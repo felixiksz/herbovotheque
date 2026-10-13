@@ -192,3 +192,32 @@
 
   H.lolo = { parler, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();
+
+// Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,
+// les surprises du 24 février (l'île de Lóló et Mémé, Lóló à la ferme et sur le terrain).
+(function () {
+  const H = window.H;
+  H.vues.surprises = {
+    afficher(c) {
+      const actif = !!H.local.apercuIleSecrete;
+      c.appendChild(H.el("section.reglage", null,
+        H.el("h2", null, "Les surprises du 24 février"),
+        H.el("p", null, actif
+          ? "L’aperçu est activé sur cet appareil : l’île de Lóló et Mémé, Lóló qui arrive à la ferme, « Appeler Lóló » sur le terrain, ses histoires et la balade avec elles."
+          : "Sur cet appareil, tout reste caché jusqu’au 24 février."),
+        H.el("div.pastilles", null,
+          H.el("button.bouton" + (actif ? "" : ".actif"), {
+            type: "button",
+            async onclick() {
+              await H.d.majLocal((l) => {
+                if (actif) delete l.apercuIleSecrete;
+                else l.apercuIleSecrete = true;
+              });
+              H.router();
+            },
+          }, actif ? "Tout recacher sur cet appareil" : "Voir les surprises sur cet appareil"),
+          H.el("a.bouton.discret-bouton", { href: "#village" }, "Retour à la ferme"))
+      ));
+    },
+  };
+})();
