@@ -54,7 +54,7 @@ python tools/version.py
 - Chez ƟvƟ et Mesi : Mesi prépare une crêpe au chocolat fondu quand il en reste dans les ressources.
 - Nuit calme (22 h – 6 h) : flashcartes, terrain et serre dorment ; balades (avec Mesi, Lóló et Mémé, ou seul·e) et histoires (drames de Lóló, douceurs et compliments de Mesi, dans `js/63-histoires.js`, corrigeables depuis « Les textes du jeu ») ; cabane de lecture à la bougie, avec la pluie sur le toit.
 - Serre : semis en pots (une graine), levée en 8 h, 4 h au bon mois de semis ; les bébés plantes se repiquent sur les îles (une pelletée de terre, peu d’énergie, et elles démarrent jeunes) ; les frileuses peuvent rester dans la serre.
-- L’île de Lóló et Mémé apparaît le 24 février. Pour tout voir avant sur un appareil (tests) : l’adresse `#surprises`, ou la case de la rubrique « Mesi » des Réglages.
+- L’île de Lóló et Mémé apparaît le 24 février : un chemin en forme de cœur, un bassin au milieu (papyrus, nénuphars, grenouilles, canards, libellules), des papillons, beaucoup de romarin et de thym. Sur cette île, Mesi donne les noms hongrois des plantes et des animaux (`js/61-hongrois.js`). Pour tout voir avant sur un appareil (tests) : l’adresse `#surprises`, ou la case de la rubrique « Mesi » des Réglages.
 
 ## Pas sur Google
 
