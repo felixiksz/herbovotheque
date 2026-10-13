@@ -6,8 +6,7 @@
   const DEPOT = "felixiksz/herbovotheque";
   const BRANCHE = "sauvegardes";
   const API = "https://api.github.com/repos/" + DEPOT;
-  const FICHIERS = { herbier: "herbier.enc", jeu: "jeu.enc" };
-  const shas = {};
+  const FICHIERS = { herbier: "data/herbier.enc", jeu: "data/jeu.enc" };
   let minuteur = null;
   let enCours = null;
 
@@ -19,53 +18,62 @@
     };
   }
 
-  async function brancheExiste() {
-    const r = await fetch(API + "/branches/" + BRANCHE, { headers: entetes() });
-    if (r.ok) return true;
-    if (r.status !== 404) throw new Error("GitHub " + r.status);
-    const depot = await (await fetch(API, { headers: entetes() })).json();
-    const tete = await (await fetch(API + "/git/ref/heads/" + depot.default_branch, { headers: entetes() })).json();
-    const c = await fetch(API + "/git/refs", {
-      method: "POST",
-      headers: entetes(),
-      body: JSON.stringify({ ref: "refs/heads/" + BRANCHE, sha: tete.object.sha }),
-    });
-    if (!c.ok) throw new Error("Création de la branche impossible (" + c.status + ")");
-    return true;
-  }
-
-  async function lireDistant(quoi) {
-    const url = API + "/contents/data/" + FICHIERS[quoi] + "?ref=" + BRANCHE;
-    const meta = await fetch(url, { headers: entetes(), cache: "no-store" });
-    if (meta.status === 404) return null;
-    if (!meta.ok) throw new Error("GitHub " + meta.status);
-    const info = await meta.json();
-    shas[quoi] = info.sha;
-    const brut = await fetch(url, { headers: entetes(true), cache: "no-store" });
-    const paquet = JSON.parse(await brut.text());
-    return H.chiffre.ouvrir(paquet, H.cle);
-  }
-
-  async function ecrireDistant(quoi, objet) {
-    const paquet = await H.chiffre.fermer(objet, H.cle, H.meta.sel, H.meta.iter);
-    const corps = {
-      message: "Sauvegarde " + (quoi === "jeu" ? "du jeu" : "de l’herbier"),
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(paquet)))),
-      branch: BRANCHE,
-    };
-    if (shas[quoi]) corps.sha = shas[quoi];
-    const r = await fetch(API + "/contents/data/" + FICHIERS[quoi], {
-      method: "PUT",
-      headers: entetes(),
-      body: JSON.stringify(corps),
-    });
-    if (r.status === 409 || r.status === 422) {
-      // quelqu'un (l'autre appareil) a écrit entre-temps : on refusionne
-      delete shas[quoi];
-      throw Object.assign(new Error("conflit"), { conflit: true });
+  async function api(chemin, opts) {
+    const r = await fetch(API + chemin, Object.assign({ headers: entetes(), cache: "no-store" }, opts));
+    if (!r.ok) {
+      const err = new Error("GitHub " + r.status);
+      err.statut = r.status;
+      throw err;
     }
+    return r.status === 204 ? null : r.json();
+  }
+
+  // Dernier commit de la branche des sauvegardes (créée au besoin).
+  async function tete() {
+    try {
+      return (await api("/git/ref/heads/" + BRANCHE)).object.sha;
+    } catch (e) {
+      if (e.statut !== 404) throw e;
+      const depot = await api("");
+      const principale = (await api("/git/ref/heads/" + depot.default_branch)).object.sha;
+      await api("/git/refs", { method: "POST", body: JSON.stringify({ ref: "refs/heads/" + BRANCHE, sha: principale }) });
+      return principale;
+    }
+  }
+
+  // Lecture brute (jusqu'à 100 Mo) d'une sauvegarde chiffrée, à un commit donné.
+  async function lireDistant(quoi, commit) {
+    const r = await fetch(API + "/contents/" + FICHIERS[quoi] + "?ref=" + commit, { headers: entetes(true), cache: "no-store" });
+    if (r.status === 404) return null;
     if (!r.ok) throw new Error("GitHub " + r.status);
-    shas[quoi] = (await r.json()).content.sha;
+    return H.chiffre.ouvrir(JSON.parse(await r.text()), H.cle);
+  }
+
+  // Écrit les sauvegardes modifiées en un seul commit (API Git : pas de limite à 1 Mo).
+  // Si l'autre appareil a écrit entre-temps, la branche a bougé : on signale un conflit.
+  async function ecrireDistant(objets, parent) {
+    const arbre = [];
+    for (const [quoi, objet] of Object.entries(objets)) {
+      const paquet = await H.chiffre.fermer(objet, H.cle, H.meta.sel, H.meta.iter);
+      const blob = await api("/git/blobs", { method: "POST", body: JSON.stringify({ content: JSON.stringify(paquet), encoding: "utf-8" }) });
+      arbre.push({ path: FICHIERS[quoi], mode: "100644", type: "blob", sha: blob.sha });
+    }
+    const base = (await api("/git/commits/" + parent)).tree.sha;
+    const tree = await api("/git/trees", { method: "POST", body: JSON.stringify({ base_tree: base, tree: arbre }) });
+    const commit = await api("/git/commits", { method: "POST", body: JSON.stringify({ message: "Sauvegarde", tree: tree.sha, parents: [parent] }) });
+    try {
+      await api("/git/refs/heads/" + BRANCHE, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) });
+    } catch (e) {
+      if (e.statut === 422 || e.statut === 409) throw Object.assign(new Error("conflit"), { conflit: true });
+      throw e;
+    }
+  }
+
+  // JSON aux clés triées, pour comparer deux versions sans se tromper d'ordre
+  function canon(v) {
+    if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}";
+    return JSON.stringify(v);
   }
 
   // --- fusion : pour chaque élément, la version la plus récente gagne ------
@@ -118,34 +126,35 @@
     if (!H.local.jeton || !navigator.onLine) return;
     etat("en cours");
     try {
-      await brancheExiste();
-      for (const quoi of ["herbier", "jeu"]) {
-        for (let essai = 0; essai < 3; essai++) {
-          const distant = await lireDistant(quoi);
+      for (let essai = 0; essai < 4; essai++) {
+        const parent = await tete();
+        const aEcrire = {};
+        for (const quoi of ["herbier", "jeu"]) {
+          const distant = await lireDistant(quoi, parent);
           const local = quoi === "jeu" ? H.jeu : H.herbier;
           const fusion = quoi === "jeu" ? fusionnerJeu(local, distant) : fusionnerHerbier(local, distant);
-          const change = JSON.stringify(fusion) !== JSON.stringify(local);
-          if (quoi === "jeu") H.jeu = fusion;
-          else H.herbier = fusion;
-          if (change) {
+          if (canon(fusion) !== canon(local)) {
+            if (quoi === "jeu") H.jeu = fusion;
+            else H.herbier = fusion;
             H.d.invalider();
             await H.kv.ecrire(quoi, fusion);
             H.emettre("donnees", quoi);
           }
-          if (!distant || JSON.stringify(fusion) !== JSON.stringify(distant)) {
-            try {
-              await ecrireDistant(quoi, fusion);
-            } catch (e) {
-              if (e.conflit) continue;
-              throw e;
-            }
-          }
-          break;
+          if (!distant || canon(fusion) !== canon(distant)) aEcrire[quoi] = fusion;
         }
-        await H.d.majLocal((l) => {
-          l.derniereSynchro = Object.assign({}, l.derniereSynchro, { [quoi]: H.maintenant() });
-        });
+        if (Object.keys(aEcrire).length) {
+          try {
+            await ecrireDistant(aEcrire, parent);
+          } catch (e) {
+            if (e.conflit) continue;
+            throw e;
+          }
+        }
+        break;
       }
+      await H.d.majLocal((l) => {
+        l.derniereSynchro = { herbier: H.maintenant(), jeu: H.maintenant() };
+      });
       etat("à jour");
     } catch (e) {
       console.warn(e);
