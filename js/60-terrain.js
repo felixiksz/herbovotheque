@@ -472,12 +472,12 @@
     o.innerHTML = "";
     if (vue.outil === "planter") {
       const p = vue.plante && H.d.plante(vue.plante);
-      o.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true }) }, p ? "Plante : " + p.nom : "Choisir la plante"));
+      o.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true, detail: ile.croquis ? null : (q) => pastillesCout(coutPlantation(q)) }) }, p ? "Plante : " + p.nom : "Choisir la plante"));
       (H.local.plantesRecentes || []).slice(0, 6).forEach((id) => {
         const q = H.d.plante(id);
         if (q && id !== vue.plante) o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { vue.plante = id; retenirPlante(id); dessinerOutils(); } }, q.nom));
       });
-      if (!ile.croquis) o.appendChild(H.el("span.cout", null, cout({ graines: 1, terre: 1, energie: 4 })));
+      if (!ile.croquis && p) o.appendChild(H.el("span.cout", null, "Pour planter " + p.nom + " : ", pastillesCout(coutPlantation(p))));
     } else if (vue.outil === "amenager") {
       Object.entries(TUILES).forEach(([id, t]) =>
         o.appendChild(H.el("button.bouton.petit" + (vue.tuile === id ? ".actif" : ""), { type: "button", onclick: () => { vue.tuile = id; dessinerOutils(); } }, t.nom))
@@ -502,8 +502,40 @@
   }
 
   function cout(c) {
-    const parts = Object.entries(c).map(([k, n]) => (k === "energie" ? n + " d’énergie" : n + " " + ((H.RESSOURCES.find((r) => r.id === k) || {}).nom || k).toLowerCase()));
+    const parts = Object.entries(c).map(([k, n]) => H.quantiteTexte(k, n));
     return parts.length ? "Coût : " + parts.join(", ") : "Gratuit";
+  }
+
+  // Ce que demande une plantation : dépend du cycle, du sol et de l'eau dont la plante a besoin.
+  function coutPlantation(p) {
+    const v = (p && p.valeurs) || {};
+    const c = {
+      Annuelle: { graines: 2, terre: 1, energie: 3 },
+      Bisannuelle: { graines: 2, terre: 1, energie: 3 },
+      Vivace: { graines: 1, terre: 1, energie: 4 },
+      Arbuste: { graines: 1, terre: 2, compost: 1, energie: 6 },
+      Arbre: { graines: 1, terre: 3, compost: 1, energie: 8 },
+      Liane: { graines: 1, terre: 2, energie: 5 },
+    }[v.cycle] || { graines: 1, terre: 1, energie: 4 };
+    const r = Object.assign({}, c);
+    if (v.arrosage === "Régulier") r.eau = 1;
+    if (v.arrosage === "Abondant") r.eau = 2;
+    if ((v.sol || []).includes("Riche")) r.compost = (r.compost || 0) + 1;
+    if (v.climatMed === "En pot ou en serre") r.soleil = 1;
+    // ordre d'affichage stable
+    const ordre = ["graines", "terre", "eau", "compost", "soleil", "energie"];
+    return Object.fromEntries(ordre.filter((k) => r[k]).map((k) => [k, r[k]]));
+  }
+
+  // petites pastilles avec l'icône de chaque ressource
+  function pastillesCout(c) {
+    return H.el("span.pastilles-cout", null,
+      Object.entries(c).map(([k, n]) => {
+        const assez = (k === "energie" ? H.ressources.energie() : H.ressources.quantite(k)) >= n;
+        return H.el("span.pastille-cout" + (assez ? "" : ".manque"), { title: H.quantiteTexte(k, n) },
+          H.el("img", { src: H.ressources.icone(k, 2), alt: "" }), String(n));
+      })
+    );
   }
 
   function retenirPlante(id) {
@@ -826,7 +858,7 @@
         const t = caseDe(ile, x, y).t;
         if (t === "eau" || t === "chemin") return libre("On ne plante pas sur un " + (t === "eau" ? "plan d’eau" : "chemin") + ".");
         if (pl) return libre("Il y a déjà une plante ici.");
-        if (!ile.croquis && !payer({ graines: 1, terre: 1, energie: 4 })) return;
+        if (!ile.croquis && !payer(coutPlantation(H.d.plante(vue.plante)))) return;
         const maintenant = H.maintenant();
         ile.plantes = ile.plantes || {};
         ile.plantes[k] = { p: vue.plante, le: maintenant, c: ile.croquis ? 100 : 0, eau: 70, maj: maintenant };
@@ -900,8 +932,10 @@
 
   function payer(couts) {
     if (H.ressources.depenser(couts)) return true;
-    const manque = Object.entries(couts).filter(([k, n]) => (k === "energie" ? H.ressources.energie() : H.ressources.quantite(k)) < n).map(([k]) => (k === "energie" ? "d’énergie" : ((H.RESSOURCES.find((r) => r.id === k) || {}).nom || k).toLowerCase()));
-    const fatigue = manque.includes("d’énergie");
+    const ids = Object.entries(couts).filter(([k, n]) => (k === "energie" ? H.ressources.energie() : H.ressources.quantite(k)) < n).map(([k]) => k);
+    const fatigue = ids.length === 1 && ids[0] === "energie";
+    const textes = ids.map(H.manqueTexte);
+    const manque = [textes.slice(0, -1).join(", "), textes[textes.length - 1]].filter(Boolean);
     H.dialogue.dire([{ qui: "ovo", texte: fatigue
       ? "Ouf, je suis un peu fatigué·e… Une petite pause, ou quelques flashcartes pour reprendre des forces ?"
       : "Il me manque " + manque.join(" et ") + ". Quelques flashcartes et on s’y remet !" }]);

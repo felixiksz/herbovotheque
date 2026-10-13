@@ -22,16 +22,28 @@
   };
 
   H.RESSOURCES = [
-    { id: "eau", nom: "Eau" },
-    { id: "graines", nom: "Graines" },
-    { id: "compost", nom: "Compost" },
-    { id: "soleil", nom: "Soleil" },
-    { id: "outils", nom: "Outils" },
-    { id: "terre", nom: "Terre" },
-    { id: "paille", nom: "Paille" },
-    { id: "purin", nom: "Purins" },
-    { id: "crepe", nom: "Crêpes au chocolat fondu" },
+    // un : pour « 1 … » ; plus : pour « 3 … » ; de : pour « il me manque … »
+    { id: "eau", nom: "Eau", un: "arrosoir d’eau", plus: "arrosoirs d’eau", de: "de l’eau" },
+    { id: "graines", nom: "Graines", un: "graine", plus: "graines", de: "des graines" },
+    { id: "compost", nom: "Compost", un: "seau de compost", plus: "seaux de compost", de: "du compost" },
+    { id: "soleil", nom: "Soleil", un: "rayon de soleil", plus: "rayons de soleil", de: "du soleil" },
+    { id: "outils", nom: "Outils", un: "outil", plus: "outils", de: "des outils" },
+    { id: "terre", nom: "Terre", un: "pelletée de terre", plus: "pelletées de terre", de: "de la terre" },
+    { id: "paille", nom: "Paille", un: "botte de paille", plus: "bottes de paille", de: "de la paille" },
+    { id: "purin", nom: "Purins", un: "bidon de purin", plus: "bidons de purin", de: "du purin" },
+    { id: "crepe", nom: "Crêpes au chocolat fondu", un: "crêpe au chocolat fondu", plus: "crêpes au chocolat fondu", de: "une crêpe au chocolat fondu" },
   ];
+  H.RESSOURCES_PAR_ID = Object.fromEntries(H.RESSOURCES.map((r) => [r.id, r]));
+
+  // « 2 pelletées de terre », « 1 graine », « 4 d’énergie »
+  H.quantiteTexte = function (id, n) {
+    if (id === "energie") return n + " d’énergie";
+    const r = H.RESSOURCES_PAR_ID[id];
+    if (!r) return n + " " + id;
+    return n + " " + (n > 1 ? r.plus : r.un);
+  };
+  // « de la terre », « de l’énergie »
+  H.manqueTexte = (id) => (id === "energie" ? "de l’énergie" : (H.RESSOURCES_PAR_ID[id] || {}).de || id);
 
   // Catégorie d'une carte = la section de sa rubrique (ou « tisanes », « perso »…).
   const PAR_DEFAUT = {

@@ -313,7 +313,8 @@
             }),
             " ",
             H.el("span", null, p.nom),
-            p.latin ? H.el("em.discret", null, " " + p.latin) : null
+            p.latin ? H.el("em.discret", null, " " + p.latin) : null,
+            opts.detail ? opts.detail(p) : null
           )
         );
       }

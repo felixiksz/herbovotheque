@@ -140,3 +140,11 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .nouvelles p { margin: 6px 0; }
 .nouvelles a { text-decoration-color: var(--fluo); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .archipel > p.discret { grid-column: 1 / -1; }
+
+/* coût d'une plantation, avec les icônes des ressources */
+.pastilles-cout { display: inline-flex; flex-wrap: wrap; gap: 3px 8px; vertical-align: middle; margin-left: 6px; }
+.pastille-cout { display: inline-flex; align-items: center; gap: 2px; font-family: var(--terrain); font-size: 0.75rem; }
+.pastille-cout img { height: 14px; image-rendering: pixelated; }
+.pastille-cout.manque { color: #d0004f; text-decoration: underline dotted; }
+:root[data-theme="nuit"] .pastille-cout.manque { color: #ff6fb5; }
+.choix-plante .pastilles-cout { float: right; margin-top: 3px; }

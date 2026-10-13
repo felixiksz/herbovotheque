@@ -43,6 +43,18 @@
         recto: () => texte("Composition du mélange ", H.el("strong", null, t.nom)),
         verso: () => H.el("ul", null, H.tisanes.composition(t).map((x) => H.el("li", null, x))),
       });
+      for (const x of t.plantes || []) {
+        const p = H.d.plante(x.id);
+        if (!p || !x.role) continue;
+        cartes.push({
+          id: "tisane-role|" + t.id + "|" + x.id,
+          plante: x.id,
+          rubrique: "tisanesRoles",
+          categorie: "tisanes",
+          recto: () => texte("Dans le mélange ", H.el("strong", null, t.nom), ", pourquoi ", H.el("strong", null, p.nom), " ?"),
+          verso: () => H.el("p.reponse-courte", null, x.role),
+        });
+      }
     }
     for (const c of Object.values(H.jeu.cartesPerso || {})) {
       if (c.supprime) continue;
@@ -69,7 +81,7 @@
       const items = H.d.champs().filter((c) => c.cartes && c.section === s.id).map((c) => ({ cle: c.id, nom: c.nom }));
       if (items.length) g.push({ titre: s.nom, items });
     }
-    const autres = [{ cle: "tisanes", nom: "Mes tisanes" }];
+    const autres = [{ cle: "tisanes", nom: "Mes tisanes" }, { cle: "tisanesRoles", nom: "Rôle de chaque plante dans mes tisanes" }];
     const paquets = new Set(Object.values(H.jeu.cartesPerso || {}).filter((c) => !c.supprime).map((c) => c.paquet || "Mes cartes"));
     paquets.forEach((p) => autres.push({ cle: "perso:" + p, nom: p }));
     g.push({ titre: "Tisanes et cartes perso", items: autres });
@@ -193,9 +205,12 @@
 
   // --- écran d'accueil des flashcartes ---------------------------------------------
   let conteneur = null;
+  let choixOuvert = null; // le panneau « Choisir quoi réviser » reste ouvert entre deux clics
 
   function accueil(params) {
+    const y = window.scrollY;
     conteneur.innerHTML = "";
+    requestAnimationFrame(() => window.scrollTo(0, y));
     let f = filtre();
     if (params[0] === "plante" && params[1]) {
       f = Object.assign({}, f, { plante: params[1], mode: "toutes" });
@@ -239,7 +254,9 @@
   }
 
   function choix(f) {
-    const det = H.el("details.cartes-choix", { open: !H.local.filtreCartes });
+    if (choixOuvert == null) choixOuvert = !H.local.filtreCartes;
+    const det = H.el("details.cartes-choix", { open: choixOuvert });
+    det.addEventListener("toggle", () => (choixOuvert = det.open));
     det.appendChild(H.el("summary", null, H.el("h2", null, "Choisir quoi réviser")));
     // rubriques
     for (const g of groupesDeRubriques()) {
@@ -322,7 +339,7 @@
       parRubrique.set(c.rubrique, r);
       if (estFragile(s)) fragiles.push(c);
     }
-    const nomRubrique = (cle) => (cle === "_latin" ? "Nom latin" : cle === "_nom" ? "Plante d’après le nom latin" : cle === "tisanes" ? "Mes tisanes" : cle.startsWith("perso:") ? cle.slice(6) : (H.d.champ(cle) || {}).nom || cle);
+    const nomRubrique = (cle) => (cle === "_latin" ? "Nom latin" : cle === "_nom" ? "Plante d’après le nom latin" : cle === "tisanes" ? "Mes tisanes" : cle === "tisanesRoles" ? "Rôle des plantes dans mes tisanes" : cle.startsWith("perso:") ? cle.slice(6) : (H.d.champ(cle) || {}).nom || cle);
     if (!vues) {
       det.appendChild(H.el("p.discret", null, "Les statistiques apparaîtront après tes premières révisions."));
     } else {
@@ -552,6 +569,7 @@
     afficher(c, params) {
       conteneur = c;
       accueil(params);
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, 0)));
     },
     mettreAJour(params) {
       accueil(params);
