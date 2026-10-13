@@ -460,8 +460,9 @@
         programmerStyle();
         return;
       }
-      const t = ctx.currentTime + 0.5;
-      prochaines = VOIX.map((v, i) => t + i * 2.3 + Math.random() * 3);
+      // la première note arrive tout de suite, les autres s'installent peu à peu
+      const t = ctx.currentTime + 0.2;
+      prochaines = VOIX.map((v, i) => t + (i ? i * 2.3 + Math.random() * 3 : 0));
       lancerBourdon();
       programmer();
     },
@@ -499,8 +500,13 @@
   H.sur("ciel", majAmbiance);
 
   // démarre au premier geste, s'arrête quand l'appli passe en arrière-plan
+  // chaque geste réveille le son s'il est resté bloqué (Safari refuse parfois le premier essai)
   const premierGeste = () => {
-    if (H.local && H.local.musique && H.jeu) H.musique.jouer();
+    if (!H.local || !H.local.musique || !H.jeu) return;
+    if (actif) {
+      if (ctx && ctx.state !== "running") ctx.resume();
+      if (silence && silence.paused) silence.play().catch(() => {});
+    } else H.musique.jouer();
   };
   // sur iPhone, seuls un vrai toucher (touchend) ou un clic ouvrent le son
   for (const ev of ["pointerdown", "touchend", "click", "keydown"]) document.addEventListener(ev, premierGeste);
