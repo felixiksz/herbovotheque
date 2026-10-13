@@ -1,0 +1,5 @@
+# fiches en clair : ne jamais publier (diffusion interdite)
+prive/
+*.pdf
+.DS_Store
+Thumbs.db

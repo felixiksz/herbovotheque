@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr" data-theme="jour">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#f8f2e4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Herbothèque">
+  <title>L’herbothèque d’ƟvƟ</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icones/icone.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icones/icone-180.png">
+  <link rel="stylesheet" href="css/00-base.css?v=20261013-020055">
+  <link rel="stylesheet" href="css/10-herbotheque.css?v=20261013-020055">
+  <link rel="stylesheet" href="css/20-fiche.css?v=20261013-020055">
+  <link rel="stylesheet" href="css/30-cartes.css?v=20261013-020055">
+  <link rel="stylesheet" href="css/40-terrain.css?v=20261013-020055">
+</head>
+<body>
+  <div id="ciel" aria-hidden="true"></div>
+
+  <header id="entete" hidden>
+    <a href="#village" class="titre-jeu">L’herbothèque d’ƟvƟ</a>
+    <nav id="menu" aria-label="Menu">
+      <a href="#village" data-vue="village">Village</a>
+      <a href="#herbotheque" data-vue="herbotheque">Herbothèque</a>
+      <a href="#cartes" data-vue="cartes">Flashcartes</a>
+      <a href="#terrain" data-vue="terrain">Terrain</a>
+      <a href="#reglages" data-vue="reglages" class="menu-reglages" aria-label="Réglages">Réglages</a>
+    </nav>
+    <div id="barre-ressources" aria-label="Ressources"></div>
+  </header>
+
+  <main id="vue"></main>
+
+  <section id="verrou" class="verrou">
+    <h1 class="titre-jeu">L’herbothèque d’ƟvƟ</h1>
+    <form id="form-verrou" autocomplete="off">
+      <label for="mdp">Mot de passe</label>
+      <input id="mdp" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+      <button type="submit" class="bouton">Ouvrir</button>
+      <p id="verrou-message" class="discret" role="alert"></p>
+    </form>
+  </section>
+
+  <script src="js/00-outils.js?v=20261013-020055"></script>
+  <script src="js/05-chiffre.js?v=20261013-020055"></script>
+  <script src="js/10-donnees.js?v=20261013-020055"></script>
+  <script src="js/15-synchro.js?v=20261013-020055"></script>
+  <script src="js/20-ciel.js?v=20261013-020055"></script>
+  <script src="js/25-aquarelle.js?v=20261013-020055"></script>
+  <script src="js/30-herbotheque.js?v=20261013-020055"></script>
+  <script src="js/35-fiche.js?v=20261013-020055"></script>
+  <script src="js/38-tisanes.js?v=20261013-020055"></script>
+  <script src="js/40-cartes.js?v=20261013-020055"></script>
+  <script src="js/45-ressources.js?v=20261013-020055"></script>
+  <script src="js/50-pixel.js?v=20261013-020055"></script>
+  <script src="js/55-dialogue.js?v=20261013-020055"></script>
+  <script src="js/60-terrain.js?v=20261013-020055"></script>
+  <script src="js/65-village.js?v=20261013-020055"></script>
+  <script src="js/80-reglages.js?v=20261013-020055"></script>
+  <script src="js/90-app.js?v=20261013-020055"></script>
+</body>
+</html>

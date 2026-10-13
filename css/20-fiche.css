@@ -1,0 +1,102 @@
+/* Fiche : page d'herbier */
+
+.page-herbier {
+  max-width: 860px;
+  margin: 0 auto;
+  background: color-mix(in srgb, var(--papier) 82%, #fffdf6);
+  border: 1px solid var(--filet);
+  border-radius: 3px;
+  padding: 14px clamp(14px, 4vw, 40px) 30px;
+  position: relative;
+}
+:root[data-theme="nuit"] .page-herbier { background: color-mix(in srgb, var(--papier) 90%, #3a3456); }
+
+.fiche-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.fiche-fleches { display: flex; gap: 6px; }
+
+.fiche-haut { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 20px; align-items: center; }
+.fiche-illus img.planche-illus { width: 100%; height: auto; display: block; }
+.fiche-illus .photo-lofi { width: 100%; transform: rotate(-1.5deg); }
+.fiche-nom { font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1.35; margin: 0; }
+.fiche-latin { font-style: italic; font-size: 1.2rem; margin: 0 0 4px; }
+.fiche-communs { margin: 0 0 10px; }
+.fiche-outils { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.fiche-preps { margin-top: 14px; }
+.fiche-preps h3 { margin-bottom: 6px; font-size: 0.95rem; }
+.pastilles { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.preps .bouton { padding: 2px 9px 2px 4px; }
+.mini-bocal { height: 26px; width: auto; }
+.fiche-preps label { display: block; margin-top: 8px; }
+
+.sommaire-fiche { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 18px 0 6px; padding: 8px 0; border-top: 1px solid var(--filet); border-bottom: 1px solid var(--filet); }
+.sommaire-fiche a { text-decoration: none; font-size: 0.95rem; }
+.sommaire-fiche a:hover { background: var(--surligne); color: #1a1714; }
+
+.section-fiche { border-bottom: 1px solid var(--filet); padding: 6px 0 10px; scroll-margin-top: 110px; }
+.section-fiche > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; }
+.section-fiche > summary::-webkit-details-marker { display: none; }
+.section-fiche > summary h2 { margin: 6px 0 2px; }
+.section-fiche > summary h2::after { content: " +"; font-family: var(--texte); font-size: 1rem; color: var(--encre-douce); }
+.section-fiche[open] > summary h2::after { content: " −"; }
+
+.rubrique { padding: 8px 0 4px; }
+.rubrique.a-verifier { border-left: 2px dashed var(--fluo-orange); padding-left: 10px; margin-left: -12px; }
+.tete-rubrique { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tete-rubrique h3 { margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.actions-rubrique { display: flex; gap: 4px; }
+.corps-rubrique { margin-top: 2px; }
+.texte-fiche p { margin: 0 0 6px; }
+.texte-fiche ul { margin: 2px 0 8px; padding-left: 1.2em; }
+.texte-fiche li { margin-bottom: 3px; }
+.texte-fiche li::marker { content: "✿ "; color: var(--encre-douce); font-size: 0.8em; }
+.texte-fiche h4 { font-family: var(--texte); font-style: italic; font-weight: 700; margin: 10px 0 4px; font-size: 1rem; }
+.texte-fiche h5 { font-family: var(--texte); font-weight: 700; margin: 8px 0 2px; font-size: 0.95rem; }
+.vide { margin: 0; font-style: italic; }
+.aide { margin: 4px 0 0; font-size: 0.8rem; }
+.pastille-valeur { border: 1px solid var(--filet); border-radius: 12px; padding: 1px 10px; font-size: 0.92rem; }
+a.pastille-valeur { text-decoration: none; }
+a.pastille-valeur:hover { background: var(--surligne); color: #1a1714; }
+
+.choix-options { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 8px; }
+.ligne-option { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.calendrier { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; max-width: 560px; }
+.calendrier .mois {
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: center;
+  padding: 3px 0;
+  border: 1px solid var(--filet);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--encre);
+}
+.calendrier .mois.plein { background: var(--fluo); color: #1a1714; border-color: #1a1714; }
+.calendrier.modifiable .mois { cursor: pointer; }
+
+.rubriques-vides { margin-top: 6px; }
+.rubriques-vides > .bouton { text-align: left; white-space: normal; }
+
+.etiquette-herbier {
+  margin: 24px 0 0 auto;
+  width: min(280px, 100%);
+  border: 1px solid var(--encre);
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  background: color-mix(in srgb, var(--papier) 60%, #fff);
+  transform: rotate(0.6deg);
+}
+:root[data-theme="nuit"] .etiquette-herbier { background: var(--papier-fonce); }
+.etiquette-herbier p { margin: 0; }
+.etiquette-herbier .titre-etiquette { font-family: var(--titre); font-size: 1.3rem; border-bottom: 1px solid var(--filet); margin-bottom: 4px; line-height: 1.7; }
+
+@media (max-width: 640px) {
+  .fiche-haut { grid-template-columns: minmax(0, 110px) minmax(0, 1fr); gap: 12px; align-items: start; }
+  .fiche-latin { font-size: 1rem; }
+  .page-herbier { padding: 10px 12px 24px; border-left: 0; border-right: 0; margin: 0 calc(-1 * var(--marge)); }
+  .calendrier .mois { font-size: 0.62rem; }
+}
+
+.corps-rubrique > p { margin: 2px 0 0; }
+.rubrique { padding: 7px 0 3px; }

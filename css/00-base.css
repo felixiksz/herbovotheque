@@ -1,0 +1,275 @@
+/* Base : polices, couleurs, papier aquarelle, touches fluo, mode nuit */
+
+@font-face { font-family: "Beth Ellen"; src: url("../fonts/beth-ellen.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Kumar One"; src: url("../fonts/kumar-one.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Caudex"; src: url("../fonts/caudex-regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Caudex"; src: url("../fonts/caudex-bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Caudex"; src: url("../fonts/caudex-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Caudex"; src: url("../fonts/caudex-bold-italic.woff2") format("woff2"); font-weight: 700; font-style: italic; font-display: swap; }
+
+:root {
+  --papier: #f8f2e4;
+  --papier-fonce: #efe4cc;
+  --encre: #2b2622;
+  --encre-douce: #5b4a3c;
+  --filet: rgba(43, 38, 34, 0.35);
+  --kraft: #c9a878;
+  --kraft-encre: #4a3420;
+  --fluo-rose: #ff2e9a;
+  --fluo-vert: #9dff00;
+  --fluo-orange: #ff7b00;
+  --fluo-jaune: #eaff2e;
+  --fluo: var(--fluo-vert);
+  --surligne: rgba(157, 255, 0, 0.75);
+  --ciel-haut: #8cc8f2;
+  --ciel-bas: #e6f4ff;
+  --titre: "Beth Ellen", "Caudex", cursive;
+  --texte: "Caudex", Georgia, serif;
+  --terrain: "Kumar One", "Caudex", sans-serif;
+  --rayon: 6px;
+  --marge: 16px;
+  color-scheme: light;
+}
+
+:root[data-theme="nuit"] {
+  --papier: #1d1b2e;
+  --papier-fonce: #26233b;
+  --encre: #f3ead8;
+  --encre-douce: #d3c6ae;
+  --filet: rgba(243, 234, 216, 0.35);
+  --kraft: #8a6a45;
+  --kraft-encre: #fff1db;
+  --surligne: rgba(255, 46, 154, 0.7);
+  --fluo: var(--fluo-rose);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--texte);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--encre);
+  background-color: var(--papier);
+  background-image: var(--papier-image, none);
+  background-size: 420px 420px;
+  overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* bande de ciel en haut de page, qui suit l'heure réelle */
+#ciel {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 190px;
+  background: linear-gradient(to bottom, var(--ciel-haut), var(--ciel-bas) 70%, transparent);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: -1;
+  transition: background 2s;
+}
+
+h1, h2, h3 { font-weight: normal; margin: 0 0 0.4em; }
+h1, h2, .titre-jeu { font-family: var(--titre); letter-spacing: 0.01em; }
+h1 { font-size: 2.1rem; line-height: 1.5; }
+h2 { font-size: 1.7rem; line-height: 1.5; }
+h3 { font-family: var(--texte); font-weight: 700; font-size: 1.05rem; }
+
+a { color: inherit; }
+
+.discret { color: var(--encre-douce); font-size: 0.92rem; }
+.erreur { color: #d0004f; }
+:root[data-theme="nuit"] .erreur { color: #ff6fb5; }
+
+[hidden] { display: none !important; }
+
+/* --- boutons : filet fin, et le fluo comme un coup de surligneur --- */
+.bouton, button.bouton {
+  font: inherit;
+  font-size: 0.98rem;
+  color: var(--encre);
+  background: transparent;
+  border: 1px solid var(--encre);
+  border-radius: var(--rayon);
+  padding: 6px 14px;
+  cursor: pointer;
+  position: relative;
+  line-height: 1.3;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.bouton:hover, .bouton:focus-visible { background: var(--surligne); color: #1a1714; outline: none; }
+.bouton.actif, .bouton[aria-pressed="true"] { background: var(--fluo); color: #1a1714; border-color: #1a1714; }
+.bouton.discret-bouton { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; padding: 6px 8px; }
+.bouton.discret-bouton:hover { text-decoration: none; }
+.bouton:disabled { opacity: 0.45; cursor: default; }
+.bouton.petit { font-size: 0.86rem; padding: 3px 9px; }
+
+.surligne {
+  background: linear-gradient(100deg, transparent 2%, var(--surligne) 4%, var(--surligne) 96%, transparent 98%);
+  padding: 0 4px;
+  color: #1a1714;
+}
+
+input, select, textarea {
+  font: inherit;
+  color: var(--encre);
+  background: color-mix(in srgb, var(--papier) 70%, transparent);
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon);
+  padding: 7px 10px;
+  max-width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--fluo); outline-offset: 1px; border-color: var(--encre); }
+textarea { width: 100%; min-height: 120px; line-height: 1.5; resize: vertical; }
+label { font-size: 0.95rem; }
+
+/* --- verrou --- */
+.verrou {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--marge);
+  text-align: center;
+  gap: 18px;
+}
+.verrou .titre-jeu { font-size: clamp(2rem, 9vw, 3.4rem); }
+.verrou form { display: flex; flex-direction: column; gap: 10px; align-items: center; width: min(320px, 100%); }
+.verrou input { width: 100%; text-align: center; font-size: 1.1rem; }
+
+/* --- en-tête et menu --- */
+#entete {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  padding: calc(8px + env(safe-area-inset-top)) var(--marge) 8px;
+  background: color-mix(in srgb, var(--papier) 88%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--filet);
+}
+#entete .titre-jeu { font-size: 1.45rem; text-decoration: none; white-space: nowrap; line-height: 1.6; }
+#menu { display: flex; gap: 2px 14px; flex-wrap: wrap; flex: 1; }
+#menu a { text-decoration: none; padding: 2px 4px; border-radius: 3px; font-size: 0.98rem; }
+#menu a:hover { background: var(--surligne); color: #1a1714; }
+#menu a[aria-current="page"] { background: var(--fluo); color: #1a1714; }
+#barre-ressources { display: flex; gap: 10px; align-items: center; font-size: 0.9rem; flex-wrap: wrap; }
+
+#vue { padding: var(--marge); max-width: 1200px; margin: 0 auto; }
+
+/* --- message discret --- */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 30px);
+  background: var(--encre);
+  color: var(--papier);
+  padding: 8px 16px;
+  border-radius: var(--rayon);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+#toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* --- fenêtre par-dessus (fiche, réglages…) --- */
+.voile {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.35);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: calc(12px + env(safe-area-inset-top)) 10px 40px;
+}
+.panneau {
+  background-color: var(--papier);
+  background-image: var(--papier-image, none);
+  background-size: 420px 420px;
+  border: 1px solid var(--filet);
+  border-radius: 8px;
+  width: min(760px, 100%);
+  padding: 18px var(--marge) 24px;
+  position: relative;
+}
+.panneau .fermer { position: absolute; top: 10px; right: 10px; }
+
+/* --- photo façon vieux téléphone avec flash --- */
+.photo-lofi {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  border: 6px solid #fbfbf6;
+  box-shadow: 0 1px 0 var(--filet);
+}
+.photo-lofi img { display: block; width: 100%; filter: contrast(1.25) saturate(1.25) brightness(1.08); }
+.photo-lofi::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.45), transparent 38%),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45));
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.photo-lofi .date-photo {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: #ff8a1e;
+  text-shadow: 0 0 3px rgba(255, 120, 0, 0.8);
+  letter-spacing: 0.08em;
+}
+
+.puce-a-verifier {
+  font-size: 0.75rem;
+  border: 1px dashed var(--encre-douce);
+  border-radius: 10px;
+  padding: 0 7px;
+  color: var(--encre-douce);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.chargement { text-align: center; padding: 40px 0; color: var(--encre-douce); }
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  #entete { gap: 2px 12px; }
+  #entete .titre-jeu { font-size: 1.25rem; }
+  #menu { order: 3; flex-basis: 100%; gap: 2px 10px; }
+  #menu a { font-size: 0.93rem; }
+  .menu-reglages { margin-left: auto; }
+  #barre-ressources { margin-left: auto; font-size: 0.85rem; }
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.45rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
