@@ -147,7 +147,7 @@
   };
   const ANIMAUX = [
     ["le cheval (Lóló !)", "ló"],
-    ["le chat (Mémé !)", "macska"],
+    ["le chat", "macska"],
     ["le canard", "kacsa"],
     ["la grenouille", "béka"],
     ["le papillon", "pillangó"],

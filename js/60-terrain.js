@@ -401,7 +401,7 @@
 
   // L'île de Lóló et Mémé : un chemin en forme de cœur, au milieu un bassin (papyrus, nénuphars,
   // grenouilles, canards), et tout autour beaucoup de romarin et de thym.
-  const VERSION_ILE_SECRETE = 2;
+  const VERSION_ILE_SECRETE = 3;
   function creerIleSecrete() {
     const cols = 22, lignes = 20;
     const ile = {
@@ -432,7 +432,8 @@
     ile.mare = mare;
     const dansMare = (x, y, marge) => ((x - mare.cx) / (mare.rx + marge)) ** 2 + ((y - mare.cy) / (mare.ry + marge)) ** 2 <= 1;
     const r = H.alea("lolo-coeur");
-    const herbes = ["rosmarinus-officinalis", "thymus-vulgaris", "thymus-serpyllum"].filter((id) => H.d.plante(id));
+    // surtout du romarin et du thym, et des bleuets
+    const herbes = ["rosmarinus-officinalis", "thymus-vulgaris", "thymus-serpyllum", "rosmarinus-officinalis", "thymus-vulgaris", "centaurea-cyanus"].filter((id) => H.d.plante(id));
     const fleurs = ["lavandula-angustifolia", "calendula-officinalis", "viola-odorata", "centaurea-cyanus", "papaver-rhoeas", "eschscholzia-californica", "matricaria-recutita"].filter((id) => H.d.plante(id));
     for (let y = 0; y < lignes; y++) {
       for (let x = 0; x < cols; x++) {
@@ -1089,7 +1090,8 @@
     if (vue.ile.secrete && Math.abs(fx - place.x) < 1.6 && fy > place.y - 2.5 && fy < place.y + 0.5) {
       marcherVers(Math.round(place.x) + 1, Math.round(place.y) - 1, () => H.dialogue.dire([
         { qui: "ovo", texte: "Et Lóló et Mémé ?" },
-        { qui: "luigi", texte: "Lóló, c’est un « ló » : un cheval. Et Mémé, c’est une « macska » : une chatte." },
+        { qui: "luigi", texte: "Lóló, c’est un « ló » : un cheval." },
+        { qui: "luigi", texte: "Et Mémé… ce n’est pas un mot à traduire. C’est un surnom : c’est comme ça que mon papa m’appelait." },
         { qui: "lolo", texte: "Hiii ! Ló ! J’adore." },
       ]));
       return true;
