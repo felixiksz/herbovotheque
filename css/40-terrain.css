@@ -264,3 +264,17 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .liste-acces li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .form-acces { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .form-acces input, .form-acces select { min-width: 160px; flex: 1; }
+
+/* l'outil de recherche de la serre */
+.outil-serre { margin-top: 18px; border-top: 1px solid var(--encre); padding-top: 4px; }
+.outil-serre .recherche { display: flex; flex-direction: column; gap: 4px; max-width: 560px; }
+.outil-serre .recherche input[type="search"] { width: 100%; }
+.spheres-serre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin: 10px 0 6px; }
+.spheres-serre .sphere { font: inherit; font-size: 0.85rem; background: none; border: 1px solid currentColor; color: var(--encre); border-radius: 999px; padding: 1px 9px; cursor: pointer; opacity: 0.75; }
+.spheres-serre .sphere:hover { opacity: 1; }
+.spheres-serre .sphere.actif { background: var(--encre); color: var(--papier); opacity: 1; }
+.resultats-serre { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 18px; }
+.resultat-serre { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--encre) 25%, transparent); }
+.resultat-serre .nom-resultat { width: 100%; }
+.resultat-serre .nom-resultat a { color: inherit; font-weight: 600; }
+.resultat-serre .extrait { margin: 0; font-size: 0.85rem; opacity: 0.8; line-height: 1.35; }

@@ -60,15 +60,109 @@
     return url;
   }
 
-  let conteneur = null;
+  // --- l'outil de recherche : par indication, par sphère d'action, et ce qui se sème ce mois-ci ---
+  const outil = { q: "", sphere: null, ceMois: true };
+  const listeSpheres = (p) => {
+    const s = (p.valeurs || {}).spheres;
+    return (Array.isArray(s) ? s : String(s || "").split(",")).map((x) => x.trim()).filter(Boolean);
+  };
+  const sansGras = (t) => String(t || "").replace(/\*\*/g, "").replace(/^[•\s]+/, "");
+  // où chercher les indications : « Propriétés et indications », la MTC, les sphères d'action
+  const CHAMPS_INDICATIONS = ["proprietes", "mtc", "spheres"];
+  function extrait(p, q) {
+    for (const champ of CHAMPS_INDICATIONS) {
+      for (const l of String((p.valeurs || {})[champ] || "").split("\n")) {
+        const propre = sansGras(l), i = H.sansAccents(propre).indexOf(q);
+        if (i < 0) continue;
+        const debut = Math.max(0, i - 50), fin = Math.min(propre.length, i + q.length + 70);
+        return (debut ? "…" : "") + propre.slice(debut, fin).trim() + (fin < propre.length ? "…" : "");
+      }
+    }
+    return null;
+  }
+  function resultats() {
+    const q = H.sansAccents(outil.q.trim()), mois = new Date().getMonth() + 1;
+    return H.d.plantes().filter((p) => {
+      if (outil.ceMois && !((p.valeurs || {}).moisSemis || []).includes(mois)) return false;
+      if (outil.sphere && !listeSpheres(p).includes(outil.sphere)) return false;
+      if (!q) return true;
+      if (H.sansAccents(p.nom + " " + p.latin).includes(q)) return true;
+      return CHAMPS_INDICATIONS.some((c) => H.sansAccents(sansGras((p.valeurs || {})[c])).includes(q));
+    });
+  }
+  function construireOutil() {
+    const nomMois = new Date().toLocaleString("fr-FR", { month: "long" });
+    const spheres = [...new Set(H.d.plantes().flatMap(listeSpheres))].sort((a, b) => a.localeCompare(b, "fr"));
+    const liste = H.el("div.resultats-serre");
+    const resume = H.el("p.discret.resume");
+    const champ = H.el("input", {
+      type: "search", value: outil.q, placeholder: "Chercher une indication : digestion, sommeil, toux…",
+      "aria-label": "Chercher une plante par indication",
+      oninput: H.anti((e) => { outil.q = e.target.value; majListe(); }, 180),
+    });
+    const ceMois = H.el("label.case", null,
+      H.el("input", { type: "checkbox", checked: outil.ceMois, onchange: (e) => { outil.ceMois = e.target.checked; majListe(); } }),
+      " seulement les plantes à semer en " + nomMois);
+    const pastilles = H.el("div.spheres-serre", { role: "group", "aria-label": "Sphères d’action" });
+    const majPastilles = () => {
+      pastilles.innerHTML = "";
+      pastilles.appendChild(H.el("span.discret", null, "Sphère d’action :"));
+      for (const s of [null].concat(spheres)) {
+        pastilles.appendChild(H.el("button.sphere" + (outil.sphere === s ? ".actif" : ""), {
+          type: "button", "aria-pressed": String(outil.sphere === s),
+          onclick: () => { outil.sphere = s; majPastilles(); majListe(); },
+        }, s || "toutes"));
+      }
+    };
+    function majListe() {
+      const q = H.sansAccents(outil.q.trim()), mois = new Date().getMonth() + 1;
+      const r = resultats();
+      resume.textContent = r.length
+        ? r.length + (r.length > 1 ? " plantes" : " plante") + (outil.ceMois ? " à semer en " + nomMois : "")
+        : outil.ceMois ? "Rien à semer en " + nomMois + " avec cette recherche. Décoche le mois pour chercher dans toutes les plantes." : "Aucune plante ne correspond.";
+      liste.innerHTML = "";
+      const libre = serre().pots.indexOf(null);
+      for (const p of r) {
+        const ex = q && !H.sansAccents(p.nom + " " + p.latin).includes(q) ? extrait(p, q) : null;
+        liste.appendChild(H.el("div.resultat-serre", null,
+          H.el("div.nom-resultat", null,
+            H.el("a", { href: "#fiche/" + encodeURIComponent(p.id) }, p.nom),
+            p.latin ? H.el("em.discret", null, " " + p.latin) : null,
+            ((p.valeurs || {}).moisSemis || []).includes(mois) ? H.el("span.bon-mois", null, "bon mois") : null),
+          ex ? H.el("p.extrait", null, ex) : null,
+          H.el("button.bouton.petit", {
+            type: "button", disabled: libre < 0, title: libre < 0 ? "Tous les pots sont occupés" : null,
+            onclick: () => semerDans(serre().pots.indexOf(null), p.id),
+          }, libre < 0 ? "Pots tous occupés" : "Semer")
+        ));
+      }
+    }
+    majPastilles();
+    majListe();
+    outil.maj = majListe;
+    return H.el("section.outil-serre", null,
+      H.el("h2", null, "Outil de recherche"),
+      H.el("div.recherche", null, champ, ceMois),
+      pastilles, resume, liste);
+  }
+
+  let conteneur = null, zone = null;
   function dessiner() {
     if (!conteneur) return;
+    if (!zone) {
+      conteneur.innerHTML = "";
+      conteneur.appendChild(H.el("div.herbo-tete", null,
+        H.el("h1", null, "Serre"),
+        H.el("p.discret", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite sur tes îles, moins cher et déjà jeunes.")
+      ));
+      zone = H.el("div");
+      conteneur.appendChild(zone);
+      conteneur.appendChild(construireOutil());
+    } else if (outil.maj) outil.maj();
     const s = serre();
-    conteneur.innerHTML = "";
-    conteneur.appendChild(H.el("div.herbo-tete", null,
-      H.el("h1", null, "Serre"),
-      H.el("p.discret", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite sur tes îles, moins cher et déjà jeunes.")
-    ));
+    const racine = conteneur;
+    conteneur = zone;
+    zone.innerHTML = "";
 
     // les pots de semis
     const grille = H.el("div.grille-pots");
@@ -124,24 +218,26 @@
             H.el("span.etat-pot", null, age < 1 ? "arrivée aujourd’hui" : "depuis " + Math.floor(age) + " j"));
         }))
       : H.el("p.discret", null, "Le curcuma, le gingembre, le cannelier… peinent dehors à Marseille. Ici, ils se plaisent : quand une frileuse est prête, tu peux la garder dans la serre."));
+    conteneur = racine;
+  }
+
+  function semerDans(i, id) {
+    if (!id || i < 0 || serre().pots[i]) return;
+    if (!H.ressources.depenser(COUT_SEMIS)) {
+      H.dialogue.dire([{ qui: "ovo", texte: "Il me manque " + (H.ressources.quantite("graines") < 1 ? "des graines" : "de l’énergie") + " pour semer. Quelques flashcartes et on s’y remet !" }]);
+      return;
+    }
+    serre().pots[i] = { p: id, le: H.maintenant() };
+    sauver();
+    H.bruit("plante");
+    const p = H.d.plante(id);
+    H.toast(bonMois(p) ? "C’est le bon mois pour semer " + H.duNom(p) + " : ça lèvera deux fois plus vite" : p.nom + " est semé·e dans un pot");
+    dessiner();
   }
 
   function semer(i) {
     const mois = new Date().getMonth() + 1;
-    H.choisirPlantes([], (ids) => {
-      const id = ids[0];
-      if (!id) return;
-      if (!H.ressources.depenser(COUT_SEMIS)) {
-        H.dialogue.dire([{ qui: "ovo", texte: "Il me manque " + (H.ressources.quantite("graines") < 1 ? "des graines" : "de l’énergie") + " pour semer. Quelques flashcartes et on s’y remet !" }]);
-        return;
-      }
-      serre().pots[i] = { p: id, le: H.maintenant() };
-      sauver();
-      H.bruit("plante");
-      const p = H.d.plante(id);
-      if (bonMois(p)) H.toast("C’est le bon mois pour semer " + H.duNom(p) + " : ça lèvera deux fois plus vite");
-      dessiner();
-    }, "Que semer ? (" + H.quantiteTexte("graines", 1) + ", " + H.quantiteTexte("energie", 1) + ")", {
+    H.choisirPlantes([], (ids) => semerDans(i, ids[0]), "Que semer ? (" + H.quantiteTexte("graines", 1) + ", " + H.quantiteTexte("energie", 1) + ")", {
       un: true,
       detail: (p) => (((p.valeurs || {}).moisSemis || []).includes(mois) ? H.el("span.bon-mois", null, "bon mois") : null),
     });
@@ -182,10 +278,12 @@
   H.vues.serre = {
     afficher(c) {
       conteneur = c;
+      zone = null;
       dessiner();
     },
     quitter() {
       conteneur = null;
+      zone = null;
     },
   };
   setInterval(() => conteneur && document.documentElement.dataset.vue === "serre" && dessiner(), 60e3);
