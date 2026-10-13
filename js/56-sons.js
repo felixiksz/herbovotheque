@@ -13,12 +13,7 @@
   let ctx = null;
   const tampons = {};
   function contexte() {
-    if (!ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-      ctx = new AC();
-    }
-    if (ctx.state === "suspended") ctx.resume();
+    ctx = H.audio.contexte();
     return ctx;
   }
 
@@ -69,7 +64,7 @@
         const s = ctx.createBufferSource();
         s.buffer = buf;
         s.loop = true;
-        s.connect(b.gain).connect(ctx.destination);
+        s.connect(b.gain).connect(H.audio.sortie());
         b.gain.gain.setValueAtTime(0.0001, ctx.currentTime);
         b.gain.gain.setTargetAtTime(volume, ctx.currentTime, 0.8);
         s.start();
@@ -225,7 +220,7 @@
     const loin = ctx.createBiquadFilter();
     loin.type = "lowpass";
     loin.frequency.value = 4200;
-    sortie.connect(loin).connect(ctx.destination);
+    sortie.connect(loin).connect(H.audio.sortie());
     // un écho discret, comme renvoyé par les rochers
     const delai = ctx.createDelay(1);
     delai.delayTime.value = 0.19 + Math.random() * 0.08;
@@ -234,7 +229,7 @@
     const sourd = ctx.createBiquadFilter();
     sourd.type = "lowpass";
     sourd.frequency.value = 2200;
-    loin.connect(delai).connect(sourd).connect(retour).connect(ctx.destination);
+    loin.connect(delai).connect(sourd).connect(retour).connect(H.audio.sortie());
     return entree;
   }
   // une note : la hauteur monte vite puis retombe lentement, avec un grain rauque
@@ -380,8 +375,8 @@
     if (ctx.createStereoPanner) {
       const pan = ctx.createStereoPanner();
       pan.pan.value = hasard(-0.65, 0.65);
-      g.connect(pan).connect(ctx.destination);
-    } else g.connect(ctx.destination);
+      g.connect(pan).connect(H.audio.sortie());
+    } else g.connect(H.audio.sortie());
     src.start(t, debut, duree * src.playbackRate.value + 0.05);
     return true;
   }
@@ -440,7 +435,7 @@
       const sortie = ctx.createGain();
       sortie.gain.value = 0.0001;
       sortie.gain.setTargetAtTime(0.05 * H.volume("bruitages"), ctx.currentTime, 2);
-      src.connect(bande).connect(pulse).connect(vague).connect(sortie).connect(ctx.destination);
+      src.connect(bande).connect(pulse).connect(vague).connect(sortie).connect(H.audio.sortie());
       [src, lfo, lent].forEach((x) => x.start());
       cigales = { sortie, noeuds: [src, lfo, lent] };
     } else if (!chant && cigales) {

@@ -14,16 +14,7 @@
   // décalage (en demi-tons) selon la voyelle prononcée
   const VOYELLES = { a: 0, e: 4, i: 7, o: -3, u: 5, y: 7 };
 
-  let audio = null;
-  function contexte() {
-    if (!audio) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-      audio = new AC();
-    }
-    if (audio.state === "suspended") audio.resume();
-    return audio;
-  }
+  const contexte = () => H.audio.contexte();
 
   function bip(voix, lettre) {
     if (!H.local || !H.local.son) return;
@@ -45,7 +36,7 @@
     const o = ctx.createOscillator();
     o.type = "triangle";
     o.frequency.value = f;
-    o.connect(g).connect(filtre).connect(ctx.destination);
+    o.connect(g).connect(filtre).connect(H.audio.sortie());
     o.start(t);
     o.stop(t + 0.15);
   }
@@ -71,7 +62,7 @@
     const o = ctx.createOscillator();
     o.type = "triangle";
     o.frequency.value = f;
-    o.connect(g).connect(filtre).connect(ctx.destination);
+    o.connect(g).connect(filtre).connect(H.audio.sortie());
     o.start(t);
     o.stop(t + 0.1);
   }
@@ -91,7 +82,7 @@
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.05 * H.volume("bruitages")), t + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.connect(g).connect(ctx.destination);
+      o.connect(g).connect(H.audio.sortie());
       o.start(t);
       o.stop(t + 0.14);
     });

@@ -39,20 +39,19 @@
   }
 
   function construire() {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    ctx = ctx || new AC();
+    ctx = H.audio.contexte();
     sortie = ctx.createGain();
     sortie.gain.value = 0.0001;
-    sortie.connect(ctx.destination);
+    sortie.connect(H.audio.sortie());
     filtre = ctx.createBiquadFilter();
     filtre.type = "lowpass";
     filtre.frequency.value = mode.clarte;
     reverb = ctx.createConvolver();
-    reverb.buffer = impulsion(6.5);
+    reverb.buffer = impulsion(3.2);
     const sec = ctx.createGain();
     sec.gain.value = 0.35;
     const humide = ctx.createGain();
-    humide.gain.value = 0.8;
+    humide.gain.value = 0.5;
     entree = ctx.createGain();
     entree.connect(filtre);
     filtre.connect(sec).connect(sortie);
@@ -100,6 +99,7 @@
     VOIX.forEach(([degre, periode], i) => {
       if (i >= Math.round(VOIX.length * Math.min(1, mode.densite))) return;
       const p = periode * mode.tempo * (nuit ? 1.35 : 1);
+      while (prochaines[i] < maintenant) prochaines[i] += p;
       while (prochaines[i] < maintenant + 1.5) {
         // l'orage bouscule les voix : petites notes rapides, parfois une octave plus haut
         const saut = mode.orage && Math.random() < 0.3 ? mode.gamme.length : 0;
@@ -344,10 +344,10 @@
           e.m += Math.round((hasard() - 0.5) * 3);
           if (hasard() < 0.5) e.m = cibles[Math.floor(hasard() * 3)] + 7;
           e.m = Math.max(4, Math.min(16, e.m));
-          I.acier(degre(e.m, 0), t, 0.13);
-          if (s === 0) I.acier(degre(e.m, 0), t + d * 0.5, 0.07);
+          I.acier(degre(e.m, 0), t, 0.1);
+          if (s === 0) I.acier(degre(e.m, 0), t + d * 0.5, 0.05);
         }
-        if (s === 0) accord(racine).forEach((k, i) => I.acier(degre(k, 0), t + i * 0.03, 0.05));
+        if (s === 0) accord(racine).forEach((k, i) => I.acier(degre(k, 0), t + i * 0.03, 0.035));
         I.charley(t, s % 2 ? 0.035 : 0.018);
       },
     },
@@ -401,12 +401,16 @@
     const S = sequence.S;
     const bpm = S.bpm * (nuit ? 0.85 : 1) * (mode.orage ? 1.08 : 1);
     const d = 60 / bpm / S.division;
-    while (sequence.t < ctx.currentTime + 0.6) {
+    while (sequence.t < ctx.currentTime + 0.02) {
+      sequence.n++;
+      sequence.t += d;
+    }
+    while (sequence.t < ctx.currentTime + 1) {
       S.pas(sequence.n, sequence.t, d, sequence);
       sequence.n++;
       sequence.t += d;
     }
-    minuteur = setTimeout(programmerStyle, 150);
+    minuteur = setTimeout(programmerStyle, 250);
   }
 
   // la météo ou la nuit changent : on glisse doucement vers la nouvelle couleur
@@ -429,12 +433,12 @@
       /* pas grave */
     }
     if (!silence) {
-      const sr = 8000, n = sr / 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+      // à la même fréquence que le reste du son : sinon le téléphone rééchantillonne tout, et ça grésille
+      const sr = (ctx && ctx.sampleRate) || 48000, n = Math.round(sr / 2) * 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
       const ecrire = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
       ecrire(0, "RIFF"); v.setUint32(4, 36 + n, true); ecrire(8, "WAVE"); ecrire(12, "fmt ");
       v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
-      v.setUint32(28, sr, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); ecrire(36, "data"); v.setUint32(40, n, true);
-      for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+      v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); ecrire(36, "data"); v.setUint32(40, n, true);
       silence = new Audio(URL.createObjectURL(new Blob([buf], { type: "audio/wav" })));
       silence.loop = true;
       silence.setAttribute("playsinline", "");
@@ -447,13 +451,13 @@
       if (actif || !H.local || !H.local.musique) return;
       if (!window.AudioContext && !window.webkitAudioContext) return;
       choisirMode();
-      sessionLecture();
       if (!ctx || !sortie) construire();
+      sessionLecture();
       if (ctx.state === "suspended") ctx.resume();
       const style = styleChoisi();
       filtre.frequency.value = mode.clarte * (nuit ? 0.6 : 1) * (STYLES[style].clarte || 1);
       sortie.gain.cancelScheduledValues(ctx.currentTime);
-      sortie.gain.setTargetAtTime(Math.max(0.0001, 0.8 * H.volume("musique")), ctx.currentTime, 2.5);
+      sortie.gain.setTargetAtTime(Math.max(0.0001, 0.6 * H.volume("musique")), ctx.currentTime, 2.5);
       actif = true;
       if (style !== "eno") {
         sequence = { S: STYLES[style], n: 0, t: ctx.currentTime + 0.3 };
@@ -487,7 +491,7 @@
     },
     // le curseur de volume a bougé
     majVolume() {
-      if (actif && sortie) sortie.gain.setTargetAtTime(Math.max(0.0001, 0.8 * H.volume("musique")), ctx.currentTime, 0.3);
+      if (actif && sortie) sortie.gain.setTargetAtTime(Math.max(0.0001, 0.6 * H.volume("musique")), ctx.currentTime, 0.3);
     },
     // pour les réglages : l'ambiance du moment
     description() {
