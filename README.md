@@ -25,7 +25,7 @@ python tools/version.py
 - `tools/culture/*.json` : les rubriques « Au jardin » pré-remplies d’après le biotope et des guides de jardinage. Dans le jeu elles restent marquées « à vérifier » jusqu’à ce qu’ƟvƟ clique sur « C’est juste » ou les modifie.
 - Le sel du chiffrement ne change jamais (`chiffrer.mjs` le réutilise) : sinon les sauvegardes synchronisées deviendraient illisibles.
 - Bruitages dans `sons/` : miaou (appeler Mesi), attention (Mesi qui appelle au loin), pas (sur le chemin pavé), roll (la pluie), galop (Lóló). ƟvƟ peut enregistrer son propre miaou dans les Réglages.
-- Messages personnels : `prive/messages.json` avec `{"message": "…", "messageIle": "…"}` (le premier s’affiche au tout premier lancement et dans la boîte aux lettres du village, le second sur l’île secrète).
+- Messages personnels : `prive/messages.json` avec `{"message": "…", "messageIle": "…"}` (le premier s’affiche au tout premier lancement et dans la boîte aux lettres de la ferme, le second sur l’île secrète).
 
 ## Données d’ƟvƟ
 
@@ -46,8 +46,13 @@ python tools/version.py
 - Lóló au galop : on entend d’abord le bruit, puis elle entre et s’arrête quand le son s’arrête.
 - Chaque plante peut avoir son propre dessin sur la carte (fiche ou panneau de la plante sur l’île).
 - Musique ambiante générée (voix en boucles de longueurs différentes, à la Music for Airports) : le mode suit la météo réelle (soleil lydien, pluie mineure, orage agité) et se feutre la nuit.
-- Village : herbothèque (tiny house sur roues), cabane à flashcartes (roulotte), cabane de lecture (cabane en A), chez ƟvƟ et Mesi (mazet), serre, ponton, boîte aux lettres ; des sapins autour ; goélands au loin et cigales l’été (sons de synthèse en attendant de vrais enregistrements).
-- Nuit calme (22 h – 6 h) : flashcartes, terrain et serre dorment ; balades (avec Mesi, Lóló et Mémé, ou seul·e) et histoires (drames de Lóló, douceurs et compliments de Mesi, dans `js/63-histoires.js`) ; cabane de lecture à la bougie, avec la pluie sur le toit.
+- La ferme : herbothèque (tiny house sur roues), cabane à flashcartes (roulotte), cabane de lecture (cabane en A), labo (cabanon de pierre), chez ƟvƟ et Mesi (mazet), serre, ponton, boîte aux lettres. Autour, la garrigue des calanques : grands pins parasols au-dessus des toits (ombre selon le vrai soleil, terre rouge dessous), pins d’Alep, chênes verts, romarin, thym, cistes, lentisques, cades. ƟvƟ suit le chemin de terre. Goélands qui passent en criant, cigales l’été (sons de synthèse en attendant de vrais enregistrements).
+- Labo : les récoltes des îles et les cueillettes (au mois de récolte) deviennent des préparations en temps réel (séchage 8 h, distillation 4 h, élixir 6 h, macérat de bourgeons 24 h, teinture et macérat huileux 48 h) qui remplissent les bocaux de l’herbothèque. Les tisanes du placard s’y infusent (5 min, +12 d’énergie) ; trois tasses font baisser d’un cran le bocal de chaque plante sèche.
+- Balade : vue de côté, pas alternés ; le chemin passe par la terre rouge et ses rochers, où l’on peut se baigner. Mémé voyage debout sur le dos de Lóló.
+- Boîte aux lettres : ƟvƟ et Mesi s’écrivent ; une lettre peut être programmée pour une date ; le drapeau rose se lève quand une lettre attend.
+- Appareil de Mesi (Réglages, « Cet appareil ») : la synchronisation n’échange que les lettres et les textes du jeu, jamais l’herbier ni les jardins d’ƟvƟ. Depuis cet appareil, « Les textes du jeu » permet de relire et corriger les histoires, les compliments, les astuces de Lóló et les répliques de Mémé (adresse directe : `#textes`).
+- Chez ƟvƟ et Mesi : Mesi prépare une crêpe au chocolat fondu quand il en reste dans les ressources.
+- Nuit calme (22 h – 6 h) : flashcartes, terrain et serre dorment ; balades (avec Mesi, Lóló et Mémé, ou seul·e) et histoires (drames de Lóló, douceurs et compliments de Mesi, dans `js/63-histoires.js`, corrigeables depuis « Les textes du jeu ») ; cabane de lecture à la bougie, avec la pluie sur le toit.
 - Serre : semis en pots (une graine), levée en 8 h, 4 h au bon mois de semis ; les bébés plantes se repiquent sur les îles (une pelletée de terre, peu d’énergie, et elles démarrent jeunes) ; les frileuses peuvent rester dans la serre.
 - L’île de Lóló et Mémé apparaît le 24 février.
 
