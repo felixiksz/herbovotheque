@@ -143,6 +143,142 @@
     );
   }
 
+  // --- le miaou pour appeler Luigi ---------------------------------------------------
+  // Enregistré au micro, converti en WAV (lisible partout, y compris sur iPhone).
+  function enWav(buffer) {
+    const canal = buffer.getChannelData(0);
+    // on retire le silence au début et à la fin
+    let debut = 0, fin = canal.length - 1;
+    while (debut < fin && Math.abs(canal[debut]) < 0.02) debut++;
+    while (fin > debut && Math.abs(canal[fin]) < 0.02) fin--;
+    const marge = Math.round(buffer.sampleRate * 0.05);
+    debut = Math.max(0, debut - marge);
+    fin = Math.min(canal.length - 1, fin + marge);
+    const n = fin - debut + 1;
+    const vue = new DataView(new ArrayBuffer(44 + n * 2));
+    const ecrire = (o, t) => [...t].forEach((c, i) => vue.setUint8(o + i, c.charCodeAt(0)));
+    ecrire(0, "RIFF");
+    vue.setUint32(4, 36 + n * 2, true);
+    ecrire(8, "WAVE");
+    ecrire(12, "fmt ");
+    vue.setUint32(16, 16, true);
+    vue.setUint16(20, 1, true);
+    vue.setUint16(22, 1, true);
+    vue.setUint32(24, buffer.sampleRate, true);
+    vue.setUint32(28, buffer.sampleRate * 2, true);
+    vue.setUint16(32, 2, true);
+    vue.setUint16(34, 16, true);
+    ecrire(36, "data");
+    vue.setUint32(40, n * 2, true);
+    let max = 0;
+    for (let i = debut; i <= fin; i++) max = Math.max(max, Math.abs(canal[i]));
+    const gain = max > 0 ? Math.min(4, 0.9 / max) : 1;
+    for (let i = 0; i < n; i++) {
+      const v = Math.max(-1, Math.min(1, canal[debut + i] * gain));
+      vue.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+    }
+    return new Blob([vue], { type: "audio/wav" });
+  }
+
+  async function versWav(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    const brut = await ctx.decodeAudioData(await blob.arrayBuffer());
+    // mono, 22 050 Hz : léger et suffisant pour un miaou
+    const hors = new OfflineAudioContext(1, Math.ceil(brut.duration * 22050), 22050);
+    const src = hors.createBufferSource();
+    src.buffer = brut;
+    src.connect(hors.destination);
+    src.start();
+    const rendu = await hors.startRendering();
+    ctx.close();
+    return enWav(rendu);
+  }
+
+  const enDataURL = (blob) => new Promise((ok) => {
+    const f = new FileReader();
+    f.onload = () => ok(f.result);
+    f.readAsDataURL(blob);
+  });
+
+  function blocMiaou() {
+    const etat = H.el("p.discret");
+    const majEtat = () => {
+      etat.textContent = H.jeu.cri ? "Cri actuel : ton enregistrement." : H.base.cri ? "Cri actuel : le miaou d’origine." : "Cri actuel : un petit miaou de synthèse.";
+    };
+    majEtat();
+    const msg = H.el("p.discret", { role: "status" });
+    const apercu = H.el("div.pastilles", { hidden: true });
+    let enregistreur = null, nouveau = null;
+
+    const boutonEnreg = H.el("button.bouton.petit", {
+      type: "button",
+      async onclick() {
+        if (enregistreur) return enregistreur.stop();
+        if (!navigator.mediaDevices || !window.MediaRecorder) {
+          msg.textContent = "Ce navigateur ne sait pas enregistrer le son.";
+          return;
+        }
+        let flux;
+        try {
+          flux = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          msg.textContent = "Le micro n’est pas autorisé.";
+          return;
+        }
+        const morceaux = [];
+        enregistreur = new MediaRecorder(flux);
+        enregistreur.ondataavailable = (e) => e.data.size && morceaux.push(e.data);
+        enregistreur.onstop = async () => {
+          flux.getTracks().forEach((t) => t.stop());
+          enregistreur = null;
+          boutonEnreg.textContent = "Enregistrer un miaou";
+          boutonEnreg.classList.remove("actif");
+          msg.textContent = "Préparation…";
+          try {
+            nouveau = await enDataURL(await versWav(new Blob(morceaux, { type: morceaux[0] ? morceaux[0].type : "audio/webm" })));
+            msg.textContent = "Écoute ton miaou, puis garde-le s’il te plaît.";
+            apercu.hidden = false;
+          } catch (e) {
+            msg.textContent = "Impossible de lire l’enregistrement.";
+          }
+        };
+        enregistreur.start();
+        boutonEnreg.textContent = "Arrêter";
+        boutonEnreg.classList.add("actif");
+        msg.textContent = "Miaule ! (l’enregistrement s’arrête tout seul après 4 secondes)";
+        setTimeout(() => enregistreur && enregistreur.state === "recording" && enregistreur.stop(), 4000);
+      },
+    }, "Enregistrer un miaou");
+
+    apercu.append(
+      H.el("button.bouton.petit", { type: "button", onclick: () => nouveau && new Audio(nouveau).play() }, "Écouter"),
+      H.el("button.bouton.petit.actif", {
+        type: "button",
+        onclick() {
+          H.jeu.cri = nouveau;
+          H.d.changer("jeu");
+          apercu.hidden = true;
+          msg.textContent = "C’est ce miaou qui appellera Luigi.";
+          majEtat();
+        },
+      }, "Garder ce miaou")
+    );
+
+    return H.el("section.reglage", null,
+      H.el("h2", null, "Le miaou pour appeler Luigi"),
+      etat,
+      H.el("div.pastilles", null,
+        H.el("button.bouton.petit", { type: "button", onclick: () => H.jouerCri() }, "Écouter le cri actuel"),
+        boutonEnreg,
+        H.jeu.cri ? H.el("button.bouton.petit", { type: "button", onclick: () => H.telecharger("miaou.wav", H.chiffre.deB64(H.jeu.cri.split(",")[1]), "audio/wav") }, "Télécharger ce miaou") : null,
+        H.jeu.cri ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { delete H.jeu.cri; H.d.changer("jeu"); H.router(); } }, "Revenir au cri d’origine") : null
+      ),
+      apercu,
+      msg
+    );
+  }
+
   function blocSauvegarde() {
     return H.el("section.reglage", null,
       H.el("h2", null, "Sauvegarde"),
@@ -186,7 +322,7 @@
   H.vues.reglages = {
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
-      c.append(blocLieu(), blocTheme(), blocSynchro(), blocSauvegarde());
+      c.append(blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde());
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },
   };

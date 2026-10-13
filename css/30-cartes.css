@@ -28,7 +28,7 @@
 .stats-ligne { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(60px, 1fr) 3.4em 6em; gap: 10px; align-items: center; font-size: 0.93rem; }
 .barre-taux { height: 6px; border: 1px solid var(--filet); border-radius: 3px; overflow: hidden; }
 .barre-taux span { display: block; height: 100%; background: var(--encre); }
-.sous-seuil .barre-taux span { background: var(--fluo-orange); }
+.sous-seuil .barre-taux span { background: var(--fluo-rose); }
 .taux { text-align: right; font-variant-numeric: tabular-nums; }
 .liste-fragiles, .liste-perso { padding-left: 1.1em; margin: 4px 0; }
 .liste-fragiles li, .liste-perso li { margin: 2px 0; }
@@ -55,7 +55,7 @@
 .recto-rubrique { font-size: 1rem; color: var(--encre-douce); }
 .verso { border-top: 1px solid var(--filet); margin-top: 16px; padding-top: 14px; max-height: 55vh; overflow-y: auto; }
 .reponse-courte { font-size: 1.3rem; margin: 0; }
-.marque-fragile { position: absolute; top: 10px; right: 12px; font-size: 0.75rem; border: 1px solid var(--fluo-orange); border-radius: 10px; padding: 0 8px; }
+.marque-fragile { position: absolute; top: 10px; right: 12px; font-size: 0.75rem; border: 1px solid var(--fluo-rose); border-radius: 10px; padding: 0 8px; }
 .retourner { align-self: center; font-size: 1.05rem; padding: 8px 22px; }
 .reponses { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .reponses .bouton { flex-direction: column; justify-content: center; gap: 0; padding: 8px 4px; }

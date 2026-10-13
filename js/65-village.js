@@ -112,7 +112,7 @@
     for (let i = 0; i < 4; i++) {
       const cx = x - 28 + i * 18;
       const carte = [[cx, y - Hh + 9], [cx + 12, y - Hh + 9], [cx + 12, y - Hh + 25], [cx, y - Hh + 25]];
-      H.aqua.lavis(ctx, r, carte, i % 2 ? "#fbf6ea" : "#9dff00", { alpha: 0.45, couches: 4 });
+      H.aqua.lavis(ctx, r, carte, i % 2 ? "#fbf6ea" : "#ff7b00", { alpha: 0.45, couches: 4 });
       H.aqua.trait(ctx, r, carte.concat([carte[0]]), { epaisseur: 0.8 });
     }
     const porte = H.aqua.rectArrondi(x - 12, y - 34, 24, 34, 5);
@@ -160,7 +160,7 @@
       const tw = ctx.measureText(l.nom).width + 18;
       const ey = y + 26;
       x = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, x));
-      ctx.fillStyle = survol ? "#9dff00" : "#c9a878";
+      ctx.fillStyle = survol ? "#ff7b00" : "#c9a878";
       ctx.fillRect(x - tw / 2, ey - 15, tw, 26);
       ctx.strokeStyle = "rgba(60,40,20,0.5)";
       ctx.strokeRect(x - tw / 2 + 0.5, ey - 14.5, tw - 1, 25);

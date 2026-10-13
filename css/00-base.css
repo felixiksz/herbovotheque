@@ -19,8 +19,8 @@
   --fluo-vert: #9dff00;
   --fluo-orange: #ff7b00;
   --fluo-jaune: #eaff2e;
-  --fluo: var(--fluo-vert);
-  --surligne: rgba(157, 255, 0, 0.75);
+  --fluo: var(--fluo-orange);
+  --surligne: rgba(255, 123, 0, 0.55);
   --ciel-haut: #8cc8f2;
   --ciel-bas: #e6f4ff;
   --titre: "Beth Ellen", "Caudex", cursive;

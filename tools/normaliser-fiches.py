@@ -177,6 +177,34 @@ def identifiant(latin):
     return slug(" ".join(mots[:2]))
 
 
+# Certaines fiches mettent toute la rubrique MTC sur une ligne :
+# « Saveur - Amère - Aromatique - Fraîche à Tiède - Feu du Foie - Nausées (…) ».
+# On garde dans « Saveur et nature » les mots de saveur et de nature, le reste va dans « MTC ».
+MOTS_SAVEUR = set(
+    "amere amer aromatique fraiche frais tiede chaude chaud froide froid douce doux piquante piquant acide "
+    "salee sale astringente astringent neutre a legerement tres un peu rafraichissante rafraichissant sucree "
+    "sucre acre fade rechauffante rechauffant et ou plutot assez fraiche/tiede saveur nature legere leger "
+    "amerement aigre mucilagineuse mucilagineux epicee epice".split()
+)
+
+
+def separer_saveur(texte):
+    morceaux = [m.strip(" .;") for m in re.split(r"\s+-\s+|\s*;\s*", texte) if m.strip(" .;")]
+    saveur, reste = [], []
+    for m in morceaux:
+        # les précisions entre parenthèses (partie de plante, « puissante »…) ne comptent pas
+        sans_paren = re.sub(r"\([^)]*\)", " ", m)
+        mots = re.findall(r"[a-zà-ÿœ/]+", sans_accents(sans_paren))
+        if not reste and all(w in MOTS_SAVEUR for w in mots):
+            saveur.append(m)
+        else:
+            reste.append(m)
+    if not [s for s in saveur if re.sub(r"\([^)]*\)", "", s).strip()] and morceaux:
+        # pas de saveur reconnue (« Plante aux 5 saveurs… ») : le premier morceau sert de saveur
+        saveur, reste = saveur + [reste[0]], reste[1:]
+    return " - ".join(saveur), reste
+
+
 plantes = []
 toutes_spheres = {}
 inconnus = set()
@@ -214,8 +242,9 @@ for brute in json.load(open(os.path.join(PRIVE, "fiches-brutes.json"), encoding=
             champ = "notes"
             pars = ["### " + (s["section"] + " – " + s["rubrique"]).strip(" –")] + pars
         if champ == "mtc" and pars and re.match(r"^\**Saveur", pars[0]):
-            v["mtcSaveur"] = re.sub(r"^\**Saveurs?\**\s*[-:]?\s*", "", pars[0]).replace("**", "").strip()
-            pars = pars[1:]
+            saveur, reste = separer_saveur(re.sub(r"^\**Saveurs?\**\s*[-:]?\s*", "", pars[0]).replace("**", "").strip())
+            v["mtcSaveur"] = saveur
+            pars = ["• " + r for r in reste] + pars[1:]
         v[champ] = (v.get(champ, "") + "\n" + "\n".join(pars)).strip()
     if "_nb" in v:
         v["description"] = (v.pop("_nb") + "\n" + v.get("description", "")).strip()

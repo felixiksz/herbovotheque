@@ -64,6 +64,37 @@
     });
   };
 
+  // Le cri pour appeler Luigi : le miaou enregistré (dans les réglages ou les fiches),
+  // sinon un petit miaou de synthèse.
+  H.jouerCri = function () {
+    if (!H.local || !H.local.son) return;
+    const enregistre = (H.jeu && H.jeu.cri) || (H.base && H.base.cri);
+    if (enregistre) {
+      const a = new Audio(enregistre);
+      a.play().catch(() => {});
+      return;
+    }
+    const ctx = contexte();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = "sawtooth";
+    f.type = "bandpass";
+    f.Q.value = 5;
+    o.frequency.setValueAtTime(420, t);
+    o.frequency.exponentialRampToValueAtTime(880, t + 0.16);
+    o.frequency.exponentialRampToValueAtTime(520, t + 0.62);
+    f.frequency.setValueAtTime(900, t);
+    f.frequency.exponentialRampToValueAtTime(1900, t + 0.16);
+    f.frequency.exponentialRampToValueAtTime(1000, t + 0.62);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.connect(f).connect(g).connect(ctx.destination);
+    o.start(t);
+    o.stop(t + 0.75);
+  };
+
   let boite = null;
 
   function fermer() {
@@ -71,7 +102,8 @@
     boite = null;
   }
 
-  // repliques : [{qui: "luigi", texte: "…"}, …] ; renvoie une promesse résolue à la fin
+  // repliques : [{qui: "luigi", texte: "…", choix?: [{valeur, libelle}]}, …]
+  // Renvoie une promesse résolue à la fin, avec la valeur choisie s'il y avait un choix.
   function dire(repliques) {
     fermer();
     return new Promise((fin) => {
@@ -81,7 +113,8 @@
       const nom = H.el("p.dialogue-nom");
       const texte = H.el("p.dialogue-texte");
       const suite = H.el("span.dialogue-suite", { "aria-hidden": "true" }, "▼");
-      boite.append(portrait, H.el("div.dialogue-corps", null, nom, texte, suite));
+      const choix = H.el("div.dialogue-choix", { hidden: true });
+      boite.append(portrait, H.el("div.dialogue-corps", null, nom, texte, choix, suite));
       document.body.appendChild(boite);
 
       let minuteur = null;
@@ -96,6 +129,8 @@
         nom.textContent = r.nom || voix.nom;
         texte.textContent = "";
         suite.hidden = true;
+        choix.hidden = true;
+        choix.innerHTML = "";
         complet = false;
         courant = r.texte;
         let n = 0;
@@ -112,24 +147,41 @@
         clearInterval(minuteur);
         texte.textContent = courant;
         complet = true;
-        suite.hidden = false;
+        const options = repliques[i].choix;
+        if (options && options.length) {
+          choix.hidden = false;
+          options.forEach((o) =>
+            choix.appendChild(H.el("button.bouton.petit", {
+              type: "button",
+              onclick(e) {
+                e.stopPropagation();
+                finir(o.valeur);
+              },
+            }, o.libelle))
+          );
+          const premier = choix.querySelector("button");
+          if (premier) premier.focus({ preventScroll: true });
+        } else suite.hidden = false;
+      }
+      function finir(valeur) {
+        document.removeEventListener("keydown", clavier);
+        fermer();
+        fin(valeur);
       }
       function avancer() {
         if (!complet) return terminer();
+        if (repliques[i] && repliques[i].choix && repliques[i].choix.length) return; // il faut choisir
         i++;
-        if (i >= repliques.length) {
-          document.removeEventListener("keydown", clavier);
-          fermer();
-          fin();
-        } else afficher();
+        if (i >= repliques.length) finir();
+        else afficher();
       }
       const clavier = (e) => {
-        if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+        if (e.key === "Escape") {
           e.preventDefault();
-          if (e.key === "Escape") {
-            i = repliques.length;
-            complet = true;
-          }
+          return finir(null);
+        }
+        if ((e.key === "Enter" || e.key === " ") && !(e.target && e.target.closest && e.target.closest(".dialogue-choix"))) {
+          e.preventDefault();
           avancer();
         }
       };

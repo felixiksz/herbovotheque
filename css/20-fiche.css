@@ -41,7 +41,7 @@
 .section-fiche[open] > summary h2::after { content: " −"; }
 
 .rubrique { padding: 8px 0 4px; }
-.rubrique.a-verifier { border-left: 2px dashed var(--fluo-orange); padding-left: 10px; margin-left: -12px; }
+.rubrique.a-verifier { border-left: 2px dashed var(--fluo-rose); padding-left: 10px; margin-left: -12px; }
 .tete-rubrique { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .tete-rubrique h3 { margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .actions-rubrique { display: flex; gap: 4px; }

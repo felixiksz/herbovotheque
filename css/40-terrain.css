@@ -79,7 +79,7 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .panneau-case .fermer-panneau { position: absolute; top: 6px; right: 6px; }
 .jauges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--terrain); font-size: 0.75rem; margin: 6px 0; }
 .jauges .jauge { display: inline-block; width: 90px; height: 8px; border: 1px solid var(--encre); border-radius: 4px; overflow: hidden; }
-.jauges .jauge-plein { display: block; height: 100%; background: var(--fluo-vert); }
+.jauges .jauge-plein { display: block; height: 100%; background: var(--fluo-orange); }
 .jauges .jauge-eau .jauge-plein { background: #3a8fd8; }
 .raisons { margin: 4px 0 8px; padding-left: 1.2em; }
 .raisons li { margin: 2px 0; }
@@ -148,3 +148,6 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .pastille-cout.manque { color: #d0004f; text-decoration: underline dotted; }
 :root[data-theme="nuit"] .pastille-cout.manque { color: #ff6fb5; }
 .choix-plante .pastilles-cout { float: right; margin-top: 3px; }
+.dialogue-choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 38vh; overflow-y: auto; }
+.dialogue-choix .bouton { font-family: var(--terrain); font-size: 0.78rem; color: #2b2622; border-color: #2b2622; }
+.dialogue-choix .bouton:hover, .dialogue-choix .bouton:focus-visible { background: var(--fluo-orange); color: #1a1714; }

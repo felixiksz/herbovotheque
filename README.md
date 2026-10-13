@@ -24,6 +24,7 @@ python tools/version.py
 
 - `tools/culture/*.json` : les rubriques « Au jardin » pré-remplies d’après le biotope et des guides de jardinage. Dans le jeu elles restent marquées « à vérifier » jusqu’à ce qu’ƟvƟ clique sur « C’est juste » ou les modifie.
 - Le sel du chiffrement ne change jamais (`chiffrer.mjs` le réutilise) : sinon les sauvegardes synchronisées deviendraient illisibles.
+- Miaou d’origine pour appeler Luigi : `prive/miaou.wav` (enregistré dans Réglages puis « Télécharger ce miaou »), ajouté aux fiches chiffrées par `assembler.py`. ƟvƟ peut enregistrer son propre miaou dans les Réglages.
 - Messages personnels : `prive/messages.json` avec `{"message": "…", "messageIle": "…"}` (le premier s’affiche au tout premier lancement et dans la boîte aux lettres du village, le second sur l’île secrète).
 
 ## Données d’ƟvƟ

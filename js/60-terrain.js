@@ -432,7 +432,7 @@
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterImage(ile) }, "Exporter le croquis (image)"),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
-      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerLuigi(true) }, "Appeler Luigi") : null,
+      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerLuigi(true) }, "Miauler pour appeler Luigi") : null,
       H.el("span.zoom", null,
         H.el("button.bouton.petit", { type: "button", "aria-label": "Dézoomer", onclick: () => zoomer(-1) }, "−"),
         H.el("button.bouton.petit", { type: "button", "aria-label": "Zoomer", onclick: () => zoomer(1) }, "+")
@@ -672,7 +672,7 @@
         ctx.fill();
       }
       if (vue.choisie && vue.choisie.x === x && vue.choisie.y === y) {
-        ctx.strokeStyle = "#9dff00";
+        ctx.strokeStyle = "#ff7b00";
         ctx.lineWidth = 2;
         ctx.strokeRect(x * T + 1, y * T + 1, T - 2, T - 2);
       }
@@ -1028,27 +1028,107 @@
     return phrases;
   }
 
-  function appelerLuigi(demande, plante) {
-    if (vue.luigi) return;
-    const derniere = H.local.derniereVisiteLuigi || 0;
-    if (!demande && H.maintenant() - derniere < 10 * 60e3) return;
-    let p = plante;
-    if (!p) {
-      const ids = Object.values(vue.ile.plantes || {}).map((x) => x.p);
-      const candidates = (ids.length ? ids : H.d.plantes().map((x) => x.id)).map((id) => H.d.plante(id)).filter((q) => q && (q.valeurs.mtcSaveur || q.valeurs.mtc));
-      p = candidates[Math.floor(Math.random() * candidates.length)];
-    }
-    const astuce = p && astuceMTC(p);
-    if (!astuce) {
-      if (demande) H.dialogue.dire([{ qui: "luigi", texte: "Plante d’abord quelque chose, et je te raconte ce qu’en dit la médecine chinoise !" }]);
+  // Les lignes de la rubrique MTC d'une plante, sans la mise en forme.
+  function lignesMTC(p, champ) {
+    return String((p.valeurs || {})[champ || "mtc"] || "")
+      .split("\n")
+      .map((l) => l.replace(/^[•\-–\s]+/, "").replace(/^#+\s*/, "").replace(/\*\*/g, "").trim())
+      .filter(Boolean);
+  }
+  const court = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+
+  // On appelle Luigi (avec le miaou) : il arrive et répond aux questions sur les plantes du jardin.
+  async function consulterLuigi() {
+    const L = (texte, choix) => H.dialogue.dire([{ qui: "luigi", texte, choix }]);
+    const ids = Array.from(new Set(Object.values(vue.ile.plantes || {}).map((x) => x.p)));
+    const plantes = ids.map((id) => H.d.plante(id)).filter(Boolean).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    if (!plantes.length) {
+      await L("Miaou reçu ! Plante d’abord quelque chose, et je te raconte ce qu’en dit la médecine chinoise.");
       return;
     }
+    let p = null;
+    let intro = "Miaou reçu ! Sur quelle plante du jardin tu veux un de mes bâtons ?";
+    for (;;) {
+      if (!p) {
+        const id = await L(intro, plantes.map((q) => ({ valeur: q.id, libelle: q.nom })).concat([{ valeur: null, libelle: "Rien, merci Luigi" }]));
+        if (!id) break;
+        p = H.d.plante(id);
+      }
+      const q = await L("Que veux-tu savoir sur " + p.nom + " ?", [
+        { valeur: "saveur", libelle: "Sa saveur et sa nature" },
+        { valeur: "indications", libelle: "À quoi elle sert en MTC" },
+        { valeur: "precautions", libelle: "Des précautions ?" },
+        { valeur: "autre", libelle: "Une autre plante" },
+        { valeur: null, libelle: "Merci Luigi !" },
+      ]);
+      if (!q) break;
+      if (q === "autre") {
+        p = null;
+        intro = "D’accord ! Laquelle, cette fois ?";
+        continue;
+      }
+      const v = p.valeurs || {};
+      const repliques = [];
+      if (q === "saveur") {
+        repliques.push(v.mtcSaveur
+          ? "En MTC : " + p.nom + ", saveur " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "."
+          : "Sa fiche ne précise pas sa saveur. Un bâton à creuser ensemble !");
+      } else if (q === "indications") {
+        const lignes = lignesMTC(p);
+        if (!lignes.length) repliques.push("Sa fiche ne dit rien côté MTC. Mystère !");
+        else {
+          repliques.push("Dans sa fiche MTC, on lit :");
+          lignes.slice(0, 4).forEach((l) => repliques.push("« " + court(l, 220) + " »"));
+          if (lignes.length > 4) repliques.push("Et il y a encore " + (lignes.length - 4) + " lignes dans sa fiche !");
+        }
+      } else if (q === "precautions") {
+        const lignes = lignesMTC(p, "precautions");
+        if (!lignes.length) repliques.push("Sa fiche ne mentionne pas de précaution particulière.");
+        else {
+          repliques.push("Côté précautions, sa fiche dit :");
+          lignes.slice(0, 3).forEach((l) => repliques.push("« " + court(l, 220) + " »"));
+        }
+      }
+      await H.dialogue.dire(repliques.map((texte) => ({ qui: "luigi", texte })));
+    }
+    await L(["À bientôt, ƟvƟ !", "Bon jardinage !", "Miaou, et à la prochaine !"][Math.floor(Math.random() * 3)]);
+  }
+
+  function partirLuigi() {
+    if (vue && vue.luigi) vue.luigi.cible = { x: -2, y: vue.luigi.y, partir: true };
+    if (vue && document.visibilityState === "hidden") vue.luigi = null;
+  }
+
+  function appelerLuigi(demande, plante) {
+    if (demande) H.jouerCri();
+    if (vue.luigi) {
+      if (demande && !vue.luigi.occupe) {
+        vue.luigi.occupe = true;
+        consulterLuigi().then(() => partirLuigi());
+      }
+      return;
+    }
+    let ensuite;
+    if (demande) {
+      ensuite = () => {
+        vue.luigi.occupe = true;
+        consulterLuigi().then(() => partirLuigi());
+      };
+    } else {
+      // visite spontanée quand on regarde une plante : un bâton sur cette plante
+      if (H.maintenant() - (H.local.derniereVisiteLuigi || 0) < 10 * 60e3) return;
+      const astuce = plante && astuceMTC(plante);
+      if (!astuce) return;
+      ensuite = () => H.dialogue.dire(astuce).then(() => partirLuigi());
+    }
     H.d.majLocal((l) => (l.derniereVisiteLuigi = H.maintenant()));
-    vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite: () => {
-      H.dialogue.dire(astuce).then(() => {
-        if (vue && vue.luigi) vue.luigi.cible = { x: -2, y: vue.luigi.y, partir: true };
-      });
-    } };
+    vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite };
+    if (document.visibilityState === "hidden") {
+      vue.luigi.x = vue.luigi.cible.x;
+      vue.luigi.cible = null;
+      vue.luigi.ensuite = null;
+      ensuite();
+    }
   }
 
   // --- animation -------------------------------------------------------------------------

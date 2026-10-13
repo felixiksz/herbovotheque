@@ -16,6 +16,7 @@
     const fleur = fleurs[H.hash(p.id) % fleurs.length];
     const feuille = ["#7a9a4a", "#5f8a46", "#8aa35a", "#6b8f5a"][H.hash(p.id + "f") % 4];
     const tiges = 1 + Math.floor(r() * 3);
+    const rubans = [];
     for (let t = 0; t < tiges; t++) {
       const x0 = W / 2 + (t - (tiges - 1) / 2) * 34 + (r() - 0.5) * 10;
       const haut = 60 + r() * 50;
@@ -25,6 +26,11 @@
         pts.push([x0 + Math.sin(k * 3 + t) * 12 * k + (t - 1) * 18 * k, Hh - 20 - k * (Hh - 20 - haut)]);
       }
       H.aqua.trait(ctx, r, pts, { couleur: "#4f6b3a", epaisseur: 2, alpha: 0.75 });
+      // le ruban se pose en travers de la tige, en bas, et un peu plus haut sur la tige principale
+      for (const i of t === 0 ? [2, 7] : [3]) {
+        const [x, y] = pts[i], [xa, ya] = pts[i - 1], [xb, yb] = pts[i + 1];
+        rubans.push([x, y, Math.atan2(yb - ya, xb - xa) + (r() - 0.5) * 0.4]);
+      }
       const n = 4 + Math.floor(r() * 4);
       for (let i = 1; i <= n; i++) {
         const k = i / (n + 1);
@@ -44,13 +50,24 @@
       }
       H.aqua.tache(ctx, r, sx, sy - 6, 4, 4, teinte, { alpha: 0.2, couches: 6 });
     }
-    // petit ruban de papier gommé qui tient le brin, comme dans un vrai herbier
-    for (const [x, y, a] of [[W / 2 - 30, Hh - 60, -0.2], [W / 2 + 26, Hh - 140, 0.25]]) {
+    // rubans de papier gommé qui tiennent les tiges, comme dans un vrai herbier
+    for (const [x, y, a] of rubans) {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(a);
-      ctx.fillStyle = "rgba(222, 205, 160, 0.75)";
-      ctx.fillRect(-20, -6, 40, 12);
+      ctx.fillStyle = "rgba(222, 204, 158, 0.85)";
+      ctx.beginPath();
+      // bords un peu déchirés aux deux bouts
+      ctx.moveTo(-6, -17);
+      ctx.lineTo(6, -18);
+      ctx.lineTo(5, -6);
+      ctx.lineTo(7, 6);
+      ctx.lineTo(5, 18);
+      ctx.lineTo(-6, 17);
+      ctx.lineTo(-5, 5);
+      ctx.lineTo(-7, -6);
+      ctx.closePath();
+      ctx.fill();
       ctx.restore();
     }
     return c.toDataURL("image/png");

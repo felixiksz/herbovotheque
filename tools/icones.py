@@ -17,9 +17,9 @@ os.makedirs(os.path.join(RACINE, "icones"), exist_ok=True)
 def icone(taille, marge=0.16, fond="#f8f2e4"):
     im = Image.new("RGB", (taille, taille), fond)
     d = ImageDraw.Draw(im)
-    # petit cercle vert fluo derrière la tête
+    # petit cercle orange fluo derrière la tête
     r = taille * 0.40
-    d.ellipse([taille / 2 - r, taille / 2 - r, taille / 2 + r, taille / 2 + r], fill="#c8f56a")
+    d.ellipse([taille / 2 - r, taille / 2 - r, taille / 2 + r, taille / 2 + r], fill="#ffa64d")
     w = max(len(l) for l in lignes)
     h = len(lignes)
     k = int((taille * (1 - 2 * marge)) / max(w, h))

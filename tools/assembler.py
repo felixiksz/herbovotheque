@@ -80,6 +80,14 @@ if os.path.exists(messages):
         if cle in ("message", "messageIle") and texte.strip():
             base[cle] = texte.strip()
 
+# le miaou d'origine pour appeler Luigi (prive/miaou.wav, .m4a, .mp3…)
+import base64
+for ext, mime in (("wav", "audio/wav"), ("m4a", "audio/mp4"), ("mp3", "audio/mpeg"), ("ogg", "audio/ogg")):
+    chemin = os.path.join(PRIVE, "miaou." + ext)
+    if os.path.exists(chemin):
+        base["cri"] = "data:" + mime + ";base64," + base64.b64encode(open(chemin, "rb").read()).decode()
+        break
+
 base["version"] = 1
 with open(os.path.join(PRIVE, "donnees.json"), "w", encoding="utf-8") as f:
     json.dump(base, f, ensure_ascii=False, separators=(",", ":"))
