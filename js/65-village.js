@@ -22,6 +22,39 @@
     paysage: ["lettres", "labo", "herbotheque", "cartes", "lecture", "serre", "maison", "terrain"],
     portrait: ["herbotheque", "cartes", "lecture", "labo", "serre", "lettres", "maison", "terrain"],
   };
+  // des raccourcis entre deux lieux voisins, pour ne pas faire tout le tour
+  const RACCOURCIS = {
+    paysage: [["maison", "labo"]],
+    portrait: [["labo", "maison"]],
+  };
+  // toutes les portions de chemin : la grande boucle, et les raccourcis
+  function troncons() {
+    const liste = CHEMIN[disposition()];
+    return liste.slice(1).map((l, i) => [liste[i], l]).concat(RACCOURCIS[disposition()]);
+  }
+  // le plus court chemin de lieu en lieu (Dijkstra sur les quelques lieux de la ferme)
+  function plusCourt(depart, but) {
+    const dist = { [depart]: 0 }, prec = {}, faits = new Set();
+    const voisins = (a) => troncons().filter((t) => t.includes(a)).map((t) => (t[0] === a ? t[1] : t[0]));
+    for (;;) {
+      let a = null;
+      for (const l of Object.keys(dist)) if (!faits.has(l) && (a === null || dist[l] < dist[a])) a = l;
+      if (a === null || a === but) break;
+      faits.add(a);
+      const [ax, ay] = devant(a);
+      for (const v of voisins(a)) {
+        const [vx, vy] = devant(v);
+        const d = dist[a] + Math.hypot(vx - ax, vy - ay);
+        if (dist[v] == null || d < dist[v]) {
+          dist[v] = d;
+          prec[v] = a;
+        }
+      }
+    }
+    const chemin = [];
+    for (let l = but; l && l !== depart; l = prec[l]) chemin.unshift(l);
+    return chemin;
+  }
 
   let scene = null;
   let galopDejaVu = false;
@@ -478,8 +511,8 @@
     arbres.forEach(([fx, fy], i) => ARBRES[i % ARBRES.length](ctx, r, fx * w, fy * h, (62 + r() * 26) * k));
     // le chemin de terre passe devant chaque lieu
     const pts = CHEMIN[disposition()].map((l) => devant(l));
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    for (const [a, b2] of troncons()) {
+      const [x0, y0] = devant(a), [x1, y1] = devant(b2);
       const n = Math.max(6, Math.round(Math.hypot(x1 - x0, y1 - y0) / (14 * k)));
       for (let j = 0; j <= n; j++) {
         const u = j / n;
@@ -494,8 +527,8 @@
         const [lx, ly] = position(id);
         if (x > lx - 92 * k && x < lx + 108 * k && y > ly - 140 * k && y < ly + 40 * k) return false;
       }
-      for (let i = 0; i < pts.length - 1; i++) {
-        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      for (const [a, b2] of troncons()) {
+        const [x0, y0] = devant(a), [x1, y1] = devant(b2);
         const u = Math.max(0, Math.min(1, ((x - x0) * (x1 - x0) + (y - y0) * (y1 - y0)) / ((x1 - x0) ** 2 + (y1 - y0) ** 2 || 1)));
         if (Math.hypot(x - x0 - u * (x1 - x0), y - y0 - u * (y1 - y0)) < 22 * k) return false;
       }
@@ -784,13 +817,11 @@
 
   // ƟvƟ suit le chemin de lieu en lieu jusqu'à celui qu'on a choisi
   function aller(id) {
-    const o = scene.ovo, liste = CHEMIN[disposition()];
+    const o = scene.ovo;
     const enRoute = o.chemin && o.chemin.length;
-    let i = liste.indexOf(enRoute ? o.chemin[0] : o.noeud);
-    const j = liste.indexOf(id);
-    if (i < 0) i = j;
-    const chemin = enRoute ? [liste[i]] : [];
-    for (let n = i; n !== j; n += j > i ? 1 : -1) chemin.push(liste[n + (j > i ? 1 : -1)]);
+    // en chemin, ƟvƟ finit d'abord la portion commencée, puis prend le plus court
+    const depart = enRoute ? o.chemin[0] : o.noeud || id;
+    const chemin = (enRoute ? [depart] : []).concat(depart === id ? [] : plusCourt(depart, id));
     if (!chemin.length) chemin.push(id);
     o.chemin = chemin;
     o.but = id;
