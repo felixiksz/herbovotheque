@@ -463,7 +463,7 @@
         }, H.RESSOURCES.filter((r) => r.id !== "crepe").map((r) => H.el("option", { value: r.id, selected: r.id === choisie }, r.nom)))
       ));
     });
-    det.appendChild(H.el("p.discret", null, "Chaque réponse rapporte la ressource de sa catégorie et un peu d’énergie. Toutes les 15 cartes : une crêpe au chocolat fondu. Après " + H.ressources.CARTES_AVANT_PAUSE + " cartes, ƟvƟ fait une pause de deux heures."));
+    det.appendChild(H.el("p.discret", null, "Chaque réponse rapporte la ressource de sa catégorie, une ressource du jardin en plus (celle qui manque le plus : terre, graines, eau, compost, outils ou soleil) et un peu d’énergie. Toutes les 15 cartes : une crêpe au chocolat fondu. Après " + H.ressources.CARTES_AVANT_PAUSE + " cartes, ƟvƟ fait une pause de deux heures."));
     det.appendChild(grille);
     return det;
   }

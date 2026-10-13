@@ -59,6 +59,9 @@
     perso: "paille",
   };
 
+  // ce que demandent les plantations, la serre et les aménagements
+  const BESOINS_JARDIN = ["terre", "graines", "eau", "compost", "outils", "soleil"];
+
   const MAX_ENERGIE = 100;
   const REPOS_PAR_HEURE = 6;          // l'énergie remonte doucement toute seule
   const CARTES_AVANT_PAUSE = 40;      // environ 20 minutes de révision
@@ -144,6 +147,10 @@
       const gain = {};
       const id = ressourcePour(categorieCarte(carte));
       gain[id] = note === 0 ? 1 : 2;
+      // et une ressource du jardin en plus, celle dont ƟvƟ a le moins : sans ça, la terre ou les
+      // outils ne venaient jamais quand on ne révisait pas les rubriques « Au jardin » ou « Précautions »
+      const manque = BESOINS_JARDIN.filter((r) => r !== id).sort((a, b) => H.ressources.quantite(a) - H.ressources.quantite(b))[0];
+      gain[manque] = (gain[manque] || 0) + 1;
       gain.energie = note === 0 ? 1 : 3;
       s.cartes++;
       if (s.cartes % 15 === 0) gain.crepe = 1;
