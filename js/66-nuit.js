@@ -428,10 +428,9 @@
       ronds(ctx, f.x, eau, t, 3);
       if (!f.parle && f.x < w * 0.7 && !H.$(".dialogue")) {
         f.parle = true;
-        H.dialogue.dire([
-          { qui: "flamant", texte: "Flma-mala-lamama !" },
-          { qui: "ovo", texte: H.histoires.auHasard(["Euh… bonjour, madame la bouée ?", "Flma-mala-lamama à toi aussi !", "Elle a l’air très sûre d’elle."]) },
-        ]);
+        const repliques = [{ qui: "flamant", texte: "Flma-mala-lamama !" }, { qui: "ovo", texte: "Fala-la-lamala !" }];
+        if (b.s.compagnon === "luigi") repliques.push({ qui: "luigi", texte: "Fla-fla-mala !" });
+        H.dialogue.dire(repliques);
       }
       if (f.x < -60) {
         f.x = null;

@@ -138,13 +138,34 @@
   let conteneurEtageres = null;
   let generation = 0;
   let resume = null;
+  let zoneDossiers = null, titreFenetre = null;
+  const COULEURS_DOSSIERS = ["#eeff41", "#ffb3a8", "#cfe8a4", "#c9c2ff", "#ffd6a0", "#a8e4ec"];
+  // une icône de dossier, dans les couleurs du bureau
+  const dossierSVG = (couleur) =>
+    '<svg width="54" height="40" viewBox="0 0 58 44" aria-hidden="true"><path d="M2 8 h20 l5 5 h29 v29 h-54 z" fill="' + couleur + '" stroke="#23214a" stroke-width="2" stroke-linejoin="round"/><path d="M2 16 h54" stroke="#23214a" stroke-width="2"/></svg>';
 
   function dessiner() {
     if (!conteneurEtageres) return;
     const rg = rangementActif();
     const q = H.sansAccents(etat.recherche.trim());
     const plantes = H.d.plantes().filter((p) => correspond(p, q));
-    const groupes = grouper(rg, plantes);
+    const tousGroupes = grouper(rg, plantes);
+    // les dossiers du bureau : un par étagère, et « Toutes » pour tout voir
+    if (etat.dossier && !tousGroupes.some((g) => g.nom === etat.dossier)) etat.dossier = null;
+    if (zoneDossiers) {
+      zoneDossiers.innerHTML = "";
+      const dossier = (nom, n, i) => H.el("button.dossier" + ((etat.dossier || null) === nom ? ".ouvert" : ""), {
+        type: "button",
+        onclick() {
+          etat.dossier = nom;
+          dessiner();
+        },
+      }, H.el("span.icone-dossier", { html: dossierSVG(nom ? COULEURS_DOSSIERS[i % COULEURS_DOSSIERS.length] : "#f2f0e8") }), H.el("span.nom-dossier", null, (nom || "Toutes") + " (" + n + ")"));
+      zoneDossiers.appendChild(dossier(null, plantes.length, 0));
+      tousGroupes.forEach((g, i) => zoneDossiers.appendChild(dossier(g.nom, g.plantes.length, i)));
+    }
+    const groupes = etat.dossier ? tousGroupes.filter((g) => g.nom === etat.dossier) : tousGroupes;
+    if (titreFenetre) titreFenetre.textContent = (etat.dossier || "Toutes les étagères") + " — " + groupes.reduce((a, g) => a + g.plantes.length, 0) + " bocaux";
     conteneurEtageres.innerHTML = "";
     if (!plantes.length) {
       conteneurEtageres.appendChild(H.el("p.discret", null, "Aucune plante ne correspond à « " + etat.recherche + " »."));
@@ -202,34 +223,41 @@
         " seulement les bocaux presque vides ou vides"
       );
       resume = H.el("p.discret.resume");
-      c.appendChild(
-        H.el(
-          "div.herbo-tete",
-          null,
-          H.el("h1", null, "Herbothèque"),
-          H.el(
-            "div.herbo-outils",
-            null,
-            H.el("div.recherche", null, champRecherche, partout, filtreVerif, filtreStock),
-            H.el("label.rangement", null, "Ranger ", rgSelect),
-            H.el(
-              "div.herbo-boutons",
-              null,
-              H.el("button.bouton", { type: "button", onclick: nouvellePlante }, "Ajouter une plante"),
-              H.el("a.bouton", { href: "#tisanes" }, "Placard à tisanes"),
-              H.el("button.bouton", { type: "button", onclick: () => H.organiser && H.organiser() }, "Organiser"),
-              H.el("button.bouton", { type: "button", onclick: exporterVisible }, "Exporter la liste")
-            )
-          ),
-          resume
-        )
-      );
+      const heure = H.el("span.heure-bureau");
+      const majHeure = () => (heure.textContent = new Date().toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" }));
+      majHeure();
+      zoneDossiers = H.el("nav.dossiers-bureau", { "aria-label": "Étagères" });
+      titreFenetre = H.el("span");
       conteneurEtageres = H.el("div.etageres", { style: "--planche:url(" + H.aqua.planche() + ")" });
-      c.appendChild(conteneurEtageres);
+      c.appendChild(H.el("div.bureau-herbo", null,
+        // la barre de menu, comme sur un vieil ordinateur
+        H.el("div.barre-bureau", null,
+          H.el("b", null, "Herbothèque"),
+          H.el("button.menu-bureau", { type: "button", onclick: nouvellePlante }, "Ajouter une plante"),
+          H.el("a.menu-bureau", { href: "#tisanes" }, "Placard à tisanes"),
+          H.el("button.menu-bureau", { type: "button", onclick: () => H.organiser && H.organiser() }, "Organiser"),
+          H.el("button.menu-bureau", { type: "button", onclick: exporterVisible }, "Exporter"),
+          H.el("label.menu-bureau", null, "Ranger ", rgSelect),
+          heure
+        ),
+        H.el("div.corps-bureau", null,
+          zoneDossiers,
+          H.el("section.fenetre-bureau", null,
+            H.el("div.titre-fenetre", null, H.el("button.fermer-fenetre", { type: "button", "aria-label": "Voir toutes les étagères", onclick: () => { etat.dossier = null; dessiner(); } }, "×"), titreFenetre),
+            H.el("div.contenu-fenetre", null,
+              H.el("div.herbo-outils", null, H.el("div.recherche", null, champRecherche, partout, filtreVerif, filtreStock)),
+              resume,
+              conteneurEtageres
+            )
+          )
+        )
+      ));
       dessiner();
     },
     quitter() {
       conteneurEtageres = null;
+      zoneDossiers = null;
+      titreFenetre = null;
     },
   };
 

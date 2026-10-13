@@ -424,6 +424,36 @@
     );
   }
 
+  // les onglets ouverts (gardés sur cet appareil)
+  const onglets = () => (H.local.onglets || []).filter((x) => H.d.plante(x));
+  function ouvrirOnglet(id) {
+    const liste = onglets().filter((x) => x !== id);
+    liste.push(id);
+    H.d.majLocal((l) => (l.onglets = liste.slice(-8)));
+    return liste.slice(-8);
+  }
+  function fermerOnglet(id) {
+    const reste = onglets().filter((x) => x !== id);
+    H.d.majLocal((l) => (l.onglets = reste));
+    if (id === actuelle) H.aller(reste.length ? "fiche/" + encodeURIComponent(reste[reste.length - 1]) : "herbotheque");
+    else afficherFiche(actuelle);
+  }
+  function chromeNavigateur(id) {
+    const liste = H.local.onglets && H.local.onglets.includes(id) ? onglets() : ouvrirOnglet(id);
+    return H.el("div.chrome-navigateur", null,
+      H.el("div.titre-fenetre", null,
+        H.el("button.fermer-fenetre", { type: "button", "aria-label": "Retour à l’herbothèque", onclick: () => H.aller("herbotheque") }, "×"),
+        H.el("span", null, "Navigateur")),
+      H.el("div.onglets-navigateur", { role: "tablist" }, liste.map((x) => {
+        const q = H.d.plante(x);
+        return H.el("div.onglet" + (x === id ? ".actif" : ""), { role: "tab", "aria-selected": x === id ? "true" : "false" },
+          H.el("a", { href: "#fiche/" + encodeURIComponent(x) }, q.nom),
+          H.el("button.fermer-onglet", { type: "button", "aria-label": "Fermer l’onglet " + q.nom, onclick: () => fermerOnglet(x) }, "×"));
+      })),
+      H.el("div.adresse-navigateur", null, "herbotheque://fiches/" + id)
+    );
+  }
+
   function afficherFiche(id) {
     const p = H.d.plante(id);
     conteneur.innerHTML = "";
@@ -460,7 +490,7 @@
     }
     page.insertBefore(sommaire, page.children[1]);
     page.appendChild(etiquetteHerbier(p));
-    conteneur.appendChild(page);
+    conteneur.appendChild(H.el("div.navigateur-fiche", null, chromeNavigateur(id), page));
   }
 
   function recharger() {

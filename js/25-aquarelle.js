@@ -206,7 +206,7 @@
       lavis(ctx, r, corps, verre, { alpha: 0.05, couches: 8 });
       trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
       const couvercle = rectArrondi(x0 + 4, 8, f.w - 8, 16, 4);
-      lavis(ctx, r, couvercle, "#c9a26b", { alpha: 0.25, couches: 10 });
+      lavis(ctx, r, couvercle, "#ff5b4f", { alpha: 0.6, couches: 10 });
       trait(ctx, r, couvercle.concat([couvercle[0]]), { epaisseur: 1.4 });
       trait(ctx, r, [[x0 + 10, 30], [x0 + 10, 64]], { couleur: "#ffffff", epaisseur: 3, alpha: 0.6 });
     } else if (forme === "flacon" || forme === "compte-gouttes") {
@@ -224,14 +224,14 @@
       trait(ctx, r, corps, { epaisseur: 1.5 });
       if (large) {
         const bouchon = rectArrondi(cx - col / 2 - 4, epaule - 26, col + 8, 18, 3);
-        lavis(ctx, r, bouchon, "#23214a", { alpha: 0.3, couches: 8 });
+        lavis(ctx, r, bouchon, "#3826f2", { alpha: 0.6, couches: 8 });
         trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.3 });
       } else {
         const bague = rectArrondi(cx - col / 2 - 3, epaule - 18, col + 6, 9, 2);
         lavis(ctx, r, bague, "#23214a", { alpha: 0.35, couches: 8 });
         trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1.2 });
         const poire = polygone(r, cx, epaule - 30, 6, 12, 14);
-        lavis(ctx, r, poire, "#23214a", { alpha: 0.28, couches: 8, bord: 0.05 });
+        lavis(ctx, r, poire, "#ff5b4f", { alpha: 0.6, couches: 8, bord: 0.05 });
         trait(ctx, r, poire.concat([poire[0]]), { epaisseur: 1.2 });
       }
       trait(ctx, r, [[x0 + 6, epaule + 24], [x0 + 6, bas - 14]], { couleur: "#fff3dc", epaisseur: 2.4, alpha: 0.55 });
@@ -251,7 +251,7 @@
       lavis(ctx, r, bague, "#f4efe4", { alpha: 0.7, couches: 6 });
       trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1 });
       const bouchon = rectArrondi(x0 + 5, 6, f.w - 10, 18, 2.5);
-      lavis(ctx, r, bouchon, "#23214a", { alpha: 0.4, couches: 8 });
+      lavis(ctx, r, bouchon, "#2f6b45", { alpha: 0.7, couches: 8 });
       trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.2 });
       for (let x = x0 + 8; x < x0 + f.w - 6; x += 3) trait(ctx, r, [[x, 8], [x, 22]], { couleur: "#5a5048", epaisseur: 0.7, alpha: 0.5, tremble: 0.2 });
       trait(ctx, r, [[x0 + 5, 40], [x0 + 5, bas - 8]], { couleur: "#fff3dc", epaisseur: 2, alpha: 0.5 });
@@ -264,7 +264,7 @@
       lavis(ctx, r, corps, verre, { alpha: 0.05, couches: 8 });
       trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
       const couvercle = rectArrondi(x0 - 2, 6, f.w + 4, 14, 4);
-      lavis(ctx, r, couvercle, "#d8d2c4", { alpha: 0.3, couches: 10 });
+      lavis(ctx, r, couvercle, "#eeff41", { alpha: 0.7, couches: 10 });
       trait(ctx, r, couvercle.concat([couvercle[0]]), { epaisseur: 1.4 });
     } else if (forme === "tube") {
       const corps = rectArrondi(x0, 22, f.w, f.h - 18, 6);
