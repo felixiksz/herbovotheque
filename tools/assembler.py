@@ -17,7 +17,7 @@ CHAMPS_JARDIN = [
     {"id": "hauteur", "nom": "Hauteur", "type": "court"},
     {"id": "espacement", "nom": "Espacement de plantation", "type": "court"},
     {"id": "exposition", "nom": "Exposition", "type": "choix", "multiple": True, "options": ["Plein soleil", "Mi-ombre", "Ombre"]},
-    {"id": "sol", "nom": "Sol", "type": "choix", "multiple": True, "options": ["Sableux", "Caillouteux", "Limoneux", "Argileux", "Humifère", "Calcaire", "Neutre", "Acide", "Sec", "Frais", "Humide", "Bien drainé", "Riche", "Pauvre"]},
+    {"id": "sol", "nom": "Sol", "type": "choix", "multiple": True, "options": ["Sableux", "Caillouteux", "Limoneux", "Argileux", "Humifère", "Calcaire", "Neutre", "Acide", "Sec", "Frais", "Humide", "Bien drainé", "Profond", "Riche", "Pauvre"]},
     {"id": "arrosage", "nom": "Arrosage", "type": "choix", "options": ["Faible", "Modéré", "Régulier", "Abondant"]},
     {"id": "secheresse", "nom": "Résistance à la sécheresse", "type": "choix", "options": ["Faible", "Moyenne", "Bonne", "Excellente"]},
     {"id": "rusticite", "nom": "Rusticité", "type": "court"},
@@ -36,6 +36,8 @@ CHAMPS_JARDIN = [
     {"id": "toxiciteJardin", "nom": "Toxicité au jardin (enfants, animaux)", "type": "court"},
 ]
 
+ALIAS_CLIMAT = {"Ombre et eau": "Avec un peu d’ombre et d’eau", "Pot": "En pot ou en serre"}
+
 base = json.load(open(os.path.join(PRIVE, "base.json"), encoding="utf-8"))
 for c in CHAMPS_JARDIN:
     c["section"] = "jardin"
@@ -53,6 +55,8 @@ for chemin in sorted(glob.glob(os.path.join(ICI, "culture", "*.json"))):
         if not p:
             raise SystemExit("plante inconnue dans %s : %s" % (chemin, pid))
         for cid, val in valeurs.items():
+            if cid == "climatMed":
+                val = ALIAS_CLIMAT.get(val, val)
             if cid not in connus:
                 raise SystemExit("rubrique inconnue %s (%s)" % (cid, pid))
             champ = connus[cid]

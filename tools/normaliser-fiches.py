@@ -168,6 +168,15 @@ PREPARATIONS_AUTO = [
     ("homeopathie", lambda f, v: "homeopathie" in v),
 ]
 
+def identifiant(latin):
+    """Genre + espèce du premier nom latin : « Centaurea cyanus L. » -> centaurea-cyanus."""
+    t = latin.split(":", 1)[1] if ":" in latin else latin
+    t = re.sub(r"\(.*?\)", " ", t)
+    t = re.split(r",| et | ou ", t)[0]
+    mots = [m for m in t.split() if m[:1].isalpha()]
+    return slug(" ".join(mots[:2]))
+
+
 plantes = []
 toutes_spheres = {}
 inconnus = set()
@@ -228,7 +237,7 @@ for brute in json.load(open(os.path.join(PRIVE, "fiches-brutes.json"), encoding=
         if test(formes, v):
             preps.append(prep)
     plantes.append({
-        "id": slug(brute["latin"].split(",")[0].split(" et ")[0].split(" ou ")[0]) or slug(nom),
+        "id": identifiant(brute["latin"]) or slug(nom),
         "nom": nom,
         "latin": brute["latin"],
         "valeurs": v,
