@@ -5,7 +5,7 @@
 // Chaque personne a son propre jeton. La liste des accès (data/acces.enc, chiffrée) ne garde
 // que l'empreinte de chaque jeton, jamais le jeton lui-même, avec un nom et un rôle :
 //   ovo     : la partie d'ƟvƟ (herbier et jeu) ;
-//   mesi    : n'échange que les lettres et les textes, et gère les accès ;
+//   mesi    : sa propre partie (data/mesi/…), et les lettres et les textes avec ƟvƟ ; gère les accès ;
 //   testeur : une partie d'essai à part (data/essais/…), qu'ƟvƟ ne voit jamais.
 (function () {
   const H = window.H;
@@ -14,8 +14,12 @@
   const API = "https://api.github.com/repos/" + DEPOT;
   const FICHIERS = { herbier: "data/herbier.enc", jeu: "data/jeu.enc", acces: "data/acces.enc" };
   const role = () => H.local.role || null;
+  // où ranger une sauvegarde : la partie d'ƟvƟ, une partie d'essai, ou la partie de Mesi (à part)
   function chemin(quoi) {
-    if (quoi !== "acces" && role() === "testeur" && H.local.empreinte) return "data/essais/" + H.local.empreinte.slice(0, 16) + "/" + quoi + ".enc";
+    if (quoi.includes("/")) return quoi;
+    if (quoi === "acces") return FICHIERS.acces;
+    if (role() === "testeur" && H.local.empreinte) return "data/essais/" + H.local.empreinte.slice(0, 16) + "/" + quoi + ".enc";
+    if (role() === "mesi") return "data/mesi/" + quoi + ".enc";
     return FICHIERS[quoi];
   }
   async function empreinte(jeton) {
@@ -172,24 +176,24 @@
           return;
         }
         const aEcrire = {};
-        // l'appareil de Mesi n'échange que les lettres et les textes : il ne touche jamais
-        // à l'herbier ni aux jardins d'ƟvƟ (et ses essais restent chez lui)
-        const mesi = role() === "mesi";
-        for (const quoi of mesi ? ["jeu"] : ["herbier", "jeu"]) {
+        // Mesi : les lettres et les textes passent par la partie d'ƟvƟ, sans jamais toucher
+        // à son herbier ni à ses jardins
+        if (role() === "mesi") {
+          const chezOvo = await lireDistant(FICHIERS.jeu, parent);
+          const commun = { lettres: fusionnerCollection(H.jeu.lettres, chezOvo && chezOvo.lettres), textes: fusionnerCollection(H.jeu.textes, chezOvo && chezOvo.textes) };
+          const chezMoi = Object.assign({}, H.jeu, commun);
+          if (canon(chezMoi) !== canon(H.jeu)) {
+            H.jeu = chezMoi;
+            await H.kv.ecrire("jeu", chezMoi);
+            H.emettre("donnees", "jeu");
+          }
+          const versOvo = Object.assign({}, chezOvo || { modifieLe: 0 }, commun);
+          if (!chezOvo || canon(versOvo) !== canon(chezOvo)) aEcrire[FICHIERS.jeu] = versOvo;
+        }
+        // ma partie à moi, partagée entre mes appareils : celle d'ƟvƟ, celle de Mesi, ou une partie d'essai
+        for (const quoi of ["herbier", "jeu"]) {
           const distant = await lireDistant(quoi, parent);
           const local = quoi === "jeu" ? H.jeu : H.herbier;
-          if (mesi) {
-            const commun = { lettres: fusionnerCollection(local.lettres, distant && distant.lettres), textes: fusionnerCollection(local.textes, distant && distant.textes) };
-            const chezMoi = Object.assign({}, local, commun);
-            if (canon(chezMoi) !== canon(local)) {
-              H.jeu = chezMoi;
-              await H.kv.ecrire("jeu", chezMoi);
-              H.emettre("donnees", "jeu");
-            }
-            const versOvo = Object.assign({}, distant || { modifieLe: 0 }, commun);
-            if (!distant || canon(versOvo) !== canon(distant)) aEcrire.jeu = versOvo;
-            continue;
-          }
           const fusion = quoi === "jeu" ? fusionnerJeu(local, distant) : fusionnerHerbier(local, distant);
           if (canon(fusion) !== canon(local)) {
             if (quoi === "jeu") H.jeu = fusion;
@@ -198,7 +202,7 @@
             await H.kv.ecrire(quoi, fusion);
             H.emettre("donnees", quoi);
           }
-          if (!distant || canon(fusion) !== canon(distant)) aEcrire[quoi] = fusion;
+          if (!distant || canon(fusion) !== canon(distant)) aEcrire[chemin(quoi)] = fusion;
         }
         if (Object.keys(aEcrire).length) {
           try {

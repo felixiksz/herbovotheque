@@ -378,7 +378,7 @@
       H.el("option", { value: "mesi" }, "appareil de Mesi"));
     return H.el("section.reglage", null,
       H.el("h2", null, "Mesi"),
-      H.el("p.discret", null, "Cet appareil est relié avec le jeton de Mesi : la synchronisation n’y échange que les lettres et les textes du jeu, jamais l’herbier ni les jardins d’ƟvƟ."),
+      H.el("p.discret", null, "Cet appareil est relié avec le jeton de Mesi : ta partie (herbier, îles, ferme…) se retrouve sur tous tes appareils, à part de celle d’ƟvƟ. Avec ƟvƟ, seules les lettres et les textes du jeu s’échangent."),
       H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")),
       H.el("label.case", null,
         H.el("input", {
