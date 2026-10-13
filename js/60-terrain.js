@@ -455,6 +455,83 @@
     sauver(ile);
   }
 
+  // --- les animaux et les insectes -----------------------------------------------------------
+  // Ceux de l'île de Lóló et Mémé (autour du bassin), et ceux qu'ƟvƟ a emmenés sur ses îles.
+  // Les positions sont en cases ; elles servent au dessin et pour les montrer du doigt.
+  const NOMS_ANIMAUX = { canard: "le canard", grenouille: "la grenouille", papillon: "le papillon", libellule: "la libellule" };
+  const HONGROIS_ANIMAUX = { canard: "kacsa", grenouille: "béka", papillon: "pillangó", libellule: "szitakötő" };
+  function animaux(ile, t) {
+    const liste = [];
+    const m = ile.mare;
+    if (m) {
+      [[0, 1], [Math.PI, -1]].forEach(([ph, sens], i) => {
+        const a = ph + (sens * t) / 9000;
+        liste.push({ type: "canard", x: m.cx + Math.cos(a) * m.rx * 0.55, y: m.cy + Math.sin(a) * m.ry * 0.5, dir: a + (sens * Math.PI) / 2, variante: i });
+      });
+      [[-1.6, -0.6], [0.2, -1.2]].forEach(([dx, dy], i) => liste.push({ type: "grenouille", x: m.cx + dx, y: m.cy + dy, variante: i }));
+      for (let i = 0; i < 2; i++) {
+        const u = t / 1000 + i * 5;
+        liste.push({ type: "libellule", x: m.cx + Math.sin(u * 0.7) * m.rx * 0.9 + Math.sin(u * 2.3) * 0.4, y: m.cy - 0.8 + Math.cos(u * 0.5 + i) * m.ry * 0.9, dir: Math.atan2(Math.cos(u * 0.5 + i), Math.cos(u * 0.7)), variante: i });
+      }
+      for (let i = 0; i < 4; i++) {
+        const u = t / 1000 + i * 7;
+        liste.push({ type: "papillon", x: ile.cols / 2 + Math.sin(u * 0.23 + i) * ile.cols * 0.38, y: ile.lignes / 2 + Math.sin(u * 0.31 + i * 2) * ile.lignes * 0.36 + Math.sin(u * 3) * 0.15, variante: i });
+      }
+    }
+    // les animaux emmenés sur cette île : chacun garde son coin
+    for (const a of ile.animaux || []) {
+      const u = t / 1000 + (a.graine || 0);
+      if (a.type === "canard") {
+        const ang = u / 9 * (a.graine % 2 ? 1 : -1);
+        liste.push({ type: "canard", x: a.x + Math.cos(ang) * 0.7, y: a.y + Math.sin(ang) * 0.5, dir: ang + Math.PI / 2, variante: a.graine % 2 });
+      } else if (a.type === "grenouille") liste.push({ type: "grenouille", x: a.x, y: a.y, variante: a.graine % 2 });
+      else if (a.type === "libellule") liste.push({ type: "libellule", x: a.x + Math.sin(u * 0.7) * 1.4, y: a.y + Math.cos(u * 0.5) * 1, dir: Math.atan2(Math.cos(u * 0.5), Math.cos(u * 0.7)), variante: a.graine % 2 });
+      else if (a.type === "papillon") liste.push({ type: "papillon", x: a.x + Math.sin(u * 0.23) * 3, y: a.y + Math.sin(u * 0.31) * 2.5 + Math.sin(u * 3) * 0.15, variante: a.graine % 4 });
+    }
+    return liste;
+  }
+  function dessinerAnimaux(ctx, ile, t) {
+    for (const a of animaux(ile, t)) {
+      const px = a.x * T, py = a.y * T;
+      ctx.save();
+      if (a.type === "canard") {
+        const [corps, tete] = a.variante ? ["#8a6a4a", "#2f7a4a"] : ["#f2f0e8", "#ffd23a"];
+        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(px - Math.cos(a.dir) * 8, py - Math.sin(a.dir) * 8, 7, 3, a.dir, 0, Math.PI * 2); ctx.stroke();
+        ctx.translate(px, py); ctx.rotate(a.dir);
+        ctx.fillStyle = corps; ctx.beginPath(); ctx.ellipse(0, 0, 7, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = tete; ctx.beginPath(); ctx.arc(6, 0, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ff9a1e"; ctx.beginPath(); ctx.moveTo(8.5, -1.2); ctx.lineTo(11.5, 0); ctx.lineTo(8.5, 1.2); ctx.fill();
+      } else if (a.type === "grenouille") {
+        const saut = (t / 1000 + a.variante * 3) % 9 < 0.5;
+        const fy = py - (saut ? 4 : 0);
+        ctx.fillStyle = "#6fae3a";
+        ctx.beginPath(); ctx.ellipse(px, fy, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#4a7a2a"; ctx.lineWidth = 2;
+        for (const s2 of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(px + s2 * 3, fy + 3); ctx.lineTo(px + s2 * 7, fy + 6); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(px + s2 * 3, fy - 2); ctx.lineTo(px + s2 * 6, fy - 5); ctx.stroke();
+        }
+        const cligne = (t / 1000 + a.variante) % 4 < 0.15;
+        ctx.fillStyle = "#23214a";
+        for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(px + s2 * 2.2, fy - 4, 1.4, cligne ? 0.3 : 1.4, 0, 0, Math.PI * 2); ctx.fill(); }
+      } else if (a.type === "libellule") {
+        ctx.translate(px, py); ctx.rotate(a.dir);
+        ctx.fillStyle = "rgba(200,230,255,0.55)";
+        for (const [dx, dy] of [[-1, -1], [-1, 1], [2, -1], [2, 1]]) { ctx.beginPath(); ctx.ellipse(dx, dy * 4, 2, 5, dy * 0.4, 0, Math.PI * 2); ctx.fill(); }
+        ctx.strokeStyle = a.variante ? "#3826f2" : "#1f8a6a"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(6, 0); ctx.stroke();
+      } else if (a.type === "papillon") {
+        const bat = Math.abs(Math.sin((t / 1000 + a.variante * 7) * 9));
+        ctx.fillStyle = ["#ff5b4f", "#ffd23a", "#7aa6e0", "#f3b4cf"][a.variante % 4];
+        for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(px + s2 * 3 * bat, py, 3.5 * bat + 0.6, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "#23214a"; ctx.fillRect(px - 0.6, py - 3, 1.2, 6);
+      }
+      ctx.restore();
+    }
+  }
+
   // le bassin et ses habitants, dessinés par-dessus l'île (en cases ; T pixels par case)
   function dessinerMare(ctx, ile, t) {
     const m = ile.mare;
@@ -477,63 +554,13 @@
       ctx.fillStyle = "#c9b45a";
       ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fill();
     }
-    // des nénuphars, et des grenouilles qui clignent des yeux
+    // des nénuphars
     const feuilles = [[-1.6, -0.6], [1.3, 0.7], [0.2, -1.2], [-0.4, 1.1]];
     feuilles.forEach(([dx, dy], i) => {
       const px = X(m.cx + dx), py = Y(m.cy + dy);
       ctx.fillStyle = "#4f8a3a";
       ctx.beginPath(); ctx.moveTo(px, py); ctx.arc(px, py, 9, 0.35, Math.PI * 2 - 0.1); ctx.closePath(); ctx.fill();
       if (i === 1) { ctx.fillStyle = "#f3b4cf"; ctx.beginPath(); ctx.arc(px - 3, py - 2, 3, 0, Math.PI * 2); ctx.fill(); }
-      if (i === 0 || i === 2) {
-        // une grenouille vue d'en haut
-        const saut = (t / 1000 + i * 3) % 9 < 0.5;
-        const fy = py - (saut ? 4 : 0);
-        ctx.fillStyle = "#6fae3a";
-        ctx.beginPath(); ctx.ellipse(px, fy, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#4a7a2a"; ctx.lineWidth = 2;
-        for (const s2 of [-1, 1]) {
-          ctx.beginPath(); ctx.moveTo(px + s2 * 3, fy + 3); ctx.lineTo(px + s2 * 7, fy + 6); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(px + s2 * 3, fy - 2); ctx.lineTo(px + s2 * 6, fy - 5); ctx.stroke();
-        }
-        const cligne = (t / 1000 + i) % 4 < 0.15;
-        ctx.fillStyle = "#23214a";
-        for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(px + s2 * 2.2, fy - 4, 1.4, cligne ? 0.3 : 1.4, 0, 0, Math.PI * 2); ctx.fill(); }
-      }
-    });
-    // deux canards qui font des ronds dans l'eau
-    [[0, "#f2f0e8", "#ffd23a", 1], [Math.PI, "#8a6a4a", "#2f7a4a", -1]].forEach(([ph, corps, tete, sens]) => {
-      const a = ph + sens * t / 9000;
-      const px = X(m.cx + Math.cos(a) * m.rx * 0.55), py = Y(m.cy + Math.sin(a) * m.ry * 0.5);
-      const dir = a + sens * Math.PI / 2;
-      ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.ellipse(px - Math.cos(dir) * 8, py - Math.sin(dir) * 8, 7, 3, dir, 0, Math.PI * 2); ctx.stroke();
-      ctx.save(); ctx.translate(px, py); ctx.rotate(dir);
-      ctx.fillStyle = corps; ctx.beginPath(); ctx.ellipse(0, 0, 7, 4.5, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = tete; ctx.beginPath(); ctx.arc(6, 0, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#ff9a1e"; ctx.beginPath(); ctx.moveTo(8.5, -1.2); ctx.lineTo(11.5, 0); ctx.lineTo(8.5, 1.2); ctx.fill();
-      ctx.restore();
-    });
-    // des libellules qui filent au-dessus de l'eau
-    for (let i = 0; i < 2; i++) {
-      const u = t / 1000 + i * 5;
-      const px = X(m.cx + Math.sin(u * 0.7) * m.rx * 0.9 + Math.sin(u * 2.3) * 0.4), py = Y(m.cy - 0.8 + Math.cos(u * 0.5 + i) * m.ry * 0.9);
-      const dir = Math.atan2(Math.cos(u * 0.5 + i), Math.cos(u * 0.7));
-      ctx.save(); ctx.translate(px, py); ctx.rotate(dir);
-      ctx.fillStyle = "rgba(200,230,255,0.55)";
-      for (const [dx, dy] of [[-1, -1], [-1, 1], [2, -1], [2, 1]]) { ctx.beginPath(); ctx.ellipse(dx, dy * 4, 2, 5, dy * 0.4, 0, Math.PI * 2); ctx.fill(); }
-      ctx.strokeStyle = i ? "#3826f2" : "#1f8a6a"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(6, 0); ctx.stroke();
-      ctx.restore();
-    }
-    // des papillons qui volettent sur toute l'île
-    ["#ff5b4f", "#ffd23a", "#7aa6e0", "#f3b4cf"].forEach((c, i) => {
-      const u = t / 1000 + i * 7;
-      const px = X(ile.cols / 2 + Math.sin(u * 0.23 + i) * ile.cols * 0.38), py = Y(ile.lignes / 2 + Math.sin(u * 0.31 + i * 2) * ile.lignes * 0.36 + Math.sin(u * 3) * 0.15);
-      const bat = Math.abs(Math.sin(u * 9));
-      ctx.fillStyle = c;
-      for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(px + s2 * 3 * bat, py, 3.5 * bat + 0.6, 3, 0, 0, Math.PI * 2); ctx.fill(); }
-      ctx.fillStyle = "#23214a"; ctx.fillRect(px - 0.6, py - 3, 1.2, 6);
     });
     ctx.restore();
   }
@@ -580,6 +607,8 @@
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
       !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
       H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
+      ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null,
+      ile.secrete ? H.el("button.bouton.petit", { type: "button", onclick: () => emmenerAnimal(ile) }, "Emmener un animal sur une de mes îles") : null,
       H.el("span.zoom", null,
         H.el("button.bouton.petit", { type: "button", "aria-label": "Dézoomer", onclick: () => zoomer(-1) }, "−"),
         H.el("button.bouton.petit", { type: "button", "aria-label": "Zoomer", onclick: () => zoomer(1) }, "+")
@@ -866,11 +895,20 @@
       }
     }
 
+    // les animaux et les insectes (ceux du bassin de Lóló et Mémé, et ceux emmenés par ƟvƟ)
+    if (ile.mare || (ile.animaux && ile.animaux.length)) dessinerAnimaux(ctx, ile, performance.now());
     // personnages
     if (!ile.croquis || vue.ovo.cible) {
       const o = vue.ovo;
       const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;
       H.pixel.dessiner(ctx, "ovo", (o.x + 0.5) * T, (o.y + 0.9) * T - (marche ? 1 : 0), 1.5, marche);
+      // pendant le tour en hongrois, Mesi marche à côté d'ƟvƟ
+      if (vue.hongrois) {
+        const mm = vue.mesiSuit || (vue.mesiSuit = { x: o.x - 1, y: o.y });
+        mm.x += (o.x - 0.9 - mm.x) * 0.08;
+        mm.y += (o.y - mm.y) * 0.08;
+        H.pixel.dessiner(ctx, "luigi", (mm.x + 0.5) * T, (mm.y + 0.9) * T, 1.5, marche);
+      }
     }
     if (vue.loloVisite && vue.loloVisite.course) {
       const l = vue.loloVisite;
@@ -1022,12 +1060,84 @@
   function clic(e) {
     const c = caseCliquee(e);
     if (!c) return;
+    if (vue.hongrois && montrerDuDoigt(e, c)) return;
     // Lóló et Mémé
     if (vue.ile.secrete && Math.abs(c.x + 0.5 - vue.ile.cols / 2) < 2.5 && c.y - vue.ile.lignes / 2 > -3 && c.y - vue.ile.lignes / 2 < 1) {
       if (!H.$(".dialogue")) H.lolo.parler(vue.ile);
       return;
     }
     marcherVers(c.x, c.y, () => agir(c.x, c.y));
+  }
+
+  // Le tour en hongrois avec Mesi : ƟvƟ marche jusqu'à une plante ou une bête, la montre du
+  // doigt, et Mesi lui dit son nom en hongrois.
+  function montrerDuDoigt(e, c) {
+    const rect = vue.toile.getBoundingClientRect(), k = T * vue.zoom;
+    const fx = (e.clientX - rect.left) / k - BORD, fy = (e.clientY - rect.top) / k - BORD;
+    const dire = (francais, hongrois) => H.dialogue.dire([
+      { qui: "ovo", texte: H.histoires.auHasard(["Et ça ? (ƟvƟ montre du doigt.)", "Comment on dit, ça ?", "Et celui-là ?"]) },
+      { qui: "luigi", texte: "« " + hongrois + " ». En français : " + francais + "." },
+    ]);
+    // une bête près du doigt ?
+    const bete = animaux(vue.ile, performance.now()).map((a) => Object.assign(a, { d: Math.hypot(a.x - fx, a.y - fy) })).sort((a, b) => a.d - b.d)[0];
+    if (bete && bete.d < 0.9) {
+      marcherVers(Math.round(bete.x), Math.round(bete.y), () => dire(NOMS_ANIMAUX[bete.type], HONGROIS_ANIMAUX[bete.type]));
+      return true;
+    }
+    // Lóló et Mémé
+    const place = vue.ile.lolo || { x: vue.ile.cols / 2, y: vue.ile.lignes / 2 + 0.6 };
+    if (vue.ile.secrete && Math.abs(fx - place.x) < 1.6 && fy > place.y - 2.5 && fy < place.y + 0.5) {
+      marcherVers(Math.round(place.x) + 1, Math.round(place.y) - 1, () => H.dialogue.dire([
+        { qui: "ovo", texte: "Et Lóló et Mémé ?" },
+        { qui: "luigi", texte: "Lóló, c’est un « ló » : un cheval. Et Mémé, c’est une « macska » : une chatte." },
+        { qui: "lolo", texte: "Hiii ! Ló ! J’adore." },
+      ]));
+      return true;
+    }
+    // une plante ?
+    const pl = (vue.ile.plantes || {})[cle(c.x, c.y)];
+    const p = pl && H.d.plante(pl.p);
+    if (p) {
+      const hu = H.hongrois && H.hongrois.plante(p);
+      marcherVers(c.x, c.y, () => (hu ? dire(H.leNom(p), hu) : H.dialogue.dire([{ qui: "luigi", texte: "Celle-là… je ne connais pas son nom hongrois. On demandera à Mamie !" }])));
+      return true;
+    }
+    return false;
+  }
+  // emmener un canard, une grenouille, un papillon ou une libellule sur une de ses îles
+  function emmenerAnimal(depuis) {
+    const mesIles = iles().filter((i) => !i.secrete && !i.supprime);
+    if (!mesIles.length) return H.toast("Crée d’abord une île à toi.");
+    let fermer;
+    const type = H.el("select", null, Object.entries(NOMS_ANIMAUX).map(([id, nom]) => H.el("option", { value: id }, nom.replace(/^(le |la |l’)/, ""))));
+    const vers = H.el("select", null, mesIles.map((i) => H.el("option", { value: i.id }, i.nom)));
+    const corps = H.el("div", null,
+      H.el("h2", null, "Emmener un animal"),
+      H.el("p.discret", null, "Les canards et les grenouilles vont près de l’eau (s’il y a une mare sur l’île), les papillons et les libellules volettent partout."),
+      H.el("label", null, "Quel animal ? ", type),
+      H.el("p", null, H.el("label", null, "Sur quelle île ? ", vers)),
+      H.el("div.boutons-bas", null, H.el("button.bouton", {
+        type: "button",
+        onclick() {
+          const cible = (H.jeu.iles || {})[vers.value];
+          if (!cible) return;
+          const eau = Object.entries(cible.cases || {}).filter(([, c]) => c.t === "eau").map(([k2]) => k2.split(",").map(Number));
+          const pres = (type.value === "canard" || type.value === "grenouille") && eau.length;
+          const [x, y] = pres ? eau[Math.floor(Math.random() * eau.length)] : [Math.floor(Math.random() * cible.cols), Math.floor(Math.random() * cible.lignes)];
+          cible.animaux = (cible.animaux || []).concat([{ id: H.uid("animal"), type: type.value, x: x + 0.5, y: y + 0.5, graine: Math.floor(Math.random() * 1000) }]);
+          sauver(cible);
+          fermer();
+          H.toast(NOMS_ANIMAUX[type.value].replace(/^./, (c2) => c2.toUpperCase()) + " part vivre sur « " + cible.nom + " » !");
+        },
+      }, "Emmener")));
+    fermer = H.fenetre(corps);
+  }
+  function finirTourHongrois() {
+    vue.hongrois = false;
+    vue.mesiSuit = null;
+    dessinerOutils && dessinerOutils();
+    H.dialogue.dire([{ qui: "luigi", texte: "Köszönöm, ƟvƟ ! Merci pour la balade. Szia !" }]);
+    if (vue.boutonHongrois) vue.boutonHongrois.hidden = true;
   }
 
   // ƟvƟ va se placer juste sous la case, puis agit ; les clics suivants attendent leur tour.
@@ -1288,19 +1398,14 @@
     for (;;) {
       if (!p) {
         const choix = plantes.map((q) => ({ valeur: q.id, libelle: q.nom }));
-        if (hongrois) choix.unshift({ valeur: "_hu", libelle: "Les noms en hongrois !" }, { valeur: "_hu_tout", libelle: "Toute l’herbothèque en hongrois" });
+        if (hongrois) choix.unshift({ valeur: "_hu", libelle: "Comment on dit en hongrois ?" });
         const id = await L(intro, choix.concat([{ valeur: null, libelle: "Rien, merci Mesi" }]));
         if (!id) break;
-        if (id === "_hu" || id === "_hu_tout") {
-          // les plantes (de l'île, ou de toute l'herbothèque), puis les animaux, six par bulle
-          const liste = (id === "_hu" ? plantes : H.d.plantes()).map((q) => [q.nom, H.hongrois.plante(q)]).filter(([, hu]) => hu);
-          const lignes = liste.map(([fr, hu]) => fr + " : " + hu).concat(id === "_hu" ? H.hongrois.ANIMAUX.map(([fr, hu]) => fr.charAt(0).toUpperCase() + fr.slice(1) + " : " + hu) : []);
-          const bulles = [{ qui: "luigi", texte: id === "_hu" ? "Szia ! Les plantes et les bêtes de l’île, en hongrois :" : "Toute l’herbothèque en hongrois, accroche-toi :" }];
-          for (let i = 0; i < lignes.length; i += 6) bulles.push({ qui: "luigi", texte: lignes.slice(i, i + 6).join("\n") });
-          bulles.push({ qui: "luigi", texte: "Egészségedre ! (À tes souhaits, et à ta santé.)" });
-          await H.dialogue.dire(bulles);
-          intro = "Autre chose ?";
-          continue;
+        if (id === "_hu") {
+          await L("Viens, on fait un tour ensemble pour en parler ! Montre-moi du doigt une plante ou une bête, et je te dis son nom en hongrois.");
+          vue.hongrois = true;
+          if (vue.boutonHongrois) vue.boutonHongrois.hidden = false;
+          return;
         }
         p = H.d.plante(id);
       }
@@ -1521,10 +1626,13 @@
         }
         bouge = true;
       } else vue.gouttes = [];
-      if (vue.ile.secrete) bouge = true;
+      if (vue.ile.secrete || (vue.ile.animaux && vue.ile.animaux.length)) bouge = true;
+      // la lumière du ciel (aube, couchant, nuit) suit l'heure, comme à la ferme
+      if (t - (vue.dernierDessin || 0) > 2000) bouge = true;
       if (bouge || !vue.dessineUneFois) {
         dessiner();
         vue.dessineUneFois = true;
+        vue.dernierDessin = t;
       }
       vue.anim = requestAnimationFrame(pas);
     };

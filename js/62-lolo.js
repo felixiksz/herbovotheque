@@ -188,13 +188,14 @@
   }
 
   // Lóló ne vient qu'une fois son île découverte (c'est la surprise du 24 février).
-  const disponible = () => !!(H.terrain && H.terrain.ileSecreteOuverte() && (H.jeu.vu.ileSecrete || H.local.apercuIleSecrete));
+  // Lóló et Mémé sont là dès le début ; seule leur île apparaît le 24 février.
+  const disponible = () => true;
 
   H.lolo = { parler, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();
 
 // Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,
-// les surprises du 24 février (l'île de Lóló et Mémé, Lóló à la ferme et sur le terrain).
+// la surprise du 24 février : l'île de Lóló et Mémé.
 (function () {
   const H = window.H;
   H.vues.surprises = {
@@ -203,7 +204,7 @@
       c.appendChild(H.el("section.reglage", null,
         H.el("h2", null, "Les surprises du 24 février"),
         H.el("p", null, actif
-          ? "L’aperçu est activé sur cet appareil : l’île de Lóló et Mémé, Lóló qui arrive à la ferme, « Appeler Lóló » sur le terrain, ses histoires et la balade avec elles."
+          ? "L’aperçu est activé sur cet appareil : l’île de Lóló et Mémé est visible dans l’archipel."
           : "Sur cet appareil, tout reste caché jusqu’au 24 février."),
         H.el("div.pastilles", null,
           H.el("button.bouton" + (actif ? "" : ".actif"), {

@@ -399,7 +399,7 @@
             });
           },
         }),
-        " Voir dès maintenant les surprises du 24 février sur cet appareil : l’île de Lóló et Mémé, Lóló qui arrive à la ferme, leurs histoires et la balade avec elles."),
+        " Voir dès maintenant l’île de Lóló et Mémé sur cet appareil (la surprise du 24 février)."),
       H.el("h3", null, "Les accès"),
       H.el("p.discret", null, "Chaque personne reçoit son propre jeton à accès fin (sur github.com : Settings, Developer settings, Fine-grained tokens, limité au dépôt herbovotheque, « Contents » en lecture et écriture). Ajoute-le ici avec son rôle avant de le donner. Seule son empreinte est gardée, chiffrée."),
       liste,

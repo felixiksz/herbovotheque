@@ -297,6 +297,9 @@
   function sansMeme(g, avecChat) {
     for (let y = 0; y <= 13; y++) for (let x = y === 13 ? 13 : 14; x < g[y].length; x++) g[y][x] = ".";
     for (let y = 14; y <= 18; y++) for (let x = 13; x <= 15; x++) if ("ktT".includes(g[y][x])) g[y][x] = "n";
+    // la croupe : une seule ligne de dos, sans bosse
+    for (let x = 10; x <= 13; x++) g[12][x] = ".";
+    for (let x = 10; x <= 12; x++) g[13][x] = "k";
     for (const [y, x0, l] of ENCOLURE) l.split("").forEach((c, i) => c !== "." && (g[y][x0 + i] = c));
     if (avecChat !== false) MEME_DEBOUT.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x + 4, y + 2, c)));
     return g;

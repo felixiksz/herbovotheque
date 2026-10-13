@@ -10,10 +10,10 @@
   const SECTIONS = [
     { cle: "complimentsMesi", nom: "Les compliments de Mesi pour ƟvƟ", type: "liste", qui: "luigi", defaut: () => H.histoires.DEFAUTS.complimentsMesi, aide: "Un compliment par ligne." },
     { cle: "histoiresMesi", nom: "Les douceurs de Mesi", type: "histoires", qui: "luigi", defaut: () => H.histoires.DEFAUTS.histoiresMesi },
-    { cle: "histoiresLolo", nom: "Les drames de Lóló", type: "histoires", qui: "lolo", surprise: true, defaut: () => H.histoires.DEFAUTS.histoiresLolo },
-    { cle: "complimentsLolo", nom: "Les compliments d’ƟvƟ pour Lóló", type: "liste", qui: "ovo", surprise: true, defaut: () => H.lolo.DEFAUTS.complimentsLolo, aide: "Un compliment par ligne. Trois compliments en 24 heures, et Lóló fait pleuvoir sur les jardins." },
-    { cle: "astucesLolo", nom: "Les astuces de Lóló", type: "liste", qui: "lolo", surprise: true, defaut: () => H.lolo.DEFAUTS.astucesLolo, aide: "Une astuce par ligne." },
-    { cle: "memeLolo", nom: "Ce que fait Mémé", type: "liste", qui: "meme", surprise: true, defaut: () => H.lolo.DEFAUTS.memeLolo, aide: "Une réplique par ligne." },
+    { cle: "histoiresLolo", nom: "Les drames de Lóló", type: "histoires", qui: "lolo", defaut: () => H.histoires.DEFAUTS.histoiresLolo },
+    { cle: "complimentsLolo", nom: "Les compliments d’ƟvƟ pour Lóló", type: "liste", qui: "ovo", defaut: () => H.lolo.DEFAUTS.complimentsLolo, aide: "Un compliment par ligne. Trois compliments en 24 heures, et Lóló fait pleuvoir sur les jardins." },
+    { cle: "astucesLolo", nom: "Les astuces de Lóló", type: "liste", qui: "lolo", defaut: () => H.lolo.DEFAUTS.astucesLolo, aide: "Une astuce par ligne." },
+    { cle: "memeLolo", nom: "Ce que fait Mémé", type: "liste", qui: "meme", defaut: () => H.lolo.DEFAUTS.memeLolo, aide: "Une réplique par ligne." },
   ];
 
   const entree = (cle) => ((H.jeu && H.jeu.textes) || {})[cle];
