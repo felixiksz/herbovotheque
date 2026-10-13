@@ -306,8 +306,9 @@
   function miniature(ile) {
     const W = 220, Hh = 130, c = H.aqua.toile(W * 2, Hh * 2), ctx = c.getContext("2d"), r = H.alea(ile.id);
     ctx.scale(2, 2);
-    H.aqua.tache(ctx, r, W / 2, Hh / 2, W * 0.5, Hh * 0.5, "#79b5d3", { alpha: 0.05, couches: 12 });
-    const k = Math.min((W - 50) / ile.cols, (Hh - 40) / ile.lignes);
+    // la mer reste à l'intérieur du dessin : pas de bord coupé net
+    H.aqua.tache(ctx, r, W / 2, Hh / 2, W * 0.4, Hh * 0.38, "#79b5d3", { alpha: 0.05, couches: 12 });
+    const k = Math.min((W - 84) / ile.cols, (Hh - 52) / ile.lignes);
     const w = ile.cols * k, h = ile.lignes * k, x0 = (W - w) / 2, y0 = (Hh - h) / 2;
     H.aqua.lavis(ctx, r, H.aqua.rectArrondi(x0 - 5, y0 - 5, w + 10, h + 10, 12), "#e7d3a2", { alpha: 0.12, couches: 10, bord: 0.2 });
     H.aqua.lavis(ctx, r, H.aqua.rectArrondi(x0, y0, w, h, 8), TEINTES_SAISON[document.documentElement.dataset.saison] || "#9cc77a", { alpha: 0.13, couches: 10, bord: 0.2 });

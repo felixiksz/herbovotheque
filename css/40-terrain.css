@@ -12,16 +12,20 @@
   flex-direction: column;
   gap: 2px;
   text-decoration: none;
-  border: 1px solid var(--filet);
-  border-radius: 8px;
-  padding: 8px 10px 10px;
-  background: color-mix(in srgb, var(--papier) 70%, transparent);
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 6px;
+  background: none;
+  box-shadow: none;
+  color: inherit;
 }
 .carte-ile img { width: 100%; height: auto; display: block; }
 .carte-ile .nom-ile { font-family: var(--titre); font-size: 1.35rem; line-height: 1.5; }
 .carte-ile .discret { font-family: var(--terrain); font-size: 0.72rem; }
-a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outline: 2px solid var(--fluo); }
+a.carte-ile:hover .nom-ile, a.carte-ile:focus-visible .nom-ile { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px; }
 .carte-ile.brume { opacity: 0.85; }
+:root[data-theme="nuit"] .carte-ile { box-shadow: none; }
 .brume-dessin {
   display: block;
   aspect-ratio: 22 / 13;
