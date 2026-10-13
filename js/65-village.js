@@ -41,8 +41,8 @@
     g.addColorStop(1, t.bas);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h * 0.3);
-    // collines au loin
-    for (let i = 0; i < 4; i++) H.aqua.tache(ctx, r, w * (0.15 + i * 0.25), h * 0.3, w * 0.22, h * 0.09, "#8aa86a", { alpha: 0.06, couches: 10 });
+    // les calanques à l'horizon
+    H.aqua.calanques(ctx, r, w, h * 0.255, h * (portrait ? 0.09 : 0.15), document.documentElement.dataset.theme === "nuit");
     // prairie
     ctx.fillStyle = herbe;
     ctx.fillRect(0, h * 0.27, w, h);
@@ -182,7 +182,8 @@
       const galope = scene.loloX < cible;
       if (galope) scene.loloX = Math.min(cible, scene.loloX + 4);
       const image = galope ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
-      H.pixel.dessiner(ctx, "lolo", scene.loloX, (portrait ? py - 60 : py - 10) - (galope && image ? 3 : 0), 2, image);
+      scene.loloY = portrait ? py - 60 : py - 10;
+      H.pixel.dessiner(ctx, "lolo", scene.loloX, scene.loloY - (galope && image ? 3 : 0), 2, image);
     }
     const o = scene.ovo;
     const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;
@@ -317,7 +318,8 @@
       boite.appendChild(toile);
       c.appendChild(boite);
       const liens = H.el("nav.liens-village", { "aria-label": "Lieux du village" },
-        Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom))
+        Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom)),
+        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => !H.$(".dialogue") && H.lolo.parler(null) }, "Parler à Lóló") : null
       );
       c.appendChild(liens);
       c.appendChild(nouvelles());
@@ -326,6 +328,15 @@
       dessiner();
       boucle();
       toile.addEventListener("click", (e) => {
+        // toucher Lóló (une fois son île découverte) : elle raconte des astuces et les plantes du moment
+        if (scene.loloX != null && H.lolo && H.lolo.disponible()) {
+          const r = toile.getBoundingClientRect();
+          const x = e.clientX - r.left, y = e.clientY - r.top;
+          if (Math.abs(x - scene.loloX) < 45 && y > scene.loloY - 70 && y < scene.loloY + 10) {
+            if (!H.$(".dialogue")) H.lolo.parler(null);
+            return;
+          }
+        }
         const id = lieuSous(e);
         if (id) aller(id);
       });

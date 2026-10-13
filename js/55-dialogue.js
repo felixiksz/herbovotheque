@@ -71,8 +71,9 @@
     const enregistre = (H.jeu && H.jeu.cri) || (H.base && H.base.cri);
     if (enregistre) {
       const a = new Audio(enregistre);
+      a.volume = 0.45;
       a.play().catch(() => {});
-    } else if (H.sons) H.sons.jouer("miaou", 0.9);
+    } else if (H.sons) H.sons.jouer("miaou", 0.4);
   };
 
   let boite = null;

@@ -461,7 +461,8 @@
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterImage(ile) }, "Exporter le croquis (image)"),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
-      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerLuigi(true) }, "Miauler pour appeler Luigi") : null,
+      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerLuigi(true) }, "Appeler Luigi") : null,
+      H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
       H.el("span.zoom", null,
         H.el("button.bouton.petit", { type: "button", "aria-label": "Dézoomer", onclick: () => zoomer(-1) }, "−"),
         H.el("button.bouton.petit", { type: "button", "aria-label": "Zoomer", onclick: () => zoomer(1) }, "+")
@@ -733,6 +734,11 @@
       const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;
       H.pixel.dessiner(ctx, "ovo", (o.x + 0.5) * T, (o.y + 0.9) * T - (marche ? 1 : 0), 1.5, marche);
     }
+    if (vue.loloVisite) {
+      const l = vue.loloVisite;
+      const image = l.cible ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
+      H.pixel.dessiner(ctx, "lolo", (l.x + 0.5) * T, (l.y + 0.9) * T - (l.cible && image ? 2 : 0), 2, image);
+    }
     if (vue.luigi) {
       const l = vue.luigi;
       const marche = l.cible ? Math.floor(performance.now() / 170) % 2 : 0;
@@ -822,6 +828,24 @@
         }
       }
     }
+    // les calanques à l'horizon, en pixels : un plan lointain bleuté, un plan calcaire plus clair
+    const nuitCiel = s.soleil.alt < -4;
+    for (const [graine, base, haut, couleur] of [
+      [11, 70, 20, nuitCiel ? "#3a3d62" : "#a9b6c9"],
+      [23, 72, 28, nuitCiel ? "#555470" : "#e4dccb"],
+    ]) {
+      const rc = H.alea(graine);
+      ctx.fillStyle = couleur;
+      let y = base - haut * 0.5;
+      for (let x = 0; x < w; x += 2) {
+        const saut = rc();
+        if (saut < 0.02) y = base - haut * (0.8 + rc() * 0.2);
+        else if (saut < 0.04) y = base - haut * (0.2 + rc() * 0.2);
+        else y += (rc() - 0.5) * 3;
+        y = Math.max(base - haut, Math.min(base - 4, y));
+        ctx.fillRect(x, Math.round(y / 2) * 2, 2, 70 - Math.round(y / 2) * 2);
+      }
+    }
     const m = s.meteo;
     if (m && (m.type === "nuages" || m.type === "pluie" || m.type === "orage" || m.type === "voile")) {
       const n = m.type === "voile" ? 2 : 5;
@@ -857,13 +881,7 @@
     if (!c) return;
     // Lóló et Mémé
     if (vue.ile.secrete && Math.abs(c.x + 0.5 - vue.ile.cols / 2) < 2.5 && c.y - vue.ile.lignes / 2 > -3 && c.y - vue.ile.lignes / 2 < 1) {
-      const repliques = [
-        [{ qui: "meme", texte: "Rrrrrr… rrrrr…" }],
-        [{ qui: "lolo", texte: "Chut, Mémé fait la sieste. Elle ne me lâche jamais le cou !" }],
-        [{ qui: "lolo", texte: "Tu veux une carotte ? Moi je veux bien une carotte." }],
-        [{ qui: "meme", texte: "(Mémé s’étire, toujours les yeux fermés, et se rendort aussitôt.)" }],
-      ];
-      H.dialogue.dire(repliques[Math.floor(Math.random() * repliques.length)]);
+      if (!H.$(".dialogue")) H.lolo.parler(vue.ile);
       return;
     }
     marcherVers(c.x, c.y, () => agir(c.x, c.y));
@@ -1178,6 +1196,29 @@
     appelerLuigi(false, p);
   }
 
+  // Lóló arrive au galop (Mémé sur le dos), raconte, puis repart.
+  function appelerLolo() {
+    if (vue.ile.secrete) {
+      if (!H.$(".dialogue")) H.lolo.parler(vue.ile);
+      return;
+    }
+    if (vue.loloVisite) return;
+    H.sons.jouer("galop", 0.6);
+    const fin = () => H.lolo.parler(vue.ile).then(() => {
+      if (!vue || !vue.loloVisite) return;
+      vue.loloVisite.cible = { x: vue.ile.cols + 4, partir: true };
+      H.sons.jouer("galop", 0.4);
+      if (document.visibilityState === "hidden") vue.loloVisite = null;
+    });
+    vue.loloVisite = { x: -4, y: Math.max(1, vue.ovo.y - 1), cible: { x: Math.max(1, vue.ovo.x - 2) }, ensuite: fin };
+    if (document.visibilityState === "hidden") {
+      vue.loloVisite.x = vue.loloVisite.cible.x;
+      vue.loloVisite.cible = null;
+      vue.loloVisite.ensuite = null;
+      fin();
+    }
+  }
+
   function partirLuigi() {
     if (vue && vue.luigi) vue.luigi.cible = { x: -2, y: vue.luigi.y, partir: true };
     if (vue && document.visibilityState === "hidden") vue.luigi = null;
@@ -1204,7 +1245,7 @@
       if (H.$(".dialogue")) return;
       const astuce = plante && astuceMTC(plante);
       H.d.majLocal((l) => (l.derniereVisiteLuigi = H.maintenant()));
-      H.sons.jouer("attention", 0.8);
+      H.sons.jouer("attention", 0.4);
       H.dialogue.dire([{
         qui: "luigi",
         nom: "Luigi, au loin",
@@ -1275,6 +1316,22 @@
         bouge = true;
       }
       if (vue.coeurs && vue.coeurs > t) bouge = true;
+      const lv = vue.loloVisite;
+      if (lv && lv.cible) {
+        const d = lv.cible.x - lv.x, v = 8 * dt;
+        if (Math.abs(d) <= v) {
+          lv.x = lv.cible.x;
+          const partir = lv.cible.partir;
+          lv.cible = null;
+          if (partir) vue.loloVisite = null;
+          else if (lv.ensuite) {
+            const f = lv.ensuite;
+            lv.ensuite = null;
+            f();
+          }
+        } else lv.x += Math.sign(d) * v;
+        bouge = true;
+      }
       // pluie ou neige d'après la vraie météo
       const m = H.ciel.meteo || {};
       const tombe = m.type === "pluie" || m.type === "orage" || m.type === "neige";

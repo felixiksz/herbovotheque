@@ -250,5 +250,55 @@
     return TEINTES_PLANTES[H.hash(p.id) % TEINTES_PLANTES.length];
   }
 
-  H.aqua = { toile, tache, lavis, trait, polygone, deformer, rectArrondi, grain, papier, planche, bocal, teintePlante, FORMES, TEINTES_PLANTES };
+  // Ligne de crête découpée, comme les calanques vues de loin : des pics, des à-pics, des replats.
+  function crete(r, w, yBase, hauteur, pas) {
+    // quelques sommets, puis on subdivise chaque segment en déplaçant son milieu (relief naturel)
+    const n = Math.max(3, Math.round(w / (pas * 2.2)));
+    let pts = [];
+    for (let i = 0; i <= n; i++) {
+      const creux = r() < 0.25; // une crique entre deux massifs
+      pts.push([(i / n) * (w + 40) - 20, yBase - hauteur * (creux ? 0.15 + r() * 0.2 : 0.45 + r() * 0.55)]);
+    }
+    for (let niveau = 0; niveau < 6; niveau++) {
+      const suivants = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+        const d = x1 - x0;
+        // le calcaire casse net : déplacements forts, parfois des à-pics
+        const ym = (y0 + y1) / 2 + (r() - 0.5) * d * (niveau < 2 ? 0.55 : 0.45);
+        suivants.push([x0, y0], [x0 + d * (0.35 + r() * 0.3), ym]);
+      }
+      suivants.push(pts[pts.length - 1]);
+      pts = suivants.map(([x, y]) => [x, Math.max(yBase - hauteur, Math.min(yBase - 2, y))]);
+    }
+    return pts;
+  }
+
+  // Les calanques à l'horizon : un plan lointain bleuté, un plan plus proche de calcaire clair,
+  // avec des fissures et quelques pins d'Alep au pied.
+  function calanques(ctx, r, w, yBase, hauteur, nuit) {
+    const loin = crete(r, w, yBase, hauteur * 0.75, w / 14);
+    H.aqua.lavis(ctx, r, loin.concat([[w + 20, yBase + 4], [-20, yBase + 4]]), nuit ? "#4a4f74" : "#a9b6c9", { alpha: 0.14, couches: 10, bord: 0.03 });
+    const pres = crete(r, w, yBase + hauteur * 0.08, hauteur, w / 10);
+    H.aqua.lavis(ctx, r, pres.concat([[w + 20, yBase + hauteur * 0.12], [-20, yBase + hauteur * 0.12]]), nuit ? "#6b6a86" : "#e9e1cf", { alpha: 0.22, couches: 12, bord: 0.03 });
+    // ombre des falaises et fissures verticales
+    for (let i = 1; i < pres.length; i++) {
+      const [x0, y0] = pres[i - 1], [x1, y1] = pres[i];
+      // une pente très raide orientée vers la droite reste à l'ombre (lumière venant de l'est)
+      if (y1 - y0 > (x1 - x0) * 1.3 && y1 - y0 > hauteur * 0.08) {
+        H.aqua.lavis(ctx, r, [[x0, y0], [x1, y1], [x1 + 2, yBase + hauteur * 0.1], [x0, yBase + hauteur * 0.1]], nuit ? "#3a3a58" : "#c4b8a2", { alpha: 0.1, couches: 4 });
+      }
+      if (r() < 0.035) {
+        const xc = x0 + (x1 - x0) * r();
+        H.aqua.trait(ctx, r, [[xc, Math.max(y0, y1) + 4], [xc + (r() - 0.5) * 4, yBase + hauteur * 0.05]], { couleur: nuit ? "#2a2a40" : "#a89c86", epaisseur: 0.8, alpha: 0.35 });
+      }
+    }
+    // pins d'Alep en bas des falaises
+    for (let i = 0; i < Math.round(w / 40); i++) {
+      const x = r() * w, y = yBase + hauteur * (0.02 + r() * 0.1);
+      H.aqua.tache(ctx, r, x, y, 5 + r() * 6, 3 + r() * 3, nuit ? "#2e3e3a" : "#5f7a4a", { alpha: 0.18, couches: 5 });
+    }
+  }
+
+  H.aqua = { calanques, crete, toile, tache, lavis, trait, polygone, deformer, rectArrondi, grain, papier, planche, bocal, teintePlante, FORMES, TEINTES_PLANTES };
 })();
