@@ -107,28 +107,101 @@
     }
     const loin = H.aqua.toile(w * 2, h);
     H.aqua.calanques(loin.getContext("2d"), H.alea("balade"), w * 2, h * 0.52, h * 0.22, nuitTheme);
-    const pin = H.aqua.toile(120, 160);
-    const pc = pin.getContext("2d"), r = H.alea("pin");
-    H.aqua.trait(pc, r, [[60, 160], [62, 70]], { couleur: "#5a3a22", epaisseur: 5 });
-    H.aqua.tache(pc, r, 60, 58, 48, 26, nuitTheme ? "#2a3b34" : "#4f6b3a", { alpha: 0.18, couches: 12 });
-    H.aqua.tache(pc, r, 40, 70, 26, 16, nuitTheme ? "#253530" : "#5f7a4a", { alpha: 0.16, couches: 8 });
+    // des pins aux troncs sinueux, comme dans les calanques, de plusieurs tailles :
+    // les plus grands sortent du cadre
+    const feuilles = nuitTheme ? ["#2a3b34", "#33463a", "#24332c"] : ["#7a9a4a", "#5f8a3a", "#8fb35a"];
+    const ecorce = nuitTheme ? "#3a3530" : "#6b5a4a";
+    function pinSinueux(lw, lh, graine) {
+      const c = H.aqua.toile(lw, lh), x = c.getContext("2d"), rr = H.alea(graine);
+      const base = lw * (0.4 + rr() * 0.2), penche = (rr() - 0.5) * lw * 0.45, phase = rr() * 6;
+      const tronc = [];
+      for (let i = 0; i <= 10; i++) {
+        const u = i / 10;
+        tronc.push([base + penche * u + Math.sin(u * 5 + phase) * lw * 0.08, lh - u * lh * 0.74]);
+      }
+      const ep = Math.max(2.2, lw * 0.035);
+      H.aqua.trait(x, rr, tronc, { couleur: ecorce, epaisseur: ep });
+      H.aqua.trait(x, rr, tronc.map(([a, b]) => [a - ep * 0.25, b]), { couleur: nuitTheme ? "#5a544c" : "#c4b8a6", epaisseur: ep * 0.3, alpha: 0.6 });
+      const bouts = [tronc[10]];
+      for (let k = 0; k < 4; k++) {
+        const [ax, ay] = tronc[Math.min(10, 4 + k + Math.floor(rr() * 2))];
+        const sens = k % 2 ? 1 : -1;
+        const pts = [[ax, ay]];
+        let bx = ax, by = ay;
+        for (let j = 1; j <= 4; j++) {
+          bx += sens * lw * (0.05 + rr() * 0.05);
+          by -= lh * (0.015 + rr() * 0.035);
+          pts.push([bx, by + Math.sin(j * 1.7 + phase) * 3]);
+        }
+        H.aqua.trait(x, rr, pts, { couleur: ecorce, epaisseur: ep * 0.45 });
+        bouts.push(pts[pts.length - 1]);
+      }
+      // le feuillage léger, en petits nuages plats au bout des branches
+      for (const [bx, by] of bouts) {
+        for (let j = 0; j < 5; j++) H.aqua.tache(x, rr, bx + (rr() - 0.5) * lw * 0.24, by + (rr() - 0.5) * lw * 0.07, lw * (0.09 + rr() * 0.08), lw * (0.045 + rr() * 0.03), feuilles[j % 3], { alpha: 0.24, couches: 7 });
+      }
+      return c;
+    }
+    const pins = [pinSinueux(110, 150, "pin-a"), pinSinueux(150, 210, "pin-b"), pinSinueux(210, 300, "pin-c"), pinSinueux(300, Math.round(h * 1.25), "pin-d"), pinSinueux(260, Math.round(h * 1.1), "pin-e")];
+    const ra = H.alea("arbres-balade");
+    const arbres = [], devant = [];
+    for (let D = 0; D < CYCLE; D += 150 + ra() * 230) arbres.push([D, ra() < 0.18 ? 3 : Math.floor(ra() * 3)]);
+    for (let D = 300; D < CYCLE; D += 1000 + ra() * 900) devant.push([D, 3 + Math.floor(ra() * 2)]);
+    // une haie de garrigue au bord du chemin : lentisques, romarins, cistes, herbes sèches
+    function haie(graine, hauteur) {
+      const c = H.aqua.toile(w * 2, hauteur), x = c.getContext("2d"), rr = H.alea(graine);
+      for (let i = 0; i < (w * 2) / 9; i++) {
+        const bx = rr() * w * 2, t = 8 + rr() * 16, sorte = Math.floor(rr() * 4), y = hauteur - 2;
+        if (sorte === 0) H.aqua.tache(x, rr, bx, y - t * 0.4, t * 0.9, t * 0.55, nuitTheme ? "#25352c" : "#466a3e", { alpha: 0.28, couches: 6 });
+        else if (sorte === 1) for (let j = 0; j < 5; j++) H.aqua.trait(x, rr, [[bx + j * 2, y], [bx + (j - 2) * 3, y - t * (0.8 + rr() * 0.5)]], { couleur: nuitTheme ? "#3a4a44" : "#6f8a78", epaisseur: 1.4, alpha: 0.7 });
+        else if (sorte === 2) {
+          H.aqua.tache(x, rr, bx, y - t * 0.35, t * 0.7, t * 0.4, nuitTheme ? "#2f4034" : "#7a9a5a", { alpha: 0.26, couches: 6 });
+          if (!nuitTheme) H.aqua.tache(x, rr, bx + (rr() - 0.5) * t, y - t * 0.5, 2.4, 2.2, rr() < 0.5 ? "#f3b4cf" : "#ffffff", { alpha: 0.7, couches: 3 });
+        } else for (let j = 0; j < 3; j++) H.aqua.trait(x, rr, [[bx + j * 2, y], [bx + j * 2 + (j - 1) * 3, y - t * 0.7]], { couleur: nuitTheme ? "#4a4a36" : "#b0a060", epaisseur: 1, alpha: 0.7 });
+      }
+      return c;
+    }
+    const haieFond = haie("haie-fond", 46), haieDevant = haie("haie-devant", 40);
     const etoiles = Array.from({ length: 60 }, (_, i) => [(i * 137.5) % w, (i * 53.3) % (h * 0.45), (i % 3) * 0.3 + 0.4]);
     // la terre rouge : des rochers rouges sur le rivage, et une grande falaise rouge au loin
-    const rochers = [0, 1, 2].map((i) => {
-      const c = H.aqua.toile(170, 120), x = c.getContext("2d"), rr = H.alea("rocher-rouge" + i);
+    // 0 à 2 : rochers rouges ; 3 à 5 : rochers calcaires blancs ; tous couverts d'un peu de garrigue
+    const rochers = [0, 1, 2, 3, 4, 5].map((i) => {
+      const rougeRoche = i < 3, forme = i % 3;
+      const teintes = rougeRoche
+        ? [nuitTheme ? "#6e3a2c" : "#b9492a", nuitTheme ? "#4a261e" : "#8a3018", "#6e2412"]
+        : [nuitTheme ? "#77787f" : "#ebe7dc", nuitTheme ? "#55565e" : "#c4bdac", "#8f8776"];
+      const c = H.aqua.toile(170, 150), x = c.getContext("2d"), rr = H.alea("rocher" + i);
       const n = 9, pts = [];
       for (let j = 0; j <= n; j++) {
         const u = j / n;
-        pts.push([10 + u * 150, 116 - (Math.pow(Math.sin(u * Math.PI), 0.7) * (46 + i * 22) + rr() * 16)]);
+        pts.push([10 + u * 150, 146 - (Math.pow(Math.sin(u * Math.PI), 0.7) * (46 + forme * 22) + rr() * 16)]);
       }
-      const contour = pts.concat([[160, 118], [10, 118]]);
-      H.aqua.lavis(x, rr, contour, nuitTheme ? "#6e3a2c" : "#b9492a", { alpha: 0.42, couches: 12, bord: 0.04 });
-      H.aqua.lavis(x, rr, contour.map(([a, b]) => [a + 14, b + 10]), nuitTheme ? "#4a261e" : "#8a3018", { alpha: 0.18, couches: 6, bord: 0.04 });
-      for (let k = 0; k < 5; k++) {
-        const y = 108 - k * 13 - rr() * 5;
-        H.aqua.trait(x, rr, [[24 + rr() * 22, y], [80, y - 3 + rr() * 6], [140 - rr() * 22, y + 2]], { couleur: "#6e2412", epaisseur: 0.8, alpha: 0.45 });
+      const contour = pts.concat([[160, 148], [10, 148]]);
+      H.aqua.lavis(x, rr, contour, teintes[0], { alpha: 0.5, couches: 12, bord: 0.04 });
+      // l'ombre et les strates restent à l'intérieur du rocher
+      x.save();
+      x.beginPath();
+      contour.forEach(([a, b], k) => (k ? x.lineTo(a, b) : x.moveTo(a, b)));
+      x.closePath();
+      x.clip();
+      H.aqua.lavis(x, rr, contour.map(([a, b]) => [a + 16, b + 12]), teintes[1], { alpha: 0.22, couches: 6, bord: 0.04 });
+      for (let k = 0; k < 6; k++) {
+        const y = 140 - k * 12 - rr() * 5;
+        H.aqua.trait(x, rr, [[0, y], [80, y - 3 + rr() * 6], [170, y + 2]], { couleur: teintes[2], epaisseur: 0.8, alpha: 0.4 });
       }
+      x.restore();
       H.aqua.trait(x, rr, pts, { epaisseur: 1.3 });
+      // de la garrigue qui pousse sur le rocher
+      for (let j = 1; j < n; j++) {
+        if (rr() < 0.35) continue;
+        const [a, b] = pts[j];
+        H.aqua.tache(x, rr, a, b - 3, 9 + rr() * 9, 4 + rr() * 3, feuilles[j % 3], { alpha: 0.32, couches: 6 });
+      }
+      if (forme === 1) {
+        const mini = pinSinueux(60, 80, "mini-pin" + i);
+        const [a, b] = pts[5];
+        x.drawImage(mini, a - 30, b - 76);
+      }
       return c;
     });
     const falaise = H.aqua.toile(560, Math.round(h * 0.42));
@@ -137,10 +210,16 @@
       const pts = [[0, fh], [30, fh * 0.6], [120, fh * 0.42], [230, fh * 0.2], [330, fh * 0.06], [420, fh * 0.04], [470, fh * 0.3], [530, fh * 0.7], [560, fh]];
       H.aqua.lavis(fx, rf, pts, nuitTheme ? "#5e3a34" : "#c0583a", { alpha: 0.3, couches: 12, bord: 0.05 });
       H.aqua.lavis(fx, rf, [[200, fh * 0.24], [330, fh * 0.08], [420, fh * 0.06], [440, fh * 0.14], [300, fh * 0.2]], nuitTheme ? "#2e3b30" : "#6b8a4a", { alpha: 0.22, couches: 6 });
-      for (let k = 0; k < 7; k++) H.aqua.trait(fx, rf, [[60 + k * 20, fh * (0.95 - k * 0.1)], [480 - k * 10, fh * (0.9 - k * 0.11)]], { couleur: "#8a3a22", epaisseur: 0.8, alpha: 0.35 });
+      fx.save();
+      fx.beginPath();
+      pts.forEach(([a, b], k) => (k ? fx.lineTo(a, b) : fx.moveTo(a, b)));
+      fx.closePath();
+      fx.clip();
+      for (let k = 0; k < 7; k++) H.aqua.trait(fx, rf, [[0, fh * (0.95 - k * 0.1)], [560, fh * (0.9 - k * 0.11)]], { couleur: "#8a3a22", epaisseur: 0.8, alpha: 0.35 });
+      fx.restore();
       H.aqua.trait(fx, rf, pts.slice(1, -1), { epaisseur: 1.2, alpha: 0.7 });
     }
-    return { ctx, dpr, w, h, loin, pin, etoiles, rochers, falaise, couvert, nuages, decalage: 0, compagnon, derniere: performance.now() };
+    return { ctx, dpr, w, h, loin, pins, arbres, devant, haieFond, haieDevant, etoiles, rochers, falaise, couvert, nuages, decalage: 0, compagnon, derniere: performance.now() };
   }
 
   // Le chemin passe par la terre rouge : rochers rouges et petite crique où l'on peut se baigner.
@@ -241,14 +320,18 @@
       ctx.fillStyle = alt < -4 ? "#5a4f3e" : rg > 0.5 ? (i % 3 ? "#9a4a2a" : "#e8dccb") : "#c4ad82";
       ctx.fillRect(x, h * 0.76 + (i % 6) * 8, 4 + (i % 3) * 2, 3);
     }
-    // les rochers rouges sur le rivage
-    poses([[820, 0, 1], [1120, 2, 0.8], [1460, 1, 1.15], [1900, 0, 0.9], [2280, 2, 1.1], [2700, 1, 0.85]], b, 0.9, (x, n, e) => {
-      ctx.drawImage(b.s.rochers[n], x - 85 * e, h * 0.745 - 120 * e, 170 * e, 120 * e);
+    // les rochers sur le rivage : rouges en terre rouge, calcaire blanc ailleurs
+    poses([[150, 4, 0.9], [430, 3, 1.1], [820, 0, 1], [1120, 2, 0.8], [1460, 1, 1.15], [1900, 0, 0.9], [2280, 2, 1.1], [2700, 1, 0.85], [3150, 5, 1], [3500, 4, 0.85], [3880, 3, 1.15]], b, 0.9, (x, n, e) => {
+      ctx.drawImage(b.s.rochers[n], x - 85 * e, h * 0.745 - 150 * e, 170 * e, 150 * e);
     });
-    for (let i = 0; i < 4; i++) {
-      const x = ((i * 260 + 80 - b.s.decalage * 0.8) % (w + 240) + w + 240) % (w + 240) - 120;
-      ctx.drawImage(b.s.pin, x, h * 0.72 - 150, 120, 160);
-    }
+    // la haie de garrigue au bord du chemin, puis les pins de plusieurs tailles
+    const xh = -((b.s.decalage) % (w * 2));
+    ctx.drawImage(b.s.haieFond, xh, h * 0.745 - 44);
+    ctx.drawImage(b.s.haieFond, xh + w * 2, h * 0.745 - 44);
+    poses(b.s.arbres, b, 0.85, (x, n) => {
+      const img = b.s.pins[n];
+      ctx.drawImage(img, x - img.width / 2, h * 0.75 - img.height);
+    });
     // les promeneurs, de profil : de vrais pas alternés
     const sol = h * 0.9;
     const pas = (decale) => (b.pause ? 4 : (Math.floor(t / 170) + decale) % 4);
@@ -258,6 +341,14 @@
       if (b.s.compagnon === "luigi") H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol + 2, 3, pas(2));
       H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol, 3, pas(0));
     }
+    // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
+    const xd = -((b.s.decalage * 1.15) % (w * 2));
+    ctx.drawImage(b.s.haieDevant, xd, h - 38);
+    ctx.drawImage(b.s.haieDevant, xd + w * 2, h - 38);
+    poses(b.s.devant, b, 1.3, (x, n) => {
+      const img = b.s.pins[n];
+      ctx.drawImage(img, x - img.width / 2, h * 1.06 - img.height);
+    });
     // on peut aller se baigner quand le chemin longe la crique aux rochers rouges
     if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !H.$(".dialogue"));
     // la pluie, quand il pleut vraiment (ou que Lóló l'a fait tomber)
