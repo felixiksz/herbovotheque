@@ -139,7 +139,7 @@
       sauver();
       H.bruit("plante");
       const p = H.d.plante(id);
-      if (bonMois(p)) H.toast("C’est le bon mois pour semer " + p.nom + " : ça lèvera deux fois plus vite");
+      if (bonMois(p)) H.toast("C’est le bon mois pour semer " + H.duNom(p) + " : ça lèvera deux fois plus vite");
       dessiner();
     }, "Que semer ? (" + H.quantiteTexte("graines", 1) + ", " + H.quantiteTexte("energie", 1) + ")", {
       un: true,

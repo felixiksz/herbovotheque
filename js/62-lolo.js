@@ -22,7 +22,7 @@
     "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton île.",
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",
     "Relie ton Mac et ton iPhone dans les Réglages pour retrouver partout le même herbier.",
-    "La boîte aux lettres du village garde le tout premier message qu’on t’a écrit.",
+    "La boîte aux lettres de la ferme garde le tout premier message qu’on t’a écrit.",
     "Dans une fiche, « Stock dans l’herbothèque » note si un bocal est plein, à moitié, presque vide ou vide. Je te dirai quand c’est la saison pour aller en recueillir !",
     "Dans l’herbothèque, coche « seulement les bocaux presque vides ou vides » pour voir ce qu’il faut aller cueillir.",
     "Dans la serre, sème au bon mois : ça lève deux fois plus vite. Les bébés plantes se repiquent ensuite sur tes îles pour presque rien.",
@@ -104,8 +104,9 @@
   }
 
   const liste = (ps, n) => {
-    const melange = ps.slice().sort(() => Math.random() - 0.5).slice(0, n).map((p) => p.nom);
-    return melange.join(", ") + (ps.length > n ? " et " + (ps.length - n) + " autres" : "");
+    const melange = ps.slice().sort(() => Math.random() - 0.5).slice(0, n);
+    if (ps.length <= n) return H.listeNoms(melange);
+    return melange.map((p) => H.leNom(p)).join(", ") + " et " + (ps.length - n) + " autres";
   };
 
   // En fleurs, à récolter, à semer : d'abord sur l'île, puis dans la nature (à aller cueillir).
@@ -126,7 +127,7 @@
         const vide = (p) => (p.preparations || []).some((id) => H.d.stock(p, id) === "vide");
         r.push(aRefaire.length > 1
           ? "Ces bocaux sont presque vides ou vides : " + liste(aRefaire, 4) + ". C’est le bon mois pour aller en cueillir !"
-          : "Le bocal « " + aRefaire[0].nom + " » est " + (vide(aRefaire[0]) ? "vide" : "presque vide") + " : c’est le bon mois pour aller en cueillir !");
+          : "Le bocal " + (H.genre(aRefaire[0]).elision ? "d’" : "de ") + H.nomPhrase(aRefaire[0]) + " est " + (vide(aRefaire[0]) ? "vide" : "presque vide") + " : c’est le bon mois pour aller en cueillir !");
       }
       if (ailleurs.length) r.push("À cueillir dans la nature en " + mois + " : " + liste(ailleurs, 6) + ".");
       if (!r.length) r.push("En " + mois + ", rien n’est à récolter d’après tes fiches.");

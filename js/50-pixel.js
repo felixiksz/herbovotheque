@@ -15,18 +15,20 @@
     n: "#7a4520", N: "#3e2210",              // chaussures, cheval
     t: "#c9ad8a", T: "#6b5442", u: "#f0e4d4", // chatte tigrée
     p: "#f4a3b8", l: "#d6eef5",
+    a: "#a3acb7", q: "#ee9a7e",
+    M: "#3e2210",                              // crinière (sans contour)               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
   };
 
-  // 16 × 22, de face. Cils : petits points au coin des lunettes.
+  // 16 × 22, de face. Cils : petits points au coin des lunettes de vue (verres transparents).
   const OVO = [
     "...kkHkkkkHkk...",
     "..khHhHhhHhHhk..",
     ".khHhhHhhHhhHhk.",
     ".khhssssssssHhk.",
     "..khsssssssshk..",
-    "..hkskksskkskh..",
-    "..hsklekkelksh..",
-    "..hsskksskkssh..",
+    "..hksaassaaskh..",
+    "..haaseaaesaah..",
+    "..hssaassaassh..",
     "..hpsssSSsssph..",
     "...kssmssmssk...",
     "...ksssmmsssk...",
@@ -56,9 +58,9 @@
     "..kccCcccCcccck.",
     "..kcssssssssck..",
     "..kcssssssssck..",
-    "..ksskksskkssck.",
-    "..ksklekkelksck.",
-    "..ksskksskkssck.",
+    "..kssqqssqqssck.",
+    "..kqqseqqesqqck.",
+    "..kssqqssqqssck.",
     "..kcsssSSsssck..",
     ".kckssmssmsskck.",
     ".kcksssmmssskck.",
@@ -149,7 +151,176 @@
     "........................................",
   ];
 
-  const SPRITES = { ovo: [OVO, OVO_MARCHE], luigi: [LUIGI, LUIGI_MARCHE], lolo: [LOLO, LOLO_2] };
+  // --- de profil (vers la droite), pour la balade : jambes et bras posés à chaque image -----
+  // Salopette vue de côté : la bavette devant, la bretelle qui passe sur l'épaule et redescend
+  // dans le dos, la chemise visible sur le flanc, le bouton sur la hanche.
+  // ƟvƟ : boucles brunes, lunettes rondes, longs cils, tournesol sur la salopette
+  const OVO_PROFIL = [
+    "....kkkkkkk.....",
+    "...kHhHhHhHkk...",
+    "..kHhHhhHhhHhk..",
+    ".khHhhHhhhHhhHk.",
+    ".kHhhHhhsssshHk.",
+    ".khHhhhssssaesk.",
+    ".kHhsSaaaaaeask.",
+    ".khHhsssssasassk",
+    "..kHhssssssapsk.",
+    "..khhsssssssmsk.",
+    "...kkhsssssssk..",
+    ".....kkssssk....",
+    "....krrrbbrrk...",
+    "...krrbrrrbbbk..",
+    "...krbrrrrboOk..",
+    "...kbrrrrrbbok..",
+    "...kbbbbbybbbk..",
+    "....kbbbbbbbk...",
+  ];
+  // Mesi : mulet châtain, lunettes, chemise verte, chiendent sur la salopette
+  const LUIGI_PROFIL = [
+    "....kkkkkkk.....",
+    "...kcCcCcCckk...",
+    "..kcCccCccCcck..",
+    "..kcccCcccCccck.",
+    "..kCccccsssscck.",
+    ".kcCccsssssqssk.",
+    ".kcCcSqqqqqeqsk.",
+    ".kcCcsssssqsqssk",
+    ".kcCcssssssqssk.",
+    ".kcCcsssssssmsk.",
+    ".kcCcksssssssk..",
+    "..kcck.kssssk...",
+    "....kgggbbggk...",
+    "...kggbgggbbvk..",
+    "...kgbggggbvVk..",
+    "...kbgggggbbVk..",
+    "...kbbbbbybbbk..",
+    "....kbbbbbbbk...",
+  ];
+
+  function poser(g, x, y, c) {
+    if (g[y] && x >= 0 && x < g[y].length) g[y][x] = c;
+  }
+  // un trait noir autour de ce qui vient d'être dessiné (jambes, bras, sabots) ; la crinière reste libre
+  function contour(g) {
+    const out = g.map((l) => l.slice());
+    for (let y = 0; y < g.length; y++) {
+      for (let x = 0; x < g[y].length; x++) {
+        if (g[y][x] !== ".") continue;
+        if ([[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].some(([a, b]) => g[b] && g[b][a] && g[b][a] !== "." && g[b][a] !== "k" && g[b][a] !== "M")) out[y][x] = "k";
+      }
+    }
+    return out.map((l) => l.join(""));
+  }
+  // images 0 à 3 : un pas, puis l'autre (pieds alternés, bras opposés) ; 4 : à l'arrêt
+  const PAS = [[3, false, -3, false], [0, false, 0, true], [-3, false, 3, false], [0, true, 0, false], [0, false, 0, false]];
+  const MAINS = [[3, 16], [8, 17], [13, 16], [8, 17], [7, 17]];
+  function profil(haut, manche, image) {
+    const g = Array.from({ length: 24 }, () => Array(16).fill("."));
+    const b = image % 2 || image === 4 ? 0 : 1; // le corps descend d'un pixel quand les jambes s'écartent
+    haut.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x, y + b, c)));
+    const jambe = (dx, leve, pantalon, chaussure) => {
+      const bas = leve ? 20 : 21;
+      for (let y = 18 + b; y < bas; y++) {
+        const x = 7 + Math.round((dx * (y - 17 - b)) / (bas - 17 - b));
+        poser(g, x, y, pantalon);
+        poser(g, x + 1, y, pantalon);
+      }
+      for (let i = 0; i < 3; i++) poser(g, 7 + dx + i, bas, chaussure);
+    };
+    const [dxD, leveD, dxA, leveA] = PAS[image];
+    jambe(dxA, leveA, "B", "N"); // la jambe de derrière, plus sombre
+    jambe(dxD, leveD, "b", "n");
+    const [mx, my] = MAINS[image];
+    for (let i = 0; i <= 4; i++) {
+      const x = Math.round(8 + ((mx - 8) * i) / 4), y = Math.round(13 + b + ((my + b - 13 - b) * i) / 4);
+      poser(g, x, y, i < 2 ? manche : "s");
+    }
+    return contour(g);
+  }
+  // Mémé réveillée, debout sur ses quatre pattes (les yeux toujours fermés) :
+  // corps allongé à l'horizontale, pattes droites, tête en avant, queue dressée
+  const MEME_DEBOUT = [
+    "...........k.k..",
+    ".k........kTkTk.",
+    "kTk.......kttttk",
+    ".kTk.....ktteetk",
+    "..kTk...kttttupk",
+    "...kTkkkkttttuk.",
+    "...kttTttTttuuk.",
+    "...ktTttTttttuk.",
+    "...kTtkkkkkTtk..",
+    "...kTtk...kTtk..",
+    "...kuuk...kuuk..",
+    "....kk.....kk...",
+  ];
+  // Lóló sans Mémé couchée sur l'encolure : l'encolure et la crinière redessinées
+  const ENCOLURE = [
+    [0, 28, "knk"],
+    [1, 28, "knk"],
+    [2, 28, "knnk"],
+    [3, 26, "kMNnnnk"],
+    [4, 25, "kMNnnnnwk"],
+    [5, 24, "kMNnnnnwwwk"],
+    [6, 23, "kMNnnnneewnnk"],
+    [7, 22, "kMN" + "n".repeat(11) + "k"],
+    [8, 21, "kMN" + "n".repeat(13) + "k"],
+    [9, 20, "kMN" + "n".repeat(14) + "k"],
+    [10, 19, "kMN" + "n".repeat(8) + "kknnnnNnk"],
+    [11, 18, "kMN" + "n".repeat(9) + "kkknnnnnk"],
+    [12, 17, "kMN" + "n".repeat(9) + "k...kknnk"],
+    [13, 13, "kkkk" + "n".repeat(11) + "k......kk"],
+  ];
+  const cou = (y) => 30 - y; // la crinière, le long de la crête de l'encolure
+  function sansMeme(g) {
+    for (let y = 0; y <= 13; y++) for (let x = y === 13 ? 13 : 14; x < g[y].length; x++) g[y][x] = ".";
+    for (let y = 14; y <= 18; y++) for (let x = 13; x <= 15; x++) if ("ktT".includes(g[y][x])) g[y][x] = "n";
+    for (const [y, x0, l] of ENCOLURE) l.split("").forEach((c, i) => c !== "." && (g[y][x0 + i] = c));
+    MEME_DEBOUT.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x + 4, y + 2, c)));
+    return g;
+  }
+  // au galop, la crinière flotte au vent derrière les oreilles
+  function criniereAuVent(g, image, cote) {
+    for (let brin = 0; brin < 3; brin++) {
+      for (let i = 0; i < 9 - brin * 2; i++) {
+        const x = (cote ? cou(4 + brin * 3) - 2 : 27) - i;
+        const y = (cote ? 4 + brin * 3 : 2 + brin) - Math.floor(i / 4) + Math.round(Math.sin(i * 0.9 + image * 1.6 + brin) * 0.8);
+        if (g[y] && g[y][x] === ".") g[y][x] = "M";
+      }
+    }
+  }
+  // Lóló au pas (ou au galop) : les jambes en diagonale avancent ensemble, celles de l'autre côté plus sombres
+  function loloAuPas(image, opts) {
+    opts = opts || {};
+    let g = (image < 2 ? LOLO : LOLO_2).map((l) => l.split(""));
+    if (opts.memeDebout) g = sansMeme(g);
+    for (let y = 23; y < g.length; y++) for (let x = 8; x < g[y].length; x++) g[y][x] = ".";
+    const th = (image * Math.PI) / 2;
+    for (const [x0, phase, c] of [[9, Math.PI, "N"], [22, 0, "N"], [12, 0, "n"], [25, Math.PI, "n"]]) {
+      const a = th + phase;
+      const dx = Math.round((opts.galop ? 3 : 2) * Math.cos(a));
+      const bas = Math.sin(a) < -0.5 ? 26 : 27;
+      for (let y = 23; y < bas; y++) {
+        const x = x0 + Math.round((dx * (y - 22)) / (bas - 22));
+        poser(g, x, y, c);
+        poser(g, x + 1, y, c);
+      }
+      poser(g, x0 + dx, bas, "e");
+      poser(g, x0 + dx + 1, bas, "e");
+    }
+    if (opts.galop) criniereAuVent(g, image, opts.memeDebout);
+    return contour(g);
+  }
+
+  const SPRITES = {
+    ovo: [OVO, OVO_MARCHE],
+    luigi: [LUIGI, LUIGI_MARCHE],
+    lolo: [LOLO, LOLO_2],
+    ovoProfil: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i)),
+    luigiProfil: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i)),
+    loloPas: [0, 1, 2, 3].map((i) => loloAuPas(i)),
+    loloGalop: [0, 1, 2, 3].map((i) => loloAuPas(i, { galop: true })),
+    loloBalade: [0, 1, 2, 3].map((i) => loloAuPas(i, { memeDebout: true })),
+  };
   const cache = new Map();
 
   function toile(motif) {

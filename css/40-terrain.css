@@ -119,14 +119,14 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
   border-radius: 10px;
   padding: 1px 10px;
 }
-.dialogue-texte { margin: 0; font-family: var(--terrain); font-size: 0.98rem; line-height: 1.5; min-height: 3em; white-space: pre-wrap; }
+.dialogue-texte { margin: 0; font-family: var(--texte); font-size: 1.12rem; line-height: 1.5; min-height: 3em; white-space: pre-wrap; }
 .dialogue-suite { position: absolute; right: 0; bottom: -8px; font-size: 0.8rem; animation: rebond 0.8s infinite; }
 @keyframes rebond { 50% { transform: translateY(3px); } }
 
 @media (max-width: 640px) {
   .zone-toile { max-height: 62vh; margin: 0 calc(-1 * var(--marge)); border-left: 0; border-right: 0; border-radius: 0; }
   .dialogue-portrait { width: 48px; }
-  .dialogue-texte { font-size: 0.9rem; }
+  .dialogue-texte { font-size: 1.02rem; }
 }
 
 /* village */
@@ -160,6 +160,7 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .cadre-balade { border: 1px solid var(--filet); border-radius: 8px; overflow: hidden; }
 .toile-balade { display: block; width: 100%; }
 .fin-balade { margin: 12px 0 30px; }
+.actions-balade { margin-top: 10px; min-height: 2.2em; }
 
 /* cabane de lecture : bois sombre, lueur de bougie qui vacille */
 .vue-lecture { max-width: none; padding: 0; }

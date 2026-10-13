@@ -38,6 +38,89 @@ window.H = window.H || {};
 
   H.slug = (t) => H.sansAccents(t).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
 
+  // --- noms de plantes dans une phrase : « le romarin », « de la sauge », « l’ortie » ----
+  // Le genre se devine d'après le premier mot ; une fiche peut le préciser (p.genre : m, f, mp, fp).
+  const MASCULINS_EN_E = "alkékenge lentisque lierre myrte trèfle tussilage solidage gingembre frêne saule chêne eleuthérocoque éleuthérocoque cèdre cyprès chèvrefeuille aulne epilobe épilobe".split(" ");
+  const FEMININS = "arnica".split(" ");
+  const SINGULIERS_EN_S = "aloès anis cyprès millepertuis radis fucus eucalyptus houx buis lis bois".split(" ");
+  const H_MUETS = "harpagophyton harpagophytum hysope hibiscus huile herbe".split(" ");
+  H.genre = function (p) {
+    const nom = String((p && p.nom) || "").trim();
+    const mot = nom.toLowerCase().split(/[\s(,’']/)[0];
+    let g = p && p.genre;
+    if (!g) {
+      const pluriel = /[sx]$/.test(mot) && !SINGULIERS_EN_S.includes(mot);
+      const base = pluriel ? mot.replace(/[sx]$/, "") : mot;
+      const fem = FEMININS.includes(base) || (/e$/.test(base) && !MASCULINS_EN_E.includes(base));
+      g = (fem ? "f" : "m") + (pluriel ? "p" : "");
+    }
+    const elision = /^[aeiouyàâäéèêëîïôöùûü]/.test(mot) || H_MUETS.includes(mot);
+    return { f: g[0] === "f", pl: g.length > 1, elision };
+  };
+  // le nom en minuscule dans une phrase (sauf « Marie », « Californie »…)
+  H.nomPhrase = (p) => {
+    const n = String((p && p.nom) || "");
+    return n.charAt(0).toLowerCase() + n.slice(1);
+  };
+  const majuscule = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  // « le romarin », « la sauge », « l’ortie », « les bouleaux » (maj : « Le romarin »)
+  H.leNom = (p, maj) => {
+    const g = H.genre(p);
+    const t = (g.pl ? "les " : g.elision ? "l’" : g.f ? "la " : "le ") + H.nomPhrase(p);
+    return maj ? majuscule(t) : t;
+  };
+  // « du romarin », « de la sauge », « de l’ortie », « des bouleaux »
+  H.duNom = (p) => {
+    const g = H.genre(p);
+    return (g.pl ? "des " : g.elision ? "de l’" : g.f ? "de la " : "du ") + H.nomPhrase(p);
+  };
+  // « au romarin », « à la sauge », « à l’ortie », « aux bouleaux »
+  H.auNom = (p) => {
+    const g = H.genre(p);
+    return (g.pl ? "aux " : g.elision ? "à l’" : g.f ? "à la " : "au ") + H.nomPhrase(p);
+  };
+  // accord : H.accord(p, "il", "elle", "ils", "elles")
+  H.accord = (p, m, f, mp, fp) => {
+    const g = H.genre(p);
+    return g.pl ? (g.f ? fp : mp) : g.f ? f : m;
+  };
+  // « le romarin, la sauge et l’ortie »
+  H.listeNoms = (plantes, article) => {
+    const noms = plantes.map((p) => (article === false ? H.nomPhrase(p) : H.leNom(p)));
+    return noms.length < 2 ? noms.join("") : noms.slice(0, -1).join(", ") + " et " + noms[noms.length - 1];
+  };
+
+  // Lignes d'une rubrique de fiche, sans mise en forme. Quand la fiche renvoie au
+  // « chapitre HE » ou « Aromathérapie », on va lire la partie concernée de la même fiche.
+  const RENVOIS = [
+    { motif: /\s*voir (?:le )?chapitre (?:HE|huiles? essentielles?|aromath[ée]rapie)\.?/i, champ: "aromatherapie" },
+    { motif: /\s*voir (?:le )?chapitre gemmoth[ée]rapie\.?/i, champ: "gemmotherapie" },
+    { motif: /\s*voir (?:le )?chapitre (?:[ée]lixirs?|fleurs de bach)\.?/i, champ: "elixirs" },
+  ];
+  const nettoyer = (l) => l.replace(/^[•\-–\s]+/, "").replace(/^#+\s*/, "").replace(/\*\*/g, "").trim();
+  H.lignesFiche = function (p, champ) {
+    const v = (p && p.valeurs) || {};
+    const lignes = String(v[champ] || "").split("\n").map(nettoyer).filter(Boolean);
+    const sortie = [];
+    for (const l of lignes) {
+      const renvoi = RENVOIS.find((r) => r.motif.test(l));
+      if (!renvoi || renvoi.champ === champ) {
+        sortie.push(l);
+        continue;
+      }
+      const reste = l.replace(renvoi.motif, "").trim();
+      let cible = String(v[renvoi.champ] || "").split("\n").map(nettoyer).filter(Boolean);
+      // pour les précautions, seulement ce qui parle de précautions dans l'autre partie
+      if (champ === "precautions") {
+        const prudence = cible.filter((x) => /pr[ée]caution|contre-indication|\bCI\b|toxi|[ée]viter|proscrire|d[ée]conseill|irritant|allerg|grossesse/i.test(x));
+        if (prudence.length) cible = prudence;
+      }
+      if (reste) sortie.push(cible.length ? reste.replace(/\.$/, "") + " :" : reste);
+      sortie.push(...cible);
+    }
+    return sortie;
+  };
+
   H.uid = (prefixe) => (prefixe || "x") + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   H.maintenant = () => Date.now();

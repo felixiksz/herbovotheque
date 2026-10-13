@@ -113,7 +113,7 @@
 
     let fermer;
     const corps = H.el("div.editeur-dessin", null,
-      H.el("h2", null, p.nom + " sur la carte"),
+      H.el("h2", null, H.leNom(p, true) + " sur la carte"),
       H.el("p.discret", null, "Dessine la plante vue de dessus, telle qu’elle apparaîtra sur tes îles. Le cercle montre sa place."),
       H.el("div.cadre-dessin", null, toile),
       pastillesCouleurs,

@@ -231,7 +231,10 @@
   function programmerGoeland() {
     setTimeout(() => {
       const jour = H.ciel && H.jeu && H.ciel.etat().soleil.alt > 2;
-      if (jour && dehors() && !H.ciel.nuitCalme()) goeland();
+      if (jour && dehors() && !H.ciel.nuitCalme()) {
+        goeland();
+        H.emettre("goeland");
+      }
       programmerGoeland();
     }, (50 + Math.random() * 130) * 1000);
   }

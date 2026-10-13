@@ -528,8 +528,8 @@
       }
       if (!ile.croquis && p) {
         o.appendChild(vue.depuisSerre
-          ? H.el("span.cout", null, "Repiquer un bébé " + p.nom + " : ", pastillesCout(H.serre.coutRepiquage))
-          : H.el("span.cout", null, "Pour planter " + p.nom + " : ", pastillesCout(coutPlantation(p))));
+          ? H.el("span.cout", null, "Repiquer un bébé " + H.nomPhrase(p) + " : ", pastillesCout(H.serre.coutRepiquage))
+          : H.el("span.cout", null, "Pour planter " + H.duNom(p) + " : ", pastillesCout(coutPlantation(p))));
       }
     } else if (vue.outil === "amenager") {
       Object.entries(TUILES).forEach(([id, t]) =>
@@ -738,8 +738,8 @@
       const visible = !vue.lolo || (vue.lolo.course && pos);
       const galope = !!(pos && pos.enCourse);
       const lx = pos ? pos.x : ile.cols / 2;
-      const image = galope ? Math.floor(maintenant / 120) % 2 : Math.floor(maintenant / 700) % 2;
-      if (visible) H.pixel.dessiner(ctx, "lolo", lx * T, (ile.lignes / 2 + 0.6) * T - (galope && image ? 2 : 0), 2, image);
+      const image = galope ? Math.floor(maintenant / 90) % 4 : Math.floor(maintenant / 700) % 2;
+      if (visible) H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", lx * T, (ile.lignes / 2 + 0.6) * T - (galope && image % 2 ? 2 : 0), 2, image);
       if (visible && !galope && Math.floor(maintenant / 1400) % 2) {
         ctx.font = "10px 'Kumar One', sans-serif";
         ctx.fillStyle = "#ff2e9a";
@@ -757,8 +757,8 @@
       const l = vue.loloVisite;
       const pos = H.sons.position(l.course, performance.now());
       if (pos) {
-        const image = pos.enCourse ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
-        H.pixel.dessiner(ctx, "lolo", (pos.x + 0.5) * T, (l.y + 0.9) * T - (pos.enCourse && image ? 2 : 0), 2, image);
+        const image = pos.enCourse ? Math.floor(performance.now() / 90) % 4 : Math.floor(performance.now() / 700) % 2;
+        H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : "lolo", (pos.x + 0.5) * T, (l.y + 0.9) * T - (pos.enCourse && image % 2 ? 2 : 0), 2, image);
       }
     }
     if (vue.luigi) {
@@ -1122,18 +1122,13 @@
     const premiere = String(v.mtc || "").split("\n").map((l) => l.replace(/^[•\-–#\s]+/, "").replace(/\*\*/g, "").trim()).filter(Boolean)[0] || "";
     const intro = ["Psst, ƟvƟ ! J’ai un bâton pour toi.", "Mon bâton du jour, c’est la MTC, évidemment !", "Tu savais ?", "Petit bâton chinois, gratuit !"][Math.floor(Math.random() * 4)];
     const phrases = [{ qui: "luigi", texte: intro }];
-    if (v.mtcSaveur) phrases.push({ qui: "luigi", texte: "En médecine chinoise : " + p.nom + ", saveur " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "." });
+    if (v.mtcSaveur) phrases.push({ qui: "luigi", texte: "En médecine chinoise, saveur et nature " + H.duNom(p) + " : " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "." });
     if (premiere) phrases.push({ qui: "luigi", texte: "Dans sa fiche MTC, on lit : « " + (premiere.length > 200 ? premiere.slice(0, 197) + "…" : premiere) + " »" });
     return phrases;
   }
 
-  // Les lignes de la rubrique MTC d'une plante, sans la mise en forme.
-  function lignesMTC(p, champ) {
-    return String((p.valeurs || {})[champ || "mtc"] || "")
-      .split("\n")
-      .map((l) => l.replace(/^[•\-–\s]+/, "").replace(/^#+\s*/, "").replace(/\*\*/g, "").trim())
-      .filter(Boolean);
-  }
+  // Les lignes de la rubrique MTC d'une plante, sans la mise en forme (renvois suivis).
+  const lignesMTC = (p, champ) => H.lignesFiche(p, champ || "mtc");
   const court = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
 
   // On appelle Mesi (avec le miaou) : Mesi arrive et répond aux questions sur les plantes du jardin.
@@ -1153,9 +1148,9 @@
         if (!id) break;
         p = H.d.plante(id);
       }
-      const q = await L("Que veux-tu savoir sur " + p.nom + " ?", [
-        { valeur: "saveur", libelle: "Sa saveur et sa nature" },
-        { valeur: "indications", libelle: "À quoi elle sert en MTC" },
+      const q = await L("Que veux-tu savoir sur " + H.leNom(p) + " ?", [
+        { valeur: "saveur", libelle: H.accord(p, "Sa", "Sa", "Leur", "Leur") + " saveur et " + H.accord(p, "sa", "sa", "leur", "leur") + " nature" },
+        { valeur: "indications", libelle: "À quoi " + H.accord(p, "il sert", "elle sert", "ils servent", "elles servent") + " en MTC" },
         { valeur: "precautions", libelle: "Des précautions ?" },
         { valeur: "autre", libelle: "Une autre plante" },
         { valeur: null, libelle: "Merci Mesi !" },
@@ -1170,7 +1165,7 @@
       const repliques = [];
       if (q === "saveur") {
         repliques.push(v.mtcSaveur
-          ? "En MTC : " + p.nom + ", saveur " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "."
+          ? "En MTC, saveur et nature " + H.duNom(p) + " : " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "."
           : "Sa fiche ne précise pas sa saveur. Un bâton à creuser ensemble !");
       } else if (q === "indications") {
         const lignes = lignesMTC(p);
@@ -1185,7 +1180,7 @@
         if (!lignes.length) repliques.push("Sa fiche ne mentionne pas de précaution particulière.");
         else {
           repliques.push("Côté précautions, sa fiche dit :");
-          lignes.slice(0, 3).forEach((l) => repliques.push("« " + court(l, 220) + " »"));
+          lignes.slice(0, 4).forEach((l) => repliques.push("« " + court(l, 220) + " »"));
         }
       }
       await H.dialogue.dire(repliques.map((texte) => ({ qui: "luigi", texte })));

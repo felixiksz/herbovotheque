@@ -19,7 +19,7 @@
     const champs = H.d.champs().filter((c) => c.cartes);
     for (const p of H.d.plantes()) {
       if (p.latin) {
-        cartes.push({ id: p.id + "|_latin", plante: p.id, rubrique: "_latin", categorie: "identite", recto: () => texte("Nom latin de ", H.el("strong", null, p.nom)), verso: () => H.el("p.reponse-courte", null, H.el("em", null, p.latin)) });
+        cartes.push({ id: p.id + "|_latin", plante: p.id, rubrique: "_latin", categorie: "identite", recto: () => texte("Nom latin " + H.duNom(p).slice(0, -H.nomPhrase(p).length), H.el("strong", null, H.nomPhrase(p))), verso: () => H.el("p.reponse-courte", null, H.el("em", null, p.latin)) });
         cartes.push({ id: p.id + "|_nom", plante: p.id, rubrique: "_nom", categorie: "identite", recto: () => texte("Quelle plante est ", H.el("em", null, p.latin), " ?"), verso: () => H.el("p.reponse-courte", null, p.nom) });
       }
       for (const c of champs) {

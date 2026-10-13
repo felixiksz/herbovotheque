@@ -89,12 +89,12 @@
       t.plantes.forEach((x, i) => {
         const p = H.d.plante(x.id);
         if (!p) return;
-        const role = H.el("textarea.role", { rows: 2, placeholder: piste(p), "aria-label": "Effet thérapeutique de " + p.nom, oninput: (e) => (x.role = e.target.value.trim()) });
+        const role = H.el("textarea.role", { rows: 2, placeholder: piste(p), "aria-label": "Effet thérapeutique " + H.duNom(p), oninput: (e) => (x.role = e.target.value.trim()) });
         role.value = x.role || "";
         const props = (p.valeurs || {}).proprietes;
         liste.appendChild(H.el("div.tisane-plante", null,
           H.el("div.org-sous-ligne", null,
-            H.el("input", { type: "text", value: x.part || "", placeholder: "1 part", size: 8, "aria-label": "Proportion de " + p.nom, oninput: (e) => (x.part = e.target.value.trim()) }),
+            H.el("input", { type: "text", value: x.part || "", placeholder: "1 part", size: 8, "aria-label": "Proportion " + H.duNom(p), oninput: (e) => (x.part = e.target.value.trim()) }),
             H.el("strong", null, p.nom),
             H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { t.plantes.splice(i, 1); dessinerListe(); } }, "Retirer")
           ),

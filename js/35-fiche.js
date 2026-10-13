@@ -249,7 +249,7 @@
   // --- en-tête de fiche : nom, préparations, étagères, photo ---------------------
   function enTete(p) {
     const illus = p.photo
-      ? H.el("figure.photo-lofi", null, H.el("img", { src: p.photo.src, alt: "Photo de " + p.nom }), H.el("span.date-photo", null, p.photo.date || ""))
+      ? H.el("figure.photo-lofi", null, H.el("img", { src: p.photo.src, alt: "Photo " + H.duNom(p) }), H.el("span.date-photo", null, p.photo.date || ""))
       : H.el("img.planche-illus", { src: planche(p), alt: "" });
 
     const preps = H.el("div.pastilles.preps");
