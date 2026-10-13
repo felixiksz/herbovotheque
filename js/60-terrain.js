@@ -488,11 +488,11 @@
     if (ile.secrete && !H.jeu.vu.ileSecrete) {
       H.jeu.vu.ileSecrete = H.maintenant();
       H.d.changer("jeu");
-      H.sons.duree("galop").then((d) => setTimeout(() => vue && H.dialogue.dire([
+      H.sons.bornes("galop").then((b) => setTimeout(() => vue && H.dialogue.dire([
         { qui: "lolo", texte: "Hiii ! Bienvenue sur notre île, ƟvƟ !" },
         { qui: "meme", texte: "Rrrrrrrr… rrrrrrrr… (Mémé ouvre un œil, sourit, et le referme.)" },
         { qui: "lolo", texte: (H.base.messageIle || "Joyeux anniversaire ! On t’a préparé un petit coin de fleurs rien que pour toi.") },
-      ]), d * 1000 + 300));
+      ]), b.fin * 1000 + 300));
     }
   }
 
@@ -774,11 +774,8 @@
     if (!sansNuit) {
       const alt = H.ciel.etat().soleil.alt;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      if (alt < 0) {
-        ctx.fillStyle = "rgba(20,24,60," + Math.min(0.45, (-alt / 12) * 0.45 + 0.05) + ")";
-        ctx.fillRect(0, 0, toile.width, toile.height);
-      } else if (alt < 8) {
-        ctx.fillStyle = "rgba(255,150,80," + (0.12 * (1 - alt / 8)) + ")";
+      for (const v of H.ciel.lumiere(alt)) {
+        ctx.fillStyle = "rgba(" + v.couleur + "," + v.alpha + ")";
         ctx.fillRect(0, 0, toile.width, toile.height);
       }
     }

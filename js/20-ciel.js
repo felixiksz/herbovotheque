@@ -95,13 +95,25 @@
     return ["orage", "orage"];
   }
 
-  // Couleurs du ciel selon la hauteur du soleil (degrés).
-  const TEINTES = [
+  // Couleurs du ciel (haut, horizon) selon la hauteur du soleil, en degrés.
+  // Le matin : lavande, rose, pêche. Le soir : violet, corail, orange, or.
+  const TEINTES_MATIN = [
     [-90, "#141a3a", "#2a2450"],
-    [-12, "#1b2350", "#3d2f63"],
-    [-6, "#3a3a7a", "#c46a8e"],
-    [0, "#6f79c0", "#ffa27a"],
-    [6, "#8fb8e8", "#ffd39a"],
+    [-12, "#1d2352", "#3d3570"],
+    [-6, "#3b3f7e", "#c37aa6"],
+    [-2, "#6a6fb3", "#f2a2b8"],
+    [2, "#8aa4d6", "#ffc4a4"],
+    [8, "#8cc0ec", "#fde3c4"],
+    [15, "#8cc8f2", "#e6f4ff"],
+    [90, "#7cc0f0", "#dff1ff"],
+  ];
+  const TEINTES_SOIR = [
+    [-90, "#141a3a", "#2a2450"],
+    [-12, "#1a1e46", "#3a2a5e"],
+    [-6, "#2e2f6e", "#9a4f8a"],
+    [-2, "#4f4f9a", "#f0706a"],
+    [2, "#6f7fc4", "#ff9a4a"],
+    [8, "#88b4e4", "#ffd08a"],
     [15, "#8cc8f2", "#e6f4ff"],
     [90, "#7cc0f0", "#dff1ff"],
   ];
@@ -110,15 +122,38 @@
     const c = [16, 8, 0].map((s) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t));
     return "#" + c.map((x) => x.toString(16).padStart(2, "0")).join("");
   }
-  function teinteCiel(alt) {
-    for (let i = 1; i < TEINTES.length; i++) {
-      if (alt <= TEINTES[i][0]) {
-        const [a0, h0, b0] = TEINTES[i - 1], [a1, h1, b1] = TEINTES[i];
+  function teinteCiel(alt, matin) {
+    if (matin == null) matin = estMatin();
+    const T = matin ? TEINTES_MATIN : TEINTES_SOIR;
+    for (let i = 1; i < T.length; i++) {
+      if (alt <= T[i][0]) {
+        const [a0, h0, b0] = T[i - 1], [a1, h1, b1] = T[i];
         const t = (alt - a0) / (a1 - a0);
         return { haut: melange(h0, h1, t), bas: melange(b0, b1, t) };
       }
     }
-    return { haut: TEINTES[6][1], bas: TEINTES[6][2] };
+    return { haut: T[T.length - 1][1], bas: T[T.length - 1][2] };
+  }
+  // avant le midi solaire du lieu : c'est le matin (lever), après : le soir (coucher)
+  function estMatin(date) {
+    date = date || new Date();
+    const lieu = (H.jeu && H.jeu.lieu) || { lat: 43.3, lon: 5.37 };
+    return date < heuresSoleil(date, lieu.lat, lieu.lon).midi;
+  }
+
+  // La lumière qui colore tout le paysage : nuit bleue, aube rose pêche, couchant orange puis violet.
+  // Renvoie des voiles [{couleur, alpha}] à peindre par-dessus la scène.
+  function lumiere(alt, matin) {
+    if (matin == null) matin = estMatin();
+    const voiles = [];
+    if (alt < 0) voiles.push({ couleur: "20,24,60", alpha: Math.min(0.45, (-alt / 12) * 0.45 + 0.03) });
+    const k = Math.max(0, 1 - Math.abs(alt - 1) / 9); // force de la couleur, maximale vers l'horizon
+    if (k > 0) {
+      if (matin) voiles.push({ couleur: "255,165,185", alpha: 0.16 * k });
+      else if (alt > -2) voiles.push({ couleur: "255,120,55", alpha: 0.2 * k });
+      else voiles.push({ couleur: "175,80,165", alpha: 0.18 * k });
+    }
+    return voiles;
   }
 
   H.ciel = {
@@ -129,6 +164,8 @@
     nomPhase,
     saison,
     teinteCiel,
+    lumiere,
+    estMatin,
     meteo: null,
 
     etat(date) {

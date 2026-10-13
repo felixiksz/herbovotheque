@@ -211,18 +211,17 @@
     // nuit
     const alt = H.ciel.etat().soleil.alt;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (alt < 0) {
-      ctx.fillStyle = "rgba(20,24,60," + Math.min(0.5, (-alt / 12) * 0.5 + 0.05) + ")";
+    for (const v of H.ciel.lumiere(alt)) {
+      ctx.fillStyle = "rgba(" + v.couleur + "," + v.alpha + ")";
       ctx.fillRect(0, 0, scene.toile.width, scene.toile.height);
+    }
+    if (alt < 0) {
       // fenêtres allumées
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const [hx, hy] = position("herbotheque");
       ctx.fillStyle = "rgba(255,210,110,0.55)";
       ctx.fillRect(hx - 52, hy - 70, 24, 30);
       ctx.fillRect(hx + 30, hy - 70, 24, 30);
-    } else if (alt < 8) {
-      ctx.fillStyle = "rgba(255,150,80," + 0.12 * (1 - alt / 8) + ")";
-      ctx.fillRect(0, 0, scene.toile.width, scene.toile.height);
     }
   }
 

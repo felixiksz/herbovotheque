@@ -88,6 +88,7 @@
   }
 
   const durees = {};
+  const bornesSon = {};
 
   H.sons = {
     // durée d'un son (en secondes), lue une fois dans le fichier
@@ -106,12 +107,38 @@
     },
     // Lóló au galop : on entend d'abord le bruit, puis elle entre et s'arrête quand le bruit s'arrête.
     // Renvoie la course {x0, x1, t0, t1} (temps en millisecondes, horloge performance.now()).
+    // moment où l'on entend vraiment le son (les fichiers ont du silence au début et à la fin)
+    bornes(nom) {
+      if (!bornesSon[nom]) {
+        bornesSon[nom] = (async () => {
+          try {
+            if (!contexte()) throw new Error("pas d'audio");
+            const a = await (await fetch(FICHIERS[nom])).arrayBuffer();
+            const buf = await new Promise((ok, ko) => ctx.decodeAudioData(a, ok, ko));
+            const d = buf.getChannelData(0);
+            let max = 0;
+            for (let i = 0; i < d.length; i += 64) max = Math.max(max, Math.abs(d[i]));
+            const seuil = max * 0.06;
+            let debut = 0, fin = d.length - 1;
+            while (debut < fin && Math.abs(d[debut]) < seuil) debut++;
+            while (fin > debut && Math.abs(d[fin]) < seuil) fin--;
+            return { debut: debut / buf.sampleRate, fin: fin / buf.sampleRate };
+          } catch (e) {
+            const total = await H.sons.duree(nom);
+            return { debut: 0, fin: total };
+          }
+        })();
+      }
+      return bornesSon[nom];
+    },
     async galop(x0, x1, arrivee, volume) {
-      const d = (await H.sons.duree("galop")) * 1000;
+      const b = await H.sons.bornes("galop");
       const joue = H.sons.jouer("galop", volume == null ? 0.6 : volume);
       const t = performance.now();
       if (!joue) return { x0, x1, t0: t, t1: t + 1500 };
-      return { x0, x1, t0: arrivee ? t + d * 0.4 : t, t1: t + d };
+      // Lóló entre quand on a entendu un bon bout du galop, et s'arrête quand le bruit s'arrête
+      const debut = b.debut * 1000, fin = b.fin * 1000;
+      return { x0, x1, t0: t + (arrivee ? debut + (fin - debut) * 0.4 : debut), t1: t + fin };
     },
     // position d'une course à l'instant t : null tant que Lóló n'est pas encore entrée
     position(c, t) {
