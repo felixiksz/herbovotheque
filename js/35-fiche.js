@@ -424,32 +424,90 @@
     );
   }
 
-  // les onglets ouverts (gardés sur cet appareil)
-  const onglets = () => (H.local.onglets || []).filter((x) => H.d.plante(x));
+  // Le navigateur de l'herbothèque : plusieurs fenêtres, chacune avec autant d'onglets qu'on veut
+  // (comme sur l'ordinateur d'ƟvƟ, avec ses centaines d'onglets). Gardé sur cet appareil.
+  function fenetres() {
+    let f = H.local.fenetresNav;
+    if (!f || !f.length) f = [{ onglets: (H.local.onglets || []).slice() }];
+    return f.map((x) => ({ onglets: (x.onglets || []).filter((id) => H.d.plante(id)) }));
+  }
+  const fenetreActive = (f) => Math.max(0, Math.min(H.local.fenetreNav || 0, (f || fenetres()).length - 1));
+  function enregistrer(f, active) {
+    H.d.majLocal((l) => {
+      l.fenetresNav = f;
+      l.fenetreNav = active;
+      delete l.onglets;
+    });
+  }
+  const versOnglet = (id) => H.aller(id ? "fiche/" + encodeURIComponent(id) : "herbotheque");
+  // ouvrir une fiche : si elle est déjà ouverte quelque part, on va dans sa fenêtre
   function ouvrirOnglet(id) {
-    const liste = onglets().filter((x) => x !== id);
-    liste.push(id);
-    H.d.majLocal((l) => (l.onglets = liste.slice(-8)));
-    return liste.slice(-8);
+    const f = fenetres();
+    let a = fenetreActive(f);
+    const ailleurs = f.findIndex((x) => x.onglets.includes(id));
+    if (ailleurs >= 0) a = ailleurs;
+    else f[a].onglets.push(id);
+    enregistrer(f, a);
+    return { f, a };
   }
   function fermerOnglet(id) {
-    const reste = onglets().filter((x) => x !== id);
-    H.d.majLocal((l) => (l.onglets = reste));
-    if (id === actuelle) H.aller(reste.length ? "fiche/" + encodeURIComponent(reste[reste.length - 1]) : "herbotheque");
+    let f = fenetres(), a = fenetreActive(f);
+    f[a].onglets = f[a].onglets.filter((x) => x !== id);
+    if (!f[a].onglets.length && f.length > 1) {
+      f.splice(a, 1);
+      a = Math.max(0, a - 1);
+    }
+    enregistrer(f, a);
+    if (id === actuelle) versOnglet(f[a].onglets[f[a].onglets.length - 1]);
     else afficherFiche(actuelle);
   }
+  // détacher l'onglet dans une nouvelle fenêtre
+  function nouvelleFenetre(id) {
+    const f = fenetres(), a = fenetreActive(f);
+    f[a].onglets = f[a].onglets.filter((x) => x !== id);
+    f.push({ onglets: [id] });
+    const vides = f[a].onglets.length === 0;
+    if (vides) f.splice(a, 1);
+    enregistrer(f, f.length - 1);
+    afficherFiche(id);
+  }
+  function changerFenetre(i) {
+    const f = fenetres();
+    enregistrer(f, i);
+    const o = f[i].onglets;
+    versOnglet(o[o.length - 1]);
+  }
+  function fermerFenetre(i) {
+    let f = fenetres();
+    f.splice(i, 1);
+    if (!f.length) f = [{ onglets: [] }];
+    const a = Math.min(fenetreActive(f), f.length - 1);
+    enregistrer(f, a);
+    const o = f[a].onglets;
+    versOnglet(o[o.length - 1]);
+  }
   function chromeNavigateur(id) {
-    const liste = H.local.onglets && H.local.onglets.includes(id) ? onglets() : ouvrirOnglet(id);
+    const { f, a } = ouvrirOnglet(id);
+    const liste = f[a].onglets;
     return H.el("div.chrome-navigateur", null,
+      // les fenêtres ouvertes, comme une barre des tâches
+      H.el("div.fenetres-navigateur", null,
+        f.map((x, i) => H.el("div.fenetre-mini" + (i === a ? ".active" : ""), null,
+          H.el("button.choisir-fenetre", { type: "button", onclick: () => changerFenetre(i) }, "Fenêtre " + (i + 1) + " · " + x.onglets.length + (x.onglets.length > 1 ? " onglets" : " onglet")),
+          H.el("button.fermer-onglet", { type: "button", "aria-label": "Fermer la fenêtre " + (i + 1), onclick: () => fermerFenetre(i) }, "×"))),
+        H.el("button.menu-bureau", { type: "button", onclick: () => nouvelleFenetre(id) }, "Ouvrir cet onglet dans une nouvelle fenêtre")
+      ),
       H.el("div.titre-fenetre", null,
         H.el("button.fermer-fenetre", { type: "button", "aria-label": "Retour à l’herbothèque", onclick: () => H.aller("herbotheque") }, "×"),
-        H.el("span", null, "Navigateur")),
-      H.el("div.onglets-navigateur", { role: "tablist" }, liste.map((x) => {
-        const q = H.d.plante(x);
-        return H.el("div.onglet" + (x === id ? ".actif" : ""), { role: "tab", "aria-selected": x === id ? "true" : "false" },
-          H.el("a", { href: "#fiche/" + encodeURIComponent(x) }, q.nom),
-          H.el("button.fermer-onglet", { type: "button", "aria-label": "Fermer l’onglet " + q.nom, onclick: () => fermerOnglet(x) }, "×"));
-      })),
+        H.el("span", null, "Navigateur — fenêtre " + (a + 1) + " · " + liste.length + (liste.length > 1 ? " onglets" : " onglet"))),
+      H.el("div.onglets-navigateur", { role: "tablist" },
+        liste.map((x) => {
+          const q = H.d.plante(x);
+          return H.el("div.onglet" + (x === id ? ".actif" : ""), { role: "tab", "aria-selected": x === id ? "true" : "false", title: q.nom },
+            H.el("a", { href: "#fiche/" + encodeURIComponent(x) }, q.nom),
+            H.el("button.fermer-onglet", { type: "button", "aria-label": "Fermer l’onglet " + q.nom, onclick: () => fermerOnglet(x) }, "×"));
+        }),
+        H.el("a.nouvel-onglet", { href: "#herbotheque", title: "Nouvel onglet : choisir une plante dans l’herbothèque", "aria-label": "Nouvel onglet" }, "+")),
       H.el("div.adresse-navigateur", null, "herbotheque://fiches/" + id)
     );
   }
