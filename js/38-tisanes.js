@@ -210,7 +210,7 @@
           bocaux(zone, barre);
         },
       },
-        H.el("span.bocal-cadre", null, H.el("img.bocal-image.forme-bocal", { src: H.aqua.bocal("bocal", H.aqua.teintePlante(p)), alt: "" })),
+        H.el("span.bocal-cadre", null, H.el("img.bocal-image.forme-bocal", { src: H.aqua.bocal("bocal", H.aqua.teintePlante(p), H.d.stock(p, "plante-seche")), alt: "" })),
         H.el("span.etiquette", { lang: "fr" }, p.nom)
       ));
     }

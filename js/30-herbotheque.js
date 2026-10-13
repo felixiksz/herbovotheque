@@ -10,15 +10,16 @@
     { id: "mes-etageres", nom: "Mes étagères", type: "manuel", etageres: [{ id: "preferees", nom: "Mes préférées", plantes: [] }] },
   ];
 
-  const etat = { recherche: "", partout: false, aVerifier: false };
+  const etat = { recherche: "", partout: false, aVerifier: false, aRemplir: false };
 
   function rangementActif() {
     const h = H.herbier;
     return h.rangements.find((r) => r.id === h.rangementActif) || h.rangements[0];
   }
 
+  const prepPrincipale = (p) => p.preparationPrincipale || (p.preparations || [])[0] || "plante-seche";
   function formePrincipale(p) {
-    const prep = H.d.preparation(p.preparationPrincipale || (p.preparations || [])[0] || "plante-seche");
+    const prep = H.d.preparation(prepPrincipale(p));
     return prep ? prep.forme : "bocal";
   }
 
@@ -30,6 +31,7 @@
 
   function correspond(p, q) {
     if (etat.aVerifier && !(p.aVerifier || []).length) return false;
+    if (etat.aRemplir && !H.d.aRemplir(p)) return false;
     if (!q) return true;
     const cible = [p.nom, p.latin, p.valeurs && p.valeurs.nomsCommuns].join(" ");
     if (H.sansAccents(cible).includes(q)) return true;
@@ -40,9 +42,9 @@
   // Groupes d'étagères pour un rangement : [{nom, plantes:[{plante, forme}]}]
   function grouper(rg, plantes) {
     const groupes = new Map();
-    const ajouter = (nom, p, forme) => {
+    const ajouter = (nom, p, forme, prepId) => {
       if (!groupes.has(nom)) groupes.set(nom, []);
-      groupes.get(nom).push({ plante: p, forme: forme || formePrincipale(p) });
+      groupes.get(nom).push({ plante: p, forme: forme || formePrincipale(p), prep: prepId || prepPrincipale(p) });
     };
     if (rg.type === "alpha") {
       for (const p of plantes) ajouter(H.sansAccents(p.nom).charAt(0).toUpperCase() || "?", p);
@@ -51,7 +53,7 @@
       for (const p of plantes) {
         for (const id of p.preparations || []) {
           const prep = H.d.preparation(id);
-          if (prep) ajouter(prep.nom, p, prep.forme);
+          if (prep) ajouter(prep.nom, p, prep.forme, prep.id);
         }
       }
     } else if (rg.type === "manuel") {
@@ -68,7 +70,7 @@
       }
       if (!etat.recherche) {
         const reste = plantes.filter((p) => !places.has(p.id));
-        if (reste.length) groupes.set("Pas encore rangées", reste.map((p) => ({ plante: p, forme: formePrincipale(p) })));
+        if (reste.length) groupes.set("Pas encore rangées", reste.map((p) => ({ plante: p, forme: formePrincipale(p), prep: prepPrincipale(p) })));
       }
     } else {
       const champ = H.d.champ(rg.champ);
@@ -94,8 +96,9 @@
 
   function bocal(item) {
     const p = item.plante;
+    const niveau = H.d.stock(p, item.prep);
     const img = H.el("img", {
-      src: H.aqua.bocal(item.forme, H.aqua.teintePlante(p)),
+      src: H.aqua.bocal(item.forme, H.aqua.teintePlante(p), niveau),
       alt: "",
       loading: "lazy",
       class: "bocal-image forme-" + item.forme,
@@ -104,7 +107,8 @@
       "a.bocal",
       { href: "#fiche/" + encodeURIComponent(p.id), title: p.nom + (p.latin ? " – " + p.latin : ""), "data-forme": item.forme },
       H.el("span.bocal-cadre", null, img),
-      H.el("span.etiquette", { lang: "fr" }, p.nom)
+      H.el("span.etiquette", { lang: "fr" }, p.nom),
+      niveau === "vide" || niveau === "presque-vide" ? H.el("span.niveau-bas", null, niveau === "vide" ? "vide" : "presque vide") : null
     );
   }
 
@@ -132,6 +136,7 @@
   }
 
   let conteneurEtageres = null;
+  let generation = 0;
   let resume = null;
 
   function dessiner() {
@@ -147,9 +152,10 @@
     // les étagères se dessinent par petits paquets pour rester fluide sur téléphone
     let i = 0;
     const cible = conteneurEtageres;
+    const tour = ++generation;
     const paquet = () => {
       // on a quitté la page, ou les étagères ont été redessinées entre-temps
-      if (cible !== conteneurEtageres) return;
+      if (cible !== conteneurEtageres || tour !== generation) return;
       const fin = Math.min(i + 4, groupes.length);
       for (; i < fin; i++) cible.appendChild(etagere(groupes[i], rg));
       if (i < groupes.length) requestAnimationFrame(paquet);
@@ -191,6 +197,10 @@
         H.el("input", { type: "checkbox", checked: etat.aVerifier, onchange: (e) => { etat.aVerifier = e.target.checked; dessiner(); } }),
         " seulement les fiches qui ont des rubriques à vérifier"
       );
+      const filtreStock = H.el("label.case", null,
+        H.el("input", { type: "checkbox", checked: etat.aRemplir, onchange: (e) => { etat.aRemplir = e.target.checked; dessiner(); } }),
+        " seulement les bocaux presque vides ou vides"
+      );
       resume = H.el("p.discret.resume");
       c.appendChild(
         H.el(
@@ -200,7 +210,7 @@
           H.el(
             "div.herbo-outils",
             null,
-            H.el("div.recherche", null, champRecherche, partout, filtreVerif),
+            H.el("div.recherche", null, champRecherche, partout, filtreVerif, filtreStock),
             H.el("label.rangement", null, "Ranger ", rgSelect),
             H.el(
               "div.herbo-boutons",

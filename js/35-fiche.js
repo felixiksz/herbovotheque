@@ -272,6 +272,20 @@
         }, H.el("img", { src: H.aqua.bocal(prep.forme, H.aqua.teintePlante(p)), alt: "", class: "mini-bocal" }), prep.nom)
       );
     }
+    // niveau de chaque bocal dans l'herbothèque
+    const stocks = H.el("div.stocks",
+      null,
+      (p.preparations || []).map((id) => {
+        const prep = H.d.preparation(id);
+        if (!prep) return null;
+        return H.el("label.ligne-stock", null,
+          H.el("img.mini-bocal", { src: H.aqua.bocal(prep.forme, H.aqua.teintePlante(p), H.d.stock(p, id)), alt: "" }),
+          H.el("span", null, prep.nom),
+          H.el("select", { "aria-label": "Stock : " + prep.nom, onchange: (e) => { H.d.fixerStock(p.id, id, e.target.value); recharger(); } },
+            H.d.NIVEAUX.map(([v, t]) => H.el("option", { value: v, selected: H.d.stock(p, id) === v }, t)))
+        );
+      })
+    );
     const choixPrincipal = H.el(
       "select",
       {
@@ -340,6 +354,7 @@
         preps,
         (p.preparations || []).length > 1 ? H.el("label.discret", null, "Bocal posé sur les étagères : ", choixPrincipal) : null
       ),
+      (p.preparations || []).length ? H.el("div.fiche-preps", null, H.el("h3", null, "Stock dans l’herbothèque"), stocks) : null,
       manuels.length ? H.el("div.fiche-preps", null, H.el("h3", null, "Sur mes étagères"), H.el("div.pastilles", null, manuels)) : null,
       H.el("div.fiche-preps.fiche-carte", null,
         H.el("h3", null, "Sur la carte du terrain"),

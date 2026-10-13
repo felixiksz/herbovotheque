@@ -87,7 +87,39 @@
     }
   }
 
+  const durees = {};
+
   H.sons = {
+    // durée d'un son (en secondes), lue une fois dans le fichier
+    duree(nom) {
+      if (!durees[nom]) {
+        durees[nom] = new Promise((ok) => {
+          const a = new Audio();
+          a.preload = "metadata";
+          a.onloadedmetadata = () => ok(isFinite(a.duration) && a.duration > 0 ? a.duration : 3);
+          a.onerror = () => ok(3);
+          a.src = FICHIERS[nom];
+          setTimeout(() => ok(3), 2500);
+        });
+      }
+      return durees[nom];
+    },
+    // Lóló au galop : on entend d'abord le bruit, puis elle entre et s'arrête quand le bruit s'arrête.
+    // Renvoie la course {x0, x1, t0, t1} (temps en millisecondes, horloge performance.now()).
+    async galop(x0, x1, arrivee, volume) {
+      const d = (await H.sons.duree("galop")) * 1000;
+      const joue = H.sons.jouer("galop", volume == null ? 0.6 : volume);
+      const t = performance.now();
+      if (!joue) return { x0, x1, t0: t, t1: t + 1500 };
+      return { x0, x1, t0: arrivee ? t + d * 0.4 : t, t1: t + d };
+    },
+    // position d'une course à l'instant t : null tant que Lóló n'est pas encore entrée
+    position(c, t) {
+      if (!c) return null;
+      if (t < c.t0) return null;
+      const k = Math.min(1, (t - c.t0) / Math.max(1, c.t1 - c.t0));
+      return { x: c.x0 + (c.x1 - c.x0) * k, enCourse: k < 1 };
+    },
     // un son joué une fois
     jouer(nom, volume) {
       if (!actif()) return null;

@@ -173,17 +173,24 @@
       const [px, py] = position("terrain");
       const portrait = disposition() === "portrait";
       const cible = portrait ? w - 60 : px - 90;
-      if (scene.loloX == null) {
-        // une fois par visite, Lóló arrive au galop avec Mémé sur le dos
-        scene.loloX = galopDejaVu ? cible : -60;
-        if (!galopDejaVu) H.sons.jouer("galop", 0.6);
-        galopDejaVu = true;
+      if (scene.loloX == null && !scene.attenteGalop) {
+        // une fois par visite, Lóló arrive au galop avec Mémé sur le dos : d'abord le bruit, puis elle
+        if (galopDejaVu) scene.loloX = cible;
+        else {
+          galopDejaVu = true;
+          scene.attenteGalop = true;
+          H.sons.galop(-60, cible, true, 0.6).then((c) => scene && (scene.courseLolo = c));
+        }
       }
-      const galope = scene.loloX < cible;
-      if (galope) scene.loloX = Math.min(cible, scene.loloX + 4);
+      let galope = false;
+      if (scene.courseLolo) {
+        const pos = H.sons.position(scene.courseLolo, performance.now());
+        scene.loloX = pos ? pos.x : null;
+        galope = !!(pos && pos.enCourse);
+      }
       const image = galope ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
       scene.loloY = portrait ? py - 60 : py - 10;
-      H.pixel.dessiner(ctx, "lolo", scene.loloX, scene.loloY - (galope && image ? 3 : 0), 2, image);
+      if (scene.loloX != null) H.pixel.dessiner(ctx, "lolo", scene.loloX, scene.loloY - (galope && image ? 3 : 0), 2, image);
     }
     const o = scene.ovo;
     const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;

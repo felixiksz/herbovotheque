@@ -23,6 +23,8 @@
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",
     "Relie ton Mac et ton iPhone dans les Réglages pour retrouver partout le même herbier.",
     "La boîte aux lettres du village garde le tout premier message qu’on t’a écrit.",
+    "Dans une fiche, « Stock dans l’herbothèque » note si un bocal est plein, à moitié, presque vide ou vide. Je te dirai quand c’est la saison pour aller en recueillir !",
+    "Dans l’herbothèque, coche « seulement les bocaux presque vides ou vides » pour voir ce qu’il faut aller cueillir.",
   ];
   const MEME = [
     "Rrrrr… rrrrr…",
@@ -43,13 +45,33 @@
     return melange.join(", ") + (ps.length > n ? " et " + (ps.length - n) + " autres" : "");
   };
 
-  function nouvelles(champ, verbe, ile) {
+  // En fleurs, à récolter, à semer : d'abord sur l'île, puis dans la nature (à aller cueillir).
+  function nouvelles(quoi, ile) {
+    const champ = { fleurs: "moisFloraison", recolte: "moisRecolte", semis: "moisSemis" }[quoi];
     const { ici, ailleurs } = plantesDuMois(champ, ile);
     const mois = H.MOIS_LONGS[new Date().getMonth()];
-    if (!ici.length && !ailleurs.length) return ["En " + mois + ", rien " + verbe.rien + " d’après tes fiches."];
     const r = [];
-    if (ici.length) r.push("Sur cette île, " + verbe.ici + " en ce moment : " + liste(ici, 5) + " !");
-    if (ailleurs.length) r.push((ici.length ? "Et dans l’herbothèque, " : "Dans l’herbothèque, ") + verbe.ailleurs + " en " + mois + " : " + liste(ailleurs, 6) + ".");
+    if (quoi === "fleurs") {
+      if (ici.length) r.push("Sur cette île, en fleurs en ce moment : " + liste(ici, 5) + " !");
+      if (ailleurs.length) r.push("Dans la nature, en fleurs en " + mois + " : " + liste(ailleurs, 6) + ".");
+      if (!r.length) r.push("En " + mois + ", rien ne fleurit d’après tes fiches.");
+    } else if (quoi === "recolte") {
+      if (ici.length) r.push("Sur cette île, à récolter en ce moment : " + liste(ici, 5) + " !");
+      // les bocaux à remplir dont c'est justement la saison
+      const aRefaire = ici.concat(ailleurs).filter((p) => H.d.aRemplir(p));
+      if (aRefaire.length) {
+        const vide = (p) => (p.preparations || []).some((id) => H.d.stock(p, id) === "vide");
+        r.push(aRefaire.length > 1
+          ? "Ces bocaux sont presque vides ou vides : " + liste(aRefaire, 4) + ". C’est le bon mois pour aller en cueillir !"
+          : "Le bocal « " + aRefaire[0].nom + " » est " + (vide(aRefaire[0]) ? "vide" : "presque vide") + " : c’est le bon mois pour aller en cueillir !");
+      }
+      if (ailleurs.length) r.push("À cueillir dans la nature en " + mois + " : " + liste(ailleurs, 6) + ".");
+      if (!r.length) r.push("En " + mois + ", rien n’est à récolter d’après tes fiches.");
+    } else {
+      if (ici.length) r.push("Sur cette île, à ressemer en ce moment : " + liste(ici, 5) + ".");
+      if (ailleurs.length) r.push("À semer en " + mois + " : " + liste(ailleurs, 6) + ".");
+      if (!r.length) r.push("En " + mois + ", rien n’est à semer d’après tes fiches.");
+    }
     return r;
   }
 
@@ -62,7 +84,7 @@
       const q = await L(intro, [
         { valeur: "astuce", libelle: "Une astuce pour le jeu" },
         { valeur: "fleurs", libelle: "Qu’est-ce qui fleurit ?" },
-        { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ?" },
+        { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
         { valeur: null, libelle: "Merci Lóló !" },
       ]);
@@ -74,12 +96,8 @@
         const a = restantes[Math.floor(Math.random() * restantes.length)];
         dejaDites.push(a);
         repliques = [a];
-      } else if (q === "fleurs") {
-        repliques = nouvelles("moisFloraison", { ici: "en fleurs", ailleurs: "en fleurs", rien: "ne fleurit" }, ile);
-      } else if (q === "recolte") {
-        repliques = nouvelles("moisRecolte", { ici: "à récolter", ailleurs: "à récolter", rien: "n’est à récolter" }, ile);
-      } else if (q === "semis") {
-        repliques = nouvelles("moisSemis", { ici: "à ressemer", ailleurs: "à semer", rien: "n’est à semer" }, ile);
+      } else {
+        repliques = nouvelles(q, ile);
       }
       const suite = repliques.map((texte) => ({ qui: "lolo", texte }));
       if (Math.random() < 0.35) suite.push({ qui: "meme", texte: MEME[Math.floor(Math.random() * MEME.length)] });

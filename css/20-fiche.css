@@ -120,3 +120,6 @@ a.pastille-valeur:hover { background: var(--surligne); color: #1a1714; }
 .pastille-couleur.actif { box-shadow: 0 0 0 2px var(--papier), 0 0 0 4px var(--fluo); }
 .dessin-outils { justify-content: center; }
 .point-epaisseur { display: inline-block; width: var(--t); height: var(--t); border-radius: 50%; background: currentColor; }
+
+.stocks { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.ligne-stock { display: inline-flex; align-items: center; gap: 6px; }

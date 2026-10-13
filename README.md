@@ -41,6 +41,8 @@ python tools/version.py
 - Lóló (une fois son île découverte) : on l’appelle pour des astuces du jeu et les plantes en fleurs, à récolter et à semer du moment ; au village, on la touche pour lui parler.
 - La pluie (roll) boucle sans couture : le jeu retire les silences du début et de la fin et fond le raccord.
 - Luigi : on l’appelle (avec le miaou) et on lui pose des questions sur les plantes de l’île ; de temps en temps il appelle au loin, et ƟvƟ choisit de lui parler ou de lui faire un câlin et des bisous.
+- Stock : chaque préparation d’une fiche peut être pleine, à moitié, presque vide ou vide ; le bocal se vide à l’écran, un filtre de l’herbothèque montre ceux à remplir, et Lóló dit quand c’est la saison d’aller en cueillir.
+- Lóló au galop : on entend d’abord le bruit, puis elle entre et s’arrête quand le son s’arrête.
 - Chaque plante peut avoir son propre dessin sur la carte (fiche ou panneau de la plante sur l’île).
 - Musique ambiante générée (voix en boucles de longueurs différentes, à la Music for Airports) : le mode suit la météo réelle (soleil lydien, pluie mineure, orage agité) et se feutre la nuit.
 - L’île de Lóló et Mémé apparaît le 24 février.

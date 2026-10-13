@@ -150,6 +150,18 @@
     },
     estModifiee: (id) => !!H.herbier.plantes[id],
 
+    // Stock de chaque préparation dans l'herbothèque : plein, moitie, presque-vide, vide.
+    NIVEAUX: [["plein", "Plein"], ["moitie", "À moitié"], ["presque-vide", "Presque vide"], ["vide", "Vide"]],
+    stock: (p, prepId) => ((p && p.stocks) || {})[prepId] || "plein",
+    aRemplir: (p) => (p.preparations || []).some((id) => ["presque-vide", "vide"].includes(H.d.stock(p, id))),
+    fixerStock(id, prepId, niveau) {
+      H.d.majPlante(id, (x) => {
+        x.stocks = Object.assign({}, x.stocks);
+        if (niveau === "plein") delete x.stocks[prepId];
+        else x.stocks[prepId] = niveau;
+      });
+    },
+
     // Modifie une plante : la copie va dans l'herbier, la base reste intacte.
     majPlante(id, fn) {
       const actuelle = H.d.plante(id);

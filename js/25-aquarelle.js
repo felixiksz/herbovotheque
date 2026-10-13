@@ -168,7 +168,17 @@
     tube: { w: 26, h: 88 },
   };
 
-  function dessinerBocal(forme, teinte, graine) {
+  // Niveau du stock : plein, à moitié, presque vide, vide (fraction du contenu dessiné).
+  const NIVEAUX = { plein: 1, moitie: 0.55, "presque-vide": 0.18, vide: 0 };
+
+  // contenu qui remplit le bas d'une zone (x, y, w, h) selon la fraction
+  function contenu(x, y, w, h, fraction, rayon) {
+    const hc = h * fraction;
+    return rectArrondi(x, y + h - hc, w, hc, Math.min(rayon, hc / 2));
+  }
+
+  function dessinerBocal(forme, teinte, graine, fraction) {
+    if (fraction == null) fraction = 1;
     const S = 2;
     const f = FORMES[forme] || FORMES.bocal;
     const W = (f.w + 12) * S, Hh = (f.h + 8) * S;
@@ -179,7 +189,7 @@
 
     if (forme === "bocal") {
       const corps = rectArrondi(x0, 22, f.w, f.h - 18, 12);
-      lavis(ctx, r, rectArrondi(x0 + 4, 40, f.w - 8, f.h - 40, 9), teinte, { alpha: 0.16, couches: 14, bord: 0.18 });
+      if (fraction > 0) lavis(ctx, r, contenu(x0 + 4, 40, f.w - 8, f.h - 40, fraction, 9), teinte, { alpha: 0.16, couches: 14, bord: 0.18 });
       tache(ctx, r, x0 + f.w * 0.35, 58, 10, 6, "#ffffff", { alpha: 0.05, couches: 6 });
       lavis(ctx, r, corps, verre, { alpha: 0.05, couches: 8 });
       trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
@@ -198,7 +208,7 @@
         [x0 + f.w - 2, epaule + 10], [cx + col / 2, epaule - 2], [cx + col / 2, epaule - 10],
       ];
       lavis(ctx, r, corps, ambre, { alpha: 0.13, couches: 14, bord: 0.1 });
-      lavis(ctx, r, rectArrondi(x0 + 3, epaule + 22, f.w - 6, bas - epaule - 26, 4), "#6b3410", { alpha: 0.12, couches: 10 });
+      if (fraction > 0) lavis(ctx, r, contenu(x0 + 3, epaule + 22, f.w - 6, bas - epaule - 26, fraction, 4), "#6b3410", { alpha: 0.12, couches: 10 });
       trait(ctx, r, corps, { epaisseur: 1.5 });
       if (large) {
         const bouchon = rectArrondi(cx - col / 2 - 4, epaule - 26, col + 8, 18, 3);
@@ -215,8 +225,10 @@
       trait(ctx, r, [[x0 + 6, epaule + 24], [x0 + 6, bas - 14]], { couleur: "#fff3dc", epaisseur: 2.4, alpha: 0.55 });
     } else if (forme === "pot") {
       const corps = rectArrondi(x0, 18, f.w, f.h - 14, 10);
-      lavis(ctx, r, rectArrondi(x0 + 4, 30, f.w - 8, f.h - 30, 8), "#e2b33c", { alpha: 0.13, couches: 12 });
-      lavis(ctx, r, rectArrondi(x0 + 8, 38, f.w - 16, f.h - 44, 6), teinte, { alpha: 0.12, couches: 10, bord: 0.2 });
+      if (fraction > 0) {
+        lavis(ctx, r, contenu(x0 + 4, 30, f.w - 8, f.h - 30, fraction, 8), "#e2b33c", { alpha: 0.13, couches: 12 });
+        lavis(ctx, r, contenu(x0 + 8, 38, f.w - 16, f.h - 44, fraction, 6), teinte, { alpha: 0.12, couches: 10, bord: 0.2 });
+      }
       lavis(ctx, r, corps, verre, { alpha: 0.05, couches: 8 });
       trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
       const couvercle = rectArrondi(x0 - 2, 6, f.w + 4, 14, 4);
@@ -224,9 +236,10 @@
       trait(ctx, r, couvercle.concat([couvercle[0]]), { epaisseur: 1.4 });
     } else if (forme === "tube") {
       const corps = rectArrondi(x0, 22, f.w, f.h - 18, 6);
-      lavis(ctx, r, rectArrondi(x0 + 3, 40, f.w - 6, f.h - 40, 5), "#ffffff", { alpha: 0.4, couches: 6 });
-      for (let i = 0; i < 26; i++) {
-        tache(ctx, r, x0 + 5 + r() * (f.w - 10), 44 + r() * (f.h - 50), 2.2, 2.2, "#d9d3c7", { alpha: 0.25, couches: 3 });
+      if (fraction > 0) lavis(ctx, r, contenu(x0 + 3, 40, f.w - 6, f.h - 40, fraction, 5), "#ffffff", { alpha: 0.4, couches: 6 });
+      const hg = (f.h - 50) * fraction;
+      for (let i = 0; i < Math.round(26 * fraction); i++) {
+        tache(ctx, r, x0 + 5 + r() * (f.w - 10), 44 + (f.h - 50 - hg) + r() * hg, 2.2, 2.2, "#d9d3c7", { alpha: 0.25, couches: 3 });
       }
       lavis(ctx, r, corps, verre, { alpha: 0.06, couches: 6 });
       trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.3 });
@@ -237,9 +250,11 @@
     return c.toDataURL("image/png");
   }
 
-  function bocal(forme, teinte) {
-    const cle = "bocal|" + forme + "|" + teinte;
-    if (!cache.has(cle)) cache.set(cle, dessinerBocal(forme, teinte, cle));
+  function bocal(forme, teinte, niveau) {
+    const fraction = NIVEAUX[niveau] == null ? 1 : NIVEAUX[niveau];
+    const cle = "bocal|" + forme + "|" + teinte + "|" + fraction;
+    // même graine quel que soit le niveau : le bocal reste le même, seul le contenu baisse
+    if (!cache.has(cle)) cache.set(cle, dessinerBocal(forme, teinte, "bocal|" + forme + "|" + teinte, fraction));
     return cache.get(cle);
   }
 
@@ -300,5 +315,5 @@
     }
   }
 
-  H.aqua = { calanques, crete, toile, tache, lavis, trait, polygone, deformer, rectArrondi, grain, papier, planche, bocal, teintePlante, FORMES, TEINTES_PLANTES };
+  H.aqua = { NIVEAUX, calanques, crete, toile, tache, lavis, trait, polygone, deformer, rectArrondi, grain, papier, planche, bocal, teintePlante, FORMES, TEINTES_PLANTES };
 })();

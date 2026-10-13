@@ -218,3 +218,7 @@ button.bocal { font: inherit; color: inherit; background: none; border: 0; paddi
 .rappel-proprietes { margin-top: 4px; }
 .rappel-proprietes .texte-fiche { max-height: 220px; overflow-y: auto; font-size: 0.9rem; border-left: 2px solid var(--filet); padding-left: 10px; }
 .role-plante { color: var(--encre); }
+
+/* stock des bocaux */
+.niveau-bas { font-family: var(--terrain); font-size: 0.66rem; color: #d0004f; margin-top: 1px; }
+:root[data-theme="nuit"] .niveau-bas { color: #ff6fb5; }

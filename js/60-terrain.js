@@ -479,19 +479,20 @@
     boucle();
     if (ile.secrete) {
       // Lóló (avec Mémé sur le dos) arrive au galop depuis le bord de l'île
-      vue.lolo = { x: -4, cible: ile.cols / 2 };
-      H.sons.jouer("galop", 0.7);
-      if (document.visibilityState === "hidden") vue.lolo.x = vue.lolo.cible;
+      vue.lolo = {};
+      H.sons.galop(-4, ile.cols / 2, true, 0.6).then((c) => {
+        if (vue) vue.lolo.course = c;
+      });
     }
     if (!ile.croquis) vue.minuteurLuigi = setInterval(visiteSpontanee, 60e3);
     if (ile.secrete && !H.jeu.vu.ileSecrete) {
       H.jeu.vu.ileSecrete = H.maintenant();
       H.d.changer("jeu");
-      setTimeout(() => H.dialogue.dire([
+      H.sons.duree("galop").then((d) => setTimeout(() => vue && H.dialogue.dire([
         { qui: "lolo", texte: "Hiii ! Bienvenue sur notre île, ƟvƟ !" },
         { qui: "meme", texte: "Rrrrr… (Mémé ouvre un œil, sourit, et le referme.)" },
         { qui: "lolo", texte: (H.base.messageIle || "Joyeux anniversaire ! On t’a préparé un petit coin de fleurs rien que pour toi.") },
-      ]), 600);
+      ]), d * 1000 + 300));
     }
   }
 
@@ -717,14 +718,17 @@
 
     // Lóló et Mémé sur leur île
     if (ile.secrete) {
-      const image = Math.floor(performance.now() / 700) % 2;
-      const lx = vue.lolo ? vue.lolo.x : ile.cols / 2;
-      const galope = vue.lolo && vue.lolo.x < vue.lolo.cible;
-      H.pixel.dessiner(ctx, "lolo", lx * T, (ile.lignes / 2 + 0.6) * T - (galope && Math.floor(performance.now() / 120) % 2 ? 3 : 0), 3, galope ? Math.floor(performance.now() / 120) % 2 : image);
-      if (!galope && Math.floor(performance.now() / 1400) % 2) {
+      const maintenant = performance.now();
+      const pos = vue.lolo && vue.lolo.course ? H.sons.position(vue.lolo.course, maintenant) : null;
+      const visible = !vue.lolo || (vue.lolo.course && pos);
+      const galope = !!(pos && pos.enCourse);
+      const lx = pos ? pos.x : ile.cols / 2;
+      const image = galope ? Math.floor(maintenant / 120) % 2 : Math.floor(maintenant / 700) % 2;
+      if (visible) H.pixel.dessiner(ctx, "lolo", lx * T, (ile.lignes / 2 + 0.6) * T - (galope && image ? 2 : 0), 2, image);
+      if (visible && !galope && Math.floor(maintenant / 1400) % 2) {
         ctx.font = "10px 'Kumar One', sans-serif";
         ctx.fillStyle = "#ff2e9a";
-        ctx.fillText("rrr", (ile.cols / 2 + 0.6) * T, (ile.lignes / 2 - 2.3) * T);
+        ctx.fillText("rrr", (ile.cols / 2 + 0.4) * T, (ile.lignes / 2 - 1.3) * T);
       }
     }
 
@@ -734,10 +738,13 @@
       const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;
       H.pixel.dessiner(ctx, "ovo", (o.x + 0.5) * T, (o.y + 0.9) * T - (marche ? 1 : 0), 1.5, marche);
     }
-    if (vue.loloVisite) {
+    if (vue.loloVisite && vue.loloVisite.course) {
       const l = vue.loloVisite;
-      const image = l.cible ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
-      H.pixel.dessiner(ctx, "lolo", (l.x + 0.5) * T, (l.y + 0.9) * T - (l.cible && image ? 2 : 0), 2, image);
+      const pos = H.sons.position(l.course, performance.now());
+      if (pos) {
+        const image = pos.enCourse ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
+        H.pixel.dessiner(ctx, "lolo", (pos.x + 0.5) * T, (l.y + 0.9) * T - (pos.enCourse && image ? 2 : 0), 2, image);
+      }
     }
     if (vue.luigi) {
       const l = vue.luigi;
@@ -1203,20 +1210,15 @@
       return;
     }
     if (vue.loloVisite) return;
-    H.sons.jouer("galop", 0.6);
-    const fin = () => H.lolo.parler(vue.ile).then(() => {
-      if (!vue || !vue.loloVisite) return;
-      vue.loloVisite.cible = { x: vue.ile.cols + 4, partir: true };
-      H.sons.jouer("galop", 0.4);
-      if (document.visibilityState === "hidden") vue.loloVisite = null;
+    const lv = (vue.loloVisite = { y: Math.max(1, vue.ovo.y - 1) });
+    const arrivee = Math.max(1, vue.ovo.x - 2);
+    lv.ensuite = () => H.lolo.parler(vue.ile).then(async () => {
+      if (!vue || vue.loloVisite !== lv) return;
+      lv.partant = true;
+      lv.arrive = false;
+      lv.course = await H.sons.galop(arrivee, vue.ile.cols + 4, false, 0.4);
     });
-    vue.loloVisite = { x: -4, y: Math.max(1, vue.ovo.y - 1), cible: { x: Math.max(1, vue.ovo.x - 2) }, ensuite: fin };
-    if (document.visibilityState === "hidden") {
-      vue.loloVisite.x = vue.loloVisite.cible.x;
-      vue.loloVisite.cible = null;
-      vue.loloVisite.ensuite = null;
-      fin();
-    }
+    H.sons.galop(-4, arrivee, true, 0.6).then((c) => (lv.course = c));
   }
 
   function partirLuigi() {
@@ -1311,26 +1313,20 @@
       const o = vue.ovo;
       const surPave = !!o.cible && caseDe(vue.ile, Math.round(o.x), Math.round(o.y)).t === "chemin";
       H.sons.boucle("pas", surPave, 0.6);
-      if (vue.lolo && vue.lolo.x < vue.lolo.cible) {
-        vue.lolo.x = Math.min(vue.lolo.cible, vue.lolo.x + 7 * dt);
-        bouge = true;
-      }
+      if (vue.lolo && (!vue.lolo.course || t < vue.lolo.course.t1)) bouge = true;
       if (vue.coeurs && vue.coeurs > t) bouge = true;
       const lv = vue.loloVisite;
-      if (lv && lv.cible) {
-        const d = lv.cible.x - lv.x, v = 8 * dt;
-        if (Math.abs(d) <= v) {
-          lv.x = lv.cible.x;
-          const partir = lv.cible.partir;
-          lv.cible = null;
-          if (partir) vue.loloVisite = null;
+      if (lv) {
+        bouge = true;
+        if (lv.course && !lv.arrive && t >= lv.course.t1) {
+          lv.arrive = true;
+          if (lv.partant) vue.loloVisite = null;
           else if (lv.ensuite) {
             const f = lv.ensuite;
             lv.ensuite = null;
             f();
           }
-        } else lv.x += Math.sign(d) * v;
-        bouge = true;
+        }
       }
       // pluie ou neige d'après la vraie météo
       const m = H.ciel.meteo || {};
