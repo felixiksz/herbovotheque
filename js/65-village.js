@@ -591,11 +591,12 @@
       ctx.fillText(l.nom, x, ey + 4);
     }
     // Lóló et Mémé viennent se promener au village une fois leur île découverte
-    if (H.terrain && H.terrain.ileSecreteOuverte() && H.jeu.vu.ileSecrete) {
-      const [px, py] = position("terrain");
-      const portrait = disposition() === "portrait";
-      const cible = portrait ? w - 60 : px - 90;
+    if (H.lolo && H.lolo.disponible()) {
+      // elle s'arrête juste devant ƟvƟ, la tête tournée vers iel
+      const o = scene.ovo;
+      const cible = Math.max(50 * k, o.x - 58 * Math.max(0.7, k));
       if (scene.loloX == null && !scene.attenteGalop) {
+        scene.loloSol = o.y;
         // une fois par visite, Lóló arrive au galop avec Mémé sur le dos : d'abord le bruit, puis elle
         if (galopDejaVu) scene.loloX = cible;
         else {
@@ -611,7 +612,7 @@
         galope = !!(pos && pos.enCourse);
       }
       const image = galope ? Math.floor(performance.now() / 90) % 4 : Math.floor(performance.now() / 700) % 2;
-      scene.loloY = portrait ? py - 70 : py - 10;
+      scene.loloY = scene.loloSol != null ? scene.loloSol : o.y;
       if (scene.loloX != null) H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", scene.loloX, scene.loloY - (galope && image % 2 ? 3 : 0), 2 * Math.max(0.7, k), image);
     }
     // le soir, Mesi attend ƟvƟ devant le mazet

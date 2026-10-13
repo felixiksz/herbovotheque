@@ -741,7 +741,7 @@
       const image = galope ? Math.floor(maintenant / 90) % 4 : Math.floor(maintenant / 700) % 2;
       if (visible) H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", lx * T, (ile.lignes / 2 + 0.6) * T - (galope && image % 2 ? 2 : 0), 2, image);
       if (visible && !galope && Math.floor(maintenant / 1400) % 2) {
-        ctx.font = "10px 'Kumar One', sans-serif";
+        ctx.font = "10px 'Suez One', serif";
         ctx.fillStyle = "#ff2e9a";
         ctx.fillText("rrr", (ile.cols / 2 + 0.4) * T, (ile.lignes / 2 - 1.3) * T);
       }
@@ -1400,7 +1400,7 @@
     const k = T * vue.zoom * vue.dpr;
     const y0 = vue.toile.height + 14 * vue.dpr;
     ctx.fillStyle = "#23214a";
-    ctx.font = (16 * vue.dpr) + "px 'Kumar One', sans-serif";
+    ctx.font = (16 * vue.dpr) + "px 'Suez One', serif";
     ctx.fillText(ile.nom + " — " + ile.largeur + " × " + ile.longueur + " m", 12 * vue.dpr, y0 + 14 * vue.dpr);
     const unMetre = k / ile.caseM;
     ctx.fillRect(c.width - unMetre - 20 * vue.dpr, y0 + 8 * vue.dpr, unMetre, 3 * vue.dpr);

@@ -188,7 +188,7 @@
   }
 
   // Lóló ne vient qu'une fois son île découverte (c'est la surprise du 24 février).
-  const disponible = () => !!(H.terrain && H.terrain.ileSecreteOuverte() && H.jeu.vu.ileSecrete);
+  const disponible = () => !!(H.terrain && H.terrain.ileSecreteOuverte() && (H.jeu.vu.ileSecrete || H.local.apercuIleSecrete));
 
   H.lolo = { parler, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();

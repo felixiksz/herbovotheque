@@ -380,6 +380,19 @@
       H.el("h2", null, "Mesi"),
       H.el("p.discret", null, "Cet appareil est relié avec le jeton de Mesi : la synchronisation n’y échange que les lettres et les textes du jeu, jamais l’herbier ni les jardins d’ƟvƟ."),
       H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")),
+      H.el("label.case", null,
+        H.el("input", {
+          type: "checkbox",
+          checked: !!H.local.apercuIleSecrete,
+          onchange: async (e) => {
+            const oui = e.target.checked;
+            await H.d.majLocal((l) => {
+              if (oui) l.apercuIleSecrete = true;
+              else delete l.apercuIleSecrete;
+            });
+          },
+        }),
+        " Voir dès maintenant les surprises du 24 février sur cet appareil : l’île de Lóló et Mémé, Lóló qui arrive à la ferme, leurs histoires et la balade avec elles."),
       H.el("h3", null, "Les accès"),
       H.el("p.discret", null, "Chaque personne reçoit son propre jeton à accès fin (sur github.com : Settings, Developer settings, Fine-grained tokens, limité au dépôt herbovotheque, « Contents » en lecture et écriture). Ajoute-le ici avec son rôle avant de le donner. Seule son empreinte est gardée, chiffrée."),
       liste,

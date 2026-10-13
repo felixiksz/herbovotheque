@@ -2,6 +2,7 @@
 
 @font-face { font-family: "Beth Ellen"; src: url("../fonts/beth-ellen.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Kumar One"; src: url("../fonts/kumar-one.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Suez One"; src: url("../fonts/suez-one.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Caudex"; src: url("../fonts/caudex-regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: "Caudex"; src: url("../fonts/caudex-bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
 @font-face { font-family: "Caudex"; src: url("../fonts/caudex-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
@@ -27,7 +28,7 @@
   --ciel-bas: #e6f4ff;
   --titre: "Beth Ellen", "Caudex", cursive;
   --texte: "Caudex", Georgia, serif;
-  --terrain: "Kumar One", "Caudex", sans-serif;
+  --terrain: "Suez One", "Caudex", serif;
   --rayon: 6px;
   --marge: 16px;
   color-scheme: light;
@@ -94,12 +95,13 @@ a { color: inherit; }
 /* --- boutons : filet fin, et le fluo comme un coup de surligneur --- */
 .bouton, button.bouton {
   font: inherit;
+  font-family: "Suez One", var(--texte);
   font-size: 0.98rem;
   color: var(--encre);
   background: transparent;
-  border: 1px solid var(--encre);
-  border-radius: var(--rayon);
-  padding: 6px 14px;
+  border: 1.5px solid var(--encre);
+  border-radius: 100px;
+  padding: 6px 16px;
   cursor: pointer;
   position: relative;
   line-height: 1.3;
