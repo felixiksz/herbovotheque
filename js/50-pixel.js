@@ -294,13 +294,20 @@
     [13, 13, "kkkk" + "n".repeat(11) + "k......kk"],
   ];
   const cou = (y) => 30 - y; // la crinière, le long de la crête de l'encolure
-  function sansMeme(g) {
+  function sansMeme(g, avecChat) {
     for (let y = 0; y <= 13; y++) for (let x = y === 13 ? 13 : 14; x < g[y].length; x++) g[y][x] = ".";
     for (let y = 14; y <= 18; y++) for (let x = 13; x <= 15; x++) if ("ktT".includes(g[y][x])) g[y][x] = "n";
     for (const [y, x0, l] of ENCOLURE) l.split("").forEach((c, i) => c !== "." && (g[y][x0 + i] = c));
-    MEME_DEBOUT.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x + 4, y + 2, c)));
+    if (avecChat !== false) MEME_DEBOUT.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x + 4, y + 2, c)));
     return g;
   }
+  // Mémé qui marche toute seule : pattes droites, puis écartées
+  const MEME_PAS = MEME_DEBOUT.slice(0, 8).concat([
+    "...kTtkkkkkTtk..",
+    "..kTtk.....kTtk.",
+    "..kuuk.....kuuk.",
+    "...kk.......kk..",
+  ]);
   // au galop, la crinière flotte au vent derrière les oreilles
   function criniereAuVent(g, image, cote) {
     for (let brin = 0; brin < 3; brin++) {
@@ -316,6 +323,7 @@
     opts = opts || {};
     let g = (image < 2 ? LOLO : LOLO_2).map((l) => l.split(""));
     if (opts.memeDebout) g = sansMeme(g);
+    else if (opts.seule) g = sansMeme(g, false);
     for (let y = 23; y < g.length; y++) for (let x = 8; x < g[y].length; x++) g[y][x] = ".";
     const th = (image * Math.PI) / 2;
     for (const [x0, phase, c] of [[9, Math.PI, "N"], [22, 0, "N"], [12, 0, "n"], [25, Math.PI, "n"]]) {
@@ -366,6 +374,8 @@
     loloPas: [0, 1, 2, 3].map((i) => loloAuPas(i)),
     loloGalop: [0, 1, 2, 3].map((i) => loloAuPas(i, { galop: true })),
     loloBalade: [0, 1, 2, 3].map((i) => loloAuPas(i, { memeDebout: true })),
+    loloSeule: [0, 1, 2, 3].map((i) => loloAuPas(i, { seule: true })),
+    memePas: [MEME_DEBOUT, MEME_PAS],
   };
   const cache = new Map();
 

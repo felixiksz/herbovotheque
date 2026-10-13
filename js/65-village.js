@@ -1069,7 +1069,7 @@
       const liens = H.el("nav.liens-village", { "aria-label": "Lieux de la ferme" },
         Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom)),
         H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => !H.$(".dialogue") && H.lolo.parler(null) }, "Parler à Lóló") : null,
-        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => H.aller("balade/lolo") }, "Se balader avec Lóló et Mémé") : null,
+        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => H.aller("balade/lolo+meme") }, "Se balader avec Lóló et Mémé") : null,
         H.el("button.bouton.petit", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager autour des maisons")
       );
       c.appendChild(liens);

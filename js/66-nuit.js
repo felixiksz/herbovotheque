@@ -50,6 +50,21 @@
     apres && apres();
   }
 
+  // on coche qui vient se promener : Mesi, Lóló, Mémé (seul·e si personne n'est coché)
+  function choixCompagnons() {
+    const qui = [["luigi", "Mesi"]].concat(loloLa() ? [["lolo", "Lóló"], ["meme", "Mémé"]] : []);
+    const coches = new Set(H.local.compagnons || ["luigi"]);
+    const cases = qui.map(([id, nom]) => H.el("label.case", null,
+      H.el("input", { type: "checkbox", checked: coches.has(id), onchange: (e) => (e.target.checked ? coches.add(id) : coches.delete(id)) }), " " + nom));
+    return H.el("div.choix-compagnons", null,
+      H.el("div.pastilles", null, ...cases),
+      H.el("div.pastilles", null, bouton("Partir en balade", () => {
+        const liste = qui.map(([id]) => id).filter((id) => coches.has(id));
+        H.d.majLocal((l) => (l.compagnons = liste));
+        H.aller("balade/" + (liste.length ? liste.join("+") : "solo"));
+      })));
+  }
+
   // --- la maison ------------------------------------------------------------------------
   H.vues.maison = {
     afficher(c) {
@@ -63,11 +78,7 @@
             ? "Mesi t’attend avec une tisane de tilleul. On se retrouve ici chaque soir."
             : "Le mazet est calme. Mesi arrose les géraniums de la fenêtre."),
         H.el("h2", null, "Faire une balade"),
-        H.el("div.pastilles", null,
-          bouton("Avec Mesi", () => H.aller("balade/luigi")),
-          loloLa() ? bouton("Avec Lóló et Mémé", () => H.aller("balade/lolo")) : null,
-          bouton("Seul·e", () => H.aller("balade/solo"))
-        ),
+        choixCompagnons(),
         H.el("h2", null, "Écouter une histoire"),
         H.el("div.pastilles", null,
           bouton("Une douceur de Mesi", () => raconter("luigi")),
@@ -91,7 +102,7 @@
   // La balade façon pochette de disque : aplats aux formes arrondies, ciel en dégradé,
   // grain de risographie. De jour, le calcaire blanc, la mer turquoise et les pins parasols ;
   // de nuit, des collines sombres sous un ciel violet et la vraie lune.
-  function scene(toile, compagnon) {
+  function scene(toile, compagnons) {
     const ctx = toile.getContext("2d");
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = toile.clientWidth || 600;
@@ -122,7 +133,7 @@
       ctx, dpr, w, h, nuit, etoiles, arbres, devant, grain,
       couvert: H.ciel.couvert(nuit),
       profils: { falaises: tirage("falaises", 24), rochers: tirage("rochers", 24), collines: tirage("collines", 24), collines2: tirage("collines2", 24), nuages: tirage("nuages", 12) },
-      decalage: 0, compagnon, derniere: performance.now(),
+      decalage: 0, compagnons, derniere: performance.now(),
     };
   }
 
@@ -386,10 +397,13 @@
     });
     // les promeneurs, de profil : de vrais pas alternés
     const pas = (decale) => (b.pause ? 4 : (Math.floor(t / 170) + decale) % 4);
-    if (S.compagnon === "lolo") H.pixel.dessiner(ctx, "loloBalade", w * 0.22, sol(w * 0.22) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
+    const avec = (q) => S.compagnons.includes(q);
+    if (avec("lolo")) H.pixel.dessiner(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
+    // Mémé sans Lóló trottine devant, sur ses quatre pattes
+    if (avec("meme") && !avec("lolo") && !b.baignade) H.pixel.dessiner(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 2.4, b.pause ? 0 : Math.floor(t / 200) % 2);
     if (b.baignade) dessinerBaignade(ctx, b, t, w, h);
     else {
-      if (S.compagnon === "luigi") H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
+      if (avec("luigi")) H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
       H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
     }
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
@@ -444,7 +458,7 @@
     const eau = h * 0.66;
     // ƟvƟ regarde vers la droite ; Mesi, en face, regarde vers ƟvƟ
     const nageurs = [["ovoProfil", w * 0.46, 0, false]];
-    if (b.s.compagnon === "luigi") nageurs.push(["luigiProfil", w * 0.56, 1.7, true]);
+    if (b.s.compagnons.includes("luigi")) nageurs.push(["luigiProfil", w * 0.56, 1.7, true]);
     for (const [nom, x, ph, miroir] of nageurs) {
       const y = eau + 40 + Math.sin(t / 500 + ph) * 2;
       ctx.save();
@@ -471,7 +485,7 @@
       if (!f.parle && f.x < w * 0.7 && !H.$(".dialogue")) {
         f.parle = true;
         const repliques = [{ qui: "flamant", texte: "Flma-mala-lamama !" }, { qui: "ovo", texte: "Fala-la-lamala !" }];
-        if (b.s.compagnon === "luigi") repliques.push({ qui: "luigi", texte: "Fla-fla-mala !" });
+        if (b.s.compagnons.includes("luigi")) repliques.push({ qui: "luigi", texte: "Fla-fla-mala !" });
         H.dialogue.dire(repliques);
       }
       if (f.x < -60) {
@@ -493,13 +507,14 @@
     const froid = [11, 12, 1, 2, 3, 4].includes(mois);
     const nuit = s.soleil.alt < -4;
     const lignes = [{ qui: "ovo", texte: nuit ? "Un bain de minuit dans la crique, sous la lune !" : "L’eau est turquoise au pied des rochers rouges. J’y vais !" }];
-    if (b.s.compagnon === "luigi") {
+    const avec = (q) => b.s.compagnons.includes(q);
+    if (avec("luigi")) {
       lignes.push({ qui: "luigi", texte: froid ? "Brrr, elle est fraîche ! Allez, à trois… un, deux… trois !" : "Elle est trop bonne ! On fait la planche ?" });
       lignes.push({ qui: "ovo", texte: froid ? "AAAH ! Elle est glacée… et c’est trop bien." : "On voit les petits poissons entre les rochers !" });
-    } else if (b.s.compagnon === "lolo") {
-      lignes.push({ qui: "lolo", texte: "Vas-y, je garde tes affaires sur la terre rouge." });
-      lignes.push({ qui: "meme", texte: "Mrrrou. (Mémé refuse de mouiller une seule moustache.)" });
-    } else {
+    }
+    if (avec("lolo")) lignes.push({ qui: "lolo", texte: "Vas-y, je garde tes affaires sur la terre rouge." });
+    if (avec("meme")) lignes.push({ qui: "meme", texte: "Mrrrou. (Mémé refuse de mouiller une seule moustache.)" });
+    if (!b.s.compagnons.length) {
       lignes.push({ qui: "ovo", nom: "Balade", texte: froid ? "Personne à l’horizon. Juste ƟvƟ, la mer froide et les rochers rouges." : "Personne à l’horizon. Juste ƟvƟ, la mer tiède et les rochers rouges." });
     }
     await H.dialogue.dire(lignes);
@@ -517,48 +532,50 @@
     await H.dialogue.dire([{ qui: "ovo", texte: nuit ? "Vite, la serviette ! On rentre tout doucement." : "Je sèche au soleil sur la terre rouge, ça sent le pin chaud." }]);
   }
 
-  async function deroulerBalade(compagnon) {
-    const intro = {
-      luigi: [{ qui: "luigi", texte: "On va voir la mer ? Prends ma main, le chemin est un peu caillouteux." }],
-      lolo: [
-        { qui: "lolo", texte: "Hiii ! Une balade ! On marche côte à côte, au pas, tranquilles." },
-        { qui: "meme", texte: "Mrrr… (Mémé se réveille, s’étire et se met debout sur le dos de Lóló : elle voyage sans même avoir à bouger.)" },
-      ],
-      solo: [{ qui: "ovo", nom: "Balade", texte: "ƟvƟ part seul·e sur le petit chemin, entre les pins et la mer." }],
-    }[compagnon];
+  async function deroulerBalade(compagnons) {
+    const avec = (q) => compagnons.includes(q);
+    const intro = [];
+    if (avec("luigi")) intro.push({ qui: "luigi", texte: "On va voir la mer ? Prends ma main, le chemin est un peu caillouteux." });
+    if (avec("lolo")) intro.push({ qui: "lolo", texte: "Hiii ! Une balade ! On marche côte à côte, au pas, tranquilles." });
+    if (avec("meme") && avec("lolo")) intro.push({ qui: "meme", texte: "Mrrr… (Mémé se réveille, s’étire et se met debout sur le dos de Lóló : elle voyage sans même avoir à bouger.)" });
+    else if (avec("meme")) intro.push({ qui: "meme", texte: "Mrrrou ! (Mémé trottine devant, la queue en l’air, les yeux toujours fermés. Elle connaît le chemin par cœur.)" });
+    if (!intro.length) intro.push({ qui: "ovo", nom: "Balade", texte: "ƟvƟ part seul·e sur le petit chemin, entre les pins et la mer." });
     await H.dialogue.dire(intro);
     if (!balade) return;
-    if (compagnon === "luigi") {
+    if (avec("luigi")) {
       await raconter("luigi");
       if (balade) await complimentMesi();
-    } else if (compagnon === "lolo") {
-      await raconter("lolo");
-    } else {
-      await H.dialogue.dire(histoires().pensees());
     }
+    if (balade && avec("lolo")) await raconter("lolo");
+    if (balade && !avec("luigi") && !avec("lolo")) await H.dialogue.dire(histoires().pensees());
     if (balade && balade.fin) balade.fin.hidden = false;
   }
 
   H.vues.balade = {
     afficher(c, params) {
-      let compagnon = ["luigi", "lolo", "solo"].includes(params[0]) ? params[0] : "luigi";
-      if (compagnon === "lolo" && !loloLa()) compagnon = "solo";
+      // « luigi+lolo+meme », « solo »… (« lolo » tout court : Lóló avec Mémé sur le dos)
+      let compagnons = String(params[0] || "luigi").split("+").filter((q) => ["luigi", "lolo", "meme"].includes(q));
+      if (params[0] === "lolo") compagnons = ["lolo", "meme"];
+      if (!loloLa()) compagnons = compagnons.filter((q) => q === "luigi");
+      const NOMS = { luigi: "Mesi", lolo: "Lóló", meme: "Mémé" };
+      const noms = compagnons.map((q) => NOMS[q]);
+      const titre = noms.length ? "Balade avec " + (noms.length > 1 ? noms.slice(0, -1).join(", ") + " et " + noms[noms.length - 1] : noms[0]) : "Balade en solo";
       const toile = H.el("canvas.toile-balade", { "aria-label": "Balade le long des calanques" });
       const bain = H.el("button.bouton", { type: "button", hidden: true, onclick: () => baignade() }, "Aller se baigner");
       const sortir = H.el("button.bouton", { type: "button", hidden: true, onclick: () => sortirDeLeau() }, "Sortir de l’eau");
       const fin = H.el("div.pastilles.fin-balade", { hidden: true },
-        bouton("Continuer la balade", () => { fin.hidden = true; deroulerBalade(compagnon); }),
+        bouton("Continuer la balade", () => { fin.hidden = true; deroulerBalade(compagnons); }),
         bouton("Rentrer à la maison", () => H.aller("maison"))
       );
       c.append(
-        H.el("h1", null, compagnon === "solo" ? "Balade en solo" : compagnon === "lolo" ? "Balade avec Lóló et Mémé" : "Balade avec Mesi"),
+        H.el("h1", null, titre),
         H.el("div.cadre-balade", null, toile),
         H.el("div.pastilles.actions-balade", null, bain, sortir),
         fin
       );
-      balade = { toile, fin, bain, sortir, s: scene(toile, compagnon) };
+      balade = { toile, fin, bain, sortir, s: scene(toile, compagnons) };
       dessinerBalade();
-      setTimeout(() => balade && deroulerBalade(compagnon), 700);
+      setTimeout(() => balade && deroulerBalade(compagnons), 700);
     },
     quitter() {
       if (balade) cancelAnimationFrame(balade.anim);
