@@ -1050,10 +1050,11 @@
     const gains = { graines: 2, compost: 1 };
     if ((p.preparations || []).includes("plante-seche")) gains.paille = 1;
     Object.entries(gains).forEach(([k2, n]) => H.ressources.ajouter(k2, n));
+    if (H.labo) H.labo.ajouterRecolte(p.id, 1);
     if (p.valeurs.cycle === "Annuelle") pl.c = 40;
     sauver(ile);
     H.bruit("recolte");
-    H.toast("Récolte : " + p.nom + " (+2 graines, +1 compost" + (gains.paille ? ", +1 paille" : "") + ")");
+    H.toast("Récolte : " + p.nom + " (+2 graines, +1 compost" + (gains.paille ? ", +1 paille" : "") + ", et une récolte pour le labo)");
     dessiner();
   }
 

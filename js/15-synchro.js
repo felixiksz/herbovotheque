@@ -121,6 +121,9 @@
     const serre = plusRecent(local, distant, "serreModifieLe");
     r.serre = serre.serre;
     r.serreModifieLe = serre.serreModifieLe;
+    const labo = plusRecent(local, distant, "laboModifieLe");
+    r.labo = labo.labo;
+    r.laboModifieLe = labo.laboModifieLe;
     r.pluieMagique = Math.max(local.pluieMagique || 0, distant.pluieMagique || 0);
     r.modifieLe = Math.max(local.modifieLe || 0, distant.modifieLe || 0);
     return r;

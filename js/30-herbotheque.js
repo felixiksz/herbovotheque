@@ -311,6 +311,7 @@
       liste.innerHTML = "";
       for (const p of H.d.plantes()) {
         if (q && !H.sansAccents(p.nom + " " + p.latin).includes(q)) continue;
+        if (opts.filtre && !opts.filtre(p)) continue;
         liste.appendChild(
           H.el(
             "label.choix-plante",

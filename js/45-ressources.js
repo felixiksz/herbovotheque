@@ -160,6 +160,12 @@
       return gain;
     },
 
+    // Un peu d'énergie en plus (une tisane du labo, par exemple).
+    gagnerEnergie(n) {
+      fixerEnergie(energie() + n);
+      modifie();
+    },
+
     // Une crêpe au chocolat fondu : fin de la pause et un bon coup d'énergie.
     mangerCrepe() {
       if (H.ressources.quantite("crepe") < 1) return false;
