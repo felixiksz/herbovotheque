@@ -12,6 +12,7 @@
   };
 
   let scene = null;
+  let galopDejaVu = false;
 
   function disposition() {
     return scene && scene.w / scene.h < 1 ? "portrait" : "paysage";
@@ -171,7 +172,17 @@
     if (H.terrain && H.terrain.ileSecreteOuverte() && H.jeu.vu.ileSecrete) {
       const [px, py] = position("terrain");
       const portrait = disposition() === "portrait";
-      H.pixel.dessiner(ctx, "lolo", portrait ? w - 60 : px - 90, portrait ? py - 60 : py - 10, 2, Math.floor(performance.now() / 700) % 2);
+      const cible = portrait ? w - 60 : px - 90;
+      if (scene.loloX == null) {
+        // une fois par visite, Lóló arrive au galop avec Mémé sur le dos
+        scene.loloX = galopDejaVu ? cible : -60;
+        if (!galopDejaVu) H.sons.jouer("galop", 0.6);
+        galopDejaVu = true;
+      }
+      const galope = scene.loloX < cible;
+      if (galope) scene.loloX = Math.min(cible, scene.loloX + 4);
+      const image = galope ? Math.floor(performance.now() / 120) % 2 : Math.floor(performance.now() / 700) % 2;
+      H.pixel.dessiner(ctx, "lolo", scene.loloX, (portrait ? py - 60 : py - 10) - (galope && image ? 3 : 0), 2, image);
     }
     const o = scene.ovo;
     const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;

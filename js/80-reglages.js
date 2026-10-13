@@ -84,8 +84,9 @@
       ),
       H.el("div.pastilles", { style: { marginTop: "10px" } },
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.son, onchange: (e) => H.d.majLocal((l) => (l.son = e.target.checked)) }), " Bruitages et babillage"),
-        H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: async (e) => { await H.d.majLocal((l) => (l.musique = e.target.checked)); e.target.checked ? H.musique.jouer() : H.musique.arreter(); } }), " Musique")
-      )
+        H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: async (e) => { await H.d.majLocal((l) => (l.musique = e.target.checked)); e.target.checked ? H.musique.jouer() : H.musique.arreter(); } }), " Musique ambiante")
+      ),
+      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + ".")
     );
   }
 
@@ -204,7 +205,7 @@
   function blocMiaou() {
     const etat = H.el("p.discret");
     const majEtat = () => {
-      etat.textContent = H.jeu.cri ? "Cri actuel : ton enregistrement." : H.base.cri ? "Cri actuel : le miaou d’origine." : "Cri actuel : un petit miaou de synthèse.";
+      etat.textContent = H.jeu.cri ? "Cri actuel : ton enregistrement." : "Cri actuel : le miaou d’origine.";
     };
     majEtat();
     const msg = H.el("p.discret", { role: "status" });

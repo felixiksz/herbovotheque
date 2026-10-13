@@ -223,7 +223,36 @@
     });
   }
 
+  // Dessins faits à la main (H.dessinerPlante) : chargés une fois, puis redessinés à la bonne taille.
+  const imagesDessin = new Map();
+  function imageDessin(p) {
+    const src = p.dessinCarte;
+    let e = imagesDessin.get(p.id);
+    if (!e || e.src !== src) {
+      e = { src, pret: false, img: new Image() };
+      e.img.onload = () => {
+        e.pret = true;
+        if (vue) dessiner();
+      };
+      e.img.src = src;
+      imagesDessin.set(p.id, e);
+    }
+    return e.pret ? e.img : null;
+  }
+
   function dessinPlante(p, st, fleur, rayonCases) {
+    if (p.dessinCarte && st >= 2) {
+      const img = imageDessin(p);
+      if (img) {
+        return memo("main|" + p.id + "|" + p.dessinCarte.length + "|" + st + "|" + rayonCases, () => {
+          const rayon = st < 3 ? 11 : Math.max(12, Math.min(rayonCases * T, 6 * T));
+          const taille = Math.ceil(rayon * 2 + 8);
+          const c = H.aqua.toile(taille * 2, taille * 2);
+          c.getContext("2d").drawImage(img, 0, 0, taille * 2, taille * 2);
+          return c;
+        });
+      }
+    }
     const cleD = "plante|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + rayonCases;
     return memo(cleD, () => {
       const r = H.alea(p.id + st);
@@ -447,6 +476,13 @@
     dessinerCiel();
     toile.addEventListener("click", clic);
     boucle();
+    if (ile.secrete) {
+      // Lóló (avec Mémé sur le dos) arrive au galop depuis le bord de l'île
+      vue.lolo = { x: -4, cible: ile.cols / 2 };
+      H.sons.jouer("galop", 0.7);
+      if (document.visibilityState === "hidden") vue.lolo.x = vue.lolo.cible;
+    }
+    if (!ile.croquis) vue.minuteurLuigi = setInterval(visiteSpontanee, 60e3);
     if (ile.secrete && !H.jeu.vu.ileSecrete) {
       H.jeu.vu.ileSecrete = H.maintenant();
       H.d.changer("jeu");
@@ -681,8 +717,10 @@
     // Lóló et Mémé sur leur île
     if (ile.secrete) {
       const image = Math.floor(performance.now() / 700) % 2;
-      H.pixel.dessiner(ctx, "lolo", (ile.cols / 2) * T, (ile.lignes / 2 + 0.6) * T, 3, image);
-      if (Math.floor(performance.now() / 1400) % 2) {
+      const lx = vue.lolo ? vue.lolo.x : ile.cols / 2;
+      const galope = vue.lolo && vue.lolo.x < vue.lolo.cible;
+      H.pixel.dessiner(ctx, "lolo", lx * T, (ile.lignes / 2 + 0.6) * T - (galope && Math.floor(performance.now() / 120) % 2 ? 3 : 0), 3, galope ? Math.floor(performance.now() / 120) % 2 : image);
+      if (!galope && Math.floor(performance.now() / 1400) % 2) {
         ctx.font = "10px 'Kumar One', sans-serif";
         ctx.fillStyle = "#ff2e9a";
         ctx.fillText("rrr", (ile.cols / 2 + 0.6) * T, (ile.lignes / 2 - 2.3) * T);
@@ -699,6 +737,16 @@
       const l = vue.luigi;
       const marche = l.cible ? Math.floor(performance.now() / 170) % 2 : 0;
       H.pixel.dessiner(ctx, "luigi", (l.x + 0.5) * T, (l.y + 0.9) * T - (marche ? 1 : 0), 1.5, marche);
+    }
+
+    // petits cœurs pendant un câlin
+    if (vue.coeurs && vue.coeurs > performance.now() && vue.luigi) {
+      const tc = (performance.now() % 1500) / 1500;
+      const cx = ((vue.ovo.x + vue.luigi.x) / 2 + 0.5) * T, cy = (vue.ovo.y - 0.3) * T;
+      for (let i = 0; i < 3; i++) {
+        const u = (tc + i / 3) % 1;
+        dessinerCoeur(ctx, cx + Math.sin(u * 6 + i) * 8, cy - u * 28, 1 - u);
+      }
     }
 
     // météo
@@ -1010,6 +1058,7 @@
       act("Purin", { purin: 1 }, () => { pl.purinJusqua = H.maintenant() + 7 * 24 * HEURE; });
       act("Rayon de soleil", { soleil: 1 }, () => { pl.c = Math.min(100, pl.c + 25); });
     }
+    actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, () => { dessiner(); inspecter(x, y); }) }, p.dessinCarte ? "Modifier son dessin" : "Dessiner son aspect"));
     actions.appendChild(H.el("a.bouton.petit", { href: "#fiche/" + encodeURIComponent(p.id) }, "Voir la fiche"));
     P.appendChild(actions);
     dessiner();
@@ -1094,6 +1143,41 @@
     await L(["À bientôt, ƟvƟ !", "Bon jardinage !", "Miaou, et à la prochaine !"][Math.floor(Math.random() * 3)]);
   }
 
+  // Un câlin et des bisous : des petits cœurs, et Luigi laisse un souvenir.
+  async function calin() {
+    vue.coeurs = performance.now() + 4500;
+    await H.dialogue.dire([
+      { qui: "ovo", texte: "Viens là, toi !" },
+      { qui: "luigi", texte: "Mwah ! Mwah ! Mwah !" },
+    ]);
+    const cadeau = Math.random() < 0.3 ? "crepe" : ["eau", "graines", "compost", "terre", "soleil"][Math.floor(Math.random() * 5)];
+    const n = cadeau === "crepe" ? 1 : 2;
+    H.ressources.ajouter(cadeau, n);
+    await H.dialogue.dire([{ qui: "luigi", texte: "Tiens, je t’ai apporté " + H.quantiteTexte(cadeau, n).replace(/^1 /, "une ").replace(/^une (outil|rayon|seau|bidon|arrosoir)/, "un $1") + ". À plus tard !" }]);
+  }
+
+  function dessinerCoeur(ctx, x, y, alpha) {
+    const motif = [".kk.kk.", "kppkppk", "kpppppk", ".kpppk.", "..kpk..", "...k..."];
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, alpha);
+    motif.forEach((l, j) => {
+      for (let i = 0; i < l.length; i++) {
+        if (l[i] === ".") continue;
+        ctx.fillStyle = l[i] === "k" ? "#2b1d14" : "#ff2e9a";
+        ctx.fillRect(Math.round(x - 7 + i * 2), Math.round(y + j * 2), 2, 2);
+      }
+    });
+    ctx.restore();
+  }
+
+  // De temps en temps, Luigi appelle au loin pendant qu'ƟvƟ jardine.
+  function visiteSpontanee() {
+    if (!vue || vue.luigi || document.visibilityState === "hidden" || Math.random() > 0.25) return;
+    const ids = Object.values(vue.ile.plantes || {}).map((x) => x.p);
+    const p = ids.length ? H.d.plante(ids[Math.floor(Math.random() * ids.length)]) : null;
+    appelerLuigi(false, p);
+  }
+
   function partirLuigi() {
     if (vue && vue.luigi) vue.luigi.cible = { x: -2, y: vue.luigi.y, partir: true };
     if (vue && document.visibilityState === "hidden") vue.luigi = null;
@@ -1115,11 +1199,31 @@
         consulterLuigi().then(() => partirLuigi());
       };
     } else {
-      // visite spontanée quand on regarde une plante : un bâton sur cette plante
+      // visite spontanée : Luigi appelle au loin, ƟvƟ choisit de lui parler ou de lui faire un câlin
       if (H.maintenant() - (H.local.derniereVisiteLuigi || 0) < 10 * 60e3) return;
+      if (H.$(".dialogue")) return;
       const astuce = plante && astuceMTC(plante);
-      if (!astuce) return;
-      ensuite = () => H.dialogue.dire(astuce).then(() => partirLuigi());
+      H.d.majLocal((l) => (l.derniereVisiteLuigi = H.maintenant()));
+      H.sons.jouer("attention", 0.8);
+      H.dialogue.dire([{
+        qui: "luigi",
+        nom: "Luigi, au loin",
+        texte: "ƟvƟ ! Hé, ƟvƟ ! Tu as un moment ?",
+        choix: [{ valeur: "parler", libelle: "Parler avec Luigi" }, { valeur: "calin", libelle: "Lui faire un câlin et des bisous" }],
+      }]).then((choix) => {
+        if (!choix || !vue || vue.luigi) return;
+        const fin = choix === "calin"
+          ? () => calin().then(() => partirLuigi())
+          : () => (astuce ? H.dialogue.dire(astuce) : consulterLuigi()).then(() => partirLuigi());
+        vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite: fin, occupe: true };
+        if (document.visibilityState === "hidden") {
+          vue.luigi.x = vue.luigi.cible.x;
+          vue.luigi.cible = null;
+          vue.luigi.ensuite = null;
+          fin();
+        }
+      });
+      return;
     }
     H.d.majLocal((l) => (l.derniereVisiteLuigi = H.maintenant()));
     vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite };
@@ -1162,6 +1266,15 @@
         }
         bouge = true;
       }
+      // les pas d'ƟvƟ sur le chemin pavé
+      const o = vue.ovo;
+      const surPave = !!o.cible && caseDe(vue.ile, Math.round(o.x), Math.round(o.y)).t === "chemin";
+      H.sons.boucle("pas", surPave, 0.6);
+      if (vue.lolo && vue.lolo.x < vue.lolo.cible) {
+        vue.lolo.x = Math.min(vue.lolo.cible, vue.lolo.x + 7 * dt);
+        bouge = true;
+      }
+      if (vue.coeurs && vue.coeurs > t) bouge = true;
       // pluie ou neige d'après la vraie météo
       const m = H.ciel.meteo || {};
       const tombe = m.type === "pluie" || m.type === "orage" || m.type === "neige";
@@ -1261,7 +1374,11 @@
       else archipel(c);
     },
     quitter() {
-      if (vue) cancelAnimationFrame(vue.anim);
+      if (vue) {
+        cancelAnimationFrame(vue.anim);
+        clearInterval(vue.minuteurLuigi);
+      }
+      H.sons.boucle("pas", false);
       vue = null;
       H.dialogue.fermer();
     },
@@ -1289,5 +1406,10 @@
     }
   });
 
-  H.terrain = { evaluer, iles, ileSecreteOuverte };
+  // dessin automatique d'une plante adulte, comme point de départ pour la dessiner soi-même
+  function dessinAuto(p) {
+    return dessinPlante(Object.assign({}, p, { dessinCarte: null }), 3, true, 1.6).toDataURL("image/png");
+  }
+
+  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto };
 })();

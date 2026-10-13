@@ -64,35 +64,15 @@
     });
   };
 
-  // Le cri pour appeler Luigi : le miaou enregistré (dans les réglages ou les fiches),
-  // sinon un petit miaou de synthèse.
+  // Le cri pour appeler Luigi : le miaou enregistré par ƟvƟ dans les réglages,
+  // sinon le miaou d'origine (sons/miaou.mp3).
   H.jouerCri = function () {
     if (!H.local || !H.local.son) return;
     const enregistre = (H.jeu && H.jeu.cri) || (H.base && H.base.cri);
     if (enregistre) {
       const a = new Audio(enregistre);
       a.play().catch(() => {});
-      return;
-    }
-    const ctx = contexte();
-    if (!ctx) return;
-    const t = ctx.currentTime;
-    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    o.type = "sawtooth";
-    f.type = "bandpass";
-    f.Q.value = 5;
-    o.frequency.setValueAtTime(420, t);
-    o.frequency.exponentialRampToValueAtTime(880, t + 0.16);
-    o.frequency.exponentialRampToValueAtTime(520, t + 0.62);
-    f.frequency.setValueAtTime(900, t);
-    f.frequency.exponentialRampToValueAtTime(1900, t + 0.16);
-    f.frequency.exponentialRampToValueAtTime(1000, t + 0.62);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.18, t + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
-    o.connect(f).connect(g).connect(ctx.destination);
-    o.start(t);
-    o.stop(t + 0.75);
+    } else if (H.sons) H.sons.jouer("miaou", 0.9);
   };
 
   let boite = null;

@@ -24,7 +24,7 @@ python tools/version.py
 
 - `tools/culture/*.json` : les rubriques « Au jardin » pré-remplies d’après le biotope et des guides de jardinage. Dans le jeu elles restent marquées « à vérifier » jusqu’à ce qu’ƟvƟ clique sur « C’est juste » ou les modifie.
 - Le sel du chiffrement ne change jamais (`chiffrer.mjs` le réutilise) : sinon les sauvegardes synchronisées deviendraient illisibles.
-- Miaou d’origine pour appeler Luigi : `prive/miaou.wav` (enregistré dans Réglages puis « Télécharger ce miaou »), ajouté aux fiches chiffrées par `assembler.py`. ƟvƟ peut enregistrer son propre miaou dans les Réglages.
+- Bruitages dans `sons/` : miaou (appeler Luigi), attention (Luigi qui appelle au loin), pas (sur le chemin pavé), roll (la pluie), galop (Lóló). ƟvƟ peut enregistrer son propre miaou dans les Réglages.
 - Messages personnels : `prive/messages.json` avec `{"message": "…", "messageIle": "…"}` (le premier s’affiche au tout premier lancement et dans la boîte aux lettres du village, le second sur l’île secrète).
 
 ## Données d’ƟvƟ
@@ -38,7 +38,9 @@ python tools/version.py
 - Ciel, saisons et météo du lieu choisi (Marseille par défaut, modifiable en voyage) ; la météo vient d’Open-Meteo, sans clé.
 - Flashcartes : raté / difficile / bien / facile ; une carte vue au moins 3 fois sous le seuil de réussite (80 % par défaut) devient « fragile » et revient plus souvent. Chaque catégorie rapporte la ressource choisie dans « Ce que rapportent les cartes ». Après 40 cartes, pause de deux heures (une crêpe au chocolat fondu permet de repartir tout de suite).
 - Terrain : îles de jeu (pousse en temps réel, ressources) ou croquis de projet (à l’échelle, sans ressources, export de la liste des plantes et de l’image). Rien ne meurt : une plante mal placée pousse lentement et dit pourquoi.
-- Luigi passe parfois raconter ses bâtons de MTC, tirés de la rubrique MTC des fiches.
+- Luigi : on miaule pour l’appeler et lui poser des questions sur les plantes de l’île ; de temps en temps il appelle au loin, et ƟvƟ choisit de lui parler ou de lui faire un câlin et des bisous.
+- Chaque plante peut avoir son propre dessin sur la carte (fiche ou panneau de la plante sur l’île).
+- Musique ambiante générée (voix en boucles de longueurs différentes, à la Music for Airports) : le mode suit la météo réelle (soleil lydien, pluie mineure, orage agité) et se feutre la nuit.
 - L’île de Lóló et Mémé apparaît le 24 février.
 
 ## Pas sur Google

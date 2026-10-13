@@ -146,9 +146,12 @@
     }
     // les étagères se dessinent par petits paquets pour rester fluide sur téléphone
     let i = 0;
+    const cible = conteneurEtageres;
     const paquet = () => {
+      // on a quitté la page, ou les étagères ont été redessinées entre-temps
+      if (cible !== conteneurEtageres) return;
       const fin = Math.min(i + 4, groupes.length);
-      for (; i < fin; i++) conteneurEtageres.appendChild(etagere(groupes[i], rg));
+      for (; i < fin; i++) cible.appendChild(etagere(groupes[i], rg));
       if (i < groupes.length) requestAnimationFrame(paquet);
     };
     paquet();

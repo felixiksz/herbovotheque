@@ -340,7 +340,14 @@
         preps,
         (p.preparations || []).length > 1 ? H.el("label.discret", null, "Bocal posé sur les étagères : ", choixPrincipal) : null
       ),
-      manuels.length ? H.el("div.fiche-preps", null, H.el("h3", null, "Sur mes étagères"), H.el("div.pastilles", null, manuels)) : null
+      manuels.length ? H.el("div.fiche-preps", null, H.el("h3", null, "Sur mes étagères"), H.el("div.pastilles", null, manuels)) : null,
+      H.el("div.fiche-preps.fiche-carte", null,
+        H.el("h3", null, "Sur la carte du terrain"),
+        H.el("div.ligne-carte", null,
+          H.el("img.apercu-carte", { src: p.dessinCarte || (H.terrain ? H.terrain.dessinAuto(p) : ""), alt: "" }),
+          H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, recharger) }, p.dessinCarte ? "Modifier son dessin" : "Dessiner son aspect sur la carte")
+        )
+      )
     );
   }
 
