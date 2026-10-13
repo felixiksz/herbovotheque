@@ -59,3 +59,7 @@ python tools/version.py
 ## Pas sur Google
 
 Balises `noindex` dans `index.html`. Le dépôt est public mais les fiches sont chiffrées.
+
+## Crédits des sons
+
+Goélands (Freesound) : « seagull 2 fx » de Snapper4298 (CC0), « Seagull single call » de steaq (CC0), « 16_2_Gaviotas_peleando » de ChristianAnd (CC0), « Seagull_byMondfisch89 » de Yudena / Mondfisch89 (CC BY-NC 4.0). Les deux WAV sont passés en mono 22 kHz, sans les silences.

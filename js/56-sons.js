@@ -310,12 +310,88 @@
     else if (sorte < 0.8) miaulement(voix, t, v);
     else alarme(voix, t, v);
   }
-  function goeland() {
-    if (!actif() || !contexte()) return;
+  function goelandSynthese() {
     const t0 = ctx.currentTime + 0.05;
     crier(t0, hasard(0.88, 1.08), 0.2);
     // parfois, un autre goéland répond, un peu plus loin
     if (Math.random() < 0.35) crier(t0 + hasard(0.7, 1.8), hasard(0.85, 1.12), 0.12);
+  }
+
+  // Les vrais goélands, enregistrés (Freesound, crédits dans les notes). Chaque cri est joué
+  // un peu plus haut ou plus bas, d'un côté ou de l'autre, adouci par la distance.
+  // La synthèse ne sert que si aucun enregistrement ne se charge (un vieux Safari et l'ogg…).
+  const ENREGISTRES = [
+    { f: "sons/goelands/goeland-cri.ogg", poids: 3 },
+    { f: "sons/goelands/goeland-rpg.ogg", poids: 2 },
+    { f: "sons/goelands/goelands-echo.wav", poids: 2, extrait: 4.5 },
+    { f: "sons/goelands/goelands-dispute.wav", poids: 1, volume: 0.7 },
+  ];
+  const tamponsGoelands = new Map();
+  function tamponGoeland(e) {
+    if (!tamponsGoelands.has(e.f)) {
+      tamponsGoelands.set(e.f, fetch(e.f)
+        .then((r) => {
+          if (!r.ok) throw new Error("GitHub " + r.status);
+          return r.arrayBuffer();
+        })
+        .then((a) => new Promise((ok, ko) => ctx.decodeAudioData(a, ok, ko)))
+        .catch(() => null));
+    }
+    return tamponsGoelands.get(e.f);
+  }
+  function tirerGoeland() {
+    let n = Math.random() * ENREGISTRES.reduce((a, e) => a + e.poids, 0);
+    for (const e of ENREGISTRES) if ((n -= e.poids) < 0) return e;
+    return ENREGISTRES[0];
+  }
+  async function goelandEnregistre(volume, delai) {
+    let e = tirerGoeland();
+    let buf = await tamponGoeland(e);
+    if (!buf) {
+      for (const autre of ENREGISTRES) {
+        buf = await tamponGoeland(autre);
+        if (buf) {
+          e = autre;
+          break;
+        }
+      }
+    }
+    if (!buf || !actif()) return !!buf;
+    const t = ctx.currentTime + 0.05 + (delai || 0);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = hasard(0.93, 1.06);
+    let debut = 0, duree = buf.duration;
+    if (e.extrait && buf.duration > e.extrait + 0.5) {
+      debut = Math.random() * (buf.duration - e.extrait);
+      duree = e.extrait;
+    }
+    duree /= src.playbackRate.value;
+    const vol = volume * (e.volume || 1) * H.volume("bruitages");
+    const loin = ctx.createBiquadFilter();
+    loin.type = "lowpass";
+    loin.frequency.value = hasard(4500, 7000);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + 0.04);
+    g.gain.setValueAtTime(Math.max(0.0002, vol), t + Math.max(0.05, duree - 0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    src.connect(loin).connect(g);
+    if (ctx.createStereoPanner) {
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = hasard(-0.65, 0.65);
+      g.connect(pan).connect(ctx.destination);
+    } else g.connect(ctx.destination);
+    src.start(t, debut, duree * src.playbackRate.value + 0.05);
+    return true;
+  }
+  function goeland() {
+    if (!actif() || !contexte()) return;
+    goelandEnregistre(0.42).then((ok) => {
+      if (!ok) return goelandSynthese();
+      // parfois, un autre goéland répond, un peu plus loin
+      if (Math.random() < 0.3) goelandEnregistre(0.24, hasard(0.8, 2));
+    });
   }
   function programmerGoeland() {
     setTimeout(() => {
