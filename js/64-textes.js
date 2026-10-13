@@ -139,6 +139,10 @@
   H.vues.textes = {
     afficher(c) {
       etats = [];
+      if (H.local.role !== "mesi") {
+        c.appendChild(H.el("p.discret", null, "Cette page est réservée à l’appareil de Mesi."));
+        return;
+      }
       c.appendChild(H.el("div.herbo-tete", null,
         H.el("h1", null, "Les textes du jeu"),
         H.el("p.discret", null, "Relis et corrige les histoires, les compliments et les répliques. Chaque correction est enregistrée dès que tu cliques ailleurs, et partagée par la synchronisation. Le bouton « Écouter » les fait lire comme dans le jeu.")

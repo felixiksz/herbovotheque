@@ -191,42 +191,131 @@
   const DEHORS = ["village", "terrain", "serre", "balade"];
   const dehors = () => DEHORS.includes(document.documentElement.dataset.vue);
 
-  // un goéland au loin : deux ou trois « kiaou » qui montent puis retombent
+  // Le goéland leucophée de Marseille, au loin. Son grand cri a trois parties : parfois quelques
+  // aboiements, puis un ou deux longs cris aigus, puis une série régulière de 8 à 14 notes plus
+  // courtes (environ quatre par seconde) qui descendent peu à peu. La voix est grave pour un
+  // goéland, nasale et rauque. Il pousse aussi un long « miaulement » plaintif, et des « ga-ga-ga »
+  // d'alarme. Synthèse : source riche en harmoniques, résonances nasales, rugosité, souffle, écho.
+  let bruitBlanc = null;
+  function souffle() {
+    if (!bruitBlanc) {
+      bruitBlanc = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = bruitBlanc.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = bruitBlanc;
+    src.loop = true;
+    return src;
+  }
+  // la chaîne commune : résonances du bec, lointain (aigus adoucis) et écho sur l'eau
+  function voixGoeland(volume) {
+    const entree = ctx.createGain();
+    const sortie = ctx.createGain();
+    sortie.gain.value = volume * H.volume("bruitages");
+    for (const [f, q, g] of [[680, 1.4, 0.55], [1400, 2.6, 1], [2750, 3.5, 0.5]]) {
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = f;
+      bp.Q.value = q;
+      const gg = ctx.createGain();
+      gg.gain.value = g;
+      entree.connect(bp).connect(gg).connect(sortie);
+    }
+    const loin = ctx.createBiquadFilter();
+    loin.type = "lowpass";
+    loin.frequency.value = 4200;
+    sortie.connect(loin).connect(ctx.destination);
+    // un écho discret, comme renvoyé par les rochers
+    const delai = ctx.createDelay(1);
+    delai.delayTime.value = 0.19 + Math.random() * 0.08;
+    const retour = ctx.createGain();
+    retour.gain.value = 0.16;
+    const sourd = ctx.createBiquadFilter();
+    sourd.type = "lowpass";
+    sourd.frequency.value = 2200;
+    loin.connect(delai).connect(sourd).connect(retour).connect(ctx.destination);
+    return entree;
+  }
+  // une note : la hauteur monte vite puis retombe lentement, avec un grain rauque
+  function noteGoeland(voix, t, d, f0, fPic, fFin, amp, rauque) {
+    const o = ctx.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(fPic, t + d * 0.18);
+    o.frequency.exponentialRampToValueAtTime(fFin, t + d);
+    // un léger tremblement de la voix
+    const vib = ctx.createOscillator(), vg = ctx.createGain();
+    vib.frequency.value = 7 + Math.random() * 5;
+    vg.gain.value = fPic * 0.012;
+    vib.connect(vg).connect(o.frequency);
+    // la rugosité : une modulation rapide de l'amplitude
+    const rugueux = ctx.createGain();
+    rugueux.gain.value = 1 - rauque * 0.45;
+    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+    lfo.frequency.value = 65 + Math.random() * 30;
+    lg.gain.value = rauque * 0.45;
+    lfo.connect(lg).connect(rugueux.gain);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(amp, t + Math.min(0.035, d * 0.2));
+    env.gain.setValueAtTime(amp * 0.85, t + d * 0.65);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(rugueux).connect(env).connect(voix);
+    // le souffle éraillé
+    const b = souffle(), bp = ctx.createBiquadFilter(), be = ctx.createGain();
+    bp.type = "bandpass";
+    bp.frequency.value = 2300;
+    bp.Q.value = 0.9;
+    be.gain.setValueAtTime(0.0001, t);
+    be.gain.exponentialRampToValueAtTime(amp * 0.22 * rauque + 0.0002, t + 0.03);
+    be.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    b.connect(bp).connect(be).connect(voix);
+    for (const n of [o, vib, lfo, b]) {
+      n.start(t);
+      n.stop(t + d + 0.05);
+    }
+  }
+  const hasard = (a, b) => a + Math.random() * (b - a);
+  // le grand cri : un ou deux longs cris aigus, puis la série qui descend
+  function grandCri(voix, t, v) {
+    if (Math.random() < 0.3) for (let i = 0; i < 2; i++, t += 0.16) noteGoeland(voix, t, 0.08, 520 * v, 600 * v, 470 * v, 0.3, 0.7);
+    const cris = Math.random() < 0.55 ? 1 : 2;
+    for (let i = 0; i < cris; i++) {
+      const d = hasard(0.45, 0.62);
+      noteGoeland(voix, t, d, 640 * v, hasard(1080, 1200) * v, 760 * v, 0.6, 0.35);
+      t += d + hasard(0.08, 0.14);
+    }
+    const n = 8 + Math.floor(Math.random() * 7);
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1), d = 0.17 - u * 0.04;
+      noteGoeland(voix, t, d, 720 * v * (1 - 0.14 * u), 960 * v * (1 - 0.2 * u), 620 * v * (1 - 0.12 * u), 0.5 * (1 - 0.5 * u), 0.45);
+      t += 0.24 - u * 0.03;
+    }
+  }
+  // le miaulement plaintif
+  function miaulement(voix, t, v) {
+    noteGoeland(voix, t, hasard(0.6, 0.8), 860 * v, 1020 * v, 540 * v, 0.5, 0.25);
+    if (Math.random() < 0.5) noteGoeland(voix, t + hasard(0.9, 1.3), hasard(0.55, 0.7), 840 * v, 990 * v, 560 * v, 0.4, 0.25);
+  }
+  // l'alarme : des « ga-ga-ga » brefs et éraillés
+  function alarme(voix, t, v) {
+    const n = 3 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++, t += hasard(0.15, 0.19)) noteGoeland(voix, t, 0.085, 500 * v, 620 * v, 460 * v, 0.45, 0.75);
+  }
+  function crier(t, v, volume) {
+    const voix = voixGoeland(volume);
+    const sorte = Math.random();
+    if (sorte < 0.5) grandCri(voix, t, v);
+    else if (sorte < 0.8) miaulement(voix, t, v);
+    else alarme(voix, t, v);
+  }
   function goeland() {
     if (!actif() || !contexte()) return;
     const t0 = ctx.currentTime + 0.05;
-    const n = 2 + Math.floor(Math.random() * 3);
-    const base = 1100 + Math.random() * 300;
-    const filtre = ctx.createBiquadFilter();
-    filtre.type = "bandpass";
-    filtre.frequency.value = 1500;
-    filtre.Q.value = 2.5;
-    const loin = ctx.createBiquadFilter();
-    loin.type = "lowpass";
-    loin.frequency.value = 2600;
-    const g = ctx.createGain();
-    g.gain.value = 0.18 * H.volume("bruitages");
-    filtre.connect(loin).connect(g).connect(ctx.destination);
-    for (let i = 0; i < n; i++) {
-      const t = t0 + i * (0.42 + Math.random() * 0.12);
-      const o = ctx.createOscillator(), e = ctx.createGain();
-      o.type = "sawtooth";
-      o.frequency.setValueAtTime(base * 0.9, t);
-      o.frequency.exponentialRampToValueAtTime(base * 1.35, t + 0.08);
-      o.frequency.exponentialRampToValueAtTime(base * 0.75, t + 0.32);
-      const vib = ctx.createOscillator(), vg = ctx.createGain();
-      vib.frequency.value = 28;
-      vg.gain.value = 25;
-      vib.connect(vg).connect(o.frequency);
-      e.gain.setValueAtTime(0.0001, t);
-      e.gain.exponentialRampToValueAtTime(i === 0 ? 0.5 : 0.35, t + 0.04);
-      e.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-      o.connect(e).connect(filtre);
-      o.start(t);
-      vib.start(t);
-      o.stop(t + 0.4);
-      vib.stop(t + 0.4);
-    }
+    crier(t0, hasard(0.88, 1.08), 0.2);
+    // parfois, un autre goéland répond, un peu plus loin
+    if (Math.random() < 0.35) crier(t0 + hasard(0.7, 1.8), hasard(0.85, 1.12), 0.12);
   }
   function programmerGoeland() {
     setTimeout(() => {

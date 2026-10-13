@@ -4,7 +4,7 @@
 (function () {
   const H = window.H;
   const NOMS = { ovo: "ƟvƟ", mesi: "Mesi" };
-  const moi = () => (H.local.joueur === "mesi" ? "mesi" : "ovo");
+  const moi = () => (H.local.role === "mesi" ? "mesi" : "ovo");
   const autre = () => (moi() === "mesi" ? "ovo" : "mesi");
 
   const lettres = () => Object.values((H.jeu && H.jeu.lettres) || {}).filter((l) => l && !l.supprime);

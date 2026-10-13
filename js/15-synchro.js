@@ -1,12 +1,27 @@
 // Synchronisation entre appareils via le dépôt GitHub (jeton à accès fin).
 // Les sauvegardes sont chiffrées et rangées sur une branche à part
 // « sauvegardes », pour ne pas reconstruire le site à chaque partie.
+//
+// Chaque personne a son propre jeton. La liste des accès (data/acces.enc, chiffrée) ne garde
+// que l'empreinte de chaque jeton, jamais le jeton lui-même, avec un nom et un rôle :
+//   ovo     : la partie d'ƟvƟ (herbier et jeu) ;
+//   mesi    : n'échange que les lettres et les textes, et gère les accès ;
+//   testeur : une partie d'essai à part (data/essais/…), qu'ƟvƟ ne voit jamais.
 (function () {
   const H = window.H;
   const DEPOT = "felixiksz/herbovotheque";
   const BRANCHE = "sauvegardes";
   const API = "https://api.github.com/repos/" + DEPOT;
-  const FICHIERS = { herbier: "data/herbier.enc", jeu: "data/jeu.enc" };
+  const FICHIERS = { herbier: "data/herbier.enc", jeu: "data/jeu.enc", acces: "data/acces.enc" };
+  const role = () => H.local.role || null;
+  function chemin(quoi) {
+    if (quoi !== "acces" && role() === "testeur" && H.local.empreinte) return "data/essais/" + H.local.empreinte.slice(0, 16) + "/" + quoi + ".enc";
+    return FICHIERS[quoi];
+  }
+  async function empreinte(jeton) {
+    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("herbotheque|" + jeton));
+    return Array.from(new Uint8Array(h), (o) => o.toString(16).padStart(2, "0")).join("");
+  }
   let minuteur = null;
   let enCours = null;
 
@@ -43,7 +58,7 @@
 
   // Lecture brute (jusqu'à 100 Mo) d'une sauvegarde chiffrée, à un commit donné.
   async function lireDistant(quoi, commit) {
-    const r = await fetch(API + "/contents/" + FICHIERS[quoi] + "?ref=" + commit, { headers: entetes(true), cache: "no-store" });
+    const r = await fetch(API + "/contents/" + chemin(quoi) + "?ref=" + commit, { headers: entetes(true), cache: "no-store" });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error("GitHub " + r.status);
     return H.chiffre.ouvrir(JSON.parse(await r.text()), H.cle);
@@ -56,7 +71,7 @@
     for (const [quoi, objet] of Object.entries(objets)) {
       const paquet = await H.chiffre.fermer(objet, H.cle, H.meta.sel, H.meta.iter);
       const blob = await api("/git/blobs", { method: "POST", body: JSON.stringify({ content: JSON.stringify(paquet), encoding: "utf-8" }) });
-      arbre.push({ path: FICHIERS[quoi], mode: "100644", type: "blob", sha: blob.sha });
+      arbre.push({ path: chemin(quoi), mode: "100644", type: "blob", sha: blob.sha });
     }
     const base = (await api("/git/commits/" + parent)).tree.sha;
     const tree = await api("/git/trees", { method: "POST", body: JSON.stringify({ base_tree: base, tree: arbre }) });
@@ -132,16 +147,34 @@
     return r;
   }
 
+  // Le rôle de ce jeton, d'après la liste des accès (null : jeton pas encore autorisé)
+  async function verifierAcces(parent) {
+    const acces = await lireDistant("acces", parent);
+    const emp = await empreinte(H.local.jeton);
+    const u = acces && acces.utilisateurs && acces.utilisateurs[emp];
+    await H.d.majLocal((l) => {
+      l.empreinte = emp;
+      l.role = u ? u.role : null;
+      l.nomAcces = u ? u.nom : null;
+    });
+    return { acces, utilisateur: u || null };
+  }
+
   async function synchroniser() {
     if (!H.local.jeton || !navigator.onLine) return;
     etat("en cours");
     try {
       for (let essai = 0; essai < 4; essai++) {
         const parent = await tete();
+        const { utilisateur } = await verifierAcces(parent);
+        if (!utilisateur) {
+          etat("erreur", "ce jeton n’a pas (ou plus) d’accès");
+          return;
+        }
         const aEcrire = {};
         // l'appareil de Mesi n'échange que les lettres et les textes : il ne touche jamais
         // à l'herbier ni aux jardins d'ƟvƟ (et ses essais restent chez lui)
-        const mesi = H.local.joueur === "mesi";
+        const mesi = role() === "mesi";
         for (const quoi of mesi ? ["jeu"] : ["herbier", "jeu"]) {
           const distant = await lireDistant(quoi, parent);
           const local = quoi === "jeu" ? H.jeu : H.herbier;
@@ -207,6 +240,74 @@
       if (enCours) return enCours;
       enCours = synchroniser().finally(() => (enCours = null));
       return enCours;
+    },
+    empreinte,
+    // Relier un jeton à cet appareil : vérifie ses droits, puis son accès dans la liste.
+    // Le tout premier jeton (quand la liste n'existe pas encore) devient celui de Mesi.
+    async relier(jeton, confirmerPremier) {
+      const t = await H.synchro.testerJeton(jeton);
+      if (!t.ok) return t;
+      const ancien = H.local.jeton;
+      await H.d.majLocal((l) => (l.jeton = jeton));
+      try {
+        const parent = await tete();
+        const { acces, utilisateur } = await verifierAcces(parent);
+        if (utilisateur) {
+          H.synchro.lancer();
+          return { ok: true, message: "Jeton relié : " + utilisateur.nom + "." };
+        }
+        if (!acces && confirmerPremier()) {
+          const emp = await empreinte(jeton);
+          await ecrireDistant({ acces: { utilisateurs: { [emp]: { nom: "Mesi", role: "mesi", ajouteLe: H.maintenant() } }, modifieLe: H.maintenant() } }, parent);
+          await verifierAcces(await tete());
+          H.synchro.lancer();
+          return { ok: true, message: "Jeton relié : Mesi. Tu peux maintenant ajouter les autres jetons." };
+        }
+        await H.d.majLocal((l) => {
+          if (ancien) l.jeton = ancien;
+          else delete l.jeton;
+        });
+        return { ok: false, message: "Ce jeton n’a pas encore d’accès : Mesi doit l’ajouter dans ses réglages." };
+      } catch (e) {
+        await H.d.majLocal((l) => {
+          if (ancien) l.jeton = ancien;
+          else delete l.jeton;
+        });
+        return { ok: false, message: "Pas de connexion avec GitHub (" + e.message + ")" };
+      }
+    },
+    // pour Mesi : la liste des accès, ajouter ou retirer un jeton
+    async listeAcces() {
+      const acces = await lireDistant("acces", await tete());
+      return Object.entries((acces && acces.utilisateurs) || {}).map(([emp, u]) => Object.assign({ empreinte: emp }, u));
+    },
+    async changerAcces(fn) {
+      if (role() !== "mesi") throw new Error("réservé à Mesi");
+      for (let essai = 0; essai < 4; essai++) {
+        const parent = await tete();
+        const acces = (await lireDistant("acces", parent)) || { utilisateurs: {} };
+        fn(acces.utilisateurs);
+        acces.modifieLe = H.maintenant();
+        try {
+          await ecrireDistant({ acces }, parent);
+          return;
+        } catch (e) {
+          if (!e.conflit) throw e;
+        }
+      }
+      throw new Error("conflit");
+    },
+    async ajouterAcces(jeton, nom, sonRole) {
+      const t = await H.synchro.testerJeton(jeton);
+      if (!t.ok) return t;
+      const emp = await empreinte(jeton);
+      await H.synchro.changerAcces((u) => (u[emp] = { nom, role: sonRole, ajouteLe: H.maintenant() }));
+      return { ok: true };
+    },
+    async retirerAcces(emp) {
+      if (emp === H.local.empreinte) return { ok: false, message: "Tu ne peux pas retirer ton propre accès." };
+      await H.synchro.changerAcces((u) => delete u[emp]);
+      return { ok: true };
     },
     async testerJeton(jeton) {
       const r = await fetch(API, {

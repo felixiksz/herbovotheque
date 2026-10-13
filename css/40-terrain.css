@@ -250,3 +250,9 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .outils-ferme { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--filet); border-radius: 8px; display: grid; gap: 6px; }
 .outils-ferme .bouton { font-family: var(--terrain); font-size: 0.78rem; }
 .outils-ferme p { margin: 0; }
+
+/* les accès (réglages de Mesi) */
+.liste-acces { list-style: none; padding: 0; display: grid; gap: 6px; }
+.liste-acces li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.form-acces { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.form-acces input, .form-acces select { min-width: 160px; flex: 1; }

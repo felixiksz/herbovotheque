@@ -126,9 +126,8 @@
           ? "Synchronisation en cours…"
           : H.synchro.etat === "erreur"
             ? "Problème de synchronisation : " + H.synchro.detail
-            : quand
-              ? "Reliée. Dernière synchronisation : " + quand
-              : "Reliée.";
+            : (H.local.nomAcces ? "Reliée (" + H.local.nomAcces + (H.local.role === "testeur" ? ", partie d’essai" : "") + "). " : "Reliée. ") +
+              (quand ? "Dernière synchronisation : " + quand : "");
     };
     majEtat();
     H.sur("synchro", majEtat);
@@ -147,16 +146,13 @@
             return;
           }
           msg.textContent = "Vérification…";
-          const t = await H.synchro.testerJeton(j).catch(() => ({ ok: false, message: "Pas de connexion" }));
-          if (!t.ok) {
-            msg.textContent = t.message;
-            return;
-          }
-          await H.d.majLocal((l) => (l.jeton = j));
+          const t = await H.synchro
+            .relier(j, () => confirm("C’est le tout premier jeton relié au jeu : il devient celui de Mesi, qui pourra ensuite ajouter les autres. C’est bien l’appareil de Mesi ?"))
+            .catch(() => ({ ok: false, message: "Pas de connexion" }));
+          msg.textContent = t.message;
+          if (!t.ok) return;
           champ.value = "";
-          msg.textContent = "Jeton enregistré.";
-          await H.synchro.lancer();
-          majEtat();
+          H.router();
         },
       }, champ, H.el("button.bouton.petit", { type: "submit" }, "Relier")),
       msg,
@@ -345,29 +341,72 @@
     );
   }
 
-  // l'appareil de Mesi : accès à la page des textes du jeu
-  function blocAppareil() {
-    const mesi = H.local.joueur === "mesi";
+  // l'appareil de Mesi (selon son jeton) : les textes du jeu et la gestion des accès
+  function blocAcces() {
+    if (H.local.role !== "mesi") return null;
+    const liste = H.el("ul.liste-acces", null, H.el("li.discret", null, "Chargement…"));
+    const msg = H.el("p.discret");
+    const NOMS_ROLES = { ovo: "la partie d’ƟvƟ", mesi: "appareil de Mesi", testeur: "partie d’essai à part" };
+    async function charger() {
+      try {
+        const acces = await H.synchro.listeAcces();
+        liste.innerHTML = "";
+        for (const u of acces) {
+          liste.appendChild(H.el("li", null,
+            H.el("strong", null, u.nom), " · " + (NOMS_ROLES[u.role] || u.role) + (u.empreinte === H.local.empreinte ? " (cet appareil)" : ""),
+            u.empreinte !== H.local.empreinte ? H.el("button.bouton.petit.discret-bouton", {
+              type: "button",
+              async onclick() {
+                if (!confirm("Retirer l’accès de « " + u.nom + " » ? Son jeton ne pourra plus synchroniser.")) return;
+                const r = await H.synchro.retirerAcces(u.empreinte).catch((e) => ({ ok: false, message: e.message }));
+                msg.textContent = r.ok ? "Accès retiré." : r.message;
+                charger();
+              },
+            }, "Retirer") : null));
+        }
+      } catch (e) {
+        liste.innerHTML = "";
+        liste.appendChild(H.el("li.discret", null, "Impossible de lire la liste des accès (" + e.message + ")."));
+      }
+    }
+    charger();
+    const jeton = H.el("input", { type: "password", placeholder: "github_pat_…", autocomplete: "off", "aria-label": "Nouveau jeton" });
+    const nom = H.el("input", { type: "text", placeholder: "Nom (ƟvƟ, Vénus…)", "aria-label": "Nom" });
+    const sonRole = H.el("select", { "aria-label": "Rôle" },
+      H.el("option", { value: "ovo" }, "la partie d’ƟvƟ"),
+      H.el("option", { value: "testeur" }, "partie d’essai à part (invisible pour ƟvƟ)"),
+      H.el("option", { value: "mesi" }, "appareil de Mesi"));
     return H.el("section.reglage", null,
-      H.el("h2", null, "Cet appareil"),
-      H.el("label", null, "Cet appareil est celui de ",
-        H.el("select", {
-          onchange: async (e) => {
-            await H.d.majLocal((l) => (l.joueur = e.target.value));
-            H.router();
-          },
+      H.el("h2", null, "Mesi"),
+      H.el("p.discret", null, "Cet appareil est relié avec le jeton de Mesi : la synchronisation n’y échange que les lettres et les textes du jeu, jamais l’herbier ni les jardins d’ƟvƟ."),
+      H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")),
+      H.el("h3", null, "Les accès"),
+      H.el("p.discret", null, "Chaque personne reçoit son propre jeton à accès fin (sur github.com : Settings, Developer settings, Fine-grained tokens, limité au dépôt herbovotheque, « Contents » en lecture et écriture). Ajoute-le ici avec son rôle avant de le donner. Seule son empreinte est gardée, chiffrée."),
+      liste,
+      H.el("form.form-acces", {
+        async onsubmit(e) {
+          e.preventDefault();
+          if (!jeton.value.trim() || !nom.value.trim()) return (msg.textContent = "Il faut le jeton et un nom.");
+          msg.textContent = "Ajout…";
+          const r = await H.synchro.ajouterAcces(jeton.value.trim(), nom.value.trim(), sonRole.value).catch((err) => ({ ok: false, message: err.message }));
+          msg.textContent = r.ok ? "Accès ajouté. Tu peux donner ce jeton." : r.message;
+          if (r.ok) {
+            jeton.value = "";
+            nom.value = "";
+            charger();
+          }
         },
-          H.el("option", { value: "ovo", selected: !mesi }, "ƟvƟ"),
-          H.el("option", { value: "mesi", selected: mesi }, "Mesi"))),
-      mesi ? H.el("p.discret", null, "Sur l’appareil de Mesi, la synchronisation n’échange que les lettres et les textes du jeu : l’herbier et les jardins d’ƟvƟ ne sont jamais modifiés d’ici.") : null,
-      mesi ? H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")) : null
+      }, nom, sonRole, jeton, H.el("button.bouton.petit", { type: "submit" }, "Ajouter")),
+      msg
     );
   }
 
   H.vues.reglages = {
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
-      c.append(blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAppareil());
+      c.append(blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde());
+      const acces = blocAcces();
+      if (acces) c.appendChild(acces);
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },
   };

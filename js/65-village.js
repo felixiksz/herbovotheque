@@ -573,11 +573,12 @@
     ctx.drawImage(scene.fond, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (scene.traitEnCours) dessinerTrait(ctx, scene.traitEnCours.type, scene.traitEnCours.pts, k, H.alea("apercu"));
-    // étiquettes des lieux (kraft, Beth Ellen)
+    // le nom d'un lieu n'apparaît qu'au survol (ou au premier toucher, sur téléphone)
     ctx.textAlign = "center";
     for (const [id, l] of Object.entries(LIEUX)) {
+      if (id !== scene.survol && id !== scene.choisi) continue;
       let [x, y] = position(id);
-      const survol = scene.survol === id;
+      const survol = true;
       ctx.font = Math.round(19 * Math.max(0.8, k)) + "px 'Beth Ellen', cursive";
       const tw = ctx.measureText(l.nom).width + 16;
       const ey = y + 24 * Math.max(0.8, k);
@@ -1031,6 +1032,11 @@
       dessiner();
       boucle();
       brancherAmenager(toile);
+      // sur téléphone : un premier toucher montre le nom du lieu, un second y entre
+      toile.addEventListener("pointerdown", (e) => (scene.typePointeur = e.pointerType));
+      toile.addEventListener("mouseleave", () => {
+        scene.survol = null;
+      });
       toile.addEventListener("click", (e) => {
         if (scene.amenager) return;
         // toucher Lóló (une fois son île découverte) : elle raconte des astuces et les plantes du moment
@@ -1043,6 +1049,13 @@
           }
         }
         const id = lieuSous(e);
+        if (scene.typePointeur === "touch" || scene.typePointeur === "pen") {
+          if (id && scene.choisi === id) {
+            scene.choisi = null;
+            aller(id);
+          } else scene.choisi = id;
+          return;
+        }
         if (id) aller(id);
       });
       toile.addEventListener("mousemove", (e) => {
