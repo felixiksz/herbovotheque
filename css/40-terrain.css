@@ -231,3 +231,17 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .histoire-jeu label { display: block; margin: 8px 0; }
 .histoire-jeu input[type="text"] { width: 100%; max-width: 420px; font: inherit; }
 .puce-a-verifier:empty { display: none; }
+
+/* la boîte aux lettres */
+.liste-lettres { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 8px; }
+.lettre-ligne { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--filet); border-radius: 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.lettre-ligne.envoyee { cursor: default; }
+.lettre-ligne img { width: 36px; height: auto; flex: none; }
+.lettre-ligne.non-lue { border-color: var(--fluo); box-shadow: inset 4px 0 0 var(--fluo); }
+.lettre-ligne > span { flex: 1; }
+.lien-discret { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+.lettre-ecrite { position: relative; max-width: 560px; }
+.lettre-ecrite .timbre { position: absolute; right: 4px; top: 30px; width: 54px; transform: rotate(4deg); }
+.lettre-date { font-family: var(--titre); margin: 0 70px 16px 0; }
+.lettre-signature { font-family: var(--titre); font-size: 1.5rem; text-align: right; margin-top: 18px; }
+.ecrire-lettre label { display: block; margin: 10px 0; }

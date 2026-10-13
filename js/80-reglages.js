@@ -359,7 +359,8 @@
         },
           H.el("option", { value: "ovo", selected: !mesi }, "ƟvƟ"),
           H.el("option", { value: "mesi", selected: mesi }, "Mesi"))),
-      mesi ? H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu")) : null
+      mesi ? H.el("p.discret", null, "Sur l’appareil de Mesi, la synchronisation n’échange que les lettres et les textes du jeu : l’herbier et les jardins d’ƟvƟ ne sont jamais modifiés d’ici.") : null,
+      mesi ? H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")) : null
     );
   }
 

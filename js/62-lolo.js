@@ -22,7 +22,7 @@
     "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton île.",
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",
     "Relie ton Mac et ton iPhone dans les Réglages pour retrouver partout le même herbier.",
-    "La boîte aux lettres de la ferme garde le tout premier message qu’on t’a écrit.",
+    "Quand le petit drapeau rose de la boîte aux lettres est levé, une lettre de Mesi t’attend. Tu peux lui répondre, ou programmer une lettre pour plus tard.",
     "Dans une fiche, « Stock dans l’herbothèque » note si un bocal est plein, à moitié, presque vide ou vide. Je te dirai quand c’est la saison pour aller en recueillir !",
     "Dans l’herbothèque, coche « seulement les bocaux presque vides ou vides » pour voir ce qu’il faut aller cueillir.",
     "Dans la serre, sème au bon mois : ça lève deux fois plus vite. Les bébés plantes se repiquent ensuite sur tes îles pour presque rien.",

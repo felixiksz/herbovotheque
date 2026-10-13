@@ -122,6 +122,7 @@
     r.serre = serre.serre;
     r.serreModifieLe = serre.serreModifieLe;
     r.textes = fusionnerCollection(local.textes, distant.textes);
+    r.lettres = fusionnerCollection(local.lettres, distant.lettres);
     const labo = plusRecent(local, distant, "laboModifieLe");
     r.labo = labo.labo;
     r.laboModifieLe = labo.laboModifieLe;
@@ -137,9 +138,24 @@
       for (let essai = 0; essai < 4; essai++) {
         const parent = await tete();
         const aEcrire = {};
-        for (const quoi of ["herbier", "jeu"]) {
+        // l'appareil de Mesi n'échange que les lettres et les textes : il ne touche jamais
+        // à l'herbier ni aux jardins d'ƟvƟ (et ses essais restent chez lui)
+        const mesi = H.local.joueur === "mesi";
+        for (const quoi of mesi ? ["jeu"] : ["herbier", "jeu"]) {
           const distant = await lireDistant(quoi, parent);
           const local = quoi === "jeu" ? H.jeu : H.herbier;
+          if (mesi) {
+            const commun = { lettres: fusionnerCollection(local.lettres, distant && distant.lettres), textes: fusionnerCollection(local.textes, distant && distant.textes) };
+            const chezMoi = Object.assign({}, local, commun);
+            if (canon(chezMoi) !== canon(local)) {
+              H.jeu = chezMoi;
+              await H.kv.ecrire("jeu", chezMoi);
+              H.emettre("donnees", "jeu");
+            }
+            const versOvo = Object.assign({}, distant || { modifieLe: 0 }, commun);
+            if (!distant || canon(versOvo) !== canon(distant)) aEcrire.jeu = versOvo;
+            continue;
+          }
           const fusion = quoi === "jeu" ? fusionnerJeu(local, distant) : fusionnerHerbier(local, distant);
           if (canon(fusion) !== canon(local)) {
             if (quoi === "jeu") H.jeu = fusion;

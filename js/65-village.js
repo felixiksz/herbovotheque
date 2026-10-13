@@ -367,7 +367,7 @@
     // les couronnes des grands pins surplombent les toits
     for (const g of grandsPins) pinParasol(ctx, H.alea("grand-pin-" + g.id), g.x, g.y, g.t, "couronne");
     dessinerPonton(ctx, r, ...position("terrain"), portrait);
-    dessinerBoite(ctx, r, ...position("lettres"));
+    dessinerBoite(ctx, r, ...position("lettres"), H.lettres && H.lettres.aLire() > 0);
     scene.fond = c;
   }
 
@@ -388,13 +388,15 @@
     H.aqua.trait(ctx, r, [[bx - 20 * k, by - 1 * k], [bx + 20 * k, by - 1 * k]], { couleur: "#ff2e9a", epaisseur: 2, alpha: 0.8 });
   }
 
-  function dessinerBoite(ctx, r, x, y) {
+  function dessinerBoite(ctx, r, x, y, drapeau) {
     const k = echelle();
     H.aqua.trait(ctx, r, [[x, y], [x, y - 34 * k]], { couleur: "#6b4423", epaisseur: 3 });
     const boite = H.aqua.rectArrondi(x - 15 * k, y - 52 * k, 30 * k, 20 * k, 8 * k);
     H.aqua.lavis(ctx, r, boite, "#3a5fd0", { alpha: 0.35, couches: 6 });
     H.aqua.trait(ctx, r, boite.concat([boite[0]]), { epaisseur: 1.3 });
-    H.aqua.trait(ctx, r, [[x + 15 * k, y - 50 * k], [x + 15 * k, y - 64 * k], [x + 24 * k, y - 60 * k], [x + 15 * k, y - 56 * k]], { couleur: "#ff2e9a", epaisseur: 1.8 });
+    // le drapeau levé : une lettre attend ; baissé : rien de neuf
+    if (drapeau) H.aqua.trait(ctx, r, [[x + 15 * k, y - 46 * k], [x + 15 * k, y - 66 * k], [x + 26 * k, y - 62 * k], [x + 15 * k, y - 58 * k]], { couleur: "#ff2e9a", epaisseur: 2.2 });
+    else H.aqua.trait(ctx, r, [[x + 13 * k, y - 40 * k], [x + 24 * k, y - 40 * k], [x + 21 * k, y - 34 * k], [x + 15 * k, y - 40 * k]], { couleur: "#ff2e9a", epaisseur: 1.6, alpha: 0.7 });
   }
 
   function dessiner() {
@@ -669,8 +671,8 @@
   }
 
   function ouvrirLettres() {
-    if (H.base.message) H.afficherMessageAccueil();
-    else H.dialogue.dire([{ qui: "ovo", texte: "La boîte aux lettres est vide… pour l’instant !" }]);
+    H.bruit("ouvre");
+    H.aller("lettres");
   }
 
   // --- les nouvelles du jour, sous la carte -------------------------------------------
@@ -767,4 +769,12 @@
 
   H.sur("ciel", () => scene && peindreFond());
   H.sur("goeland", () => scene && lancerGoelands());
+  H.sur("lettres", () => {
+    if (!scene) return;
+    const leve = H.lettres.aLire() > 0;
+    if (leve !== scene.drapeau) {
+      scene.drapeau = leve;
+      peindreFond();
+    }
+  });
 })();
