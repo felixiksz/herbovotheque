@@ -240,9 +240,8 @@ button.bocal { font: inherit; color: inherit; background: none; border: 0; paddi
 .dossier .nom-dossier { padding: 0 3px; }
 .dossier.ouvert .nom-dossier, .dossier:hover .nom-dossier { background: #3826f2; color: #fff; }
 .fenetre-bureau, .navigateur-fiche { background: var(--papier); border: 1.5px solid var(--encre); box-shadow: 6px 6px 0 rgba(35, 33, 74, 0.85); min-width: 0; }
-.titre-fenetre { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-bottom: 1.5px solid var(--encre); font: 12px ui-monospace, Menlo, monospace;
-  background: repeating-linear-gradient(transparent 0 4px, var(--encre) 4px 5px) 0 7px / 100% 15px no-repeat; }
-.titre-fenetre > span { background: var(--papier); padding: 0 8px; margin: 0 auto; }
+.titre-fenetre { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-bottom: 1.5px solid var(--encre); font: 12px ui-monospace, Menlo, monospace; background: rgba(35, 33, 74, 0.07); }
+.titre-fenetre > span { padding: 0 8px; margin: 0 auto; }
 .fermer-fenetre { width: 18px; height: 18px; padding: 0; border: 1.5px solid var(--encre); background: var(--papier); color: var(--encre); font: 12px monospace; line-height: 13px; cursor: pointer; }
 .contenu-fenetre { padding: 12px 14px; }
 .onglets-navigateur { display: flex; overflow-x: auto; border-bottom: 1.5px solid var(--encre); background: rgba(35, 33, 74, 0.08); }

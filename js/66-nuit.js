@@ -231,10 +231,20 @@
   }
 
   // Le chemin passe par la terre rouge : rochers rouges et petite crique où l'on peut se baigner.
-  const CYCLE = 4200, ROUGE = [650, 2900];
-  function rouge(X) {
+  const CYCLE = 4200, ROUGE = [650, 2900], DUNES = [2950, 3550], FALAISES = [3600, 4180];
+  function zone(X, [a, b], fondu) {
     const x = ((X % CYCLE) + CYCLE) % CYCLE;
-    return Math.max(0, Math.min(1, (x - ROUGE[0]) / 320, (ROUGE[1] - x) / 320));
+    return Math.max(0, Math.min(1, (x - a) / fondu, (b - x) / fondu));
+  }
+  const rouge = (X) => zone(X, ROUGE, 320);
+  const dunes = (X) => zone(X, DUNES, 220);
+  const falaises = (X) => zone(X, FALAISES, 200);
+  // le relief du chemin : des collines dans la garrigue, de longues dunes, presque plat au pied des falaises
+  function relief(X) {
+    const collines = Math.sin(X / 190) * 0.55 + Math.sin(X / 73 + 1.3) * 0.25 + 0.8;
+    const dune = Math.sin(X / 120) * 0.5 + 0.5;
+    const d = dunes(X), f = falaises(X);
+    return collines * (1 - d) * (1 - f * 0.7) + dune * d * 1.2;
   }
   function melange(a, b, t) {
     const c = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
@@ -318,37 +328,69 @@
     ctx.fillRect(0, h * 0.58, w, h * 0.02);
     ctx.fillStyle = "rgba(255,255,255,0.75)";
     for (let i = 0; i < 12; i++) ctx.fillRect(boucler(i * 110 - avance * 0.4, w, 40), h * 0.62 + (i % 4) * 7, 22, 1.8);
+    // au pied des falaises : une grande paroi de calcaire qui monte juste derrière le chemin
+    const f0 = falaises(avance);
+    if (f0 > 0.01 && !nuit) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, f0 * 1.4);
+      falaisesPlates(ctx, w, h * 0.76, h * 0.62, avance * 0.7, S.profils.falaises, "#efeadf", "#c9c1ae", 140);
+      ctx.restore();
+    }
     // les rochers du rivage : calcaire blanc, ou rouges dans la terre rouge
     if (nuit) collinesPlates(ctx, w, h * 0.73, h * 0.08, avance * 0.55, S.profils.collines2, "#22443c", 110);
     else falaisesPlates(ctx, w, h * 0.73, h * 0.13, avance * 0.6, S.profils.rochers, melange("#ebe6da", "#c9643f", ici), melange("#bdb5a3", "#9a4527", ici), 70);
-    // le chemin piéton : beige, puis la terre rouge
-    const bandes = 30;
-    for (let i = 0; i < bandes; i++) {
-      const x0 = (i / bandes) * w, X = avance + x0 + w / bandes / 2 - w * 0.42;
-      ctx.fillStyle = nuit ? melange("#2f4a36", "#5e3a2a", rouge(X)) : melange("#e3c08e", "#c9653d", rouge(X));
-      ctx.fillRect(Math.floor(x0), h * 0.72, Math.ceil(w / bandes) + 1, h * 0.28);
+    // le sol du chemin à l'abscisse x de l'écran : il monte et descend avec le relief
+    const X = (x) => avance + x - w * 0.42;
+    const sol = (x) => h * 0.92 - relief(X(x)) * h * 0.1;
+    // dans les dunes : de grandes bosses de sable derrière le chemin
+    const d0 = dunes(avance);
+    if (d0 > 0.01) {
+      ctx.fillStyle = nuit ? "rgba(70,70,90," + d0 + ")" : "rgba(236,213,160," + d0 + ")";
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w + 6; x += 6) ctx.lineTo(x, sol(x) - h * 0.2 - (Math.sin((X(x) * 0.7) / 90) * 0.5 + 0.5) * h * 0.1);
+      ctx.lineTo(w, h);
+      ctx.fill();
     }
+    // le chemin piéton, qui épouse le relief : beige, sable dans les dunes, terre rouge
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let x = 0; x <= w + 6; x += 6) ctx.lineTo(x, sol(x) - h * 0.15);
+    ctx.lineTo(w, h);
+    const gr = ctx.createLinearGradient(0, 0, w, 0);
+    for (let i = 0; i <= 10; i++) {
+      const xx = (i / 10) * w, rg = rouge(X(xx)), du = dunes(X(xx));
+      gr.addColorStop(i / 10, nuit ? melange("#2f4a36", "#5e3a2a", rg) : du > rg ? melange("#e3c08e", "#efd9a6", du) : melange("#e3c08e", "#c9653d", rg));
+    }
+    ctx.fillStyle = gr;
+    ctx.fill();
     for (let i = 0; i < 20; i++) {
       const x = boucler(i * 73 - avance, w, 30);
       ctx.fillStyle = nuit ? "#3a4a3a" : i % 3 ? "#f3e2cf" : "#a8552f";
       ctx.beginPath();
-      ctx.ellipse(x, h * (0.78 + (i % 5) * 0.035), 3 + (i % 3), 2, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, sol(x) - h * (0.11 - (i % 5) * 0.022), 3 + (i % 3), 2, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    // la garrigue au bord du chemin, et les pins parasols de toutes tailles
-    for (let i = 0; i < 14; i++) buissonPlat(ctx, boucler(i * 95 - avance * 0.9, w, 50), h * 0.74, 12 + (i % 3) * 5, nuit ? "#163024" : i % 2 ? "#2f7a3e" : "#4f9a46");
+    // la garrigue au bord du chemin (des oyats dans les dunes), et les pins parasols de toutes tailles
+    for (let i = 0; i < 14; i++) {
+      const x = boucler(i * 95 - avance * 0.9, w, 50);
+      if (dunes(X(x)) > 0.5 && !nuit) {
+        ctx.strokeStyle = "#8a9a4a"; ctx.lineWidth = 1.6;
+        for (let j = 0; j < 5; j++) { ctx.beginPath(); ctx.moveTo(x + j * 3, sol(x) - h * 0.15); ctx.lineTo(x + j * 3 + (j - 2) * 3, sol(x) - h * 0.15 - 14 - (j % 2) * 6); ctx.stroke(); }
+      } else buissonPlat(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, nuit ? "#163024" : i % 2 ? "#2f7a3e" : "#4f9a46");
+    }
     poses(S.arbres, b, 0.85, (x, taille) => {
-      if (nuit) pinPlat(ctx, x, h * 0.76, taille, "#132a1e", "#0f2218", "#132a1e");
-      else pinPlat(ctx, x, h * 0.76, taille, taille > 160 ? "#1f7a3a" : "#2d8f45", "#155a2a", "#5a3a2a");
+      if (dunes(X(x)) > 0.6) return;
+      if (nuit) pinPlat(ctx, x, sol(x) - h * 0.14, taille, "#132a1e", "#0f2218", "#132a1e");
+      else pinPlat(ctx, x, sol(x) - h * 0.14, taille, taille > 160 ? "#1f7a3a" : "#2d8f45", "#155a2a", "#5a3a2a");
     });
     // les promeneurs, de profil : de vrais pas alternés
-    const sol = h * 0.9;
     const pas = (decale) => (b.pause ? 4 : (Math.floor(t / 170) + decale) % 4);
-    if (S.compagnon === "lolo") H.pixel.dessiner(ctx, "loloBalade", w * 0.22, sol + 4, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
+    if (S.compagnon === "lolo") H.pixel.dessiner(ctx, "loloBalade", w * 0.22, sol(w * 0.22) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
     if (b.baignade) dessinerBaignade(ctx, b, t, w, h);
     else {
-      if (S.compagnon === "luigi") H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol + 2, 3, pas(2));
-      H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol, 3, pas(0));
+      if (S.compagnon === "luigi") H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
+      H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
     }
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");

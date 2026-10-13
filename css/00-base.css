@@ -284,3 +284,38 @@ label { font-size: 0.95rem; }
 .ligne-volume { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 200px) 3.2em; gap: 10px; align-items: center; }
 .ligne-volume input[type="range"] { accent-color: var(--fluo); width: 100%; padding: 0; }
 .valeur-volume { font-variant-numeric: tabular-nums; text-align: right; font-size: 0.9rem; }
+
+/* --- le style « bureau » de la maquette : fenêtres cernées d'encre, barre de titre rayée,
+   ombre décalée (réglages, flashcartes, terrain, fenêtres par-dessus la page) --- */
+.reglage, details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses,
+.cartes-resume, .bandeau-pause, .carte-ile, .panneau-case, .panneau, .carte {
+  background-color: var(--papier);
+  border: 1.5px solid var(--encre);
+  border-radius: 3px;
+  box-shadow: 6px 6px 0 rgba(35, 33, 74, 0.85);
+}
+:root[data-theme="nuit"] :is(.reglage, details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses, .cartes-resume, .bandeau-pause, .carte-ile, .panneau-case, .panneau, .carte) { box-shadow: 6px 6px 0 rgba(0, 0, 10, 0.6); }
+.reglage, details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses { padding: 0 16px 14px; margin: 0 0 24px; }
+.cartes-resume, .bandeau-pause { padding: 12px 16px; margin-bottom: 24px; }
+/* la barre de titre : le titre au milieu, des rayures de chaque côté */
+.reglage > h2:first-child, :is(details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses) > summary {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 -16px 12px; padding: 0 12px; min-height: 32px;
+  border-bottom: 1.5px solid var(--encre);
+  font: 400 1rem "Suez One", var(--texte);
+  list-style: none; cursor: default;
+}
+:is(details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses) > summary { cursor: pointer; }
+:is(details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses) > summary::-webkit-details-marker { display: none; }
+:is(details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses):not([open]) > summary { margin-bottom: -14px; border-bottom: 0; }
+:is(details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses) > summary h2 { margin: 0; font: inherit; }
+.reglage > h2:first-child, :is(details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses) > summary { background: rgba(35, 33, 74, 0.07); }
+:root[data-theme="nuit"] :is(.reglage > h2:first-child, details > summary) { background: rgba(243, 234, 216, 0.08); }
+/* la flashcarte elle-même, comme une petite fenêtre */
+.carte { border-radius: 3px; padding-top: 0; }
+.carte::before {
+  content: "flashcarte"; display: block; margin: 0 -22px 16px; height: 26px; line-height: 26px; text-align: center;
+  border-bottom: 1.5px solid var(--encre); font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--encre);
+  background: rgba(35, 33, 74, 0.07);
+}
+.carte-ile { border-radius: 3px; }
