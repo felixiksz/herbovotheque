@@ -169,7 +169,8 @@ label { font-size: 0.95rem; }
 #menu a { text-decoration: none; padding: 2px 4px; border-radius: 3px; font-size: 0.98rem; }
 #menu a:hover { background: var(--surligne); color: #1a1714; }
 #menu a[aria-current="page"] { background: var(--fluo); color: #1a1714; }
-#barre-ressources { display: flex; gap: 10px; align-items: center; font-size: 0.9rem; flex-wrap: wrap; }
+#barre-ressources { display: flex; gap: 4px 10px; align-items: center; justify-content: flex-end; font-size: 0.85rem; flex-wrap: wrap; flex-basis: 100%; }
+@media (min-width: 1280px) { #barre-ressources { flex-basis: auto; } }
 
 #vue { padding: var(--marge); max-width: 1200px; margin: 0 auto; }
 
