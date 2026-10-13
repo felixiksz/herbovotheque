@@ -480,6 +480,8 @@
     conteneur.appendChild(zone);
 
     const fin = () => {
+      // la séance est finie : le clavier ne répond plus à aucune carte
+      clavier = null;
       zone.innerHTML = "";
       zone.appendChild(H.el("div.carte.carte-fin", null,
         H.el("h2", null, "Séance terminée"),
@@ -526,7 +528,11 @@
         boutons.hidden = false;
         retourner.remove();
       }
+      let repondu = false;
       function repondre(n) {
+        // une seule réponse par carte (un double clic ou une touche gardée enfoncée ne comptent pas)
+        if (repondu) return;
+        repondu = true;
         const nouvel = prochainEtat(etat(c.id), n, H.maintenant());
         H.jeu.cartes = H.jeu.cartes || {};
         H.jeu.cartes[c.id] = nouvel;
@@ -546,7 +552,7 @@
         suivante();
       }
       clavier = (e) => {
-        if (e.target.closest("input, textarea, select")) return;
+        if (e.repeat || e.target.closest("input, textarea, select")) return;
         if (e.key === " " || e.key === "Enter") {
           if (verso.hidden) {
             e.preventDefault();
