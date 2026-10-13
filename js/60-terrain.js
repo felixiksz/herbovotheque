@@ -1124,13 +1124,35 @@
     const intro = ["Psst, ƟvƟ ! J’ai un bâton pour toi.", "Mon bâton du jour, c’est la MTC, évidemment !", "Tu savais ?", "Petit bâton chinois, gratuit !"][Math.floor(Math.random() * 4)];
     const phrases = [{ qui: "luigi", texte: intro }];
     if (v.mtcSaveur) phrases.push({ qui: "luigi", texte: "En médecine chinoise, saveur et nature " + H.duNom(p) + " : " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "." });
-    if (premiere) phrases.push({ qui: "luigi", texte: "Dans sa fiche MTC, on lit : « " + (premiere.length > 200 ? premiere.slice(0, 197) + "…" : premiere) + " »" });
+    if (premiere) {
+      phrases.push({ qui: "luigi", texte: "Dans sa fiche MTC, on lit :" });
+      citer(premiere).forEach((texte) => phrases.push({ qui: "luigi", texte }));
+    }
     return phrases;
   }
 
   // Les lignes de la rubrique MTC d'une plante, sans la mise en forme (renvois suivis).
   const lignesMTC = (p, champ) => H.lignesFiche(p, champ || "mtc");
-  const court = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+  // une longue ligne de fiche, découpée en bulles d'environ 240 signes, sans couper une phrase
+  function decouper(texte, max) {
+    max = max || 240;
+    const phrases = texte.split(/(?<=[.;!?»)])\s+/);
+    const morceaux = [];
+    let courant = "";
+    for (const ph of phrases) {
+      if (courant && (courant + " " + ph).length > max) {
+        morceaux.push(courant);
+        courant = ph;
+      } else courant = courant ? courant + " " + ph : ph;
+    }
+    if (courant) morceaux.push(courant);
+    return morceaux;
+  }
+  // une citation de la fiche, en une ou plusieurs bulles, entre guillemets
+  const citer = (ligne) => {
+    const m = decouper(ligne);
+    return m.map((x, i) => (i === 0 ? "« " : "") + x + (i === m.length - 1 ? " »" : ""));
+  };
 
   // On appelle Mesi (avec le miaou) : Mesi arrive et répond aux questions sur les plantes du jardin.
   async function consulterMesi() {
@@ -1173,7 +1195,7 @@
         if (!lignes.length) repliques.push("Sa fiche ne dit rien côté MTC. Mystère !");
         else {
           repliques.push("Dans sa fiche MTC, on lit :");
-          lignes.slice(0, 4).forEach((l) => repliques.push("« " + court(l, 220) + " »"));
+          lignes.slice(0, 4).forEach((l) => repliques.push(...citer(l)));
           if (lignes.length > 4) repliques.push("Et il y a encore " + (lignes.length - 4) + " lignes dans sa fiche !");
         }
       } else if (q === "precautions") {
@@ -1181,7 +1203,7 @@
         if (!lignes.length) repliques.push("Sa fiche ne mentionne pas de précaution particulière.");
         else {
           repliques.push("Côté précautions, sa fiche dit :");
-          lignes.slice(0, 4).forEach((l) => repliques.push("« " + court(l, 220) + " »"));
+          lignes.slice(0, 4).forEach((l) => repliques.push(...citer(l)));
         }
       }
       await H.dialogue.dire(repliques.map((texte) => ({ qui: "luigi", texte })));

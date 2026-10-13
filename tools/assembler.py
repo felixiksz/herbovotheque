@@ -88,6 +88,30 @@ for ext, mime in (("wav", "audio/wav"), ("m4a", "audio/mp4"), ("mp3", "audio/mpe
         base["cri"] = "data:" + mime + ";base64," + base64.b64encode(open(chemin, "rb").read()).decode()
         break
 
+# Défauts d'extraction du PDF : « c œ ur » -> « cœur », « l’ œ il » -> « l’œil »,
+# « effet œ strogène » -> « effet œstrogène », « de ́ coction » -> « décoction », « a ̀ la » -> « à la ».
+import re, unicodedata
+GARDER_ESPACE = {"a", "ou", "la"}
+def nettoyer(t):
+    t = re.sub(r"([œŒ]) (?=[a-zàâäéèêëîïôöùûü])", r"\1", t)
+    t = re.sub(r"(?<![\w])([A-Za-z]) ([œŒ])", r"\1\2", t)
+    t = re.sub(r"([’'\-]) ([œŒ])", r"\1\2", t)
+    def accent(m):
+        mot, lettre, marque, espace = m.group(1), m.group(2), m.group(3), m.group(4)
+        jeton = mot + lettre
+        return mot + unicodedata.normalize("NFC", lettre + marque) + (espace if jeton.lower() in GARDER_ESPACE else "")
+    t = re.sub(r"(\w*?)(\w) ([\u0300-\u036f])( ?)", accent, t)
+    return t
+def nettoyer_tout(v):
+    if isinstance(v, str):
+        return nettoyer(v)
+    if isinstance(v, list):
+        return [nettoyer_tout(x) for x in v]
+    if isinstance(v, dict):
+        return {k: nettoyer_tout(x) for k, x in v.items()}
+    return v
+base["plantes"] = nettoyer_tout(base["plantes"])
+
 base["version"] = 1
 with open(os.path.join(PRIVE, "donnees.json"), "w", encoding="utf-8") as f:
     json.dump(base, f, ensure_ascii=False, separators=(",", ":"))
