@@ -162,22 +162,24 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .fin-balade { margin: 12px 0 30px; }
 .actions-balade { margin-top: 10px; min-height: 2.2em; }
 
-/* cabane de lecture : bois sombre, lueur de bougie qui vacille */
+/* cabane de lecture : fond bleu nuit, une grille qui se bombe autour du doigt, la bougie */
 .vue-lecture { max-width: none; padding: 0; }
 .cabane-lecture {
+  position: relative;
+  overflow: hidden;
   min-height: calc(100vh - 80px);
   padding: 28px var(--marge) 40px;
-  color: #f3e6cf;
+  color: #f2f0e8;
   background:
-    radial-gradient(ellipse at 50% 18%, rgba(255, 176, 90, 0.28), transparent 55%),
-    linear-gradient(#2a1d14, #1a120c);
-  animation: lueur 3.2s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 50% 16%, rgba(255, 176, 90, 0.22), transparent 50%),
+    linear-gradient(#1c1b3a, #121130);
 }
-.cabane-lecture h1 { color: #f8ead2; }
-.cabane-lecture .discret { color: #d9c4a2; }
-.cabane-lecture .bouton { color: #f3e6cf; border-color: #d9c4a2; }
+.cabane-lecture > *:not(.grille-cabane) { position: relative; }
+.grille-cabane { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cabane-lecture h1 { color: #f2f0e8; }
+.cabane-lecture .discret { color: #c9c4e8; }
+.cabane-lecture .bouton { color: #f2f0e8; border-color: #c9c4e8; }
 .cabane-lecture .bouton:hover { color: #23214a; }
-@keyframes lueur { from { background-position: 0 0, 0 0; filter: brightness(0.96); } to { filter: brightness(1.05); } }
 .bougie { position: relative; width: 60px; height: 82px; margin: 0 auto 6px; }
 .bougie .cire { position: absolute; bottom: 12px; left: 22px; width: 16px; height: 44px; background: #f4ead6; border-radius: 3px 3px 2px 2px; }
 /* le bougeoir en laiton : une coupelle et une petite anse */
@@ -192,25 +194,31 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
   transform-origin: 50% 100%;
 }
 @keyframes flamme { from { transform: scale(1, 1) rotate(-2deg); } to { transform: scale(0.92, 1.08) rotate(2deg); } }
-.etagere-livres { display: flex; flex-wrap: wrap; gap: 14px; margin: 22px 0 18px; max-width: 760px; }
+/* les livres : des couvertures en aplats, cernées d'encre nuit, comme des pochettes */
+.etagere-livres { display: flex; flex-wrap: wrap; gap: 16px; margin: 22px 0 22px; max-width: 760px; }
 .livre {
   font: inherit; cursor: pointer; text-align: left;
-  width: 150px; min-height: 120px; padding: 12px 12px 10px;
-  border: 1px solid #0e0905; border-radius: 3px 8px 8px 3px;
-  background: linear-gradient(90deg, rgba(35, 33, 74, 0.25) 0 8px, transparent 8px), #7a3a2a;
-  color: #f8ead2; display: flex; flex-direction: column; gap: 6px;
-  box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.08);
+  width: 150px; min-height: 176px; padding: 10px 12px 12px 18px;
+  border: 2px solid #23214a; border-radius: 4px 10px 10px 4px;
+  color: #23214a; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 5px 5px 0 rgba(10, 9, 30, 0.6);
+  background: linear-gradient(90deg, rgba(35, 33, 74, 0.28) 0 7px, transparent 7px), var(--couverture);
+  transition: transform 0.15s;
 }
-.livre:nth-child(2) { background-color: #2f4a6b; }
-.livre:nth-child(3) { background-color: #4f6b3a; }
-.livre:nth-child(4) { background-color: #5a4a7a; }
+.livre-corail { --couverture: #ff5b4f; }
+.livre-fluo { --couverture: #eeff41; }
+.livre-pin { --couverture: #2f6b45; color: #f2f0e8; }
+.livre-outremer { --couverture: #3826f2; color: #f2f0e8; }
+.livre .motif { display: block; }
 .livre .titre { font-family: var(--titre); font-size: 1.15rem; line-height: 1.35; }
-.livre .sous { font-size: 0.8rem; color: #e6d3b3; }
-.livre:hover, .livre:focus-visible { outline: 2px solid var(--fluo); transform: translateY(-3px); }
-.livre-ouvert { max-width: 620px; }
-.titre-livre { font-family: var(--titre); font-size: 1.5rem; margin: 6px 0 8px; color: #f8ead2; }
+.livre .sous { font-size: 0.8rem; opacity: 0.85; }
+.livre:hover, .livre:focus-visible { outline: none; transform: translate(-2px, -4px) rotate(-1deg); box-shadow: 7px 9px 0 rgba(10, 9, 30, 0.6); }
+/* la page ouverte : une feuille de papier recyclé, cernée, un peu de travers */
+.livre-ouvert:not(:empty) { max-width: 620px; padding: 16px 20px 14px; background: #f2f0e8; color: #23214a; border: 2px solid #23214a; border-radius: 4px; box-shadow: 6px 6px 0 rgba(10, 9, 30, 0.6); transform: rotate(-0.4deg); }
+.livre-ouvert .bouton { color: #23214a; border-color: #23214a; }
+.titre-livre { font-family: var(--titre); font-size: 1.5rem; margin: 2px 0 8px; color: #23214a; }
 .page-livre { font-size: 1.2rem; line-height: 1.75; min-height: 5em; }
-.numero-page { font-size: 0.85rem; color: #d9c4a2; }
+.numero-page { font-size: 0.85rem; color: #4a4870; }
 
 /* serre */
 .vue-serre h2 { font-size: 1.4rem; margin-top: 16px; }

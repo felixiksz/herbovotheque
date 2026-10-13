@@ -493,16 +493,16 @@
   function livres() {
     const h = histoires();
     const liste = [
-      { titre: "Les douceurs de Mesi", sous: "histoires pour s’endormir", pages: () => h.auHasard(h.LUIGI) },
-      loloLa() ? { titre: "Les drames de Lóló", sous: "absurdes et bouleversants", pages: () => h.auHasard(h.LOLO) } : null,
+      { titre: "Les douceurs de Mesi", sous: "histoires pour s’endormir", couverture: "corail", motif: "lune", pages: () => h.auHasard(h.LUIGI) },
+      loloLa() ? { titre: "Les drames de Lóló", sous: "absurdes et bouleversants", couverture: "fluo", motif: "fer", pages: () => h.auHasard(h.LOLO) } : null,
       // la nuit, on ne révise pas : seulement des histoires
-      H.ciel.nuitCalme() ? null : { titre: "Une fiche au hasard", sous: "l’herbier d’ƟvƟ", pages: () => {
+      H.ciel.nuitCalme() ? null : { titre: "Une fiche au hasard", sous: "l’herbier d’ƟvƟ", couverture: "pin", motif: "feuille", pages: () => {
         const p = h.auHasard(H.d.plantes());
         const v = p.valeurs || {};
         const lignes = H.lignesFiche(p, "description").concat(H.lignesFiche(p, "ethnobotanique"));
         return { titre: p.nom + (p.latin ? " · " + p.latin : ""), lignes: lignes.map((texte) => ({ texte })) };
       } },
-      { titre: "Le ciel de cette nuit", sous: "la lune et les étoiles", pages: () => {
+      { titre: "Le ciel de cette nuit", sous: "la lune et les étoiles", couverture: "outremer", motif: "etoiles", pages: () => {
         const s = H.ciel.etat();
         const ph = H.ciel.nomPhase(s.lune.phase);
         return { titre: "Le ciel de cette nuit", lignes: [
@@ -535,6 +535,68 @@
     page();
   }
 
+  // le petit dessin de chaque couverture, en aplats cernés d'encre nuit
+  const MOTIFS = {
+    lune: '<circle cx="30" cy="26" r="13" fill="#f2f0e8" stroke="#23214a" stroke-width="2"/><circle cx="36" cy="22" r="11" fill="#ff5b4f"/><path d="M12 44 l3 -6 l3 6 l-6 -4 h6 z" fill="#eeff41" stroke="#23214a" stroke-width="1.2"/>',
+    fer: '<path d="M18 14 v18 a12 12 0 0 0 24 0 v-18" fill="none" stroke="#23214a" stroke-width="6" stroke-linecap="round"/><path d="M18 14 v18 a12 12 0 0 0 24 0 v-18" fill="none" stroke="#ff5b4f" stroke-width="2.5" stroke-linecap="round"/>',
+    feuille: '<path d="M30 46 C10 34 14 14 30 8 C46 14 50 34 30 46 Z" fill="#9cc06a" stroke="#23214a" stroke-width="2"/><path d="M30 46 V14" stroke="#23214a" stroke-width="1.6"/>',
+    etoiles: '<circle cx="40" cy="20" r="8" fill="#eeff41" stroke="#23214a" stroke-width="2"/><circle cx="16" cy="14" r="2" fill="#f2f0e8"/><circle cx="22" cy="34" r="1.6" fill="#f2f0e8"/><circle cx="12" cy="42" r="2.2" fill="#f2f0e8"/><circle cx="44" cy="42" r="1.6" fill="#f2f0e8"/>',
+  };
+
+  // le fond de la cabane : une grille bleu nuit qui se bombe autour du doigt ou de la souris
+  function grilleCabane(boite) {
+    const toile = H.el("canvas.grille-cabane", { "aria-hidden": "true" });
+    boite.prepend(toile);
+    const ctx = toile.getContext("2d");
+    let cible = { x: -999, y: -999 }, souris = { x: -999, y: -999 }, anim = null;
+    const suivre = (e) => {
+      const r = toile.getBoundingClientRect();
+      cible = { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    boite.addEventListener("pointermove", suivre);
+    boite.addEventListener("pointerdown", suivre);
+    const dessiner = () => {
+      if (!document.body.contains(toile)) return;
+      const dpr = Math.min(2, window.devicePixelRatio || 1), w = boite.clientWidth, h = boite.clientHeight;
+      if (toile.width !== Math.round(w * dpr) || toile.height !== Math.round(h * dpr)) {
+        toile.width = Math.round(w * dpr);
+        toile.height = Math.round(h * dpr);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      souris.x += (cible.x - souris.x) * 0.12;
+      souris.y += (cible.y - souris.y) * 0.12;
+      const pas = 30, R = 130;
+      const tordre = (x, y) => {
+        const dx = x - souris.x, dy = y - souris.y, d = Math.hypot(dx, dy);
+        if (d > R || d === 0) return [x, y];
+        const f = Math.sin((1 - d / R) * Math.PI) * 16;
+        return [x + (dx / d) * f, y + (dy / d) * f];
+      };
+      ctx.strokeStyle = "rgba(150,140,255,0.16)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= w + pas; x += pas) {
+        ctx.beginPath();
+        for (let y = 0; y <= h; y += 8) {
+          const [a, b] = tordre(x, y);
+          y ? ctx.lineTo(a, b) : ctx.moveTo(a, b);
+        }
+        ctx.stroke();
+      }
+      for (let y = 0; y <= h + pas; y += pas) {
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 8) {
+          const [a, b] = tordre(x, y);
+          x ? ctx.lineTo(a, b) : ctx.moveTo(a, b);
+        }
+        ctx.stroke();
+      }
+      anim = requestAnimationFrame(dessiner);
+    };
+    dessiner();
+    return () => cancelAnimationFrame(anim);
+  }
+
   H.vues.lecture = {
     afficher(c) {
       // la pluie tombe sur le toit de la cabane, même par beau temps
@@ -545,14 +607,18 @@
         H.el("h1", null, "Cabane de lecture"),
         H.el("p.discret", null, "Une bougie, un plaid, la pluie sur le toit. Pour les soirs où le sommeil se fait attendre."),
         H.el("div.etagere-livres", null,
-          livres().map((l) => H.el("button.livre", { type: "button", onclick: () => lire(l, zone) }, H.el("span.titre", null, l.titre), H.el("span.sous", null, l.sous)))
+          livres().map((l) => H.el("button.livre.livre-" + l.couverture, { type: "button", onclick: () => lire(l, zone) },
+            H.el("span.motif", { html: '<svg viewBox="0 0 60 52" width="60" height="52" aria-hidden="true">' + MOTIFS[l.motif] + "</svg>" }),
+            H.el("span.titre", null, l.titre),
+            H.el("span.sous", null, l.sous)))
         ),
         zone,
         H.el("p", null, H.el("a.bouton.discret-bouton", { href: "#village" }, "Retour à la ferme"))
       ));
-      lecture = true;
+      lecture = grilleCabane(c.querySelector(".cabane-lecture"));
     },
     quitter() {
+      if (lecture) lecture();
       lecture = null;
       if (H.sons.majPluie) H.sons.majPluie();
     },
