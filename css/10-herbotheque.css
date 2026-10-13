@@ -73,6 +73,7 @@
 .bocal-image.forme-compte-gouttes { width: 38px; }
 .bocal-image.forme-pot { width: 66px; }
 .bocal-image.forme-tube { width: 26px; }
+.bocal-image.forme-huile-essentielle { width: 32px; }
 .bocal .etiquette {
   font-family: var(--titre);
   font-size: 0.88rem;

@@ -274,3 +274,9 @@ label { font-size: 0.95rem; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* curseurs de volume */
+.volumes { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; max-width: 520px; }
+.ligne-volume { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 200px) 3.2em; gap: 10px; align-items: center; }
+.ligne-volume input[type="range"] { accent-color: var(--fluo); width: 100%; padding: 0; }
+.valeur-volume { font-variant-numeric: tabular-nums; text-align: right; font-size: 0.9rem; }

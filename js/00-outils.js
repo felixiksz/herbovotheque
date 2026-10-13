@@ -120,6 +120,15 @@ window.H = window.H || {};
     return url;
   };
 
+  // Volumes réglables (0 à 1) : musique, bruitages, pluie, babillage des bulles.
+  H.VOLUMES = [["musique", "Musique", 0.7], ["bruitages", "Bruitages (miaou, galop, pas…)", 0.8], ["pluie", "Pluie", 0.7], ["voix", "Babillage des bulles", 0.8]];
+  H.volume = function (cat) {
+    const v = H.local && H.local.volumes && H.local.volumes[cat];
+    if (v != null) return v;
+    const d = H.VOLUMES.find((x) => x[0] === cat);
+    return d ? d[2] : 1;
+  };
+
   // Petit bus d'évènements entre modules.
   const ecouteurs = {};
   H.sur = (nom, fn) => (ecouteurs[nom] = ecouteurs[nom] || []).push(fn);

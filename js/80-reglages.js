@@ -69,7 +69,7 @@
   function blocTheme() {
     const choix = [["auto", "Selon le soleil"], ["jour", "Toujours le jour"], ["nuit", "Toujours la nuit"]];
     return H.el("section.reglage", null,
-      H.el("h2", null, "Jour et nuit"),
+      H.el("h2", null, "Jour, nuit et sons"),
       H.el("div.pastilles", null,
         choix.map(([v, t]) =>
           H.el("button.bouton.petit" + (H.local.theme === v ? ".actif" : ""), {
@@ -86,7 +86,32 @@
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.son, onchange: (e) => H.d.majLocal((l) => (l.son = e.target.checked)) }), " Bruitages et babillage"),
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: async (e) => { await H.d.majLocal((l) => (l.musique = e.target.checked)); e.target.checked ? H.musique.jouer() : H.musique.arreter(); } }), " Musique ambiante")
       ),
-      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + ".")
+      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + "."),
+      H.el("div.volumes", null,
+        H.VOLUMES.map(([cat, nom]) => {
+          const sortie = H.el("span.valeur-volume", null, Math.round(H.volume(cat) * 100) + " %");
+          return H.el("label.ligne-volume", null,
+            H.el("span", null, nom),
+            H.el("input", {
+              type: "range", min: 0, max: 100, step: 1, value: Math.round(H.volume(cat) * 100),
+              "aria-label": "Volume : " + nom,
+              oninput(e) {
+                const v = parseInt(e.target.value, 10) / 100;
+                sortie.textContent = Math.round(v * 100) + " %";
+                H.local.volumes = Object.assign({}, H.local.volumes, { [cat]: v });
+                if (cat === "musique") H.musique.majVolume();
+                if (cat === "pluie" && H.sons.majPluie) H.sons.majPluie();
+              },
+              onchange(e) {
+                H.d.majLocal((l) => (l.volumes = Object.assign({}, l.volumes, { [cat]: parseInt(e.target.value, 10) / 100 })));
+                if (cat === "bruitages") H.jouerCri();
+                if (cat === "voix" && H.bruit) H.dialogue.dire([{ qui: "ovo", texte: "Coucou ! Comme ça, c’est mieux ?" }]);
+              },
+            }),
+            sortie
+          );
+        })
+      )
     );
   }
 

@@ -36,7 +36,7 @@
     o.frequency.value = f;
     const t = ctx.currentTime;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.035, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.035 * H.volume("voix")), t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
     o.connect(g).connect(ctx.destination);
     o.start(t);
@@ -56,7 +56,7 @@
       o.frequency.value = f;
       const t = ctx.currentTime + i * 0.07;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.05 * H.volume("bruitages")), t + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
       o.connect(g).connect(ctx.destination);
       o.start(t);
@@ -71,7 +71,7 @@
     const enregistre = (H.jeu && H.jeu.cri) || (H.base && H.base.cri);
     if (enregistre) {
       const a = new Audio(enregistre);
-      a.volume = 0.45;
+      a.volume = Math.min(1, 0.45 * H.volume("bruitages"));
       a.play().catch(() => {});
     } else if (H.sons) H.sons.jouer("miaou", 0.4);
   };

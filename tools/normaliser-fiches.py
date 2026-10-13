@@ -152,7 +152,7 @@ SPHERES = [
 PREPARATIONS = [
     {"id": "plante-seche", "nom": "Plante sèche", "forme": "bocal"},
     {"id": "teinture", "nom": "Teinture mère", "forme": "flacon"},
-    {"id": "huile-essentielle", "nom": "Huile essentielle", "forme": "compte-gouttes"},
+    {"id": "huile-essentielle", "nom": "Huile essentielle", "forme": "huile-essentielle"},
     {"id": "macerat", "nom": "Macérat huileux", "forme": "pot"},
     {"id": "gemmotherapie", "nom": "Macérat de bourgeons", "forme": "flacon"},
     {"id": "elixir", "nom": "Élixir floral", "forme": "compte-gouttes"},

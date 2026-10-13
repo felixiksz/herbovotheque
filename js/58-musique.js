@@ -203,7 +203,7 @@
       if (ctx.state === "suspended") ctx.resume();
       filtre.frequency.value = mode.clarte * (nuit ? 0.6 : 1);
       sortie.gain.cancelScheduledValues(ctx.currentTime);
-      sortie.gain.setTargetAtTime(0.55, ctx.currentTime, 2.5);
+      sortie.gain.setTargetAtTime(Math.max(0.0001, 0.8 * H.volume("musique")), ctx.currentTime, 2.5);
       actif = true;
       const t = ctx.currentTime + 0.5;
       prochaines = VOIX.map((v, i) => t + i * 2.3 + Math.random() * 3);
@@ -219,6 +219,10 @@
       sortie.gain.setTargetAtTime(0.0001, t, 0.8);
       arreterBourdon();
       arreterGrondement();
+    },
+    // le curseur de volume a bougé
+    majVolume() {
+      if (actif && sortie) sortie.gain.setTargetAtTime(Math.max(0.0001, 0.8 * H.volume("musique")), ctx.currentTime, 0.3);
     },
     // pour les réglages : l'ambiance du moment
     description() {

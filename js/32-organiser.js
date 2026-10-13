@@ -14,6 +14,7 @@
     ["bocal", "Bocal"],
     ["flacon", "Flacon ambré"],
     ["compte-gouttes", "Compte-gouttes"],
+    ["huile-essentielle", "Flacon d’huile essentielle"],
     ["pot", "Pot"],
     ["tube", "Petit tube"],
   ];

@@ -124,13 +124,13 @@
     jouer(nom, volume) {
       if (!actif()) return null;
       const a = new Audio(FICHIERS[nom]);
-      a.volume = volume == null ? 0.6 : volume;
+      a.volume = Math.min(1, (volume == null ? 0.6 : volume) * H.volume("bruitages"));
       a.play().catch(() => {});
       return a;
     },
     // un son en boucle (pas, pluie) qu'on allume ou éteint
     boucle(nom, allume, volume) {
-      volume = volume == null ? 0.5 : volume;
+      volume = (volume == null ? 0.5 : volume) * H.volume(nom === "pluie" ? "pluie" : "bruitages");
       if (nom === "pluie") {
         boucles.pluie = boucles.pluie || {};
         boucles.pluie.voulu = allume;
@@ -142,7 +142,7 @@
           a = boucles[nom] = new Audio(FICHIERS[nom]);
           a.loop = true;
         }
-        a.volume = volume;
+        a.volume = Math.min(1, volume);
         if (a.paused) a.play().catch(() => {});
       } else if (a && !a.paused) {
         a.pause();
@@ -164,6 +164,7 @@
     const pleut = !!m && (m.type === "pluie" || m.type === "orage");
     H.sons.boucle("pluie", pleut && !!H.jeu, m && m.type === "orage" ? 0.5 : 0.32);
   }
+  H.sons.majPluie = pluie;
   H.sur("meteo", pluie);
   H.sur("ciel", pluie);
   document.addEventListener("pointerdown", pluie);

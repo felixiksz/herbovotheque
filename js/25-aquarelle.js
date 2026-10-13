@@ -164,6 +164,7 @@
     bocal: { w: 74, h: 96 },
     flacon: { w: 50, h: 100 },
     "compte-gouttes": { w: 40, h: 92 },
+    "huile-essentielle": { w: 34, h: 80 },
     pot: { w: 76, h: 66 },
     tube: { w: 26, h: 88 },
   };
@@ -223,6 +224,26 @@
         trait(ctx, r, poire.concat([poire[0]]), { epaisseur: 1.2 });
       }
       trait(ctx, r, [[x0 + 6, epaule + 24], [x0 + 6, bas - 14]], { couleur: "#fff3dc", epaisseur: 2.4, alpha: 0.55 });
+    } else if (forme === "huile-essentielle") {
+      // petit flacon ambré de 10 ml : bouchon noir strié, bague d'inviolabilité, étiquette
+      const corps = rectArrondi(x0, 34, f.w, f.h - 30, 7);
+      lavis(ctx, r, corps, ambre, { alpha: 0.16, couches: 14, bord: 0.06 });
+      if (fraction > 0) lavis(ctx, r, contenu(x0 + 3, 40, f.w - 6, f.h - 40, fraction, 4), "#6b3410", { alpha: 0.14, couches: 10 });
+      const etiquette = [[x0 + 2, 52], [x0 + f.w - 2, 52], [x0 + f.w - 2, 72], [x0 + 2, 72]];
+      lavis(ctx, r, etiquette, "#efe2c4", { alpha: 0.5, couches: 6, bord: 0.02 });
+      for (const y of [58, 63, 67]) trait(ctx, r, [[x0 + 7, y], [x0 + f.w - (y === 58 ? 7 : 11), y]], { couleur: "#6b4423", epaisseur: 0.9, alpha: 0.55 });
+      trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
+      const col = [[x0 + 9, 34], [x0 + 9, 28], [x0 + f.w - 9, 28], [x0 + f.w - 9, 34]];
+      lavis(ctx, r, col, ambre, { alpha: 0.2, couches: 6 });
+      trait(ctx, r, col, { epaisseur: 1.2 });
+      const bague = rectArrondi(x0 + 5, 23, f.w - 10, 6, 1.5);
+      lavis(ctx, r, bague, "#f4efe4", { alpha: 0.7, couches: 6 });
+      trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1 });
+      const bouchon = rectArrondi(x0 + 5, 6, f.w - 10, 18, 2.5);
+      lavis(ctx, r, bouchon, "#2b2622", { alpha: 0.4, couches: 8 });
+      trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.2 });
+      for (let x = x0 + 8; x < x0 + f.w - 6; x += 3) trait(ctx, r, [[x, 8], [x, 22]], { couleur: "#5a5048", epaisseur: 0.7, alpha: 0.5, tremble: 0.2 });
+      trait(ctx, r, [[x0 + 5, 40], [x0 + 5, bas - 8]], { couleur: "#fff3dc", epaisseur: 2, alpha: 0.5 });
     } else if (forme === "pot") {
       const corps = rectArrondi(x0, 18, f.w, f.h - 14, 10);
       if (fraction > 0) {

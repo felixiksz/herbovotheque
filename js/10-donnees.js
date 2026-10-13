@@ -92,6 +92,12 @@
   // (sauf celles qu'ƟvƟ a retirées volontairement).
   function completerSchema() {
     const s = H.herbier.schema;
+    // les huiles essentielles ont maintenant leur propre flacon (avant : compte-gouttes)
+    const he = s.preparations.find((p) => p.id === "huile-essentielle");
+    if (he && he.forme === "compte-gouttes" && !s.formeHeChoisie) {
+      he.forme = "huile-essentielle";
+      s.formeHeChoisie = true;
+    }
     for (const cle of ["sections", "champs", "preparations"]) {
       const ids = new Set(s[cle].map((x) => x.id));
       for (const x of H.base[cle] || []) {
