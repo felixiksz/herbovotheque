@@ -282,3 +282,18 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 .resultat-serre .nom-resultat { width: 100%; }
 .resultat-serre .nom-resultat a { color: inherit; font-weight: 600; }
 .resultat-serre .extrait { margin: 0; font-size: 0.85rem; opacity: 0.8; line-height: 1.35; }
+
+/* la bulle d'une plante, au survol ou au toucher */
+.bulle-plante {
+  position: fixed; z-index: 60; pointer-events: none;
+  display: grid; grid-template-columns: 56px auto; column-gap: 10px; align-items: center;
+  max-width: 260px; padding: 8px 12px 8px 8px;
+  background: var(--papier); color: var(--encre);
+  border: 1px solid var(--encre); border-radius: 6px;
+  box-shadow: 3px 3px 0 rgba(35, 33, 74, 0.25);
+}
+.bulle-plante[hidden] { display: none; }
+.bulle-plante img { grid-row: 1 / span 3; width: 56px; height: 56px; object-fit: contain; image-rendering: auto; }
+.bulle-plante .nom-bulle { font-weight: 600; line-height: 1.2; }
+.bulle-plante .latin-bulle { font-size: 0.8rem; opacity: 0.75; line-height: 1.2; }
+.bulle-plante .etat-bulle { font-family: var(--terrain); font-size: 0.7rem; opacity: 0.85; margin-top: 2px; }

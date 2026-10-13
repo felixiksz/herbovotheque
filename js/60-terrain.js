@@ -624,6 +624,11 @@
     dessiner();
     dessinerCiel();
     toile.addEventListener("click", clic);
+    // le nom et l'aperçu d'une plante : au survol avec la souris, ou au toucher sur téléphone
+    toile.addEventListener("pointerdown", (e) => (vue.pointeur = e.pointerType));
+    toile.addEventListener("pointermove", (e) => e.pointerType === "mouse" && montrerBulle(e));
+    toile.addEventListener("pointerleave", (e) => e.pointerType === "mouse" && cacherBulle());
+    zoneToile.addEventListener("scroll", () => cacherBulle());
     boucle();
     if (ile.secrete) {
       // Lóló (avec Mémé sur le dos) arrive au galop depuis le bord de l'île
@@ -1061,9 +1066,58 @@
     return { x, y };
   }
 
+  // La petite bulle d'une plante : son aperçu (sa photo, son dessin ou le dessin automatique),
+  // son nom et où elle en est. Sur téléphone, elle s'affiche au toucher et s'efface toute seule.
+  const apercus = new Map();
+  function apercuPlante(p) {
+    if (p.photo && p.photo.src) return p.photo.src;
+    if (p.dessinCarte) return p.dessinCarte;
+    if (!apercus.has(p.id)) apercus.set(p.id, dessinAuto(p));
+    return apercus.get(p.id);
+  }
+  let bulle = null, minuteurBulle = null;
+  function cacherBulle() {
+    clearTimeout(minuteurBulle);
+    if (bulle) bulle.hidden = true;
+  }
+  function montrerBulle(e, duree) {
+    const c = caseCliquee(e);
+    const pl = c && (vue.ile.plantes || {})[cle(c.x, c.y)];
+    const p = pl && H.d.plante(pl.p);
+    if (!p) return cacherBulle();
+    if (!bulle) {
+      bulle = H.el("div.bulle-plante", { role: "tooltip", hidden: true });
+      document.body.appendChild(bulle);
+    }
+    const st = stade(vue.ile, pl);
+    const etat = vue.ile.croquis ? null : NOMS_STADES[st] + (fleurie(p, vue.ile, pl) ? ", en fleur" : "") + (aRecolter(p, vue.ile, pl) ? ", à récolter" : "");
+    const cleBulle = p.id + "|" + etat;
+    if (bulle.dataset.cle !== cleBulle) {
+      bulle.dataset.cle = cleBulle;
+      bulle.innerHTML = "";
+      bulle.append(
+        H.el("img", { src: apercuPlante(p), alt: "" }),
+        H.el("span.nom-bulle", null, p.nom),
+        p.latin ? H.el("em.latin-bulle", null, p.latin) : null,
+        etat ? H.el("span.etat-bulle", null, etat) : null
+      );
+    }
+    bulle.hidden = false;
+    // à côté du doigt ou du pointeur, sans sortir de l'écran
+    const l = bulle.offsetWidth, h = bulle.offsetHeight;
+    let x = e.clientX + 16, y = e.clientY + 16;
+    if (x + l > window.innerWidth - 8) x = e.clientX - l - 16;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - 16;
+    bulle.style.left = Math.max(8, x) + "px";
+    bulle.style.top = Math.max(8, y) + "px";
+    clearTimeout(minuteurBulle);
+    if (duree) minuteurBulle = setTimeout(cacherBulle, duree);
+  }
+
   function clic(e) {
     const c = caseCliquee(e);
     if (!c) return;
+    if (vue.pointeur && vue.pointeur !== "mouse") montrerBulle(e, 2600);
     if (vue.hongrois && montrerDuDoigt(e, c)) return;
     // Lóló et Mémé
     if (vue.ile.secrete && Math.abs(c.x + 0.5 - vue.ile.cols / 2) < 2.5 && c.y - vue.ile.lignes / 2 > -3 && c.y - vue.ile.lignes / 2 < 1) {
@@ -1757,6 +1811,8 @@
         clearInterval(vue.minuteurMesi);
       }
       H.sons.boucle("pas", false);
+      if (bulle) bulle.remove();
+      bulle = null;
       vue = null;
       H.dialogue.fermer();
     },
