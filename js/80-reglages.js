@@ -86,7 +86,14 @@
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.son, onchange: (e) => H.d.majLocal((l) => (l.son = e.target.checked)) }), " Bruitages et babillage"),
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: async (e) => { await H.d.majLocal((l) => (l.musique = e.target.checked)); e.target.checked ? H.musique.jouer() : H.musique.arreter(); } }), " Musique ambiante")
       ),
-      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + "."),
+      H.el("label", null, "Style de la musique ",
+        H.el("select", {
+          onchange: async (e) => {
+            await H.d.majLocal((l) => (l.styleMusique = e.target.value));
+            H.musique.changerStyle();
+          },
+        }, Object.entries(H.musique.STYLES).map(([id, nom]) => H.el("option", { value: id, selected: (H.local.styleMusique || "eno") === id }, nom)))),
+      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + ". Sur iPhone, si on n’entend rien, vérifie le volume du téléphone."),
       H.el("div.volumes", null,
         H.VOLUMES.map(([cat, nom]) => {
           const sortie = H.el("span.valeur-volume", null, Math.round(H.volume(cat) * 100) + " %");
