@@ -605,15 +605,29 @@
           H.sons.galop(-60, cible, true, 0.6).then((c) => scene && (scene.courseLolo = c));
         }
       }
-      let galope = false;
-      if (scene.courseLolo) {
+      let galope = false, trotte = false;
+      if (scene.courseLolo && !scene.courseFinie) {
+        // pendant le galop d'arrivée, elle vise l'endroit où se trouve ƟvƟ en ce moment
+        scene.courseLolo.x1 = cible;
         const pos = H.sons.position(scene.courseLolo, performance.now());
         scene.loloX = pos ? pos.x : null;
         galope = !!(pos && pos.enCourse);
+        if (pos && !pos.enCourse) scene.courseFinie = true;
+        scene.loloSol = o.y;
+      } else if (scene.loloX != null) {
+        // ensuite, elle suit ƟvƟ en trottant et s'arrête toujours juste devant iel
+        const dx = cible - scene.loloX, dy = o.y - scene.loloSol;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          const pas = Math.min(1, 0.035 * 60 / 60) * 3.2 * Math.max(0.7, k);
+          const d = Math.hypot(dx, dy);
+          scene.loloX += (dx / d) * Math.min(d, pas);
+          scene.loloSol += (dy / d) * Math.min(d, pas);
+          trotte = true;
+        }
       }
-      const image = galope ? Math.floor(performance.now() / 90) % 4 : Math.floor(performance.now() / 700) % 2;
+      const image = galope || trotte ? Math.floor(performance.now() / (galope ? 90 : 130)) % 4 : Math.floor(performance.now() / 700) % 2;
       scene.loloY = scene.loloSol != null ? scene.loloSol : o.y;
-      if (scene.loloX != null) H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", scene.loloX, scene.loloY - (galope && image % 2 ? 3 : 0), 2 * Math.max(0.7, k), image);
+      if (scene.loloX != null) H.pixel.dessiner(ctx, galope ? "loloGalop" : trotte ? "loloPas" : "lolo", scene.loloX, scene.loloY - (galope && image % 2 ? 3 : 0), 2 * Math.max(0.7, k), image);
     }
     // le soir, Mesi attend ƟvƟ devant le mazet
     const soir = H.ciel.etat().soleil.alt < 3 && new Date().getHours() >= 15;
@@ -1024,6 +1038,7 @@
       const liens = H.el("nav.liens-village", { "aria-label": "Lieux de la ferme" },
         Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom)),
         H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => !H.$(".dialogue") && H.lolo.parler(null) }, "Parler à Lóló") : null,
+        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => H.aller("balade/lolo") }, "Se balader avec Lóló et Mémé") : null,
         H.el("button.bouton.petit", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager autour des maisons")
       );
       c.appendChild(liens);

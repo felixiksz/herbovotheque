@@ -17,7 +17,8 @@
     p: "#f4a3b8", l: "#d6eef5",
     a: "#a3acb7", q: "#ee9a7e",
     M: "#3e2210",                              // crinière (sans contour)
-    z: "#1f6fe0", Z: "#16509f", Y: "#f6c400", X: "#c99a00", // sandales Adidas Lego d'ƟvƟ (l'été)               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
+    z: "#1f6fe0", Z: "#16509f", Y: "#f6c400", X: "#c99a00", // sandales Adidas Lego d'ƟvƟ (l'été)
+    f: "#ff7fa6", F: "#d9577e",               // la bouée flamant rose               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
   };
 
   // 16 × 22, de face. Cils : petits points au coin des lunettes de vue (verres transparents).
@@ -333,7 +334,28 @@
     return contour(g);
   }
 
+  // une bouée flamant rose, qui flotte et qui parle (« Flma-mala-lamama ! »)
+  const FLAMANT = [
+    "..........kkk.......",
+    ".........kfffk......",
+    "........kffwek......",
+    "........kfffkkk.....",
+    "........kffk.kyk....",
+    "........kffk..kk....",
+    ".........kffk.......",
+    "..........kffk......",
+    "..........kffk......",
+    "...kkkkkkkkffk......",
+    "..kffffffffffffk....",
+    ".kfFFFFFFFFFFFFfk...",
+    "kfFkkkkkkkkkkkkFfk..",
+    ".kfFFFFFFFFFFFFfk...",
+    "..kffffffffffffk....",
+    "...kkkkkkkkkkkk.....",
+  ];
+
   const SPRITES = {
+    flamant: [FLAMANT],
     ovo: [OVO, OVO_MARCHE],
     luigi: [LUIGI, LUIGI_MARCHE],
     lolo: [LOLO, LOLO_2],
@@ -378,7 +400,7 @@
     },
     // portrait (tête seule) agrandi, en image
     portrait(nom, echelle) {
-      const lignes = nom === "lolo" ? SPRITES.lolo[0].slice(0, 14).map((l) => l.slice(18)) : SPRITES[nom][0].slice(0, 12);
+      const lignes = nom === "lolo" ? SPRITES.lolo[0].slice(0, 14).map((l) => l.slice(18)) : nom === "flamant" ? SPRITES.flamant[0].slice(0, 10).map((l) => l.slice(6, 18)) : SPRITES[nom][0].slice(0, 12);
       return H.dessinPixel(lignes, PAL, echelle || 5);
     },
     image(nom, echelle, image) {

@@ -9,6 +9,7 @@
     luigi: { nom: "Mesi", hauteur: 220 },
     lolo: { nom: "Lóló", hauteur: 150 },
     meme: { nom: "Mémé", hauteur: 360 },
+    flamant: { nom: "Bouée flamant rose", hauteur: 470 },
   };
   // décalage (en demi-tons) selon la voyelle prononcée
   const VOYELLES = { a: 0, e: 4, i: 7, o: -3, u: 5, y: 7 };

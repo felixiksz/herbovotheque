@@ -385,30 +385,60 @@
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 
-  // la tête hors de l'eau, des ronds dans l'eau
+  // la tête hors de l'eau, face à face, des ronds dans l'eau ; parfois une bouée flamant rose passe
+  function ronds(ctx, x, eau, t, ph) {
+    ctx.strokeStyle = "rgba(255,255,255,0.75)";
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 2; i++) {
+      const u = ((t / 45 + ph * 30 + i * 9) % 18) / 18;
+      ctx.globalAlpha = 1 - u;
+      ctx.beginPath();
+      ctx.ellipse(x, eau + 1, 16 + u * 18, 3, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
   function dessinerBaignade(ctx, b, t, w, h) {
-    const eau = h * 0.68;
-    const nageurs = [["ovoProfil", w * 0.5, 0]];
-    if (b.s.compagnon === "luigi") nageurs.push(["luigiProfil", w * 0.6, 1.7]);
-    for (const [nom, x, ph] of nageurs) {
+    const eau = h * 0.66;
+    // ƟvƟ regarde vers la droite ; Mesi, en face, regarde vers ƟvƟ
+    const nageurs = [["ovoProfil", w * 0.46, 0, false]];
+    if (b.s.compagnon === "luigi") nageurs.push(["luigiProfil", w * 0.56, 1.7, true]);
+    for (const [nom, x, ph, miroir] of nageurs) {
       const y = eau + 40 + Math.sin(t / 500 + ph) * 2;
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 0, w, eau);
       ctx.clip();
-      H.pixel.dessiner(ctx, nom, x, y, 3, 4);
+      H.pixel.dessiner(ctx, nom, x, y, 3, 4, miroir);
       ctx.restore();
-      ctx.strokeStyle = "rgba(255,255,255,0.75)";
-      ctx.lineWidth = 1.4;
-      for (let i = 0; i < 2; i++) {
-        const r = 16 + ((t / 45 + ph * 30 + i * 9) % 18);
-        ctx.globalAlpha = 1 - ((t / 45 + ph * 30 + i * 9) % 18) / 18;
-        ctx.beginPath();
-        ctx.ellipse(x, eau + 1, r, 3, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
+      ronds(ctx, x, eau, t, ph);
     }
+    // la bouée flamant rose : elle dérive de droite à gauche, et dit bonjour en passant
+    const f = b.flamant || (b.flamant = { prochain: t + 5000 + Math.random() * 9000 });
+    if (f.x == null && t > f.prochain) Object.assign(f, { x: w + 40, parle: false });
+    if (f.x != null) {
+      f.x -= 0.028 * (t - (f.dernier || t));
+      const y = eau + 4 + Math.sin(t / 420) * 2.5;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, w, eau + 3);
+      ctx.clip();
+      H.pixel.dessiner(ctx, "flamant", f.x, y, 3, 0, true);
+      ctx.restore();
+      ronds(ctx, f.x, eau, t, 3);
+      if (!f.parle && f.x < w * 0.7 && !H.$(".dialogue")) {
+        f.parle = true;
+        H.dialogue.dire([
+          { qui: "flamant", texte: "Flma-mala-lamama !" },
+          { qui: "ovo", texte: H.histoires.auHasard(["Euh… bonjour, madame la bouée ?", "Flma-mala-lamama à toi aussi !", "Elle a l’air très sûre d’elle."]) },
+        ]);
+      }
+      if (f.x < -60) {
+        f.x = null;
+        f.prochain = t + 20000 + Math.random() * 25000;
+      }
+    }
+    f.dernier = t;
   }
 
   async function baignade() {
@@ -440,6 +470,7 @@
     if (!b) return;
     b.sortir.hidden = true;
     b.baignade = null;
+    b.flamant = null;
     b.pause = false;
     const nuit = H.ciel.etat().soleil.alt < -4;
     await H.dialogue.dire([{ qui: "ovo", texte: nuit ? "Vite, la serviette ! On rentre tout doucement." : "Je sèche au soleil sur la terre rouge, ça sent le pin chaud." }]);
