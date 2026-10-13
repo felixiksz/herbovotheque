@@ -1,4 +1,4 @@
-// Bruitages enregistrés : miaou (appeler Luigi), attention (Luigi qui appelle au loin),
+// Bruitages enregistrés : miaou (appeler Mesi), attention (Mesi qui appelle au loin),
 // pas (ƟvƟ sur le pavé), roll (la pluie), galop (Lóló qui arrive).
 (function () {
   const H = window.H;
@@ -91,6 +91,8 @@
   const bornesSon = {};
 
   H.sons = {
+    // pour essayer : H.sons.goeland()
+    goeland: () => goeland(),
     // durée d'un son (en secondes), lue une fois dans le fichier
     duree(nom) {
       if (!durees[nom]) {
@@ -185,6 +187,108 @@
     },
   };
 
+  // --- ambiance du dehors : goélands au loin, cigales en été (sons de synthèse) ----------
+  const DEHORS = ["village", "terrain", "serre", "balade"];
+  const dehors = () => DEHORS.includes(document.documentElement.dataset.vue);
+
+  // un goéland au loin : deux ou trois « kiaou » qui montent puis retombent
+  function goeland() {
+    if (!actif() || !contexte()) return;
+    const t0 = ctx.currentTime + 0.05;
+    const n = 2 + Math.floor(Math.random() * 3);
+    const base = 1100 + Math.random() * 300;
+    const filtre = ctx.createBiquadFilter();
+    filtre.type = "bandpass";
+    filtre.frequency.value = 1500;
+    filtre.Q.value = 2.5;
+    const loin = ctx.createBiquadFilter();
+    loin.type = "lowpass";
+    loin.frequency.value = 2600;
+    const g = ctx.createGain();
+    g.gain.value = 0.18 * H.volume("bruitages");
+    filtre.connect(loin).connect(g).connect(ctx.destination);
+    for (let i = 0; i < n; i++) {
+      const t = t0 + i * (0.42 + Math.random() * 0.12);
+      const o = ctx.createOscillator(), e = ctx.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(base * 0.9, t);
+      o.frequency.exponentialRampToValueAtTime(base * 1.35, t + 0.08);
+      o.frequency.exponentialRampToValueAtTime(base * 0.75, t + 0.32);
+      const vib = ctx.createOscillator(), vg = ctx.createGain();
+      vib.frequency.value = 28;
+      vg.gain.value = 25;
+      vib.connect(vg).connect(o.frequency);
+      e.gain.setValueAtTime(0.0001, t);
+      e.gain.exponentialRampToValueAtTime(i === 0 ? 0.5 : 0.35, t + 0.04);
+      e.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+      o.connect(e).connect(filtre);
+      o.start(t);
+      vib.start(t);
+      o.stop(t + 0.4);
+      vib.stop(t + 0.4);
+    }
+  }
+  function programmerGoeland() {
+    setTimeout(() => {
+      const jour = H.ciel && H.jeu && H.ciel.etat().soleil.alt > 2;
+      if (jour && dehors() && !H.ciel.nuitCalme()) goeland();
+      programmerGoeland();
+    }, (50 + Math.random() * 130) * 1000);
+  }
+  programmerGoeland();
+
+  // les cigales : un grésillement aigu qui pulse vite et enfle par vagues, l'été, en journée
+  let cigales = null;
+  function majCigales() {
+    const s = H.ciel && H.jeu ? H.ciel.etat() : null;
+    const m = (H.ciel && H.ciel.meteo) || {};
+    const chant = !!s && s.saison === "été" && s.soleil.alt > 12 && (m.temperature == null || m.temperature >= 22) &&
+      m.type !== "pluie" && m.type !== "orage" && dehors() && actif();
+    if (chant && !cigales && contexte()) {
+      const n = ctx.sampleRate;
+      const buf = ctx.createBuffer(1, n, n);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const bande = ctx.createBiquadFilter();
+      bande.type = "bandpass";
+      bande.frequency.value = 4600;
+      bande.Q.value = 6;
+      const pulse = ctx.createGain();
+      pulse.gain.value = 0.5;
+      const lfo = ctx.createOscillator(), lg = ctx.createGain();
+      lfo.type = "square";
+      lfo.frequency.value = 48;
+      lg.gain.value = 0.5;
+      lfo.connect(lg).connect(pulse.gain);
+      const vague = ctx.createGain();
+      vague.gain.value = 0.6;
+      const lent = ctx.createOscillator(), lentg = ctx.createGain();
+      lent.frequency.value = 0.08;
+      lentg.gain.value = 0.4;
+      lent.connect(lentg).connect(vague.gain);
+      const sortie = ctx.createGain();
+      sortie.gain.value = 0.0001;
+      sortie.gain.setTargetAtTime(0.05 * H.volume("bruitages"), ctx.currentTime, 2);
+      src.connect(bande).connect(pulse).connect(vague).connect(sortie).connect(ctx.destination);
+      [src, lfo, lent].forEach((x) => x.start());
+      cigales = { sortie, noeuds: [src, lfo, lent] };
+    } else if (!chant && cigales) {
+      const c = cigales;
+      cigales = null;
+      c.sortie.gain.setTargetAtTime(0.0001, ctx.currentTime, 1);
+      c.noeuds.forEach((x) => x.stop(ctx.currentTime + 4));
+    } else if (chant && cigales) {
+      cigales.sortie.gain.setTargetAtTime(0.05 * H.volume("bruitages"), ctx.currentTime, 0.5);
+    }
+  }
+  H.sur("ciel", majCigales);
+  H.sur("meteo", majCigales);
+  window.addEventListener("hashchange", () => setTimeout(majCigales, 50));
+  document.addEventListener("pointerdown", majCigales);
+
   // La pluie : quand il pleut vraiment (d'après la météo du lieu choisi)
   function pluie() {
     const m = H.ciel && H.ciel.meteo;
@@ -207,5 +311,6 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") H.sons.toutCouper();
     else pluie();
+    majCigales();
   });
 })();

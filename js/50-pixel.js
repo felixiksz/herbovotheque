@@ -1,4 +1,4 @@
-// Personnages en pixels : ƟvƟ (salopette au tournesol), Luigi (salopette au chiendent),
+// Personnages en pixels : ƟvƟ (salopette au tournesol), Mesi (salopette au chiendent),
 // Lóló le cheval à l'étoile blanche et Mémé la chatte tigrée qui lui fait un câlin.
 (function () {
   const H = window.H;
@@ -6,7 +6,7 @@
   const PAL = {
     k: "#2b1d14", s: "#f2c29b", S: "#d9a07a", m: "#b8404e", w: "#ffffff", e: "#1a1a1a",
     h: "#3b2416", H: "#5e3b22",              // cheveux d'ƟvƟ : brun foncé bouclé
-    c: "#8a4b22", C: "#b06a33",              // cheveux de Luigi : châtain
+    c: "#8a4b22", C: "#b06a33",              // cheveux de Mesi : châtain
     r: "#e03a3a", R: "#b02424",              // chemise rouge
     g: "#3aa04a", G: "#257a33",              // chemise verte
     b: "#3a5fd0", B: "#2a439a", y: "#ffd23a", // salopette, boutons
@@ -49,7 +49,7 @@
     ".........kkkkk..",
   ]);
 
-  // Luigi : un peu plus grand, mulet châtain, chemise verte, chiendent sur la salopette.
+  // Mesi : un peu plus grand, mulet châtain, chemise verte, chiendent sur la salopette.
   const LUIGI = [
     "....kkkkkkkk....",
     "...kcCccccCck...",

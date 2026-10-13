@@ -6,7 +6,7 @@
 
   const VOIX = {
     ovo: { nom: "ƟvƟ", hauteur: 330 },
-    luigi: { nom: "Luigi", hauteur: 220 },
+    luigi: { nom: "Mesi", hauteur: 220 },
     lolo: { nom: "Lóló", hauteur: 150 },
     meme: { nom: "Mémé", hauteur: 360 },
   };
@@ -96,7 +96,7 @@
     });
   };
 
-  // Le cri pour appeler Luigi : le miaou enregistré par ƟvƟ dans les réglages,
+  // Le cri pour appeler Mesi : le miaou enregistré par ƟvƟ dans les réglages,
   // sinon le miaou d'origine (sons/miaou.mp3).
   H.jouerCri = function () {
     if (!H.local || !H.local.son) return;

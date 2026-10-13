@@ -19,12 +19,15 @@
     "Pailler garde l’eau deux semaines, le purin fortifie la plante, et un rayon de soleil la fait pousser d’un coup.",
     "Tu peux dessiner toi-même l’aspect d’une plante sur la carte : « Dessiner son aspect », dans sa fiche.",
     "Le placard à tisanes garde tes mélanges. Le rôle de chaque plante peut même devenir une flashcarte.",
-    "Pour les bâtons de médecine chinoise, appelle Luigi : il connaît plein de choses sur les plantes de ton île.",
+    "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton île.",
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",
     "Relie ton Mac et ton iPhone dans les Réglages pour retrouver partout le même herbier.",
     "La boîte aux lettres du village garde le tout premier message qu’on t’a écrit.",
     "Dans une fiche, « Stock dans l’herbothèque » note si un bocal est plein, à moitié, presque vide ou vide. Je te dirai quand c’est la saison pour aller en recueillir !",
     "Dans l’herbothèque, coche « seulement les bocaux presque vides ou vides » pour voir ce qu’il faut aller cueillir.",
+    "Dans la serre, sème au bon mois : ça lève deux fois plus vite. Les bébés plantes se repiquent ensuite sur tes îles pour presque rien.",
+    "Le curcuma, le gingembre et les autres frileuses se plaisent dans la serre. Garde-les au chaud !",
+    "La nuit, les flashcartes et le terrain dorment. Viens plutôt te balader avec moi, ou lire dans la cabane à la bougie.",
   ];
   const MEME = [
     "Rrrrrrrr… rrrrrrrr… rrrrrrrr…",
@@ -66,7 +69,7 @@
     const choix = await H.dialogue.dire([{
       qui: "ovo",
       texte: "Hmm… qu’est-ce que je pourrais lui dire de gentil ?",
-      choix: melange.map((c) => ({ valeur: c, libelle: c })).concat([{ valeur: null, libelle: "Rien, je suis timide" }]),
+      choix: melange.map((c) => ({ valeur: c, libelle: c })),
     }]);
     if (!choix) return;
     const c = H.jeu.complimentsLolo || { n: 0, le: 0 };
@@ -129,7 +132,7 @@
       if (!r.length) r.push("En " + mois + ", rien n’est à récolter d’après tes fiches.");
     } else {
       if (ici.length) r.push("Sur cette île, à ressemer en ce moment : " + liste(ici, 5) + ".");
-      if (ailleurs.length) r.push("À semer en " + mois + " : " + liste(ailleurs, 6) + ".");
+      if (ailleurs.length) r.push("À semer en " + mois + " : " + liste(ailleurs, 6) + ". Dans la serre, au bon mois, ça lève deux fois plus vite !");
       if (!r.length) r.push("En " + mois + ", rien n’est à semer d’après tes fiches.");
     }
     return r;

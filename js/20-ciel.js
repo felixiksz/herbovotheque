@@ -166,6 +166,11 @@
     teinteCiel,
     lumiere,
     estMatin,
+    // de 22 h à 6 h, on ne révise pas et on ne jardine pas : on se balade, on lit, on dort
+    nuitCalme(date) {
+      const h = (date || new Date()).getHours();
+      return h >= 22 || h < 6;
+    },
     meteo: null,
 
     etat(date) {

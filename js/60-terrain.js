@@ -461,7 +461,7 @@
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterImage(ile) }, "Exporter le croquis (image)"),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
-      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerLuigi(true) }, "Appeler Luigi") : null,
+      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
       H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
       H.el("span.zoom", null,
         H.el("button.bouton.petit", { type: "button", "aria-label": "Dézoomer", onclick: () => zoomer(-1) }, "−"),
@@ -484,7 +484,7 @@
         if (vue) vue.lolo.course = c;
       });
     }
-    if (!ile.croquis) vue.minuteurLuigi = setInterval(visiteSpontanee, 60e3);
+    if (!ile.croquis) vue.minuteurMesi = setInterval(visiteSpontanee, 60e3);
     if (ile.secrete && !H.jeu.vu.ileSecrete) {
       H.jeu.vu.ileSecrete = H.maintenant();
       H.d.changer("jeu");
@@ -510,12 +510,27 @@
     o.innerHTML = "";
     if (vue.outil === "planter") {
       const p = vue.plante && H.d.plante(vue.plante);
-      o.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true, detail: ile.croquis ? null : (q) => pastillesCout(coutPlantation(q)) }) }, p ? "Plante : " + p.nom : "Choisir la plante"));
+      o.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; vue.depuisSerre = false; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true, detail: ile.croquis ? null : (q) => pastillesCout(coutPlantation(q)) }) }, p && !vue.depuisSerre ? "Plante : " + p.nom : "Choisir la plante"));
       (H.local.plantesRecentes || []).slice(0, 6).forEach((id) => {
         const q = H.d.plante(id);
-        if (q && id !== vue.plante) o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { vue.plante = id; retenirPlante(id); dessinerOutils(); } }, q.nom));
+        if (q && (id !== vue.plante || vue.depuisSerre)) o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = false; retenirPlante(id); dessinerOutils(); } }, q.nom));
       });
-      if (!ile.croquis && p) o.appendChild(H.el("span.cout", null, "Pour planter " + p.nom + " : ", pastillesCout(coutPlantation(p))));
+      // les bébés plantes de la serre : repiquage moins cher, et elles démarrent déjà jeunes
+      if (!ile.croquis && H.serre) {
+        const bebes = H.serre.bebes();
+        if (bebes.length) {
+          o.appendChild(H.el("span.cout", null, "De la serre :"));
+          bebes.forEach(([id, n]) => {
+            const q = H.d.plante(id);
+            if (q) o.appendChild(H.el("button.bouton.petit" + (vue.depuisSerre && vue.plante === id ? ".actif" : ""), { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; dessinerOutils(); } }, q.nom + " × " + n));
+          });
+        }
+      }
+      if (!ile.croquis && p) {
+        o.appendChild(vue.depuisSerre
+          ? H.el("span.cout", null, "Repiquer un bébé " + p.nom + " : ", pastillesCout(H.serre.coutRepiquage))
+          : H.el("span.cout", null, "Pour planter " + p.nom + " : ", pastillesCout(coutPlantation(p))));
+      }
     } else if (vue.outil === "amenager") {
       Object.entries(TUILES).forEach(([id, t]) =>
         o.appendChild(H.el("button.bouton.petit" + (vue.tuile === id ? ".actif" : ""), { type: "button", onclick: () => { vue.tuile = id; dessinerOutils(); } }, t.nom))
@@ -933,10 +948,18 @@
         const t = caseDe(ile, x, y).t;
         if (t === "eau" || t === "chemin") return libre("On ne plante pas sur un " + (t === "eau" ? "plan d’eau" : "chemin") + ".");
         if (pl) return libre("Il y a déjà une plante ici.");
-        if (!ile.croquis && !payer(coutPlantation(H.d.plante(vue.plante)))) return;
+        const repiquage = !ile.croquis && vue.depuisSerre;
+        if (repiquage && !H.serre.bebes().some(([id]) => id === vue.plante)) {
+          vue.depuisSerre = false;
+          dessinerOutils();
+          return libre("Plus de bébé plante de cette espèce dans la caisse.");
+        }
+        if (!ile.croquis && !payer(repiquage ? H.serre.coutRepiquage : coutPlantation(H.d.plante(vue.plante)))) return;
+        if (repiquage) H.serre.prendre(vue.plante);
         const maintenant = H.maintenant();
         ile.plantes = ile.plantes || {};
-        ile.plantes[k] = { p: vue.plante, le: maintenant, c: ile.croquis ? 100 : 0, eau: 70, maj: maintenant };
+        ile.plantes[k] = { p: vue.plante, le: maintenant, c: ile.croquis ? 100 : repiquage ? 30 : 0, eau: 70, maj: maintenant };
+        if (repiquage) dessinerOutils();
         sauver(ile);
         H.bruit("plante");
         const p = H.d.plante(vue.plante);
@@ -1089,10 +1112,10 @@
     actions.appendChild(H.el("a.bouton.petit", { href: "#fiche/" + encodeURIComponent(p.id) }, "Voir la fiche"));
     P.appendChild(actions);
     dessiner();
-    if (!ile.croquis && Math.random() < 0.3) appelerLuigi(false, p);
+    if (!ile.croquis && Math.random() < 0.3) appelerMesi(false, p);
   }
 
-  // --- Luigi et ses « bâtons » (la MTC, sa spécialité) ----------------------------------
+  // --- Mesi et ses « bâtons » (la MTC, sa spécialité) ----------------------------------
   function astuceMTC(p) {
     const v = p.valeurs || {};
     if (!v.mtcSaveur && !v.mtc) return null;
@@ -1113,8 +1136,8 @@
   }
   const court = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
 
-  // On appelle Luigi (avec le miaou) : il arrive et répond aux questions sur les plantes du jardin.
-  async function consulterLuigi() {
+  // On appelle Mesi (avec le miaou) : Mesi arrive et répond aux questions sur les plantes du jardin.
+  async function consulterMesi() {
     const L = (texte, choix) => H.dialogue.dire([{ qui: "luigi", texte, choix }]);
     const ids = Array.from(new Set(Object.values(vue.ile.plantes || {}).map((x) => x.p)));
     const plantes = ids.map((id) => H.d.plante(id)).filter(Boolean).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
@@ -1126,7 +1149,7 @@
     let intro = "Miaou reçu ! Sur quelle plante du jardin tu veux un de mes bâtons ?";
     for (;;) {
       if (!p) {
-        const id = await L(intro, plantes.map((q) => ({ valeur: q.id, libelle: q.nom })).concat([{ valeur: null, libelle: "Rien, merci Luigi" }]));
+        const id = await L(intro, plantes.map((q) => ({ valeur: q.id, libelle: q.nom })).concat([{ valeur: null, libelle: "Rien, merci Mesi" }]));
         if (!id) break;
         p = H.d.plante(id);
       }
@@ -1135,7 +1158,7 @@
         { valeur: "indications", libelle: "À quoi elle sert en MTC" },
         { valeur: "precautions", libelle: "Des précautions ?" },
         { valeur: "autre", libelle: "Une autre plante" },
-        { valeur: null, libelle: "Merci Luigi !" },
+        { valeur: null, libelle: "Merci Mesi !" },
       ]);
       if (!q) break;
       if (q === "autre") {
@@ -1167,10 +1190,10 @@
       }
       await H.dialogue.dire(repliques.map((texte) => ({ qui: "luigi", texte })));
     }
-    await L(["À bientôt, ƟvƟ !", "Bon jardinage !", "Miaou, et à la prochaine !"][Math.floor(Math.random() * 3)]);
+    await L(["À tout à l’heure !", "À ce soir !", "À toute !", "Le temps n’est qu’un concept."][Math.floor(Math.random() * 4)]);
   }
 
-  // Un câlin et des bisous : des petits cœurs, et Luigi laisse un souvenir.
+  // Un câlin et des bisous : des petits cœurs, et Mesi laisse un souvenir.
   async function calin() {
     vue.coeurs = performance.now() + 4500;
     await H.dialogue.dire([
@@ -1197,12 +1220,12 @@
     ctx.restore();
   }
 
-  // De temps en temps, Luigi appelle au loin pendant qu'ƟvƟ jardine.
+  // De temps en temps, Mesi appelle au loin pendant qu'ƟvƟ jardine.
   function visiteSpontanee() {
     if (!vue || vue.luigi || document.visibilityState === "hidden" || Math.random() > 0.25) return;
     const ids = Object.values(vue.ile.plantes || {}).map((x) => x.p);
     const p = ids.length ? H.d.plante(ids[Math.floor(Math.random() * ids.length)]) : null;
-    appelerLuigi(false, p);
+    appelerMesi(false, p);
   }
 
   // Lóló arrive au galop (Mémé sur le dos), raconte, puis repart.
@@ -1223,17 +1246,17 @@
     H.sons.galop(-4, arrivee, true, 0.6).then((c) => (lv.course = c));
   }
 
-  function partirLuigi() {
+  function partirMesi() {
     if (vue && vue.luigi) vue.luigi.cible = { x: -2, y: vue.luigi.y, partir: true };
     if (vue && document.visibilityState === "hidden") vue.luigi = null;
   }
 
-  function appelerLuigi(demande, plante) {
+  function appelerMesi(demande, plante) {
     if (demande) H.jouerCri();
     if (vue.luigi) {
       if (demande && !vue.luigi.occupe) {
         vue.luigi.occupe = true;
-        consulterLuigi().then(() => partirLuigi());
+        consulterMesi().then(() => partirMesi());
       }
       return;
     }
@@ -1241,25 +1264,25 @@
     if (demande) {
       ensuite = () => {
         vue.luigi.occupe = true;
-        consulterLuigi().then(() => partirLuigi());
+        consulterMesi().then(() => partirMesi());
       };
     } else {
-      // visite spontanée : Luigi appelle au loin, ƟvƟ choisit de lui parler ou de lui faire un câlin
-      if (H.maintenant() - (H.local.derniereVisiteLuigi || 0) < 10 * 60e3) return;
+      // visite spontanée : Mesi appelle au loin, ƟvƟ choisit de lui parler ou de lui faire un câlin
+      if (H.maintenant() - (H.local.derniereVisiteMesi || 0) < 10 * 60e3) return;
       if (H.$(".dialogue")) return;
       const astuce = plante && astuceMTC(plante);
-      H.d.majLocal((l) => (l.derniereVisiteLuigi = H.maintenant()));
+      H.d.majLocal((l) => (l.derniereVisiteMesi = H.maintenant()));
       H.sons.jouer("attention", 0.4);
       H.dialogue.dire([{
         qui: "luigi",
-        nom: "Luigi, au loin",
+        nom: "Mesi, au loin",
         texte: "ƟvƟ ! Hé, ƟvƟ ! Tu as un moment ?",
-        choix: [{ valeur: "parler", libelle: "Parler avec Luigi" }, { valeur: "calin", libelle: "Lui faire un câlin et des bisous" }],
+        choix: [{ valeur: "parler", libelle: "Parler avec Mesi" }, { valeur: "calin", libelle: "Lui faire un câlin et des bisous" }],
       }]).then((choix) => {
         if (!choix || !vue || vue.luigi) return;
         const fin = choix === "calin"
-          ? () => calin().then(() => partirLuigi())
-          : () => (astuce ? H.dialogue.dire(astuce) : consulterLuigi()).then(() => partirLuigi());
+          ? () => calin().then(() => partirMesi())
+          : () => (astuce ? H.dialogue.dire(astuce) : consulterMesi()).then(() => partirMesi());
         vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite: fin, occupe: true };
         if (document.visibilityState === "hidden") {
           vue.luigi.x = vue.luigi.cible.x;
@@ -1270,7 +1293,7 @@
       });
       return;
     }
-    H.d.majLocal((l) => (l.derniereVisiteLuigi = H.maintenant()));
+    H.d.majLocal((l) => (l.derniereVisiteMesi = H.maintenant()));
     vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite };
     if (document.visibilityState === "hidden") {
       vue.luigi.x = vue.luigi.cible.x;
@@ -1432,7 +1455,7 @@
     quitter() {
       if (vue) {
         cancelAnimationFrame(vue.anim);
-        clearInterval(vue.minuteurLuigi);
+        clearInterval(vue.minuteurMesi);
       }
       H.sons.boucle("pas", false);
       vue = null;

@@ -118,6 +118,10 @@
     r.lieuModifieLe = lieu.lieuModifieLe;
     r.recompenses = plusRecent(local, distant, "recompensesModifieLe").recompenses || local.recompenses;
     r.vu = Object.assign({}, distant.vu, local.vu);
+    const serre = plusRecent(local, distant, "serreModifieLe");
+    r.serre = serre.serre;
+    r.serreModifieLe = serre.serreModifieLe;
+    r.pluieMagique = Math.max(local.pluieMagique || 0, distant.pluieMagique || 0);
     r.modifieLe = Math.max(local.modifieLe || 0, distant.modifieLe || 0);
     return r;
   }

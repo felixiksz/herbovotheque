@@ -24,7 +24,7 @@ python tools/version.py
 
 - `tools/culture/*.json` : les rubriques « Au jardin » pré-remplies d’après le biotope et des guides de jardinage. Dans le jeu elles restent marquées « à vérifier » jusqu’à ce qu’ƟvƟ clique sur « C’est juste » ou les modifie.
 - Le sel du chiffrement ne change jamais (`chiffrer.mjs` le réutilise) : sinon les sauvegardes synchronisées deviendraient illisibles.
-- Bruitages dans `sons/` : miaou (appeler Luigi), attention (Luigi qui appelle au loin), pas (sur le chemin pavé), roll (la pluie), galop (Lóló). ƟvƟ peut enregistrer son propre miaou dans les Réglages.
+- Bruitages dans `sons/` : miaou (appeler Mesi), attention (Mesi qui appelle au loin), pas (sur le chemin pavé), roll (la pluie), galop (Lóló). ƟvƟ peut enregistrer son propre miaou dans les Réglages.
 - Messages personnels : `prive/messages.json` avec `{"message": "…", "messageIle": "…"}` (le premier s’affiche au tout premier lancement et dans la boîte aux lettres du village, le second sur l’île secrète).
 
 ## Données d’ƟvƟ
@@ -40,12 +40,15 @@ python tools/version.py
 - Terrain : îles de jeu (pousse en temps réel, ressources) ou croquis de projet (à l’échelle, sans ressources, export de la liste des plantes et de l’image). Rien ne meurt : une plante mal placée pousse lentement et dit pourquoi.
 - Lóló (une fois son île découverte) : on l’appelle pour des astuces du jeu et les plantes en fleurs, à récolter et à semer du moment ; au village, on la touche pour lui parler. Trois compliments dans la journée, et elle fait tomber une pluie de joie (dix minutes, arrose toutes les îles).
 - La pluie (roll) boucle sans couture : le jeu retire les silences du début et de la fin et fond le raccord.
-- Luigi : on l’appelle (avec le miaou) et on lui pose des questions sur les plantes de l’île ; de temps en temps il appelle au loin, et ƟvƟ choisit de lui parler ou de lui faire un câlin et des bisous.
+- Mesi : on l’appelle (avec le miaou) et on lui pose des questions sur les plantes de l’île ; de temps en temps il appelle au loin, et ƟvƟ choisit de lui parler ou de lui faire un câlin et des bisous.
 - Réglages : volume de la musique, des bruitages, de la pluie et du babillage (gardé sur chaque appareil).
 - Stock : chaque préparation d’une fiche peut être pleine, à moitié, presque vide ou vide ; le bocal se vide à l’écran, un filtre de l’herbothèque montre ceux à remplir, et Lóló dit quand c’est la saison d’aller en cueillir.
 - Lóló au galop : on entend d’abord le bruit, puis elle entre et s’arrête quand le son s’arrête.
 - Chaque plante peut avoir son propre dessin sur la carte (fiche ou panneau de la plante sur l’île).
 - Musique ambiante générée (voix en boucles de longueurs différentes, à la Music for Airports) : le mode suit la météo réelle (soleil lydien, pluie mineure, orage agité) et se feutre la nuit.
+- Village : herbothèque (tiny house sur roues), cabane à flashcartes (roulotte), cabane de lecture (cabane en A), chez ƟvƟ et Mesi (mazet), serre, ponton, boîte aux lettres ; des sapins autour ; goélands au loin et cigales l’été (sons de synthèse en attendant de vrais enregistrements).
+- Nuit calme (22 h – 6 h) : flashcartes, terrain et serre dorment ; balades (avec Mesi, Lóló et Mémé, ou seul·e) et histoires (drames de Lóló, douceurs et compliments de Mesi, dans `js/63-histoires.js`) ; cabane de lecture à la bougie, avec la pluie sur le toit.
+- Serre : semis en pots (une graine), levée en 8 h, 4 h au bon mois de semis ; les bébés plantes se repiquent sur les îles (une pelletée de terre, peu d’énergie, et elles démarrent jeunes) ; les frileuses peuvent rester dans la serre.
 - L’île de Lóló et Mémé apparaît le 24 février.
 
 ## Pas sur Google

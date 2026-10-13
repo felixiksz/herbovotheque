@@ -169,7 +169,7 @@
     );
   }
 
-  // --- le miaou pour appeler Luigi ---------------------------------------------------
+  // --- le miaou pour appeler Mesi ---------------------------------------------------
   // Enregistré au micro, converti en WAV (lisible partout, y compris sur iPhone).
   function enWav(buffer) {
     const canal = buffer.getChannelData(0);
@@ -285,14 +285,14 @@
           H.jeu.cri = nouveau;
           H.d.changer("jeu");
           apercu.hidden = true;
-          msg.textContent = "C’est ce miaou qui appellera Luigi.";
+          msg.textContent = "C’est ce miaou qui appellera Mesi.";
           majEtat();
         },
       }, "Garder ce miaou")
     );
 
     return H.el("section.reglage", null,
-      H.el("h2", null, "Le miaou pour appeler Luigi"),
+      H.el("h2", null, "Le miaou pour appeler Mesi"),
       etat,
       H.el("div.pastilles", null,
         H.el("button.bouton.petit", { type: "button", onclick: () => H.jouerCri() }, "Écouter le cri actuel"),
