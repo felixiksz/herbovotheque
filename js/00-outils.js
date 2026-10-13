@@ -96,6 +96,30 @@ window.H = window.H || {};
     return h >>> 0;
   };
 
+  // Dessin en pixels : motif = lignes de caractères, palette = {caractère: couleur}.
+  const cachePixel = new Map();
+  H.dessinPixel = function (motif, palette, echelle) {
+    echelle = echelle || 1;
+    const cle = motif.join("/") + JSON.stringify(palette) + echelle;
+    if (cachePixel.has(cle)) return cachePixel.get(cle);
+    const h = motif.length, w = Math.max(...motif.map((l) => l.length));
+    const c = document.createElement("canvas");
+    c.width = w * echelle;
+    c.height = h * echelle;
+    const ctx = c.getContext("2d");
+    motif.forEach((ligne, y) => {
+      for (let x = 0; x < ligne.length; x++) {
+        const col = palette[ligne[x]];
+        if (!col) continue;
+        ctx.fillStyle = col;
+        ctx.fillRect(x * echelle, y * echelle, echelle, echelle);
+      }
+    });
+    const url = c.toDataURL("image/png");
+    cachePixel.set(cle, url);
+    return url;
+  };
+
   // Petit bus d'évènements entre modules.
   const ecouteurs = {};
   H.sur = (nom, fn) => (ecouteurs[nom] = ecouteurs[nom] || []).push(fn);

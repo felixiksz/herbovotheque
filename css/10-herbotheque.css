@@ -132,3 +132,59 @@
 
   .herbo-boutons .bouton { font-size: 0.9rem; padding: 5px 10px; }
 }
+
+/* fenêtre Organiser */
+.panneau.large { width: min(900px, 100%); }
+.org-onglets { margin: 4px 0 14px; }
+.org-section { border-top: 1px solid var(--filet); padding: 10px 0 4px; }
+.org-section .titre-section { font-family: var(--titre); font-size: 1.3rem; border-color: transparent; background: transparent; padding-left: 0; }
+.org-ligne { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; padding: 7px 0; border-bottom: 1px dashed var(--filet); }
+.org-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; flex: 1 1 280px; }
+.org-tete input[type="text"] { flex: 1 1 180px; }
+.org-etageres { flex-basis: 100%; padding-left: 16px; border-left: 1px solid var(--filet); }
+.org-sous-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 3px 0; }
+.org-options { flex-basis: 100%; }
+.org-options textarea { min-height: 80px; margin-top: 4px; }
+.org-nouveau { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--filet); }
+.org-nouveau h3 { margin-bottom: 6px; }
+
+/* placard à tisanes : un meuble à portes ouvertes, des sachets kraft */
+.placard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px 16px;
+  align-items: flex-end;
+  padding: 18px 16px 0;
+  border: 1px solid var(--encre);
+  border-radius: 4px 4px 0 0;
+  min-height: 220px;
+  background:
+    var(--planche) left bottom / 600px 15px repeat-x,
+    color-mix(in srgb, var(--kraft) 18%, transparent);
+  padding-bottom: 24px;
+}
+.placard-vide { flex-basis: 100%; text-align: center; color: var(--encre-douce); margin: auto; }
+.sachet {
+  font: inherit;
+  color: var(--kraft-encre);
+  width: 132px;
+  min-height: 170px;
+  border: 1px solid rgba(60, 40, 20, 0.45);
+  border-radius: 2px 2px 4px 4px;
+  background: var(--sachet, var(--kraft));
+  position: relative;
+  padding: 26px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.sachet-pli { position: absolute; top: 12px; left: 0; right: 0; border-top: 1px dashed rgba(60, 40, 20, 0.5); }
+.sachet-pli::after { content: ""; position: absolute; top: -12px; left: 50%; width: 22px; height: 8px; margin-left: -11px; border-radius: 0 0 3px 3px; background: var(--fluo); }
+.sachet-nom { font-family: var(--titre); font-size: 1.15rem; line-height: 1.35; background: #fbf6ea; color: #2b2622; padding: 4px 4px 2px; border-radius: 2px; }
+.sachet-plantes { font-size: 0.78rem; line-height: 1.35; }
+.sachet:hover, .sachet:focus-visible { transform: translateY(-4px) rotate(1deg); outline: 2px solid var(--fluo); }
+.tisane-compo { padding-left: 1.2em; }
+.tisane-liste { display: flex; flex-direction: column; gap: 4px; }

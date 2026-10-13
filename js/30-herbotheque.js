@@ -221,6 +221,8 @@
     if (quoi === "herbier" && conteneurEtageres && document.documentElement.dataset.vue === "herbotheque") dessiner();
   });
   H.herbotheque = { redessiner: () => dessiner() };
+  // Groupes d'un rangement (pour choisir quoi réviser) : [{nom, ids}]
+  H.groupesDe = (rg) => grouper(rg, H.d.plantes()).map((g) => ({ nom: g.nom, ids: g.plantes.map((x) => x.plante.id) }));
 
   function nouvellePlante() {
     const champ = H.el("input", { type: "text", placeholder: "Nom de la plante", required: true });
