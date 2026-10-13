@@ -900,7 +900,8 @@
     // les animaux et les insectes (ceux du bassin de Lóló et Mémé, et ceux emmenés par ƟvƟ)
     if (ile.mare || (ile.animaux && ile.animaux.length)) dessinerAnimaux(ctx, ile, performance.now());
     // personnages
-    if (!ile.croquis || vue.ovo.cible) {
+    const enCalin = vue.calin && vue.luigi && !vue.luigi.cible;
+    if ((!ile.croquis || vue.ovo.cible) && !enCalin) {
       const o = vue.ovo;
       const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;
       H.pixel.dessiner(ctx, "ovo", (o.x + 0.5) * T, (o.y + 0.9) * T - (marche ? 1 : 0), 1.5, marche);
@@ -920,16 +921,17 @@
         H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : "lolo", (pos.x + 0.5) * T, (l.y + 0.9) * T - (pos.enCourse && image % 2 ? 2 : 0), 2, image);
       }
     }
-    if (vue.luigi) {
+    if (vue.luigi && !enCalin) {
       const l = vue.luigi;
       const marche = l.cible ? Math.floor(performance.now() / 170) % 2 : 0;
       H.pixel.dessiner(ctx, "luigi", (l.x + 0.5) * T, (l.y + 0.9) * T - (marche ? 1 : 0), 1.5, marche);
     }
+    if (enCalin) dessinerCalin(ctx, T);
 
     // petits cœurs pendant un câlin
     if (vue.coeurs && vue.coeurs > performance.now() && vue.luigi) {
       const tc = (performance.now() % 1500) / 1500;
-      const cx = ((vue.ovo.x + vue.luigi.x) / 2 + 0.5) * T, cy = (vue.ovo.y - 0.3) * T;
+      const cx = (vue.ovo.x + 0.5) * T - 10, cy = (vue.ovo.y - 0.3) * T;
       for (let i = 0; i < 3; i++) {
         const u = (tc + i / 3) % 1;
         dessinerCoeur(ctx, cx + Math.sin(u * 6 + i) * 8, cy - u * 28, 1 - u);
@@ -1452,17 +1454,52 @@
     await L(["À tout à l’heure !", "À ce soir !", "À toute !", "Le temps n’est qu’un concept."][Math.floor(Math.random() * 4)]);
   }
 
-  // Un câlin et des bisous : des petits cœurs, et Mesi laisse un souvenir.
+  // Un câlin et des bisous : Mesi et ƟvƟ se serrent l'un·e contre l'autre en se balançant,
+  // trois bisous claquent sur la joue d'ƟvƟ, des petits cœurs s'envolent ; puis Mesi laisse un souvenir.
   async function calin() {
-    vue.coeurs = performance.now() + 4500;
-    await H.dialogue.dire([
-      { qui: "ovo", texte: "Viens là, toi !" },
-      { qui: "luigi", texte: "Mwah ! Mwah ! Mwah !" },
-    ]);
+    const t0 = performance.now();
+    vue.calin = { t0, bisous: [] };
+    vue.coeurs = t0 + 600e3;
+    await H.dialogue.dire([{ qui: "ovo", texte: "Viens là, toi !" }]);
+    if (!vue || !vue.calin) return;
+    const t = performance.now();
+    vue.calin.bisous = [250, 800, 1350].map((d) => t + d);
+    vue.calin.bisous.forEach((b) => setTimeout(() => H.bruit("bisou"), b - t));
+    await H.dialogue.dire([{ qui: "luigi", texte: "Mwah ! Mwah ! Mwah !" }]);
+    if (!vue) return;
+    // on se lâche doucement, les derniers cœurs finissent de monter
+    vue.calin = null;
+    vue.coeurs = performance.now() + 1500;
     const cadeau = Math.random() < 0.3 ? "crepe" : ["eau", "graines", "compost", "terre", "soleil"][Math.floor(Math.random() * 5)];
     const n = cadeau === "crepe" ? 1 : 2;
     H.ressources.ajouter(cadeau, n);
     await H.dialogue.dire([{ qui: "luigi", texte: "Tiens, je t’ai apporté " + H.quantiteTexte(cadeau, n).replace(/^1 /, "une ").replace(/^une (outil|rayon|seau|bidon|arrosoir)/, "un $1") + ". À plus tard !" }]);
+  }
+
+  // Le dessin du câlin, à la place d'ƟvƟ (ƟvƟ ne bouge pas, Mesi vient se blottir à sa gauche) :
+  // on se serre et on se relâche en se balançant ; à chaque bisou, Mesi se penche, une marque
+  // rose reste un instant sur la joue d'ƟvƟ et un petit cœur s'en échappe.
+  function dessinerCalin(ctx, T) {
+    const c = vue.calin, t = performance.now(), o = vue.ovo, k = 1.5;
+    const age = t - c.t0;
+    // ƟvƟ est au centre de la 23e colonne du dessin (qui en fait 32) : on le garde à sa place
+    const x = (o.x + 0.5) * T - 7 * k, y = (o.y + 0.9) * T;
+    let image = Math.floor(age / 650) % 2;
+    let saut = image === 1 ? 1 : 0;
+    for (const b of c.bisous) {
+      if (t >= b && t < b + 220) { image = 2; saut = 2; }
+      else if (t >= b + 220 && t < b + 700 && image !== 2) image = 3;
+    }
+    // l'arrivée : Mesi se blottit (le dessin glisse depuis la gauche)
+    const entree = Math.min(1, age / 260);
+    const glisse = (1 - entree) * (1 - entree) * 10;
+    H.pixel.dessiner(ctx, "calin", x - glisse, y - saut, k, image);
+    // les petits cœurs des bisous, qui montent de la joue d'ƟvƟ
+    for (const b of c.bisous) {
+      const u = (t - b) / 900;
+      if (u < 0 || u > 1) continue;
+      dessinerCoeur(ctx, (o.x + 0.5) * T - 9 * k + Math.sin(u * 7) * 3, y - 15 * k - u * 22, 1 - u);
+    }
   }
 
   function dessinerCoeur(ctx, x, y, alpha) {
@@ -1598,7 +1635,7 @@
       const surPave = !!o.cible && caseDe(vue.ile, Math.round(o.x), Math.round(o.y)).t === "chemin";
       H.sons.boucle("pas", surPave, 0.6);
       if (vue.lolo && (!vue.lolo.course || t < vue.lolo.course.t1)) bouge = true;
-      if (vue.coeurs && vue.coeurs > t) bouge = true;
+      if ((vue.coeurs && vue.coeurs > t) || vue.calin) bouge = true;
       const lv = vue.loloVisite;
       if (lv) {
         bouge = true;

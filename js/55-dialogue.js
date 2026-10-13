@@ -72,6 +72,19 @@
     if (!H.local || !H.local.son) return;
     const ctx = contexte();
     if (!ctx) return;
+    if (type === "bisou") {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+      o.type = "sine";
+      o.frequency.setValueAtTime(420 + Math.random() * 80, t);
+      o.frequency.exponentialRampToValueAtTime(1500, t + 0.06);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.08 * H.volume("bruitages")), t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      o.connect(g).connect(H.audio.sortie());
+      o.start(t);
+      o.stop(t + 0.1);
+      return;
+    }
     const notes = { recolte: [660, 880, 1100], plante: [440, 550], eau: [900, 700, 500], erreur: [220, 180], ouvre: [520, 780] }[type] || [600];
     notes.forEach((f, i) => {
       const o = ctx.createOscillator();

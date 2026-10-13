@@ -365,7 +365,53 @@
     "...kkkkkkkkkkkk.....",
   ];
 
+  // Le câlin, de face : Mesi et ƟvƟ côte à côte, penché·es l'un·e vers l'autre, tempe contre
+  // tempe, les yeux fermés ; le bras de Mesi sur l'épaule d'ƟvƟ, celui d'ƟvƟ autour de la
+  // taille de Mesi. Images : 0 le câlin, 1 on se serre un peu plus, 2 et 3 un bisou sur la joue
+  // (Mesi se penche encore, une petite marque rose sur la joue d'ƟvƟ).
+  function calin(image, ete) {
+    const W = 32, Hh = 23, g = Array.from({ length: Hh }, () => Array(W).fill("."));
+    const serre = image === 1 ? 1 : 0, bisou = image === 2, apres = image === 3;
+    const xm = 1, xo = 15 - serre;
+    // le bras qui entoure l'autre disparaît du dessin de face : il passe derrière
+    const sansBras = (motif, cote) => motif.map((l, y) => {
+      if (y < 12 || y > 16) return l;
+      const a = l.split("");
+      if (cote === "droit") { a[12] = "k"; a[13] = "."; a[14] = "."; }
+      else { a[1] = "."; a[2] = "."; a[3] = "k"; }
+      return a.join("");
+    });
+    const poserPenche = (motif, x0, y0, penche) => motif.forEach((l, y) => {
+      const d = Math.round((penche * Math.max(0, 12 - y)) / 12);
+      l.split("").forEach((c, x) => c !== "." && poser(g, x0 + x + d, y0 + y, c === "e" ? "S" : c));
+    });
+    const bande = (x1, x2, y, haut, bas) => {
+      for (let x = x1; x <= x2; x++) { poser(g, x, y - 1, "k"); poser(g, x, y, haut); poser(g, x, y + 1, bas); poser(g, x, y + 2, "k"); }
+    };
+    // le bras d'ƟvƟ passe derrière Mesi, à la taille ; celui de Mesi derrière ƟvƟ, aux épaules
+    bande(xm + 4, xo + 4, 15, "r", "R");
+    poserPenche(sansBras(LUIGI, "droit"), xm, 0, bisou ? 3 : 2);
+    bande(xm + 11, xo + 11, 12, "g", "G");
+    poserPenche(sansBras(ete ? OVO_ETE : OVO, "gauche"), xo, 1, -2);
+    // les mains : celle de Mesi sur l'épaule d'ƟvƟ, celle d'ƟvƟ sur la hanche de Mesi
+    [[xo + 12, 12], [xo + 13, 12], [xo + 12, 13], [xo + 13, 13]].forEach(([x, y]) => poser(g, x, y, "s"));
+    [[xo + 12, 11], [xo + 13, 11], [xo + 14, 12], [xo + 14, 13], [xo + 12, 14], [xo + 13, 14]].forEach(([x, y]) => poser(g, x, y, "k"));
+    [[xm + 4, 15], [xm + 5, 15], [xm + 4, 16], [xm + 5, 16]].forEach(([x, y]) => poser(g, x, y, "s"));
+    [[xm + 3, 15], [xm + 3, 16], [xm + 4, 17], [xm + 5, 17]].forEach(([x, y]) => poser(g, x, y, "k"));
+    if (bisou) {
+      // la bouche de Mesi en cul-de-poule, tournée vers ƟvƟ
+      [[6, 9], [9, 9], [7, 10], [8, 10]].forEach(([x, y]) => poser(g, xm + 1 + x, y, "s"));
+      poser(g, xm + 1 + 10, 9, "m");
+      poser(g, xm + 1 + 10, 10, "m");
+    }
+    // la petite marque rose sur la joue d'ƟvƟ
+    if (bisou || apres) { poser(g, xo + 2, 9, "f"); poser(g, xo + 3, 9, "f"); }
+    return g.map((l) => l.join(""));
+  }
+
   const SPRITES = {
+    calin: [0, 1, 2, 3].map((i) => calin(i)),
+    calinEte: [0, 1, 2, 3].map((i) => calin(i, true)),
     flamant: [FLAMANT],
     ovo: [OVO, OVO_MARCHE],
     luigi: [LUIGI, LUIGI_MARCHE],
