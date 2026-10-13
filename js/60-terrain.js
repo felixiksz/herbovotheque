@@ -145,7 +145,7 @@
     if (ile.croquis) return;
     const p = H.d.plante(pl.p);
     if (!p) return;
-    const meteo = H.ciel.meteo || {};
+    const meteo = H.pluieMagique && H.pluieMagique() ? Object.assign({}, H.ciel.meteo, { type: "pluie" }) : H.ciel.meteo || {};
     const c = caseDe(ile, x, y);
     const v = p.valeurs || {};
     let heures = Math.min(24 * 45, (maintenant - (pl.maj || maintenant)) / HEURE);
@@ -490,7 +490,7 @@
       H.d.changer("jeu");
       H.sons.duree("galop").then((d) => setTimeout(() => vue && H.dialogue.dire([
         { qui: "lolo", texte: "Hiii ! Bienvenue sur notre île, ƟvƟ !" },
-        { qui: "meme", texte: "Rrrrr… (Mémé ouvre un œil, sourit, et le referme.)" },
+        { qui: "meme", texte: "Rrrrrrrr… rrrrrrrr… (Mémé ouvre un œil, sourit, et le referme.)" },
         { qui: "lolo", texte: (H.base.messageIle || "Joyeux anniversaire ! On t’a préparé un petit coin de fleurs rien que pour toi.") },
       ]), d * 1000 + 300));
     }
@@ -863,7 +863,12 @@
       }
     }
     const heures = s.heures;
+    if (H.pluieMagique && H.pluieMagique()) {
+      ctx.fillStyle = "rgba(120,125,160,0.5)";
+      for (let i = 0; i < 5; i++) ctx.fillRect(Math.round((i + 0.3) * (w / 5)), 12 + (i % 2) * 6, 34, 10);
+    }
     vue.infoCiel.textContent = [
+      H.pluieMagique && H.pluieMagique() ? "pluie de joie de Lóló" : null,
       H.jeu.lieu.nom,
       H.heure(s.date),
       m ? m.temperature + " °C, " + m.libelle : null,
@@ -1329,7 +1334,8 @@
         }
       }
       // pluie ou neige d'après la vraie météo
-      const m = H.ciel.meteo || {};
+      const magique = H.pluieMagique && H.pluieMagique();
+      const m = magique ? { type: "pluie" } : H.ciel.meteo || {};
       const tombe = m.type === "pluie" || m.type === "orage" || m.type === "neige";
       if (tombe) {
         const W = vue.toile.width, Hh = vue.toile.height;

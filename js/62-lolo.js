@@ -27,11 +27,71 @@
     "Dans l’herbothèque, coche « seulement les bocaux presque vides ou vides » pour voir ce qu’il faut aller cueillir.",
   ];
   const MEME = [
-    "Rrrrr… rrrrr…",
+    "Rrrrrrrr… rrrrrrrr… rrrrrrrr…",
     "(Mémé remue une oreille, sans ouvrir les yeux.)",
     "(Mémé serre un peu plus fort le cou de Lóló.)",
-    "Mrrrou…",
+    "Mrrrrrou… rrrrrrrr…",
   ];
+
+  const COMPLIMENTS = [
+    "Tu as la plus jolie étoile du monde !",
+    "Ta crinière brille comme du miel au soleil.",
+    "Tu galopes plus vite que le mistral !",
+    "Mémé a bien de la chance de dormir sur toi.",
+    "Tu sens bon le foin et la lavande.",
+    "Tes sabots font la plus jolie musique.",
+    "Tu es la plus douce des juments.",
+    "Tes yeux pétillent comme la mer aux calanques.",
+  ];
+  const DUREE_PLUIE = 10 * 60e3;
+
+  // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins.
+  H.pluieMagique = () => !!(H.jeu && H.jeu.pluieMagique && H.jeu.pluieMagique > H.maintenant());
+
+  function faireTomberLaPluie() {
+    const t = H.maintenant();
+    H.jeu.pluieMagique = t + DUREE_PLUIE;
+    // la pluie arrose toutes les plantes de toutes les îles de jeu
+    for (const ile of Object.values(H.jeu.iles || {})) {
+      if (!ile || ile.supprime || ile.croquis) continue;
+      for (const pl of Object.values(ile.plantes || {})) pl.eau = 100;
+      ile.modifieLe = t;
+    }
+    H.d.changer("jeu");
+    H.emettre("meteo", H.ciel.meteo);
+  }
+
+  async function complimenter() {
+    const melange = COMPLIMENTS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    const choix = await H.dialogue.dire([{
+      qui: "ovo",
+      texte: "Hmm… qu’est-ce que je pourrais lui dire de gentil ?",
+      choix: melange.map((c) => ({ valeur: c, libelle: c })).concat([{ valeur: null, libelle: "Rien, je suis timide" }]),
+    }]);
+    if (!choix) return;
+    const c = H.jeu.complimentsLolo || { n: 0, le: 0 };
+    if (H.maintenant() - c.le > 24 * 3600e3) c.n = 0;
+    c.n++;
+    c.le = H.maintenant();
+    H.jeu.complimentsLolo = c;
+    H.d.changer("jeu");
+    if (c.n === 1) {
+      await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Hiii… merci ! Tu me fais rougir jusqu’aux oreilles." }]);
+    } else if (c.n === 2) {
+      await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Oh là là, encore ? Mon cœur fait des galops !" }]);
+    } else {
+      c.n = 0;
+      await H.dialogue.dire([
+        { qui: "ovo", texte: choix },
+        { qui: "lolo", texte: "Hiii ! Tu me rends tellement heureuse que… regarde le ciel !" },
+      ]);
+      faireTomberLaPluie();
+      await H.dialogue.dire([
+        { qui: "meme", texte: "Rrrrrrrr… (Mémé sent les premières gouttes, ouvre un œil, et se rendort.)" },
+        { qui: "lolo", texte: "Voilà : une pluie de joie pour tous tes jardins ! Ça arrose tout, pendant dix minutes." },
+      ]);
+    }
+  }
 
   function plantesDuMois(champ, ile) {
     const mois = new Date().getMonth() + 1;
@@ -86,9 +146,15 @@
         { valeur: "fleurs", libelle: "Qu’est-ce qui fleurit ?" },
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
+        { valeur: "compliment", libelle: "Lui faire un compliment" },
         { valeur: null, libelle: "Merci Lóló !" },
       ]);
       if (!q) break;
+      if (q === "compliment") {
+        await complimenter();
+        intro = "Autre chose ?";
+        continue;
+      }
       let repliques = [];
       if (q === "astuce") {
         if (dejaDites.length >= ASTUCES.length) dejaDites = [];

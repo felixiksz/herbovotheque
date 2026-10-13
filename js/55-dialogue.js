@@ -8,7 +8,7 @@
     ovo: { nom: "ƟvƟ", hauteur: 330 },
     luigi: { nom: "Luigi", hauteur: 220 },
     lolo: { nom: "Lóló", hauteur: 150 },
-    meme: { nom: "Mémé", hauteur: 420 },
+    meme: { nom: "Mémé", hauteur: 360 },
   };
   // décalage (en demi-tons) selon la voyelle prononcée
   const VOYELLES = { a: 0, e: 4, i: 7, o: -3, u: 5, y: 7 };
@@ -49,63 +49,30 @@
     o.stop(t + 0.15);
   }
 
-  // Le ronronnement de Mémé : un grondement grave qui vibre vite (~26 fois par seconde),
-  // et qui monte et descend doucement comme une respiration. Renvoie une fonction pour l'arrêter.
-  let bruitBrun = null;
-  function ronronner() {
-    if (!H.local || !H.local.son) return () => {};
+  // Le ronron de Mémé : les mêmes petits sons feutrés, mais rapides et réguliers
+  // (comme « rr-rr-rr »), presque sans changer de hauteur, et qui enflent puis retombent
+  // comme une respiration.
+  function ronron(voix, n) {
+    if (!H.local || !H.local.son) return;
     const ctx = contexte();
-    if (!ctx) return () => {};
-    if (!bruitBrun) {
-      const n = ctx.sampleRate * 2;
-      bruitBrun = ctx.createBuffer(1, n, ctx.sampleRate);
-      const d = bruitBrun.getChannelData(0);
-      let dernier = 0;
-      for (let i = 0; i < n; i++) {
-        dernier = (dernier + 0.02 * (Math.random() * 2 - 1)) / 1.02;
-        d[i] = dernier * 3.5;
-      }
-    }
+    if (!ctx) return;
+    const f = voix.hauteur * Math.pow(2, (Math.random() - 0.5) * 0.4 / 12);
+    const souffle = 0.55 + 0.45 * Math.sin(n / 5);
     const t = ctx.currentTime;
-    const sortie = ctx.createGain();
-    sortie.gain.setValueAtTime(0.0001, t);
-    sortie.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.5 * H.volume("voix")), t + 0.25);
-    sortie.connect(ctx.destination);
-    // respiration : le ronron enfle et retombe
-    const souffle = ctx.createGain();
-    souffle.gain.value = 0.65;
-    const lfoSouffle = ctx.createOscillator(), profSouffle = ctx.createGain();
-    lfoSouffle.frequency.value = 0.9;
-    profSouffle.gain.value = 0.35;
-    lfoSouffle.connect(profSouffle).connect(souffle.gain);
-    // la vibration rapide du ronron
-    const vibre = ctx.createGain();
-    vibre.gain.value = 0.5;
-    const lfoVibre = ctx.createOscillator(), profVibre = ctx.createGain();
-    lfoVibre.frequency.value = 26;
-    profVibre.gain.value = 0.5;
-    lfoVibre.connect(profVibre).connect(vibre.gain);
     const filtre = ctx.createBiquadFilter();
     filtre.type = "lowpass";
-    filtre.frequency.value = 380;
-    const bruit = ctx.createBufferSource();
-    bruit.buffer = bruitBrun;
-    bruit.loop = true;
-    const corps = ctx.createOscillator(), gCorps = ctx.createGain();
-    corps.type = "triangle";
-    corps.frequency.value = 75;
-    gCorps.gain.value = 0.25;
-    bruit.connect(filtre);
-    corps.connect(gCorps).connect(filtre);
-    filtre.connect(vibre).connect(souffle).connect(sortie);
-    [bruit, corps, lfoSouffle, lfoVibre].forEach((n) => n.start(t));
-    return function arreter() {
-      const fin = ctx.currentTime;
-      sortie.gain.cancelScheduledValues(fin);
-      sortie.gain.setValueAtTime(Math.max(0.0002, sortie.gain.value), fin);
-      sortie.gain.exponentialRampToValueAtTime(0.0001, fin + 0.4);
-      [bruit, corps, lfoSouffle, lfoVibre].forEach((n) => n.stop(fin + 0.45));
-    };
+    filtre.frequency.value = f * 1.8;
+    filtre.Q.value = 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.09 * souffle * H.volume("voix")), t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    const o = ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.value = f;
+    o.connect(g).connect(filtre).connect(ctx.destination);
+    o.start(t);
+    o.stop(t + 0.1);
   }
 
   // Petit bruitage générique (récolte, plantation…)
@@ -166,15 +133,6 @@
       let minuteur = null;
       let complet = false;
       let courant = "";
-      let arreterRonron = null, debutRonron = 0;
-      const couperRonron = (attendre) => {
-        const stop = arreterRonron;
-        arreterRonron = null;
-        if (!stop) return;
-        // un ronron dure au moins une seconde et demie, même pour un « Rrrr » très court
-        const reste = attendre ? Math.max(0, 1500 - (performance.now() - debutRonron)) : 0;
-        setTimeout(stop, reste);
-      };
 
       function afficher() {
         const r = repliques[i];
@@ -190,24 +148,19 @@
         courant = r.texte;
         let n = 0;
         clearInterval(minuteur);
-        couperRonron(false);
-        // Mémé ne parle pas : elle ronronne, et sa bulle s'écrit plus lentement
+        // Mémé ne parle pas : elle ronronne, un petit son à chaque lettre, bien régulier
         const meme = r.qui === "meme";
-        if (meme) {
-          arreterRonron = ronronner();
-          debutRonron = performance.now();
-        }
         minuteur = setInterval(() => {
           n++;
           texte.textContent = courant.slice(0, n);
           const lettre = courant[n - 1] || "";
-          if (!meme && /[a-zàâäéèêëîïôöùûüÿœ]/i.test(lettre) && n % 2 === 0) bip(voix, lettre);
+          if (meme) ronron(voix, n);
+          else if (/[a-zàâäéèêëîïôöùûüÿœ]/i.test(lettre) && n % 2 === 0) bip(voix, lettre);
           if (n >= courant.length) terminer();
-        }, meme ? 70 : 32);
+        }, meme ? 45 : 32);
       }
       function terminer() {
         clearInterval(minuteur);
-        couperRonron(true);
         texte.textContent = courant;
         complet = true;
         const options = repliques[i].choix;
@@ -227,7 +180,6 @@
         } else suite.hidden = false;
       }
       function finir(valeur) {
-        couperRonron(false);
         document.removeEventListener("keydown", clavier);
         fermer();
         fin(valeur);

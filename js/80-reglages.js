@@ -100,7 +100,7 @@
                 sortie.textContent = Math.round(v * 100) + " %";
                 H.local.volumes = Object.assign({}, H.local.volumes, { [cat]: v });
                 if (cat === "musique") H.musique.majVolume();
-                if (cat === "pluie" && H.sons.majPluie) H.sons.majPluie();
+                if (cat === "pluie" && H.sons.apercuPluie) H.sons.apercuPluie();
               },
               onchange(e) {
                 H.d.majLocal((l) => (l.volumes = Object.assign({}, l.volumes, { [cat]: parseInt(e.target.value, 10) / 100 })));

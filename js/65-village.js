@@ -192,6 +192,19 @@
       scene.loloY = portrait ? py - 60 : py - 10;
       if (scene.loloX != null) H.pixel.dessiner(ctx, "lolo", scene.loloX, scene.loloY - (galope && image ? 3 : 0), 2, image);
     }
+    const m = H.ciel.meteo || {};
+    if ((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage") {
+      ctx.strokeStyle = "rgba(60,100,165,0.6)";
+      ctx.lineWidth = 1.5;
+      const t = performance.now() / 1000;
+      ctx.beginPath();
+      for (let i = 0; i < 150; i++) {
+        const x = (i * 97.3) % w, y = ((i * 53.1 + t * (380 + (i % 5) * 30)) % (h + 20)) - 10;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 3, y + 13);
+      }
+      ctx.stroke();
+    }
     const o = scene.ovo;
     const marche = o.cible ? Math.floor(performance.now() / 160) % 2 : 0;
     H.pixel.dessiner(ctx, "ovo", o.x, o.y - (marche ? 2 : 0), 3, marche);

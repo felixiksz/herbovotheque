@@ -161,10 +161,19 @@
   // La pluie : quand il pleut vraiment (d'après la météo du lieu choisi)
   function pluie() {
     const m = H.ciel && H.ciel.meteo;
-    const pleut = !!m && (m.type === "pluie" || m.type === "orage");
+    const pleut = (!!m && (m.type === "pluie" || m.type === "orage")) || (H.pluieMagique && H.pluieMagique());
     H.sons.boucle("pluie", pleut && !!H.jeu, m && m.type === "orage" ? 0.5 : 0.32);
   }
   H.sons.majPluie = pluie;
+  // dans les réglages : faire entendre la pluie quelques secondes, même s'il fait beau
+  let finApercu = null;
+  H.sons.apercuPluie = function () {
+    boucles.pluie = boucles.pluie || {};
+    boucles.pluie.voulu = true;
+    boucleContinue("pluie", true, 0.35 * H.volume("pluie"));
+    clearTimeout(finApercu);
+    finApercu = setTimeout(pluie, 3500);
+  };
   H.sur("meteo", pluie);
   H.sur("ciel", pluie);
   document.addEventListener("pointerdown", pluie);
