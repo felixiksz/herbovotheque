@@ -164,6 +164,21 @@
     nomPhase,
     saison,
     teinteCiel,
+    // le ciel couvert selon la météo (et la pluie de joie de Lóló) : null quand il fait beau
+    couvert(nuit) {
+      const m = H.ciel.meteo || {};
+      const type = H.pluieMagique && H.pluieMagique() ? "pluie" : m.type;
+      const S = {
+        pluie: { couleur: "#9aa0ad", ventre: "#5f6574", n: 6, alpha: 0.32, voile: "105,112,128,0.38" },
+        orage: { couleur: "#7c8191", ventre: "#3f4352", n: 7, alpha: 0.36, voile: "62,66,84,0.5" },
+        neige: { couleur: "#eef0f3", ventre: "#b9bec8", n: 6, alpha: 0.3, voile: "200,204,214,0.35" },
+        nuages: { couleur: "#f4f4f2", ventre: "#c3c7cf", n: 5, alpha: 0.28, voile: "165,170,182,0.25" },
+        voile: { couleur: "#ffffff", n: 2, alpha: 0.22 },
+        brume: { couleur: "#eceef0", n: 3, alpha: 0.18, voile: "222,224,228,0.4" },
+      }[type];
+      if (!S) return null;
+      return nuit ? Object.assign({}, S, { couleur: "#5a5e7a", ventre: S.ventre ? "#2e3046" : null, voile: S.voile ? "28,30,48,0.35" : null }) : S;
+    },
     lumiere,
     estMatin,
     // de 22 h à 6 h, on ne révise pas et on ne jardine pas : on se balade, on lit, on dort

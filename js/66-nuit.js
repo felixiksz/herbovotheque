@@ -98,6 +98,13 @@
     toile.style.height = h + "px";
     // décor pré-dessiné : les calanques au loin (deux largeurs pour défiler sans fin), un pin
     const nuitTheme = H.ciel.etat().soleil.alt < -4;
+    // les nuages (quand le ciel est couvert), sur deux largeurs pour défiler sans fin
+    const couvert = H.ciel.couvert(nuitTheme);
+    let nuages = null;
+    if (couvert) {
+      nuages = H.aqua.toile(w * 2, Math.round(h * 0.45));
+      H.aqua.nuages(nuages.getContext("2d"), H.alea("nuages-balade"), 0, w * 2, h * 0.06, h * 0.3, Object.assign({}, couvert, { n: couvert.n * 2 }));
+    }
     const loin = H.aqua.toile(w * 2, h);
     H.aqua.calanques(loin.getContext("2d"), H.alea("balade"), w * 2, h * 0.52, h * 0.22, nuitTheme);
     const pin = H.aqua.toile(120, 160);
@@ -133,7 +140,7 @@
       for (let k = 0; k < 7; k++) H.aqua.trait(fx, rf, [[60 + k * 20, fh * (0.95 - k * 0.1)], [480 - k * 10, fh * (0.9 - k * 0.11)]], { couleur: "#8a3a22", epaisseur: 0.8, alpha: 0.35 });
       H.aqua.trait(fx, rf, pts.slice(1, -1), { epaisseur: 1.2, alpha: 0.7 });
     }
-    return { ctx, dpr, w, h, loin, pin, etoiles, rochers, falaise, decalage: 0, compagnon, derniere: performance.now() };
+    return { ctx, dpr, w, h, loin, pin, etoiles, rochers, falaise, couvert, nuages, decalage: 0, compagnon, derniere: performance.now() };
   }
 
   // Le chemin passe par la terre rouge : rochers rouges et petite crique où l'on peut se baigner.
@@ -199,6 +206,16 @@
         ctx.fill();
       }
     }
+    // ciel couvert : voile gris et nuages qui passent
+    if (b.s.couvert) {
+      if (b.s.couvert.voile) {
+        ctx.fillStyle = "rgba(" + b.s.couvert.voile + ")";
+        ctx.fillRect(0, 0, w, h * 0.6);
+      }
+      const xn = -((b.s.decalage * 0.08 + t / 1000 * 6) % (w * 2));
+      ctx.drawImage(b.s.nuages, xn, 0, w * 2, b.s.nuages.height);
+      ctx.drawImage(b.s.nuages, xn + w * 2, 0, w * 2, b.s.nuages.height);
+    }
     // calanques au loin (défilent lentement), mer, chemin, pins (défilent vite)
     const xl = -((b.s.decalage * 0.15) % w);
     ctx.drawImage(b.s.loin, 0, 0, b.s.loin.width, b.s.loin.height, xl, 0, w * 2, h);
@@ -243,6 +260,23 @@
     }
     // on peut aller se baigner quand le chemin longe la crique aux rochers rouges
     if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !H.$(".dialogue"));
+    // la pluie, quand il pleut vraiment (ou que Lóló l'a fait tomber)
+    const m = H.ciel.meteo || {};
+    if ((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage") {
+      const g = b.s.gouttes || (b.s.gouttes = []);
+      while (g.length < 120) g.push({ x: Math.random() * (w + 40), y: -Math.random() * h, v: 280 + Math.random() * 200, a: 0.3 + Math.random() * 0.4 });
+      ctx.lineWidth = 1.3;
+      for (const d of g) {
+        d.y += d.v * dt;
+        d.x -= d.v * 0.15 * dt;
+        if (d.y > h) Object.assign(d, { x: Math.random() * (w + 40), y: -10 - Math.random() * 40 });
+        ctx.strokeStyle = "rgba(60,100,165," + d.a.toFixed(2) + ")";
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x - 2, d.y + 12);
+        ctx.stroke();
+      }
+    }
     // lumière du moment
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     for (const v of H.ciel.lumiere(alt)) {

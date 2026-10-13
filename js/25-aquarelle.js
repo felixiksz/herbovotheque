@@ -336,5 +336,19 @@
     }
   }
 
-  H.aqua = { NIVEAUX, calanques, crete, toile, tache, lavis, trait, polygone, deformer, rectArrondi, grain, papier, planche, bocal, teintePlante, FORMES, TEINTES_PLANTES };
+  // des nuages à l'aquarelle entre y0 et y1 ; « ventre » : le dessous plus sombre des nuages de pluie
+  function nuages(ctx, r, x0, w, y0, y1, opts) {
+    const n = opts.n || 5;
+    for (let i = 0; i < n; i++) {
+      const cx = x0 + (i + 0.2 + r() * 0.6) * (w / n), cy = y0 + r() * (y1 - y0);
+      const large = (w / n) * (0.55 + r() * 0.55), haut = large * 0.3;
+      if (opts.ventre) tache(ctx, r, cx, cy + haut * 0.3, large * 0.5, haut * 0.32, opts.ventre, { alpha: 0.2, couches: 6 });
+      for (let j = 0; j < 7; j++) {
+        tache(ctx, r, cx + (r() - 0.5) * large * 0.9, cy - (j % 3 === 0 ? haut * 0.35 : 0) + (r() - 0.5) * haut * 0.4,
+          large * (0.2 + r() * 0.16), haut * (0.45 + r() * 0.35), opts.couleur, { alpha: opts.alpha || 0.24, couches: 7 });
+      }
+    }
+  }
+
+  H.aqua = { nuages, NIVEAUX, calanques, crete, toile, tache, lavis, trait, polygone, deformer, rectArrondi, grain, papier, planche, bocal, teintePlante, FORMES, TEINTES_PLANTES };
 })();

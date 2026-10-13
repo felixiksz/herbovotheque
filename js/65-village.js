@@ -284,6 +284,15 @@
     g.addColorStop(1, t.bas);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h * (horizon + 0.03));
+    // quand il pleut, le ciel se couvre : voile gris et nuages
+    const couvert = H.ciel.couvert(s.soleil.alt < -4);
+    if (couvert) {
+      if (couvert.voile) {
+        ctx.fillStyle = "rgba(" + couvert.voile + ")";
+        ctx.fillRect(0, 0, w, h * (horizon + 0.03));
+      }
+      H.aqua.nuages(ctx, H.alea("nuages-ferme"), -w * 0.05, w * 1.1, h * 0.03, h * (horizon - 0.1), couvert);
+    }
     // les calanques à l'horizon
     H.aqua.calanques(ctx, r, w, h * (horizon - 0.015), h * (portrait ? 0.07 : 0.15), document.documentElement.dataset.theme === "nuit");
     // prairie
@@ -768,6 +777,7 @@
   };
 
   H.sur("ciel", () => scene && peindreFond());
+  H.sur("meteo", () => scene && peindreFond());
   H.sur("goeland", () => scene && lancerGoelands());
   H.sur("lettres", () => {
     if (!scene) return;
