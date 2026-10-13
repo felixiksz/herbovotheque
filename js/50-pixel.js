@@ -16,7 +16,8 @@
     t: "#c9ad8a", T: "#6b5442", u: "#f0e4d4", // chatte tigrée
     p: "#f4a3b8", l: "#d6eef5",
     a: "#a3acb7", q: "#ee9a7e",
-    M: "#3e2210",                              // crinière (sans contour)               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
+    M: "#3e2210",                              // crinière (sans contour)
+    z: "#1f6fe0", Z: "#16509f", Y: "#f6c400", X: "#c99a00", // sandales Adidas Lego d'ƟvƟ (l'été)               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
   };
 
   // 16 × 22, de face. Cils : petits points au coin des lunettes de vue (verres transparents).
@@ -48,6 +49,22 @@
     "...kbbbkkbbbk...",
     "...knnnkkbbbk...",
     "...kkkkk.knnnk..",
+    ".........kkkkk..",
+  ]);
+
+  // l'été (de mai à septembre), ƟvƟ porte ses sandales Adidas Lego : dessus bleu,
+  // liseré rouge, grosse semelle jaune
+  const OVO_ETE = OVO.slice(0, 19).concat([
+    "...kssskksssk...",
+    "..kzrzzk.kzzrzk.",
+    "..kYYYYk.kYYYYk.",
+    "..kkkkkk.kkkkkk.",
+  ]);
+  const OVO_MARCHE_ETE = OVO.slice(0, 18).concat([
+    "...kbbbkkbbbk...",
+    "...kzrzkksssk...",
+    "...kYYYk.kzrzk..",
+    "...kkkkk.kYYYk..",
     ".........kkkkk..",
   ]);
 
@@ -214,7 +231,7 @@
   // images 0 à 3 : un pas, puis l'autre (pieds alternés, bras opposés) ; 4 : à l'arrêt
   const PAS = [[3, false, -3, false], [0, false, 0, true], [-3, false, 3, false], [0, true, 0, false], [0, false, 0, false]];
   const MAINS = [[3, 16], [8, 17], [13, 16], [8, 17], [7, 17]];
-  function profil(haut, manche, image) {
+  function profil(haut, manche, image, sandales) {
     const g = Array.from({ length: 24 }, () => Array(16).fill("."));
     const b = image % 2 || image === 4 ? 0 : 1; // le corps descend d'un pixel quand les jambes s'écartent
     haut.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x, y + b, c)));
@@ -225,7 +242,12 @@
         poser(g, x, y, pantalon);
         poser(g, x + 1, y, pantalon);
       }
-      for (let i = 0; i < 3; i++) poser(g, 7 + dx + i, bas, chaussure);
+      if (sandales) {
+        // dessus bleu au liseré rouge, puis la grosse semelle jaune
+        const fonce = chaussure === "N";
+        [fonce ? "Z" : "z", "r", fonce ? "Z" : "z"].forEach((c, i) => poser(g, 7 + dx + i, bas, c));
+        for (let i = -1; i < 3; i++) poser(g, 7 + dx + i, bas + 1, fonce ? "X" : "Y");
+      } else for (let i = 0; i < 3; i++) poser(g, 7 + dx + i, bas, chaussure);
     };
     const [dxD, leveD, dxA, leveA] = PAS[image];
     jambe(dxA, leveA, "B", "N"); // la jambe de derrière, plus sombre
@@ -316,6 +338,8 @@
     luigi: [LUIGI, LUIGI_MARCHE],
     lolo: [LOLO, LOLO_2],
     ovoProfil: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i)),
+    ovoEte: [OVO_ETE, OVO_MARCHE_ETE],
+    ovoProfilEte: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, true)),
     luigiProfil: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i)),
     loloPas: [0, 1, 2, 3].map((i) => loloAuPas(i)),
     loloGalop: [0, 1, 2, 3].map((i) => loloAuPas(i, { galop: true })),
@@ -345,6 +369,9 @@
     PAL,
     // toile (1 pixel = 1 pixel) d'un personnage ; image 0 = repos, 1 = pas
     sprite(nom, image) {
+      // de mai à septembre, ƟvƟ est en sandales
+      const mois = new Date().getMonth();
+      if (mois >= 4 && mois <= 8 && SPRITES[nom + "Ete"]) nom += "Ete";
       const cle = nom + (image || 0);
       if (!cache.has(cle)) cache.set(cle, toile(SPRITES[nom][image || 0]));
       return cache.get(cle);
