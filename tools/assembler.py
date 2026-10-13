@@ -73,6 +73,13 @@ for chemin in sorted(glob.glob(os.path.join(ICI, "culture", "*.json"))):
             p.setdefault("aVerifier", []).append(cid)
         compte += 1
 
+# messages personnels (bienvenue, île secrète) : chiffrés avec le reste, jamais en clair sur GitHub
+messages = os.path.join(PRIVE, "messages.json")
+if os.path.exists(messages):
+    for cle, texte in json.load(open(messages, encoding="utf-8")).items():
+        if cle in ("message", "messageIle") and texte.strip():
+            base[cle] = texte.strip()
+
 base["version"] = 1
 with open(os.path.join(PRIVE, "donnees.json"), "w", encoding="utf-8") as f:
     json.dump(base, f, ensure_ascii=False, separators=(",", ":"))

@@ -84,7 +84,7 @@
       ),
       H.el("div.pastilles", { style: { marginTop: "10px" } },
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.son, onchange: (e) => H.d.majLocal((l) => (l.son = e.target.checked)) }), " Bruitages et babillage"),
-        H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: (e) => H.d.majLocal((l) => (l.musique = e.target.checked)) }), " Musique")
+        H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: async (e) => { await H.d.majLocal((l) => (l.musique = e.target.checked)); e.target.checked ? H.musique.jouer() : H.musique.arreter(); } }), " Musique")
       )
     );
   }

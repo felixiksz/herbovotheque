@@ -1,0 +1,16 @@
+{
+  "name": "L’herbothèque d’ƟvƟ",
+  "short_name": "Herbothèque",
+  "lang": "fr",
+  "start_url": "./#village",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8f2e4",
+  "theme_color": "#f8f2e4",
+  "icons": [
+    { "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icones/icone-masquable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
