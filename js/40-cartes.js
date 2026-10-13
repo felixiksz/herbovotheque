@@ -247,7 +247,7 @@
     return H.el("div.bandeau-pause", null,
       H.el("p", null, "ƟvƟ se repose : encore ", H.el("strong", null, duree(reste)), " avant que les cartes rapportent à nouveau des ressources. Tu peux réviser quand même, pour le plaisir."),
       H.ressources.quantite("crepe") > 0
-        ? H.el("button.bouton.petit", { type: "button", onclick: () => { H.ressources.mangerCrepe(); H.toast("Miam. Pleine d’énergie !"); H.router(); } },
+        ? H.el("button.bouton.petit", { type: "button", onclick: () => { H.ressources.mangerCrepe(); H.toast("Miam. Plein·e d’énergie !"); H.router(); } },
             H.el("img", { src: H.ressources.icone("crepe", 2), alt: "" }), "Manger une crêpe au chocolat fondu")
         : null
     );
@@ -471,7 +471,7 @@
   // --- séance de révision -------------------------------------------------------------
   function revision(file, f) {
     file = file.slice();
-    let faites = 0, reussies = 0;
+    let faites = 0, reussies = 0, avertiPause = false;
     const gains = {};
     const total = () => faites + file.length;
 
@@ -541,7 +541,11 @@
         if (n > 0) reussies++;
         const g = H.ressources.recompenser(c, n);
         if (g.pause) {
-          /* pendant la pause, pas de récompense */
+          // pendant la pause, pas de récompense : on le dit une fois par séance
+          if (!avertiPause) {
+            avertiPause = true;
+            H.toast("ƟvƟ se repose : les cartes ne rapportent plus rien pendant encore " + duree(H.ressources.seance().pauseJusqua - H.maintenant()) + ". Une crêpe au chocolat fondu met fin à la pause.", 6000);
+          }
         } else {
           for (const [k, v] of Object.entries(g)) if (typeof v === "number" && k !== "energie") gains[k] = (gains[k] || 0) + v;
           if (g.crepe) H.toast("Une crêpe au chocolat fondu pour ƟvƟ !");
