@@ -48,17 +48,40 @@
       const bloc = H.el("div.org-ligne", null,
         H.el("div.org-tete", null, nom, H.el("span.discret", null, detail)),
         H.el("div.pastilles", null,
-          petit("Monter", () => { deplacer(rgs, i, -1); rangementsModifies(); redessiner(); }, { discret: true }),
+          i > 0 ? petit("Monter dans le menu « Ranger »", () => { deplacer(rgs, i, -1); rangementsModifies(); redessiner(); }, { discret: true }) : null,
           rgs.length > 1 ? petit("Supprimer", () => { if (confirm("Supprimer le rangement « " + rg.nom + " » ?")) { rgs.splice(i, 1); rangementsModifies(); redessiner(); } }, { discret: true }) : null
         )
       );
+      // l'ordre des étagères d'un rangement automatique, à régler à la main
+      if (rg.type !== "manuel") {
+        const noms = H.groupesDe(rg).map((g) => g.nom);
+        const ets = H.el("div.org-etageres");
+        const bouger = (k, d) => {
+          const ordre = noms.slice();
+          deplacer(ordre, k, d);
+          rg.ordre = ordre;
+          rangementsModifies();
+          if (H.herbotheque) H.herbotheque.redessiner();
+          redessiner();
+        };
+        noms.forEach((n, k) => {
+          ets.appendChild(H.el("div.org-sous-ligne", null,
+            H.el("span", null, n),
+            k > 0 ? petit("Monter", () => bouger(k, -1), { discret: true, label: "Monter l’étagère " + n }) : null,
+            k < noms.length - 1 ? petit("Descendre", () => bouger(k, 1), { discret: true, label: "Descendre l’étagère " + n }) : null
+          ));
+        });
+        if (rg.ordre) ets.appendChild(petit("Revenir à l’ordre automatique", () => { delete rg.ordre; rangementsModifies(); if (H.herbotheque) H.herbotheque.redessiner(); redessiner(); }, { discret: true }));
+        bloc.appendChild(ets);
+      }
       if (rg.type === "manuel") {
         const ets = H.el("div.org-etageres");
         (rg.etageres || []).forEach((et, k) => {
           ets.appendChild(H.el("div.org-sous-ligne", null,
             H.el("input", { type: "text", value: et.nom, "aria-label": "Nom de l’étagère", onchange: (e) => { et.nom = e.target.value.trim() || et.nom; rangementsModifies(); } }),
             H.el("span.discret", null, et.plantes.length + " plantes"),
-            petit("Monter", () => { deplacer(rg.etageres, k, -1); rangementsModifies(); redessiner(); }, { discret: true }),
+            k > 0 ? petit("Monter", () => { deplacer(rg.etageres, k, -1); rangementsModifies(); if (H.herbotheque) H.herbotheque.redessiner(); redessiner(); }, { discret: true }) : null,
+            k < rg.etageres.length - 1 ? petit("Descendre", () => { deplacer(rg.etageres, k, 1); rangementsModifies(); if (H.herbotheque) H.herbotheque.redessiner(); redessiner(); }, { discret: true }) : null,
             petit("Retirer", () => { if (confirm("Retirer l’étagère « " + et.nom + " » ? Les fiches restent dans l’herbothèque.")) { rg.etageres.splice(k, 1); rangementsModifies(); redessiner(); } }, { discret: true })
           ));
         });

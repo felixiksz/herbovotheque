@@ -91,6 +91,14 @@
       const champ = H.d.champ(rg.champ);
       if (!champ || !champ.options) liste.sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     }
+    // l'ordre choisi à la main dans « Organiser » passe avant l'ordre automatique
+    if (rg.type !== "manuel" && rg.ordre && rg.ordre.length) {
+      const rang = (nom) => {
+        const i = rg.ordre.indexOf(nom);
+        return i < 0 ? 1e6 : i;
+      };
+      liste = liste.map((g, i) => [g, i]).sort((a, b) => rang(a[0].nom) - rang(b[0].nom) || a[1] - b[1]).map(([g]) => g);
+    }
     return liste;
   }
 
