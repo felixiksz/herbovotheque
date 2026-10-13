@@ -154,5 +154,20 @@
 
   const auHasard = (liste) => liste[Math.floor(Math.random() * liste.length)];
 
-  H.histoires = { LOLO, LUIGI, COMPLIMENTS, pensees, auHasard };
+  // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
+  const T = (cle, defaut) => (H.textes ? H.textes.valeur(cle, defaut) : defaut);
+  H.histoires = {
+    get LOLO() {
+      return T("histoiresLolo", LOLO);
+    },
+    get LUIGI() {
+      return T("histoiresMesi", LUIGI);
+    },
+    get COMPLIMENTS() {
+      return T("complimentsMesi", COMPLIMENTS);
+    },
+    DEFAUTS: { histoiresLolo: LOLO, histoiresMesi: LUIGI, complimentsMesi: COMPLIMENTS },
+    pensees,
+    auHasard,
+  };
 })();

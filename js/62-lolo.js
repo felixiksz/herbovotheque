@@ -28,6 +28,11 @@
     "Dans la serre, sème au bon mois : ça lève deux fois plus vite. Les bébés plantes se repiquent ensuite sur tes îles pour presque rien.",
     "Le curcuma, le gingembre et les autres frileuses se plaisent dans la serre. Garde-les au chaud !",
     "La nuit, les flashcartes et le terrain dorment. Viens plutôt te balader avec moi, ou lire dans la cabane à la bougie.",
+    "Au labo, les récoltes deviennent des préparations : séchage, teinture, macérat, distillation… Quand c’est prêt, le bocal de l’herbothèque se remplit.",
+    "Va cueillir dans la nature depuis le labo : seulement les plantes dont c’est le mois de récolte !",
+    "Au labo, infuse une tisane de ton placard : elle redonne de l’énergie. Mais les bocaux de plantes sèches baissent un peu à chaque tasse.",
+    "Pendant la balade, quand le chemin passe par la terre rouge, on peut aller se baigner au pied des rochers.",
+    "Chez toi, Mesi te prépare une crêpe au chocolat fondu, s’il en reste dans tes ressources.",
   ];
   const MEME = [
     "Rrrrrrrr… rrrrrrrr… rrrrrrrr…",
@@ -47,6 +52,11 @@
     "Tes yeux pétillent comme la mer aux calanques.",
   ];
   const DUREE_PLUIE = 10 * 60e3;
+  // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
+  const T = (cle, defaut) => (H.textes ? H.textes.valeur(cle, defaut) : defaut);
+  const astuces = () => T("astucesLolo", ASTUCES);
+  const repliquesMeme = () => T("memeLolo", MEME);
+  const compliments = () => T("complimentsLolo", COMPLIMENTS);
 
   // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins.
   H.pluieMagique = () => !!(H.jeu && H.jeu.pluieMagique && H.jeu.pluieMagique > H.maintenant());
@@ -65,7 +75,7 @@
   }
 
   async function complimenter() {
-    const melange = COMPLIMENTS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    const melange = compliments().slice().sort(() => Math.random() - 0.5).slice(0, 3);
     const choix = await H.dialogue.dire([{
       qui: "ovo",
       texte: "Hmm… qu’est-ce que je pourrais lui dire de gentil ?",
@@ -161,8 +171,8 @@
       }
       let repliques = [];
       if (q === "astuce") {
-        if (dejaDites.length >= ASTUCES.length) dejaDites = [];
-        const restantes = ASTUCES.filter((a) => !dejaDites.includes(a));
+        if (dejaDites.length >= astuces().length) dejaDites = [];
+        const restantes = astuces().filter((a) => !dejaDites.includes(a));
         const a = restantes[Math.floor(Math.random() * restantes.length)];
         dejaDites.push(a);
         repliques = [a];
@@ -170,7 +180,7 @@
         repliques = nouvelles(q, ile);
       }
       const suite = repliques.map((texte) => ({ qui: "lolo", texte }));
-      if (Math.random() < 0.35) suite.push({ qui: "meme", texte: MEME[Math.floor(Math.random() * MEME.length)] });
+      if (Math.random() < 0.35) suite.push({ qui: "meme", texte: H.histoires.auHasard(repliquesMeme()) });
       await H.dialogue.dire(suite);
       intro = "Autre chose ?";
     }
@@ -180,5 +190,5 @@
   // Lóló ne vient qu'une fois son île découverte (c'est la surprise du 24 février).
   const disponible = () => !!(H.terrain && H.terrain.ileSecreteOuverte() && H.jeu.vu.ileSecrete);
 
-  H.lolo = { parler, disponible };
+  H.lolo = { parler, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();

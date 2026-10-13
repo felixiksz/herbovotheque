@@ -345,10 +345,28 @@
     );
   }
 
+  // l'appareil de Mesi : accès à la page des textes du jeu
+  function blocAppareil() {
+    const mesi = H.local.joueur === "mesi";
+    return H.el("section.reglage", null,
+      H.el("h2", null, "Cet appareil"),
+      H.el("label", null, "Cet appareil est celui de ",
+        H.el("select", {
+          onchange: async (e) => {
+            await H.d.majLocal((l) => (l.joueur = e.target.value));
+            H.router();
+          },
+        },
+          H.el("option", { value: "ovo", selected: !mesi }, "ƟvƟ"),
+          H.el("option", { value: "mesi", selected: mesi }, "Mesi"))),
+      mesi ? H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu")) : null
+    );
+  }
+
   H.vues.reglages = {
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
-      c.append(blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde());
+      c.append(blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAppareil());
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },
   };

@@ -121,6 +121,7 @@
     const serre = plusRecent(local, distant, "serreModifieLe");
     r.serre = serre.serre;
     r.serreModifieLe = serre.serreModifieLe;
+    r.textes = fusionnerCollection(local.textes, distant.textes);
     const labo = plusRecent(local, distant, "laboModifieLe");
     r.labo = labo.labo;
     r.laboModifieLe = labo.laboModifieLe;

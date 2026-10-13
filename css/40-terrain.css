@@ -223,3 +223,11 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .nom-pot { font-family: var(--titre); font-size: 1.05rem; line-height: 1.3; }
 .etat-pot, .reste { font-family: var(--terrain); font-size: 0.7rem; color: var(--encre-douce); }
 .bon-mois { float: right; font-family: var(--terrain); font-size: 0.7rem; color: #1a1714; background: var(--fluo); border-radius: 8px; padding: 0 6px; }
+
+/* les textes du jeu */
+.texte-jeu { width: 100%; font-family: var(--texte); font-size: 1rem; line-height: 1.5; padding: 8px; border: 1px solid var(--filet); border-radius: 6px; }
+.histoire-jeu { border-top: 1px solid var(--filet); padding: 8px 0; }
+.histoire-jeu summary { cursor: pointer; font-weight: bold; }
+.histoire-jeu label { display: block; margin: 8px 0; }
+.histoire-jeu input[type="text"] { width: 100%; max-width: 420px; font: inherit; }
+.puce-a-verifier:empty { display: none; }
