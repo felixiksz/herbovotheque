@@ -245,3 +245,8 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
 .lettre-date { font-family: var(--titre); margin: 0 70px 16px 0; }
 .lettre-signature { font-family: var(--titre); font-size: 1.5rem; text-align: right; margin-top: 18px; }
 .ecrire-lettre label { display: block; margin: 10px 0; }
+
+/* aménager autour des maisons */
+.outils-ferme { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--filet); border-radius: 8px; display: grid; gap: 6px; }
+.outils-ferme .bouton { font-family: var(--terrain); font-size: 0.78rem; }
+.outils-ferme p { margin: 0; }

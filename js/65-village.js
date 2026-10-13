@@ -265,6 +265,154 @@
     }
   }
 
+  // --- l'aménagement paysager autour des maisons, dessiné par ƟvƟ -----------------------
+  // Chaque élément est accroché au lieu le plus proche (coordonnées à l'échelle de la ferme),
+  // pour rester autour de la même maison sur ordinateur comme sur téléphone.
+  const OBJETS = { plante: "Plante", pierre: "Pierre", dalle: "Pas japonais", pot: "Pot", banc: "Banc" };
+  const PINCEAUX = { gravier: "Gravier", terreRouge: "Terre rouge", terrazzo: "Terrazzo", prairie: "Prairie fleurie", bassin: "Bassin" };
+  const elementsFerme = () => Object.values((H.jeu.ferme && H.jeu.ferme.elements) || {}).filter((e) => e && !e.supprime && LIEUX[e.lieu]);
+  function enregistrerElement(e) {
+    e.modifieLe = H.maintenant();
+    H.jeu.ferme = Object.assign({}, H.jeu.ferme);
+    H.jeu.ferme.elements = Object.assign({}, H.jeu.ferme.elements, { [e.id]: e });
+    H.d.changer("jeu");
+  }
+  function ancrer(x, y) {
+    let meilleur = null, dmin = Infinity;
+    for (const id of Object.keys(LIEUX)) {
+      const [lx, ly] = position(id);
+      const d = Math.hypot(lx - x, ly - y);
+      if (d < dmin) {
+        dmin = d;
+        meilleur = id;
+      }
+    }
+    const [lx, ly] = position(meilleur), k = echelle();
+    return { lieu: meilleur, x: (x - lx) / k, y: (y - ly) / k };
+  }
+  const versScene = (lieu, x, y) => {
+    const [lx, ly] = position(lieu), k = echelle();
+    return [lx + x * k, ly + y * k];
+  };
+  const pointsScene = (e) => e.pts.map(([x, y]) => versScene(e.lieu, x, y));
+
+  // les pinceaux : gravier, terre rouge, terrazzo, prairie fleurie, bassin
+  function dessinerTrait(ctx, type, pts, k, r) {
+    if (pts.length < 1) return;
+    const large = (type === "bassin" ? 34 : 24) * k;
+    const chemin = () => {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      if (pts.length === 1) ctx.lineTo(pts[0][0] + 0.1, pts[0][1]);
+    };
+    const fond = { gravier: "#e7ddc6", terreRouge: "#c0663c", terrazzo: "#efeae0", prairie: "#9cc06a", bassin: "#79b5d3" }[type];
+    ctx.save();
+    ctx.lineCap = ctx.lineJoin = "round";
+    if (type === "bassin") {
+      chemin();
+      ctx.strokeStyle = "#d9d2c2";
+      ctx.lineWidth = large + 8 * k;
+      ctx.stroke();
+    }
+    chemin();
+    ctx.strokeStyle = fond;
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = large;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    // les détails, semés le long du trait
+    const semis = { gravier: ["#b9ad96", "#fffaf0", "#a39782"], terreRouge: ["#9a4a2a", "#e8dccb", "#7a3a1a"], terrazzo: ["#1c1b1a", "#c9452c", "#3826f2", "#8a8a84", "#e8a37a"], prairie: ["#f2c94c", "#ffffff", "#f08a9b", "#b48ad8", "#5f8a46"], bassin: ["#ffffff"] }[type];
+    for (let i = 0; i < pts.length; i++) {
+      const [x, y] = pts[i];
+      const n = type === "bassin" ? 1 : 5;
+      for (let j = 0; j < n; j++) {
+        const dx = (r() - 0.5) * large * 0.85, dy = (r() - 0.5) * large * 0.85;
+        ctx.fillStyle = semis[Math.floor(r() * semis.length)];
+        if (type === "bassin") ctx.fillRect(x + dx, y + dy, 7 * k, 1.2);
+        else if (type === "prairie") A().tache(ctx, r, x + dx, y + dy, 1.8, 1.6, ctx.fillStyle, { alpha: 0.6, couches: 2 });
+        else {
+          const t = (type === "terrazzo" ? 1 + r() * 2.6 : 0.8 + r() * 1.8) * Math.max(0.7, k);
+          ctx.beginPath();
+          ctx.ellipse(x + dx, y + dy, t, t * 0.75, r() * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  // une plante de l'herbier vue de côté (ou le dessin qu'ƟvƟ en a fait), fleurie au bon mois
+  const imagesDessins = new Map();
+  function imageDessin(p) {
+    const cle = p.id + "|" + p.dessinCarte.length;
+    if (!imagesDessins.has(cle)) {
+      const img = new Image();
+      img.onload = () => scene && peindreFond();
+      img.src = p.dessinCarte;
+      imagesDessins.set(cle, img);
+    }
+    const img = imagesDessins.get(cle);
+    return img.complete && img.naturalWidth ? img : null;
+  }
+  function plantePaysage(ctx, r, p, x, y, k) {
+    const v = p.valeurs || {};
+    const t = ({ Arbre: 96, Arbuste: 52, Liane: 46 }[v.cycle] || 30) * k;
+    A().tache(ctx, r, x, y, t * 0.42, t * 0.1, "#2b2622", { alpha: 0.06, couches: 5 });
+    const img = p.dessinCarte && imageDessin(p);
+    if (img) {
+      ctx.drawImage(img, x - t * 0.6, y - t * 1.15, t * 1.2, t * 1.2);
+      return;
+    }
+    const feuille = ["#5f8a46", "#7a9a4a", "#6b8f5a", "#4f7a3a", "#8aa35a"][H.hash(p.id) % 5];
+    const fleurs = ["#e9e4f5", "#f2c94c", "#b48ad8", "#f08a9b", "#ffffff", "#f5a742", "#7aa6e0"];
+    const fleur = (v.moisFloraison || []).includes(new Date().getMonth() + 1) ? fleurs[H.hash(p.id) % fleurs.length] : null;
+    if (v.cycle === "Arbre") {
+      A().trait(ctx, r, [[x, y], [x + (r() - 0.5) * t * 0.1, y - t * 0.55]], { couleur: "#6b4a32", epaisseur: Math.max(1.6, t / 16) });
+      for (let i = 0; i < 6; i++) A().tache(ctx, r, x + (r() - 0.5) * t * 0.6, y - t * (0.62 + r() * 0.3), t * 0.24, t * 0.2, i % 2 ? feuille : "#4d6b3a", { alpha: 0.22, couches: 8 });
+    } else {
+      for (let i = 0; i < 7; i++) A().trait(ctx, r, [[x + (i - 3) * t * 0.05, y], [x + (i - 3) * t * 0.14, y - t * (0.5 + r() * 0.4)]], { couleur: "#5a7a3a", epaisseur: 1, alpha: 0.6 });
+      for (let i = 0; i < 6; i++) A().tache(ctx, r, x + (r() - 0.5) * t * 0.8, y - t * (0.25 + r() * 0.4), t * 0.22, t * 0.16, feuille, { alpha: 0.24, couches: 7 });
+    }
+    if (fleur) for (let i = 0; i < 8; i++) A().tache(ctx, r, x + (r() - 0.5) * t * 0.8, y - t * (0.35 + r() * 0.55), 2.4 * Math.max(0.7, k), 2.2 * Math.max(0.7, k), fleur, { alpha: 0.6, couches: 3 });
+  }
+
+  function dessinerObjet(ctx, e, x, y, k) {
+    const r = H.alea("objet-" + e.id);
+    if (e.type === "plante") {
+      const p = H.d.plante(e.p);
+      if (p) plantePaysage(ctx, r, p, x, y, k);
+    } else if (e.type === "pierre") {
+      const pts = A().polygone(r, x, y - 9 * k, 16 * k, 10 * k, 9).map(([a, b]) => [a, Math.min(b, y)]);
+      A().lavis(ctx, r, pts, "#ddd8cb", { alpha: 0.6, couches: 8, bord: 0.04 });
+      A().trait(ctx, r, pts.concat([pts[0]]), { epaisseur: 1.1 });
+      A().trait(ctx, r, [[x - 6 * k, y - 12 * k], [x + 4 * k, y - 15 * k]], { couleur: "#a39d8f", epaisseur: 0.8, alpha: 0.6 });
+    } else if (e.type === "dalle") {
+      ctx.save();
+      ctx.fillStyle = "#efeae0";
+      ctx.strokeStyle = "#2b2622";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 13 * k, 5.5 * k, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      for (let i = 0; i < 9; i++) {
+        ctx.fillStyle = ["#1c1b1a", "#c9452c", "#3826f2", "#8a8a84", "#e8a37a"][Math.floor(r() * 5)];
+        ctx.fillRect(x + (r() - 0.5) * 18 * k, y + (r() - 0.5) * 6 * k, 1.6 * Math.max(0.7, k), 1.3 * Math.max(0.7, k));
+      }
+      ctx.restore();
+    } else if (e.type === "pot") {
+      const pot = [[x - 9 * k, y - 16 * k], [x + 9 * k, y - 16 * k], [x + 6 * k, y], [x - 6 * k, y]];
+      for (let i = 0; i < 4; i++) A().tache(ctx, r, x + (i - 1.5) * 5 * k, y - 22 * k - (i % 2) * 4 * k, 6 * k, 5 * k, "#5f8a46", { alpha: 0.3, couches: 5 });
+      A().lavis(ctx, r, pot, "#c96a3a", { alpha: 0.5, couches: 8 });
+      A().trait(ctx, r, pot.concat([pot[0]]), { epaisseur: 1.1 });
+    } else if (e.type === "banc") {
+      A().lavis(ctx, r, [[x - 24 * k, y - 14 * k], [x + 24 * k, y - 14 * k], [x + 24 * k, y - 10 * k], [x - 24 * k, y - 10 * k]], "#a8743f", { alpha: 0.6, couches: 6 });
+      A().lavis(ctx, r, [[x - 24 * k, y - 26 * k], [x + 24 * k, y - 26 * k], [x + 24 * k, y - 21 * k], [x - 24 * k, y - 21 * k]], "#a8743f", { alpha: 0.6, couches: 6 });
+      for (const dx of [-20, 20]) A().trait(ctx, r, [[x + dx * k, y], [x + dx * k, y - 26 * k]], { couleur: "#6b4423", epaisseur: 1.6 });
+      A().trait(ctx, r, [[x - 24 * k, y - 14 * k], [x + 24 * k, y - 14 * k]], { epaisseur: 1 });
+    }
+  }
+
   function peindreFond() {
     const { w, h } = scene;
     const S = scene.dpr;
@@ -338,6 +486,8 @@
         H.aqua.tache(ctx, r, x0 + (x1 - x0) * u, y0 - 2 + (y1 - y0) * u, 20 * k, 9 * k, "#d8c39a", { alpha: 0.06, couches: 4 });
       }
     }
+    // les allées, prairies et bassins peints par ƟvƟ
+    for (const e of elementsFerme()) if (PINCEAUX[e.type]) dessinerTrait(ctx, e.type, pointsScene(e), echelle(), H.alea("trait-" + e.id));
     // romarin, thym, cistes, lentisques et cades, loin des maisons, du chemin et de la mer
     const libre = (x, y) => {
       for (const id of Object.keys(LIEUX)) {
@@ -372,7 +522,14 @@
       const x = r() * w, y = h * (horizon + 0.05) + r() * h * 0.66;
       H.aqua.tache(ctx, r, x, y, 2.2, 2, fleurs[i % fleurs.length], { alpha: 0.35, couches: 3 });
     }
-    for (const [id, fn] of Object.entries(DESSINS)) dansLeRepere(ctx, id, () => fn(ctx, H.alea("maison-" + id)));
+    // les maisons et les objets posés par ƟvƟ, du fond vers le devant
+    const aDessiner = Object.entries(DESSINS).map(([id, fn]) => ({ y: position(id)[1], dessin: () => dansLeRepere(ctx, id, () => fn(ctx, H.alea("maison-" + id))) }));
+    for (const e of elementsFerme()) {
+      if (!OBJETS[e.type]) continue;
+      const [x, y] = versScene(e.lieu, e.x, e.y);
+      aDessiner.push({ y, dessin: () => dessinerObjet(ctx, e, x, y, echelle()) });
+    }
+    aDessiner.sort((a, b) => a.y - b.y).forEach((d) => d.dessin());
     // les couronnes des grands pins surplombent les toits
     for (const g of grandsPins) pinParasol(ctx, H.alea("grand-pin-" + g.id), g.x, g.y, g.t, "couronne");
     dessinerPonton(ctx, r, ...position("terrain"), portrait);
@@ -415,6 +572,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(scene.fond, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (scene.traitEnCours) dessinerTrait(ctx, scene.traitEnCours.type, scene.traitEnCours.pts, k, H.alea("apercu"));
     // étiquettes des lieux (kraft, Beth Ellen)
     ctx.textAlign = "center";
     for (const [id, l] of Object.entries(LIEUX)) {
@@ -679,6 +837,146 @@
     return meilleur;
   }
 
+  function coordonnees(e) {
+    const r = scene.toile.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  }
+  function elementSous(x, y) {
+    let meilleur = null, dmin = 26 * Math.max(0.7, echelle());
+    for (const e of elementsFerme()) {
+      let d;
+      if (OBJETS[e.type]) {
+        const [ex, ey] = versScene(e.lieu, e.x, e.y);
+        d = Math.hypot(ex - x, ey - 12 * echelle() - y);
+      } else d = Math.min(...pointsScene(e).map(([a, b]) => Math.hypot(a - x, b - y)));
+      if (d < dmin) {
+        dmin = d;
+        meilleur = e;
+      }
+    }
+    return meilleur;
+  }
+
+  function barreAmenager() {
+    const a = scene.amenager;
+    const barre = H.el("div.outils-ferme");
+    const outil = (id, nom) => H.el("button.bouton.petit" + (a.outil === id ? ".actif" : ""), { type: "button", onclick: () => { a.outil = id; majBarre(); } }, nom);
+    const plante = a.plante && H.d.plante(a.plante);
+    barre.append(
+      H.el("p.discret", null, "Clique sur la ferme pour poser un élément, ou glisse pour peindre. Tout reste accroché à la maison la plus proche."),
+      H.el("div.pastilles", null,
+        H.el("button.bouton.petit" + (a.outil === "plante" ? ".actif" : ""), {
+          type: "button",
+          onclick: () => H.choisirPlantes(a.plante ? [a.plante] : [], (ids) => {
+            a.plante = ids[0] || a.plante;
+            a.outil = "plante";
+            majBarre();
+          }, "Quelle plante poser ?", { un: true }),
+        }, plante ? "Plante : " + plante.nom : "Choisir une plante"),
+        ...Object.entries(OBJETS).filter(([id]) => id !== "plante").map(([id, nom]) => outil(id, nom))),
+      H.el("div.pastilles", null, ...Object.entries(PINCEAUX).map(([id, nom]) => outil(id, nom))),
+      H.el("div.pastilles", null,
+        outil("deplacer", "Déplacer"),
+        outil("gomme", "Gomme"),
+        H.el("button.bouton.petit", {
+          type: "button",
+          onclick() {
+            const id = a.poses.pop();
+            const e = id && ((H.jeu.ferme || {}).elements || {})[id];
+            if (!e) return H.toast("Rien à annuler");
+            enregistrerElement(Object.assign({}, e, { supprime: true }));
+            peindreFond();
+          },
+        }, "Annuler le dernier"),
+        H.el("button.bouton.petit.actif", { type: "button", onclick: () => basculerAmenager(false) }, "Terminer"))
+    );
+    return barre;
+  }
+  function majBarre() {
+    if (!scene || !scene.amenager) return;
+    const nouvelle = barreAmenager();
+    scene.barre.replaceWith(nouvelle);
+    scene.barre = nouvelle;
+    scene.toile.style.cursor = scene.amenager.outil === "deplacer" ? "grab" : "crosshair";
+  }
+  function basculerAmenager(oui) {
+    if (oui) {
+      scene.amenager = { outil: "pierre", plante: null, poses: [] };
+      scene.barre = barreAmenager();
+      scene.boite.after(scene.barre);
+      majBarre();
+    } else {
+      scene.amenager = null;
+      if (scene.barre) scene.barre.remove();
+      scene.barre = null;
+      scene.toile.style.cursor = "default";
+    }
+  }
+
+  // les gestes sur la toile en mode « Aménager »
+  function brancherAmenager(toile) {
+    let geste = null;
+    toile.addEventListener("pointerdown", (ev) => {
+      const a = scene && scene.amenager;
+      if (!a) return;
+      const [x, y] = coordonnees(ev);
+      toile.setPointerCapture(ev.pointerId);
+      if (PINCEAUX[a.outil]) {
+        scene.traitEnCours = { type: a.outil, pts: [[x, y]] };
+        geste = "trait";
+      } else if (a.outil === "deplacer") {
+        const e = elementSous(x, y);
+        if (e) geste = { e, depuis: [x, y] };
+      } else if (a.outil === "gomme") {
+        const e = elementSous(x, y);
+        if (e) {
+          enregistrerElement(Object.assign({}, e, { supprime: true }));
+          peindreFond();
+        }
+      } else geste = "poser";
+    });
+    toile.addEventListener("pointermove", (ev) => {
+      if (!geste || !scene) return;
+      const [x, y] = coordonnees(ev);
+      if (geste === "trait") {
+        const pts = scene.traitEnCours.pts, [px, py] = pts[pts.length - 1];
+        if (Math.hypot(x - px, y - py) > 6) pts.push([x, y]);
+      }
+    });
+    toile.addEventListener("pointerup", (ev) => {
+      const a = scene && scene.amenager;
+      if (!a || !geste) return;
+      const [x, y] = coordonnees(ev);
+      if (geste === "trait") {
+        const t = scene.traitEnCours;
+        scene.traitEnCours = null;
+        const ancre = ancrer(t.pts[0][0], t.pts[0][1]);
+        const k = echelle(), [lx, ly] = position(ancre.lieu);
+        const e = { id: H.uid("trait"), type: t.type, lieu: ancre.lieu, pts: t.pts.map(([px, py]) => [(px - lx) / k, (py - ly) / k]) };
+        enregistrerElement(e);
+        a.poses.push(e.id);
+      } else if (geste === "poser") {
+        if (a.outil === "plante" && !a.plante) {
+          H.toast("Choisis d’abord une plante");
+        } else {
+          const e = Object.assign({ id: H.uid("objet"), type: a.outil }, ancrer(x, y), a.outil === "plante" ? { p: a.plante } : {});
+          enregistrerElement(e);
+          a.poses.push(e.id);
+          H.bruit("plante");
+        }
+      } else if (geste.e) {
+        const [ex, ey] = OBJETS[geste.e.type] ? versScene(geste.e.lieu, geste.e.x, geste.e.y) : [0, 0];
+        if (OBJETS[geste.e.type]) enregistrerElement(Object.assign({}, geste.e, ancrer(ex + x - geste.depuis[0], ey + y - geste.depuis[1])));
+        else {
+          const k = echelle(), dx = (x - geste.depuis[0]) / k, dy = (y - geste.depuis[1]) / k;
+          enregistrerElement(Object.assign({}, geste.e, { pts: geste.e.pts.map(([px, py]) => [px + dx, py + dy]) }));
+        }
+      }
+      geste = null;
+      peindreFond();
+    });
+  }
+
   function ouvrirLettres() {
     H.bruit("ouvre");
     H.aller("lettres");
@@ -723,7 +1021,8 @@
       c.appendChild(boite);
       const liens = H.el("nav.liens-village", { "aria-label": "Lieux de la ferme" },
         Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom)),
-        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => !H.$(".dialogue") && H.lolo.parler(null) }, "Parler à Lóló") : null
+        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => !H.$(".dialogue") && H.lolo.parler(null) }, "Parler à Lóló") : null,
+        H.el("button.bouton.petit", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager autour des maisons")
       );
       c.appendChild(liens);
       c.appendChild(nouvelles());
@@ -731,7 +1030,9 @@
       dimensionner();
       dessiner();
       boucle();
+      brancherAmenager(toile);
       toile.addEventListener("click", (e) => {
+        if (scene.amenager) return;
         // toucher Lóló (une fois son île découverte) : elle raconte des astuces et les plantes du moment
         if (scene.loloX != null && H.lolo && H.lolo.disponible()) {
           const r = toile.getBoundingClientRect();
@@ -745,6 +1046,7 @@
         if (id) aller(id);
       });
       toile.addEventListener("mousemove", (e) => {
+        if (scene.amenager) return;
         const id = lieuSous(e);
         if (id !== scene.survol) {
           scene.survol = id;

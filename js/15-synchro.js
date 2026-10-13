@@ -123,6 +123,7 @@
     r.serreModifieLe = serre.serreModifieLe;
     r.textes = fusionnerCollection(local.textes, distant.textes);
     r.lettres = fusionnerCollection(local.lettres, distant.lettres);
+    r.ferme = { elements: fusionnerCollection((local.ferme || {}).elements, (distant.ferme || {}).elements) };
     const labo = plusRecent(local, distant, "laboModifieLe");
     r.labo = labo.labo;
     r.laboModifieLe = labo.laboModifieLe;
