@@ -410,7 +410,7 @@
     vue = {
       ile, outil: "regarder", plante: null, tuile: "terre", zone: { expo: "Mi-ombre", sol: [] },
       zoom: H.local.zoomTerrain || (window.innerWidth < 640 ? 0.75 : 1),
-      ovo: { x: Math.floor(ile.cols / 2), y: Math.floor(ile.lignes / 2), cible: null, file: [], pas: 0 },
+      ovo: { x: ile.secrete ? 3 : Math.floor(ile.cols / 2), y: Math.floor(ile.lignes / 2) + (ile.secrete ? 1 : 0), cible: null, file: [], pas: 0 },
       luigi: null, gouttes: [], derniere: performance.now(), anim: 0, choisie: null,
     };
 
@@ -649,11 +649,11 @@
     // Lóló et Mémé sur leur île
     if (ile.secrete) {
       const image = Math.floor(performance.now() / 700) % 2;
-      H.pixel.dessiner(ctx, "lolo", (ile.cols / 2) * T, (ile.lignes / 2 + 0.6) * T, 2, image);
+      H.pixel.dessiner(ctx, "lolo", (ile.cols / 2) * T, (ile.lignes / 2 + 0.6) * T, 3, image);
       if (Math.floor(performance.now() / 1400) % 2) {
         ctx.font = "10px 'Kumar One', sans-serif";
         ctx.fillStyle = "#ff2e9a";
-        ctx.fillText("rrr", (ile.cols / 2 + 0.2) * T, (ile.lignes / 2 - 1.3) * T);
+        ctx.fillText("rrr", (ile.cols / 2 + 0.6) * T, (ile.lignes / 2 - 2.3) * T);
       }
     }
 
@@ -776,7 +776,7 @@
     const c = caseCliquee(e);
     if (!c) return;
     // Lóló et Mémé
-    if (vue.ile.secrete && Math.abs(c.x - vue.ile.cols / 2) < 2 && Math.abs(c.y - vue.ile.lignes / 2) < 1.5) {
+    if (vue.ile.secrete && Math.abs(c.x + 0.5 - vue.ile.cols / 2) < 2.5 && c.y - vue.ile.lignes / 2 > -3 && c.y - vue.ile.lignes / 2 < 1) {
       const repliques = [
         [{ qui: "meme", texte: "Rrrrrr… rrrrr…" }],
         [{ qui: "lolo", texte: "Chut, Mémé fait la sieste. Elle ne me lâche jamais le cou !" }],

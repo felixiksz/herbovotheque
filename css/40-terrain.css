@@ -128,3 +128,15 @@ a.carte-ile:hover, a.carte-ile:focus-visible { border-color: var(--encre); outli
   .dialogue-portrait { width: 48px; }
   .dialogue-texte { font-size: 0.9rem; }
 }
+
+/* village */
+.vue-village { max-width: 1100px; }
+.village { border: 1px solid var(--filet); border-radius: 8px; overflow: hidden; }
+.toile-village { display: block; width: 100%; }
+.liens-village { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.liens-village .bouton { font-family: var(--terrain); font-size: 0.78rem; }
+.nouvelles { margin: 14px 0 30px; max-width: 760px; }
+.nouvelles h2 { margin-bottom: 0; }
+.nouvelles p { margin: 6px 0; }
+.nouvelles a { text-decoration-color: var(--fluo); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.archipel > p.discret { grid-column: 1 / -1; }

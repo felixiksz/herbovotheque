@@ -10,7 +10,7 @@
     { id: "mes-etageres", nom: "Mes étagères", type: "manuel", etageres: [{ id: "preferees", nom: "Mes préférées", plantes: [] }] },
   ];
 
-  const etat = { recherche: "", partout: false };
+  const etat = { recherche: "", partout: false, aVerifier: false };
 
   function rangementActif() {
     const h = H.herbier;
@@ -29,6 +29,7 @@
   }
 
   function correspond(p, q) {
+    if (etat.aVerifier && !(p.aVerifier || []).length) return false;
     if (!q) return true;
     const cible = [p.nom, p.latin, p.valeurs && p.valeurs.nomsCommuns].join(" ");
     if (H.sansAccents(cible).includes(q)) return true;
@@ -99,13 +100,11 @@
       loading: "lazy",
       class: "bocal-image forme-" + item.forme,
     });
-    const aVerifier = (p.aVerifier || []).length > 0;
     return H.el(
       "a.bocal",
       { href: "#fiche/" + encodeURIComponent(p.id), title: p.nom + (p.latin ? " – " + p.latin : ""), "data-forme": item.forme },
       H.el("span.bocal-cadre", null, img),
-      H.el("span.etiquette", { lang: "fr" }, p.nom),
-      aVerifier ? H.el("span.pastille", { title: "Des rubriques sont à vérifier" }) : null
+      H.el("span.etiquette", { lang: "fr" }, p.nom)
     );
   }
 
@@ -185,6 +184,10 @@
         H.el("input", { type: "checkbox", checked: etat.partout, onchange: (e) => { etat.partout = e.target.checked; dessiner(); } }),
         " aussi dans le texte des fiches"
       );
+      const filtreVerif = H.el("label.case", null,
+        H.el("input", { type: "checkbox", checked: etat.aVerifier, onchange: (e) => { etat.aVerifier = e.target.checked; dessiner(); } }),
+        " seulement les fiches qui ont des rubriques à vérifier"
+      );
       resume = H.el("p.discret.resume");
       c.appendChild(
         H.el(
@@ -194,7 +197,7 @@
           H.el(
             "div.herbo-outils",
             null,
-            H.el("div.recherche", null, champRecherche, partout),
+            H.el("div.recherche", null, champRecherche, partout, filtreVerif),
             H.el("label.rangement", null, "Ranger ", rgSelect),
             H.el(
               "div.herbo-boutons",

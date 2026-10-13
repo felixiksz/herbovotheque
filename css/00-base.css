@@ -263,10 +263,10 @@ label { font-size: 0.95rem; }
   body { font-size: 16px; }
   #entete { gap: 2px 12px; }
   #entete .titre-jeu { font-size: 1.25rem; }
-  #menu { order: 3; flex-basis: 100%; gap: 2px 10px; }
-  #menu a { font-size: 0.93rem; }
-  .menu-reglages { margin-left: auto; }
-  #barre-ressources { margin-left: auto; font-size: 0.85rem; }
+  #menu { order: 3; flex-basis: 100%; gap: 2px 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #menu::-webkit-scrollbar, #barre-ressources::-webkit-scrollbar { display: none; }
+  #menu a { font-size: 0.93rem; white-space: nowrap; }
+  #barre-ressources { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; font-size: 0.8rem; scrollbar-width: none; }
   h1 { font-size: 1.8rem; }
   h2 { font-size: 1.45rem; }
 }
