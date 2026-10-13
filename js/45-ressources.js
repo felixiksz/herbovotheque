@@ -6,7 +6,7 @@
 (function () {
   const H = window.H;
 
-  const P = { k: "#2b2622", b: "#3a8fd8", c: "#8fd0ff", w: "#ffffff", g: "#c79a4a", G: "#8a6230", v: "#5aa63a", V: "#2f7a2a", y: "#ffd23a", o: "#ff9a1e", s: "#9aa0a8", S: "#5a6068", t: "#7a4a24", T: "#4a2a14", p: "#e8d27a", P: "#b89a3a", m: "#7a3a1a", r: "#ff4fa0", n: "#5a3a22", N: "#2a1a10" };
+  const P = { k: "#23214a", b: "#3a8fd8", c: "#8fd0ff", w: "#ffffff", g: "#c79a4a", G: "#8a6230", v: "#5aa63a", V: "#2f7a2a", y: "#ffd23a", o: "#ff9a1e", s: "#9aa0a8", S: "#5a6068", t: "#7a4a24", T: "#4a2a14", p: "#e8d27a", P: "#b89a3a", m: "#7a3a1a", r: "#ff4fa0", n: "#5a3a22", N: "#2a1a10" };
 
   const ICONES = {
     eau: ["....k....", "...kck...", "..kccbk..", ".kcbbbbk.", ".kwbbbbk.", ".kwcbbbk.", "..kbbbk..", "...kkk..."],

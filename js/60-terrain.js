@@ -275,7 +275,7 @@
       } else {
         const arbre = v.cycle === "Arbre" || v.cycle === "Arbuste";
         if (arbre && st === 3) {
-          H.aqua.tache(ctx, r, cx + 3, cy + 4, rayon * 0.9, rayon * 0.75, "#2b2622", { alpha: 0.03, couches: 8 });
+          H.aqua.tache(ctx, r, cx + 3, cy + 4, rayon * 0.9, rayon * 0.75, "#23214a", { alpha: 0.03, couches: 8 });
           H.aqua.tache(ctx, r, cx, cy, rayon, rayon * 0.92, feuille, { alpha: 0.075, couches: 16, bord: 0.35 });
           H.aqua.tache(ctx, r, cx - rayon * 0.3, cy - rayon * 0.3, rayon * 0.45, rayon * 0.4, "#c9e08a", { alpha: 0.06, couches: 8 });
         } else {
@@ -1209,7 +1209,7 @@
     motif.forEach((l, j) => {
       for (let i = 0; i < l.length; i++) {
         if (l[i] === ".") continue;
-        ctx.fillStyle = l[i] === "k" ? "#2b1d14" : "#ff2e9a";
+        ctx.fillStyle = l[i] === "k" ? "#2a2246" : "#ff2e9a";
         ctx.fillRect(Math.round(x - 7 + i * 2), Math.round(y + j * 2), 2, 2);
       }
     });
@@ -1399,7 +1399,7 @@
     // cartouche : nom, dimensions, barre d'échelle d'un mètre
     const k = T * vue.zoom * vue.dpr;
     const y0 = vue.toile.height + 14 * vue.dpr;
-    ctx.fillStyle = "#2b2622";
+    ctx.fillStyle = "#23214a";
     ctx.font = (16 * vue.dpr) + "px 'Kumar One', sans-serif";
     ctx.fillText(ile.nom + " — " + ile.largeur + " × " + ile.longueur + " m", 12 * vue.dpr, y0 + 14 * vue.dpr);
     const unMetre = k / ile.caseM;

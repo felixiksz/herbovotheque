@@ -60,7 +60,7 @@
 .reponses { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .reponses .bouton { flex-direction: column; justify-content: center; gap: 0; padding: 8px 4px; }
 .reponses .delai { font-size: 0.78rem; color: var(--encre-douce); }
-.reponses .bouton:hover .delai { color: #1a1714; }
+.reponses .bouton:hover .delai { color: #23214a; }
 .carte-fin h2 { margin-bottom: 6px; }
 .gains { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .gain { display: inline-flex; align-items: center; gap: 4px; }

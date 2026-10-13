@@ -8,19 +8,21 @@
 @font-face { font-family: "Caudex"; src: url("../fonts/caudex-bold-italic.woff2") format("woff2"); font-weight: 700; font-style: italic; font-display: swap; }
 
 :root {
-  --papier: #f8f2e4;
-  --papier-fonce: #efe4cc;
-  --encre: #2b2622;
-  --encre-douce: #5b4a3c;
-  --filet: rgba(43, 38, 34, 0.35);
+  --papier: #f2f0e8;
+  --papier-fonce: #e6e3d8;
+  --encre: #23214a;
+  --encre-douce: #4a4870;
+  --encre-pin: #1f3b2c;
+  --outremer: #3826f2;
+  --filet: rgba(35, 33, 74, 0.3);
   --kraft: #c9a878;
   --kraft-encre: #4a3420;
   --fluo-rose: #ff2e9a;
   --fluo-vert: #9dff00;
-  --fluo-orange: #ff7b00;
-  --fluo-jaune: #eaff2e;
+  --fluo-orange: #ff5b4f;
+  --fluo-jaune: #eeff41;
   --fluo: var(--fluo-orange);
-  --surligne: rgba(255, 123, 0, 0.55);
+  --surligne: rgba(255, 91, 79, 0.5);
   --ciel-haut: #8cc8f2;
   --ciel-bas: #e6f4ff;
   --titre: "Beth Ellen", "Caudex", cursive;
@@ -32,8 +34,8 @@
 }
 
 :root[data-theme="nuit"] {
-  --papier: #1d1b2e;
-  --papier-fonce: #26233b;
+  --papier: #1c1b3a;
+  --papier-fonce: #26244a;
   --encre: #f3ead8;
   --encre-douce: #d3c6ae;
   --filet: rgba(243, 234, 216, 0.35);
@@ -107,8 +109,8 @@ a { color: inherit; }
   gap: 6px;
   -webkit-tap-highlight-color: transparent;
 }
-.bouton:hover, .bouton:focus-visible { background: var(--surligne); color: #1a1714; outline: none; }
-.bouton.actif, .bouton[aria-pressed="true"] { background: var(--fluo); color: #1a1714; border-color: #1a1714; }
+.bouton:hover, .bouton:focus-visible { background: var(--surligne); color: #23214a; outline: none; }
+.bouton.actif, .bouton[aria-pressed="true"] { background: var(--fluo); color: #23214a; border-color: #23214a; }
 .bouton.discret-bouton { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; padding: 6px 8px; }
 .bouton.discret-bouton:hover { text-decoration: none; }
 .bouton:disabled { opacity: 0.45; cursor: default; }
@@ -117,7 +119,7 @@ a { color: inherit; }
 .surligne {
   background: linear-gradient(100deg, transparent 2%, var(--surligne) 4%, var(--surligne) 96%, transparent 98%);
   padding: 0 4px;
-  color: #1a1714;
+  color: #23214a;
 }
 
 input, select, textarea {
@@ -167,8 +169,8 @@ label { font-size: 0.95rem; }
 #entete .titre-jeu { font-size: 1.45rem; text-decoration: none; white-space: nowrap; line-height: 1.6; }
 #menu { display: flex; gap: 2px 14px; flex-wrap: wrap; flex: 1; }
 #menu a { text-decoration: none; padding: 2px 4px; border-radius: 3px; font-size: 0.98rem; }
-#menu a:hover { background: var(--surligne); color: #1a1714; }
-#menu a[aria-current="page"] { background: var(--fluo); color: #1a1714; }
+#menu a:hover { background: var(--surligne); color: #23214a; }
+#menu a[aria-current="page"] { background: var(--fluo); color: #23214a; }
 #barre-ressources { display: flex; gap: 4px 10px; align-items: center; justify-content: flex-end; font-size: 0.85rem; flex-wrap: wrap; flex-basis: 100%; }
 @media (min-width: 1280px) { #barre-ressources { flex-basis: auto; } }
 
@@ -231,7 +233,7 @@ label { font-size: 0.95rem; }
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.45), transparent 38%),
-    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45));
+    radial-gradient(ellipse at center, transparent 55%, rgba(35, 33, 74, 0.45));
   mix-blend-mode: screen;
   pointer-events: none;
 }

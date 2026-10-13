@@ -4,7 +4,7 @@
   const H = window.H;
 
   const PAL = {
-    k: "#2b1d14", s: "#f2c29b", S: "#d9a07a", m: "#b8404e", w: "#ffffff", e: "#1a1a1a",
+    k: "#2a2246", s: "#f2c29b", S: "#d9a07a", m: "#b8404e", w: "#ffffff", e: "#23214a",
     h: "#3b2416", H: "#5e3b22",              // cheveux d'ƟvƟ : brun foncé bouclé
     c: "#8a4b22", C: "#b06a33",              // cheveux de Mesi : châtain
     r: "#e03a3a", R: "#b02424",              // chemise rouge

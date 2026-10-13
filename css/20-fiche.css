@@ -31,7 +31,7 @@
 
 .sommaire-fiche { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 18px 0 6px; padding: 8px 0; border-top: 1px solid var(--filet); border-bottom: 1px solid var(--filet); }
 .sommaire-fiche a { text-decoration: none; font-size: 0.95rem; }
-.sommaire-fiche a:hover { background: var(--surligne); color: #1a1714; }
+.sommaire-fiche a:hover { background: var(--surligne); color: #23214a; }
 
 .section-fiche { border-bottom: 1px solid var(--filet); padding: 6px 0 10px; scroll-margin-top: 110px; }
 .section-fiche > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; }
@@ -56,7 +56,7 @@
 .aide { margin: 4px 0 0; font-size: 0.8rem; }
 .pastille-valeur { border: 1px solid var(--filet); border-radius: 12px; padding: 1px 10px; font-size: 0.92rem; }
 a.pastille-valeur { text-decoration: none; }
-a.pastille-valeur:hover { background: var(--surligne); color: #1a1714; }
+a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 
 .choix-options { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 8px; }
 .ligne-option { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -72,7 +72,7 @@ a.pastille-valeur:hover { background: var(--surligne); color: #1a1714; }
   background: transparent;
   color: var(--encre);
 }
-.calendrier .mois.plein { background: var(--fluo); color: #1a1714; border-color: #1a1714; }
+.calendrier .mois.plein { background: var(--fluo); color: #23214a; border-color: #23214a; }
 .calendrier.modifiable .mois { cursor: pointer; }
 
 .rubriques-vides { margin-top: 6px; }
@@ -111,7 +111,7 @@ a.pastille-valeur:hover { background: var(--surligne); color: #1a1714; }
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle, #c5d495 0, #a9bf7a 70%, #93a86a 100%);
-  box-shadow: 0 0 0 1px var(--encre), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 1px var(--encre), inset 0 0 0 1px rgba(35, 33, 74, 0.2);
   overflow: hidden;
 }
 .toile-dessin { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }

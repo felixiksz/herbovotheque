@@ -4,7 +4,7 @@
   const H = window.H;
   const TAILLE = 256;      // toile de dessin
   const SORTIE = 160;      // image enregistrée (légère, pour la synchronisation)
-  const COULEURS = ["#2b2622", "#4f7a3a", "#6f9a4f", "#9cc77a", "#c9e08a", "#7a5a32", "#b5651d", "#ffffff", "#f2c94c", "#ff7b00", "#f08a9b", "#b48ad8", "#7aa6e0", "#e03a3a"];
+  const COULEURS = ["#23214a", "#4f7a3a", "#6f9a4f", "#9cc77a", "#c9e08a", "#7a5a32", "#b5651d", "#ffffff", "#f2c94c", "#ff7b00", "#f08a9b", "#b48ad8", "#7aa6e0", "#e03a3a"];
   const EPAISSEURS = [3, 7, 14, 24];
 
   H.dessinerPlante = function (id, apres) {

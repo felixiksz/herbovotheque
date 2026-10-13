@@ -70,7 +70,7 @@
     papierActuel = nuit;
     document.documentElement.style.setProperty("--papier-image", "url(" + H.aqua.papier(nuit) + ")");
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = nuit ? "#1d1b2e" : "#f8f2e4";
+    if (meta) meta.content = nuit ? "#1c1b3a" : "#f2f0e8";
   }
 
   function router() {

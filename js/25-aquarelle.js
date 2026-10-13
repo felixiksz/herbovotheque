@@ -73,7 +73,7 @@
   function trait(ctx, r, pts, opts) {
     opts = opts || {};
     ctx.save();
-    ctx.strokeStyle = opts.couleur || "#2b2622";
+    ctx.strokeStyle = opts.couleur || "#23214a";
     ctx.lineWidth = opts.epaisseur || 1.6;
     ctx.lineCap = ctx.lineJoin = "round";
     ctx.globalAlpha = opts.alpha || 0.85;
@@ -116,24 +116,35 @@
   }
 
   // --- papier de fond --------------------------------------------------------
+  // Le papier du fond : un papier recyclé clair, avec de petites fibres et quelques paillettes
+  // de couleur (la nuit, le même en bleu nuit). Le motif se répète sans couture.
   function papier(nuit) {
     const cle = "papier" + (nuit ? "n" : "j");
     if (cache.has(cle)) return cache.get(cle);
-    const w = 420, h = 420, c = toile(w, h), ctx = c.getContext("2d"), r = H.alea(7);
-    ctx.fillStyle = nuit ? "#1d1b2e" : "#f8f2e4";
+    const w = 320, h = 320, c = toile(w, h), ctx = c.getContext("2d"), r = H.alea(7);
+    ctx.fillStyle = nuit ? "#1c1b3a" : "#f2f0e8";
     ctx.fillRect(0, 0, w, h);
-    const teintes = nuit ? ["#262340", "#212a44", "#2a2442"] : ["#efe2c8", "#f3e9d2", "#eadcc0"];
-    // chaque tache est répétée de l'autre côté des bords : le motif se raccorde sans couture
-    for (let i = 0; i < 9; i++) {
-      const x = r() * w, y = r() * h, rx = 50 + r() * 90, ry = 40 + r() * 80, t = teintes[i % 3];
-      const graine = Math.floor(r() * 1e9);
+    for (let i = 0; i < 2600; i++) {
+      ctx.fillStyle = nuit ? "rgba(243,234,216," + (0.02 + r() * 0.04) + ")" : "rgba(35,33,74," + (0.02 + r() * 0.04) + ")";
+      ctx.fillRect(r() * w, r() * h, 1, 1);
+    }
+    ctx.lineWidth = 0.7;
+    for (let i = 0; i < 140; i++) {
+      const a = r() * w, b = r() * h, l = 3 + r() * 9, ang = r() * Math.PI;
+      ctx.strokeStyle = nuit ? (r() < 0.7 ? "rgba(160,150,200,0.22)" : "rgba(255,255,255,0.12)") : (r() < 0.7 ? "rgba(140,128,110,0.25)" : "rgba(255,255,255,0.8)");
       for (const dx of [-w, 0, w]) {
         for (const dy of [-h, 0, h]) {
-          tache(ctx, H.alea(graine), x + dx, y + dy, rx, ry, t, { alpha: nuit ? 0.035 : 0.045, couches: 10 });
+          ctx.beginPath();
+          ctx.moveTo(a + dx, b + dy);
+          ctx.quadraticCurveTo(a + dx + Math.cos(ang) * l * 0.5 + 2, b + dy + Math.sin(ang) * l * 0.5, a + dx + Math.cos(ang) * l, b + dy + Math.sin(ang) * l);
+          ctx.stroke();
         }
       }
     }
-    grain(ctx, r, w, h, 2600, nuit ? 0.1 : 0.08);
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = ["rgba(255,91,79,0.35)", "rgba(56,38,242,0.3)", "rgba(31,59,44,0.3)"][i % 3];
+      ctx.fillRect(r() * w, r() * h, 1.5, 1.2);
+    }
     const url = c.toDataURL("image/png");
     cache.set(cle, url);
     return url;
@@ -213,14 +224,14 @@
       trait(ctx, r, corps, { epaisseur: 1.5 });
       if (large) {
         const bouchon = rectArrondi(cx - col / 2 - 4, epaule - 26, col + 8, 18, 3);
-        lavis(ctx, r, bouchon, "#2b2622", { alpha: 0.3, couches: 8 });
+        lavis(ctx, r, bouchon, "#23214a", { alpha: 0.3, couches: 8 });
         trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.3 });
       } else {
         const bague = rectArrondi(cx - col / 2 - 3, epaule - 18, col + 6, 9, 2);
-        lavis(ctx, r, bague, "#2b2622", { alpha: 0.35, couches: 8 });
+        lavis(ctx, r, bague, "#23214a", { alpha: 0.35, couches: 8 });
         trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1.2 });
         const poire = polygone(r, cx, epaule - 30, 6, 12, 14);
-        lavis(ctx, r, poire, "#2b2622", { alpha: 0.28, couches: 8, bord: 0.05 });
+        lavis(ctx, r, poire, "#23214a", { alpha: 0.28, couches: 8, bord: 0.05 });
         trait(ctx, r, poire.concat([poire[0]]), { epaisseur: 1.2 });
       }
       trait(ctx, r, [[x0 + 6, epaule + 24], [x0 + 6, bas - 14]], { couleur: "#fff3dc", epaisseur: 2.4, alpha: 0.55 });
@@ -240,7 +251,7 @@
       lavis(ctx, r, bague, "#f4efe4", { alpha: 0.7, couches: 6 });
       trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1 });
       const bouchon = rectArrondi(x0 + 5, 6, f.w - 10, 18, 2.5);
-      lavis(ctx, r, bouchon, "#2b2622", { alpha: 0.4, couches: 8 });
+      lavis(ctx, r, bouchon, "#23214a", { alpha: 0.4, couches: 8 });
       trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.2 });
       for (let x = x0 + 8; x < x0 + f.w - 6; x += 3) trait(ctx, r, [[x, 8], [x, 22]], { couleur: "#5a5048", epaisseur: 0.7, alpha: 0.5, tremble: 0.2 });
       trait(ctx, r, [[x0 + 5, 40], [x0 + 5, bas - 8]], { couleur: "#fff3dc", epaisseur: 2, alpha: 0.5 });

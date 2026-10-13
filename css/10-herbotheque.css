@@ -101,7 +101,7 @@
 }
 .bocal:hover .bocal-image, .bocal:focus-visible .bocal-image { transform: translateY(-5px) rotate(-2deg); }
 .bocal:focus-visible { outline: none; }
-.bocal:hover .etiquette, .bocal:focus-visible .etiquette { background: var(--fluo); color: #1a1714; }
+.bocal:hover .etiquette, .bocal:focus-visible .etiquette { background: var(--fluo); color: #23214a; }
 .bocal .pastille {
   position: absolute;
   top: 2px;
@@ -184,7 +184,7 @@
 }
 .sachet-pli { position: absolute; top: 12px; left: 0; right: 0; border-top: 1px dashed rgba(60, 40, 20, 0.5); }
 .sachet-pli::after { content: ""; position: absolute; top: -12px; left: 50%; width: 22px; height: 8px; margin-left: -11px; border-radius: 0 0 3px 3px; background: var(--fluo); }
-.sachet-nom { font-family: var(--titre); font-size: 1.15rem; line-height: 1.35; background: #fbf6ea; color: #2b2622; padding: 4px 4px 2px; border-radius: 2px; }
+.sachet-nom { font-family: var(--titre); font-size: 1.15rem; line-height: 1.35; background: #fbf6ea; color: #23214a; padding: 4px 4px 2px; border-radius: 2px; }
 .sachet-plantes { font-size: 0.78rem; line-height: 1.35; }
 .sachet:hover, .sachet:focus-visible { transform: translateY(-4px) rotate(1deg); outline: 2px solid var(--fluo); }
 .tisane-compo { padding-left: 1.2em; }
@@ -197,7 +197,7 @@
 .aide-placard { flex-basis: 100%; margin: 0; }
 .bocaux-placard { flex-basis: 100%; }
 button.bocal { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-.bocal.choisi .etiquette { background: var(--fluo); color: #1a1714; }
+.bocal.choisi .etiquette { background: var(--fluo); color: #23214a; }
 .bocal.choisi .bocal-image { transform: translateY(-6px); }
 .barre-melange {
   position: sticky;

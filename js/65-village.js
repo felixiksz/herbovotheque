@@ -97,7 +97,7 @@
     for (const y of [-27, -18, -9]) A().trait(ctx, r, [[-15 - (y + 36) / 7, y], [15 + (y + 36) / 7, y]], { couleur: "#6b4423", epaisseur: 0.9, alpha: 0.7 });
     forme(ctx, r, rect(33, -158, 7, 22), "#3e3a36", 0.45, 1.2);
     // petites cartes pendues à une ficelle sous l'arrondi
-    A().trait(ctx, r, [[-48, -110], [48, -110]], { couleur: "#2b2622", epaisseur: 0.8 });
+    A().trait(ctx, r, [[-48, -110], [48, -110]], { couleur: "#23214a", epaisseur: 0.8 });
     for (let i = 0; i < 4; i++) forme(ctx, r, rect(-40 + i * 22, -109, 11, 15), i % 2 ? "#fbf6ea" : "#ff7b00", 0.45, 0.8);
   }
 
@@ -321,7 +321,7 @@
     ctx.stroke();
     ctx.globalAlpha = 1;
     // les détails, semés le long du trait
-    const semis = { gravier: ["#b9ad96", "#fffaf0", "#a39782"], terreRouge: ["#9a4a2a", "#e8dccb", "#7a3a1a"], terrazzo: ["#1c1b1a", "#c9452c", "#3826f2", "#8a8a84", "#e8a37a"], prairie: ["#f2c94c", "#ffffff", "#f08a9b", "#b48ad8", "#5f8a46"], bassin: ["#ffffff"] }[type];
+    const semis = { gravier: ["#b9ad96", "#fffaf0", "#a39782"], terreRouge: ["#9a4a2a", "#e8dccb", "#7a3a1a"], terrazzo: ["#23214a", "#c9452c", "#3826f2", "#8a8a84", "#e8a37a"], prairie: ["#f2c94c", "#ffffff", "#f08a9b", "#b48ad8", "#5f8a46"], bassin: ["#ffffff"] }[type];
     for (let i = 0; i < pts.length; i++) {
       const [x, y] = pts[i];
       const n = type === "bassin" ? 1 : 5;
@@ -357,7 +357,7 @@
   function plantePaysage(ctx, r, p, x, y, k) {
     const v = p.valeurs || {};
     const t = ({ Arbre: 96, Arbuste: 52, Liane: 46 }[v.cycle] || 30) * k;
-    A().tache(ctx, r, x, y, t * 0.42, t * 0.1, "#2b2622", { alpha: 0.06, couches: 5 });
+    A().tache(ctx, r, x, y, t * 0.42, t * 0.1, "#23214a", { alpha: 0.06, couches: 5 });
     const img = p.dessinCarte && imageDessin(p);
     if (img) {
       ctx.drawImage(img, x - t * 0.6, y - t * 1.15, t * 1.2, t * 1.2);
@@ -389,14 +389,14 @@
     } else if (e.type === "dalle") {
       ctx.save();
       ctx.fillStyle = "#efeae0";
-      ctx.strokeStyle = "#2b2622";
+      ctx.strokeStyle = "#23214a";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.ellipse(x, y, 13 * k, 5.5 * k, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       for (let i = 0; i < 9; i++) {
-        ctx.fillStyle = ["#1c1b1a", "#c9452c", "#3826f2", "#8a8a84", "#e8a37a"][Math.floor(r() * 5)];
+        ctx.fillStyle = ["#23214a", "#c9452c", "#3826f2", "#8a8a84", "#e8a37a"][Math.floor(r() * 5)];
         ctx.fillRect(x + (r() - 0.5) * 18 * k, y + (r() - 0.5) * 6 * k, 1.6 * Math.max(0.7, k), 1.3 * Math.max(0.7, k));
       }
       ctx.restore();
@@ -587,7 +587,7 @@
       ctx.fillRect(x - tw / 2, ey - 14, tw, 24);
       ctx.strokeStyle = "rgba(60,40,20,0.5)";
       ctx.strokeRect(x - tw / 2 + 0.5, ey - 13.5, tw - 1, 23);
-      ctx.fillStyle = "#3a2614";
+      ctx.fillStyle = "#23214a";
       ctx.fillText(l.nom, x, ey + 4);
     }
     // Lóló et Mémé viennent se promener au village une fois leur île découverte
