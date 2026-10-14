@@ -17,7 +17,8 @@ PURPLE, GREEN = 0x642477, 0x127047
 def role(span):
     f, s, c = span["font"], round(span["size"]), span["color"]
     t = span["text"].strip()
-    if s <= 8 or "Tous droits" in t or "reproduction" in t or "L.111" in t:
+    # le pied de page (pas les phrases du texte qui contiennent « reproduction »)
+    if s <= 8 or t.startswith(("Tous droits", "La reproduction et/ou")) or "L.111" in t:
         return "skip"
     if f.startswith("Roboto-Regular") and s in (11, 12):
         return "skip"  # en-tête courant « Fiche plante Imderplam - … »
@@ -62,7 +63,8 @@ def lignes_de(doc):
                         continue
                     t = propre(s["text"])
                     gras = "Bold" in s["font"] and main == "texte"
-                    if s["font"].startswith("MS-") or t.strip() in ("✧", "❖", "➢", "▪", "●"):
+                    # les puces, mais pas les flèches ↗ ↘, ≃ et ⅕, qui sont dans la même police
+                    if (s["font"].startswith("MS-") and not any(c in t for c in "↗↘≃⅕")) or t.strip() in ("✧", "❖", "➢", "▪", "●"):
                         t = "• "
                     morceaux.append((t, gras))
                 yield pn, main, round(l["bbox"][1], 1), round(l["bbox"][0]), morceaux
