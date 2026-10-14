@@ -88,7 +88,7 @@
       degrade(c, ["#0f0d3a", "#15124a", "#1b1d4a", "#232a63", "#3a3aa8", "#5b3c8f"], 0, 88);
       for (let k = 0; k < W / 2.6; k++) P(c, (hash(k, 1) * W) | 0, (hash(1, k) * hash(k, 2) * 72) | 0, hash(k, 4) < 0.25 ? "#f6ee55" : "#d6eef7");
       // la lune en croissant, à l'écart du titre
-      const lx = Math.round(W * 0.84), ly = 46;
+      const lx = Math.round(W * 0.8), ly = 46;
       for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { if (dx * dx + dy * dy > 36) continue; P(c, lx + dx, ly + dy, (dx - 3) * (dx - 3) + (dy + 1) * (dy + 1) < 28 ? "#232a63" : "#f3f0dc"); }
       cap(c, W * 0.55, W * 0.86, 88, 26, "#2e3270", "#262a63");
       calanques(c, 88, [[-0.05, 0.27, 30, 1], [0.19, 0.46, 22, 2], [0.41, 0.66, 16, 3]], { clair: "#4a4a82", moyen: "#3c3c74", ombre: "#2a2c6a", pins: ["#2e4a5a", "#26405a", "#20344e"], tronc: "#2a1d1b" }, 1);
@@ -162,7 +162,7 @@
     if (etiquette) etiquette.textContent = nuit ? "Chut… le mot de passe ?" : "Mot de passe";
     if (bouton) bouton.textContent = nuit ? "Entrer" : "Ouvrir";
     // la scène prend la forme de l'écran (plus étroite sur téléphone)
-    W = Math.max(110, Math.min(360, Math.round((HAUT * innerWidth) / Math.max(1, innerHeight))));
+    W = Math.max(70, Math.min(360, Math.round((HAUT * innerWidth) / Math.max(1, innerHeight))));
     toile.width = W; toile.height = HAUT;
     fond = document.createElement("canvas");
     fond.width = W; fond.height = HAUT;
