@@ -450,3 +450,12 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 /* dans son onglet, l'outil de recherche de la serre n'a plus besoin de son titre */
 .panneau-onglet > .outil-serre > h2:first-child { display: none; }
 .panneau-onglet > .outil-serre { margin: 0; padding: 0; border: 0; box-shadow: none; background: none; }
+
+/* la caisse de la serre face au sol de l'île */
+.liste-caisse { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 12px; }
+.liste-caisse li { display: grid; gap: 3px; padding-bottom: 10px; border-bottom: 1px solid var(--filet); }
+.liste-caisse .bon { color: #2f6b35; }
+.liste-caisse .pas-bon { color: #b2552e; }
+:root[data-theme="nuit"] .liste-caisse .bon { color: #9cc77a; }
+:root[data-theme="nuit"] .liste-caisse .pas-bon { color: #ffb3a8; }
+.caisse-moins ul { margin: 6px 0 0; padding-left: 18px; }

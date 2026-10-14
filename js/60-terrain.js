@@ -725,6 +725,7 @@
         const bebes = H.serre.bebes();
         if (bebes.length) {
           o.appendChild(H.el("span.cout", null, "De la serre :"));
+          o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: fenetreCaisse }, "Ta caisse et le sol"));
           bebes.forEach(([id, n]) => {
             const q = H.d.plante(id);
             if (q) o.appendChild(H.el("button.bouton.petit" + (vue.depuisSerre && vue.plante === id ? ".actif" : ""), { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; dessinerOutils(); } }, q.nom + " × " + n));
@@ -899,6 +900,16 @@
           ctx.fillStyle = c.expo === "Ombre" ? "rgba(40,40,90,0.28)" : "rgba(40,40,90,0.14)";
           ctx.fillRect(x * T, y * T, T, T);
         }
+      }
+    }
+
+    // en repiquant une plante de la caisse : les cases libres où elle se plairait
+    if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
+      const p = H.d.plante(vue.plante);
+      if (p) {
+        if (!vue.casesBonnes || vue.casesBonnes.id !== p.id || vue.casesBonnes.le < performance.now() - 1500) vue.casesBonnes = { id: p.id, le: performance.now(), cases: new Set(casesQuiConviennent(ile, p)) };
+        ctx.fillStyle = "rgba(157,255,0,0.22)";
+        for (const k2 of vue.casesBonnes.cases) { const [x, y] = k2.split(",").map(Number); ctx.fillRect(x * T + 1, y * T + 1, T - 2, T - 2); }
       }
     }
 
@@ -1403,6 +1414,60 @@
     dessiner();
   }
 
+  // Les bébés plantes de la caisse face à une case : celles qui s'y plairaient (et pourquoi pas les autres)
+  const SE_PLAIT = 0.85;
+  function caisseIci(ile, x, y) {
+    if (!H.serre) return [];
+    return H.serre.bebes().map(([id, n]) => {
+      const p = H.d.plante(id);
+      if (!p) return null;
+      const ev = evaluer(ile, x, y, p, null);
+      return { p, n, f: ev.facteur, raisons: ev.raisons.filter((r) => !/voisines|s’entend/.test(r)) };
+    }).filter(Boolean).sort((a, b) => b.f - a.f);
+  }
+  // sur combien de cases libres de l'île une plante se plairait
+  function casesQuiConviennent(ile, p) {
+    const bonnes = [];
+    for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
+      if ((ile.plantes || {})[cle(x, y)]) continue;
+      const t = caseDe(ile, x, y).t;
+      if (t === "eau" || t === "dalle" || t === "chemin") continue;
+      if (evaluer(ile, x, y, p, null).facteur >= SE_PLAIT) bonnes.push(cle(x, y));
+    }
+    return bonnes;
+  }
+  const texteListe = (l) => (l && l.length ? l.join(", ").toLowerCase() : "non précisé");
+  // la fenêtre « Ta caisse et le sol » : ce dont chaque plante a besoin, et où elle se plairait sur l'île
+  function fenetreCaisse() {
+    const ile = vue.ile, bebes = H.serre ? H.serre.bebes() : [];
+    let fermer;
+    const corps = H.el("div.fenetre-caisse", null,
+      H.el("h2", null, "Ta caisse et le sol"),
+      H.el("p.discret", null, "Le sol de l’île : " + texteListe(ile.sol) + " · " + (ile.expo || "Plein soleil").toLowerCase() + ". Chaque case peut avoir le sien (outil « Soleil et sol »)."),
+      bebes.length ? H.el("ul.liste-caisse", null, bebes.map(([id, n]) => {
+        const p = H.d.plante(id);
+        if (!p) return null;
+        const v = p.valeurs || {}, bonnes = casesQuiConviennent(ile, p);
+        return H.el("li", null,
+          H.el("b", null, p.nom + " × " + n),
+          H.el("span", null, "Sol : " + texteListe(v.sol) + " · exposition : " + texteListe(v.exposition) + (v.arrosage ? " · arrosage " + v.arrosage.toLowerCase() : "")),
+          H.el("span" + (bonnes.length ? ".bon" : ".pas-bon"), null, bonnes.length ? "Se plairait sur " + bonnes.length + (bonnes.length > 1 ? " cases" : " case") + " de cette île." : "Ne se plairait nulle part ici sans changer le sol ou l’ombre."),
+          H.el("div.pastilles", null,
+            bonnes.length ? H.el("button.bouton.petit", { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; vue.outil = "planter"; fermer(); dessinerOutils(); dessiner(); } }, "Montrer où, et la repiquer") : null,
+            conseilsSolPlante(ile, p)));
+      })) : H.el("p", null, "La caisse est vide. Les bébés plantes prêtes à la serre y arrivent quand on les met en caisse."));
+    fermer = H.fenetre(corps);
+  }
+  // ce qui manque au sol de l'île pour une plante, et les plantes qui peuvent l'apporter
+  function conseilsSolPlante(ile, p) {
+    const voulu = (p.valeurs || {}).sol || [], ici = new Set(ile.sol || []);
+    const idees = voulu.filter((q) => !ici.has(q)).map((q) => {
+      const l = plantesQuiApportent(q).filter((x2) => x2.id !== p.id).slice(0, 3);
+      return l.length ? "sol " + q.toLowerCase() + " : " + l.map((x2) => x2.nom).join(", ") : null;
+    }).filter(Boolean);
+    return idees.length ? H.el("span.discret", null, "Pour arranger le sol : " + idees.join(" ; ")) : null;
+  }
+
   function montrerCase(x, y) {
     const c = caseDe(vue.ile, x, y);
     vue.choisie = { x, y };
@@ -1413,6 +1478,16 @@
       H.el("h3", null, TUILES[c.t].nom),
       H.el("p", null, c.expo + " · sol " + (c.sol.length ? c.sol.join(", ").toLowerCase() : "non précisé"))
     );
+    // ce qu'on pourrait repiquer ici, de ce qui attend dans la caisse
+    const caisse = vue.ile.croquis ? [] : caisseIci(vue.ile, x, y);
+    if (caisse.length) {
+      const bien = caisse.filter((e) => e.f >= SE_PLAIT), moins = caisse.filter((e) => e.f < SE_PLAIT);
+      vue.panneau.append(
+        H.el("p", null, H.el("b", null, "De ta caisse, se plairaient ici : "), bien.length ? bien.map((e) => e.p.nom).join(", ") : "aucune."),
+        bien.length ? H.el("div.pastilles", null, bien.map((e) => H.el("button.bouton.petit", { type: "button", onclick: () => { vue.plante = e.p.id; vue.depuisSerre = true; vue.outil = "planter"; dessinerOutils(); dessiner(); } }, "Repiquer " + e.p.nom))) : null,
+        moins.length ? H.el("details.caisse-moins", null, H.el("summary.discret", null, "Moins bien ici : " + moins.map((e) => e.p.nom).join(", ")),
+          H.el("ul", null, moins.map((e) => H.el("li", null, H.el("b", null, e.p.nom + " : "), e.raisons.join(" ") || "elle ne serait pas à son aise.")))) : null);
+    }
     dessiner();
   }
 

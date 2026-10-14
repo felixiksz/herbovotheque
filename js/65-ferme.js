@@ -663,14 +663,35 @@
     "kMk..kKKKKKKKKKKk.......",
     ".k......................",
   ];
+  // Lóló qui broute, comme un vrai cheval : l'encolure descend, le bout du nez dans l'herbe
+  const LOLO_BROUTE = [
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "......o.o...............",
+    ".....otoTo..............",
+    "....otttTtoo............",
+    "....ouutTtTtokkk........",
+    "..kMkooooooooMnnkk......",
+    ".kMMknnnnnnnnnnnnMkk....",
+    ".kMknnnnnnnnnnnnnnMnk...",
+    "kMk.knnnnnnnnnnnKknMnk..",
+    "kMk..kKKKKKKKKKKk.knMnk.",
+    ".k................kMnnnk",
+    "..................knwnek",
+    "...................knnnk",
+    "....................kNk.",
+  ];
   // les quatre jambes (arrière, arrière, avant, avant) : où elles partent, et de combien le sabot avance
   const JAMBES = [5, 8, 13, 16];
   const FOULEES = [[0, 0, 0, 0], [-1, 1, 1, -1], [0, 0, 0, 0], [1, -1, -1, 1]];
   const PAL_LOLO = { k: "#5a3418", K: "#9a6a3c", n: "#c08850", N: "#3e2210", M: "#3e2210", w: "#f3f0dc", e: "#1b1d4a", o: "#2a2246", t: "#d8bf98", T: "#6b5442", u: "#f3ead8" };
   function dessinLolo(c, x, y, image, gauche, sansMeme) {
-    const f = image === false || image == null ? 0 : image, monte = f % 2 ? 1 : 0, haut = LOLO.length + 4;
+    const broute = image === "broute", f = broute || image === false || image == null ? 0 : image, monte = f % 2 ? 1 : 0, haut = LOLO.length + 4;
     const px = (i, j, col) => pixel(c, gauche ? x + 11 - i : x - 12 + i, y - haut + j, col);
-    LOLO.forEach((l, j) => [...l].forEach((ch, i) => {
+    (broute ? LOLO_BROUTE : LOLO).forEach((l, j) => [...l].forEach((ch, i) => {
       if (!PAL_LOLO[ch]) return;
       if (sansMeme && "otTu".includes(ch)) { if (j === 9 && ch === "o") px(i, j - monte, PAL_LOLO.k); return; }
       px(i, j - monte, PAL_LOLO[ch]);
@@ -1074,6 +1095,31 @@
   }
   H.sur("meteo", majHeureMeteo);
 
+  // Lóló ne suit pas toujours : une fois sur trois, quand ƟvƟ part, il reste brouter l'herbe ;
+  // quand ƟvƟ s'arrête, il finit sa bouchée et la rejoint au trot. Et quand on reste longtemps
+  // sans bouger, il baisse parfois la tête pour brouter un moment.
+  function majBroute(lo, perso, t) {
+    if (perso.trajet && !lo.voyage) { lo.voyage = true; lo.broute = Math.random() < 0.35; lo.rejoindre = 0; }
+    if (!perso.trajet && lo.voyage) { lo.voyage = false; if (lo.broute) lo.rejoindre = t + 1800 + Math.random() * 2500; }
+    if (!perso.trajet && !lo.broute && !lo.rejoindre) {
+      if (!lo.immobile) lo.immobile = t;
+      if (t - lo.immobile > 12000 && Math.random() < 0.004) { lo.broute = true; lo.brouteJusqua = t + 6000 + Math.random() * 9000; }
+    } else lo.immobile = 0;
+    if (lo.broute && lo.brouteJusqua && !perso.trajet && t > lo.brouteJusqua && !lo.rejoindre) { lo.broute = false; lo.brouteJusqua = 0; lo.immobile = t; }
+    if (lo.rejoindre && t > lo.rejoindre) {
+      // au trot, jusqu'à côté d'ƟvƟ
+      const cx = perso.x - 1.6, cy = perso.y + 0.4, dx = cx - lo.x, dy = cy - lo.y, d = Math.hypot(dx, dy);
+      lo.broute = false;
+      if (d < 0.08) { lo.rejoindre = 0; lo.marche = false; lo.immobile = t; return true; }
+      lo.x += (dx / d) * Math.min(d, 0.07); lo.y += (dy / d) * Math.min(d, 0.07);
+      lo.gauche = dx - dy < 0;
+      lo.marche = true;
+      return true;
+    }
+    if (lo.broute) { lo.marche = false; return true; }
+    return false;
+  }
+
   // --- la scène ---
   let scene = null, galopDejaVu = false;
   const laboActif = () => !!(H.labo && H.labo.enCours && H.labo.enCours());
@@ -1173,6 +1219,8 @@
         lo.marche = pos.enCourse;
         if (!pos.enCourse) lo.course = null;
       }
+    } else if (lo.x != null && majBroute(lo, perso, t)) {
+      // il broute, ou il rejoint ƟvƟ au trot
     } else if (lo.x != null && scene.traces.length > 20 && perso.trajet) {
       const [tx, ty] = scene.traces[scene.traces.length - 20];
       lo.marche = Math.hypot(tx - lo.x, ty - lo.y) > 0.05;
@@ -1235,7 +1283,7 @@
         m.posSprite = [px, py];
       } else if (o.e) { const [x, y] = iso(o.e.i, o.e.j); dessinObjet(ctx, o.e, Math.round(x) - cx, Math.round(y) + 4 - cy); }
       else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet ? temps : 0); }
-      else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.marche ? Math.floor(t / (lo.course ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
+      else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.broute && !lo.marche ? "broute" : lo.marche ? Math.floor(t / (lo.course || lo.rejoindre ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
       else if (o.poule) { const [x, y] = iso(o.poule.x, o.poule.y); dessinPoule(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.poule, Math.floor(t / (o.poule.picore ? 260 : 170) + o.poule.robe) % 2); }
       else if (o.bete) {
         const [x, y] = iso(o.x, o.y), arret = scene.visiteur && t < scene.visiteur.pause, f = !arret && temps % 2;
