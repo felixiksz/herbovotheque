@@ -91,7 +91,7 @@
   // --- choix de ce qu'on révise (gardé sur l'appareil) --------------------------
   function filtre() {
     const f = Object.assign(
-      { rubriques: ["_latin", "famille", "proprietes", "mtcSaveur", "tisanes"], rangement: "", groupes: [], mode: "dues", nouvelles: 15, plante: null },
+      { rubriques: ["_latin", "famille", "proprietes", "mtcSaveur", "tisanes"], rangement: "", groupes: [], mode: "dues", nouvelles: 15, plante: null, plantesChoisies: [] },
       H.local.filtreCartes || {}
     );
     return f;
@@ -113,6 +113,10 @@
       return habituelles.length ? habituelles : dIle;
     }
     let cartes = toutes.filter((c) => f.rubriques.includes(c.rubrique));
+    if ((f.plantesChoisies || []).length) {
+      const ids = new Set(f.plantesChoisies);
+      cartes = cartes.filter((c) => c.plante && ids.has(c.plante));
+    }
     if (f.rangement && f.groupes.length) {
       const rg = H.herbier.rangements.find((r) => r.id === f.rangement);
       if (rg) {
@@ -195,6 +199,8 @@
       }
     }
     dues.sort((a, b) => etat(a.id).due - etat(b.id).due);
+    if (f.mode === "aRevoir") return { file: dues, dues: dues.length, nouvelles: nouvelles.length, fragiles: fragiles.length, total: cartes.length };
+    if (f.mode === "nouvelles") return { file: melanger(nouvelles).slice(0, Math.max(1, f.nouvelles)), dues: dues.length, nouvelles: nouvelles.length, fragiles: fragiles.length, total: cartes.length };
     if (f.mode === "fragiles") return { file: melanger(fragiles), dues: dues.length, nouvelles: nouvelles.length, fragiles: fragiles.length, total: cartes.length };
     if (f.mode === "toutes") return { file: melanger(cartes.slice()).slice(0, 60), dues: dues.length, nouvelles: nouvelles.length, fragiles: fragiles.length, total: cartes.length };
     const nouv = melanger(nouvelles).slice(0, f.plante ? 999 : f.nouvelles);
@@ -273,6 +279,22 @@
     const det = H.el("details.cartes-choix", { open: rubriquesSeules || choixOuvert });
     det.addEventListener("toggle", () => (choixOuvert = det.open));
     det.appendChild(H.el("summary", null, H.el("h2", null, rubriquesSeules ? "Quelles rubriques réviser" : "Choisir quoi réviser")));
+    if (!rubriquesSeules) {
+      const info = fileDeRevision(f);
+      det.appendChild(H.el("h3", null, "Quelles cartes"));
+      const modes = [
+        ["dues", "À revoir et nouvelles"],
+        ["aRevoir", "Seulement celles à revoir (" + info.dues + ")"],
+        ["nouvelles", "Seulement les nouvelles (" + info.nouvelles + ")"],
+        ["fragiles", "Seulement les fragiles (" + info.fragiles + ")"],
+        ["toutes", "Tout, dans le désordre (" + info.total + ")"],
+      ];
+      det.appendChild(H.el("div.pastilles", null,
+        modes.map(([m, t]) => H.el("button.bouton.petit" + (f.mode === m ? ".actif" : ""), { type: "button", "aria-pressed": String(f.mode === m), onclick: () => { majFiltre((x) => (x.mode = m)); setTimeout(() => accueil(derniersParams), 0); } }, t)),
+        f.mode === "dues" || f.mode === "nouvelles" ? H.el("label.discret", null, " Nouvelles cartes par séance ",
+          H.el("input", { type: "number", min: 1, max: 100, value: f.nouvelles, style: { width: "4.5em" }, onchange: (e) => { majFiltre((x) => (x.nouvelles = Math.max(1, parseInt(e.target.value, 10) || 1))); setTimeout(() => accueil(derniersParams), 0); } })) : null
+      ));
+    }
     // rubriques
     for (const g of groupesDeRubriques()) {
       det.appendChild(H.el("h3", null, g.titre));
@@ -324,14 +346,12 @@
       ));
       if (!f.groupes.length) det.appendChild(H.el("p.discret", null, "Aucune étagère choisie : toutes les plantes sont incluses."));
     }
-    // mode
-    det.appendChild(H.el("h3", null, "Quelles cartes"));
-    const modes = [["dues", "À revoir et nouvelles"], ["fragiles", "Seulement les fragiles"], ["toutes", "Tout, dans le désordre"]];
+    // ou bien des plantes choisies une à une
+    const choisies = (f.plantesChoisies || []).map((id) => H.d.plante(id)).filter(Boolean);
     det.appendChild(H.el("div.pastilles", null,
-      modes.map(([m, t]) => H.el("button.bouton.petit" + (f.mode === m ? ".actif" : ""), { type: "button", onclick: () => { majFiltre((x) => (x.mode = m)); setTimeout(() => accueil([]), 0); } }, t)),
-      H.el("label.discret", null, " Nouvelles cartes par séance ",
-        H.el("input", { type: "number", min: 0, max: 100, value: f.nouvelles, style: { width: "4.5em" }, onchange: (e) => { majFiltre((x) => (x.nouvelles = Math.max(0, parseInt(e.target.value, 10) || 0))); setTimeout(() => accueil([]), 0); } })
-      )
+      H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes(f.plantesChoisies || [], (ids) => { majFiltre((x) => (x.plantesChoisies = ids)); setTimeout(() => accueil(derniersParams), 0); }, "Quelles plantes réviser ?") }, choisies.length ? "Changer les plantes choisies" : "Choisir des plantes une à une"),
+      choisies.map((q) => H.el("button.bouton.petit.actif", { type: "button", title: "Retirer de la révision", onclick: () => { majFiltre((x) => (x.plantesChoisies = (x.plantesChoisies || []).filter((id) => id !== q.id))); setTimeout(() => accueil(derniersParams), 0); } }, q.nom + " ×")),
+      choisies.length ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { majFiltre((x) => (x.plantesChoisies = [])); setTimeout(() => accueil(derniersParams), 0); } }, "Toutes les plantes") : null
     ));
     return det;
   }
