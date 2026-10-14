@@ -891,18 +891,6 @@
     ctx.drawImage(vue.fond, 0, 0);
     ctx.setTransform(k / T, 0, 0, k / T, BORD * k, BORD * k);
 
-    // zones (exposition) en surimpression légère
-    if (vue.voirZones || vue.outil === "zones") {
-      for (let y = 0; y < ile.lignes; y++) {
-        for (let x = 0; x < ile.cols; x++) {
-          const c = caseDe(ile, x, y);
-          if (c.expo === "Plein soleil") continue;
-          ctx.fillStyle = c.expo === "Ombre" ? "rgba(40,40,90,0.28)" : "rgba(40,40,90,0.14)";
-          ctx.fillRect(x * T, y * T, T, T);
-        }
-      }
-    }
-
     // en repiquant une plante de la caisse : les cases libres où elle se plairait
     if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
       const p = H.d.plante(vue.plante);
@@ -1025,6 +1013,38 @@
     }
     // les gros pixels aux couleurs des pochettes
     if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5));
+    // les zones par-dessus les gros pixels (sinon le voile léger disparaît dans la palette)
+    if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZones(ctx, k);
+  }
+
+  // Mi-ombre : hachures espacées ; ombre : hachures serrées ; un liseré jaune là où l'exposition change
+  function dessinerZones(ctx, k) {
+    const ile = vue.ile;
+    const px = Math.max(1, Math.round(k / 12));
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, BORD * k, BORD * k);
+    for (let y = 0; y < ile.lignes; y++) {
+      for (let x = 0; x < ile.cols; x++) {
+        const expo = caseDe(ile, x, y).expo;
+        const x0 = Math.round(x * k), y0 = Math.round(y * k), w = Math.round((x + 1) * k) - x0, h = Math.round((y + 1) * k) - y0;
+        if (expo !== "Plein soleil") {
+          const pas = expo === "Ombre" ? 3 * px : 6 * px;
+          ctx.fillStyle = "#1b1d4a";
+          ctx.beginPath();
+          ctx.rect(x0, y0, w, h);
+          ctx.save();
+          ctx.clip();
+          // diagonales en escalier, pixel par pixel
+          for (let d = -h; d < w; d += pas) for (let i = 0; i < h; i += px) ctx.fillRect(x0 + d + i, y0 + i, px, px);
+          ctx.restore();
+        }
+        ctx.fillStyle = "#ffe14d";
+        const autre = (xx, yy) => xx >= 0 && yy >= 0 && xx < ile.cols && yy < ile.lignes && caseDe(ile, xx, yy).expo !== expo;
+        if (autre(x + 1, y)) ctx.fillRect(x0 + w - px, y0, px, h);
+        if (autre(x, y + 1)) ctx.fillRect(x0, y0 + h - px, w, px);
+      }
+    }
+    ctx.restore();
   }
 
   function dessinerCiel() {
