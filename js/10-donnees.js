@@ -95,6 +95,41 @@
       options: ["Enrichit (azote)", "Apporte de l’humus", "Décompacte", "Draine", "Garde la fraîcheur", "Acidifie", "Adoucit le calcaire"] },
   ];
 
+  // La première fois qu'on ouvre le jeu, une seule tisane attend dans le placard : celle de
+  // Pizsoma (réglisse, aubépine, pétales de rose). Les mélanges d'essai faits avant l'ouverture
+  // sont rangés (pas effacés : ils restent dans les données, marqués supprimés). Les tisanes
+  // créées ensuite par ƟvƟ ne sont jamais touchées.
+  const OUVERTURE = Date.parse("2026-10-15T00:00:00+02:00");
+  function tisaneDeDepart() {
+    const h = H.herbier;
+    h.tisanes = h.tisanes || {};
+    if (h.tisanes.pizsoma) return;
+    const t = H.maintenant();
+    for (const x of Object.values(h.tisanes)) {
+      if (!x.supprime && (x.creeLe || x.modifieLe || 0) < OUVERTURE) Object.assign(x, { supprime: true, modifieLe: t });
+    }
+    // la rose (ses pétales) n'a pas de fiche : on l'ajoute à l'herbothèque, à compléter
+    if (!h.plantes.rose && !(H.base.plantes || []).some((p) => p.id === "rose")) {
+      h.plantes.rose = { id: "rose", nom: "Rose", latin: "Rosa gallica", creeLe: t, modifieLe: t };
+    }
+    h.tisanes.pizsoma = {
+      id: "pizsoma",
+      nom: "La tisane de Pizsoma",
+      plantes: [
+        { id: "glycyrrhiza-glabra", part: "racine", role: "La douceur, et le goût sucré" },
+        { id: "crataegus-monogyna", part: "fleurs et feuilles", role: "Apaise le cœur et la nervosité" },
+        { id: "rose", part: "pétales", role: "Le parfum, et la douceur pour l’humeur" },
+      ],
+      usage: "",
+      preparation: "Infusion 10 min à couvert.",
+      notes: "",
+      creeLe: t,
+      modifieLe: t,
+    };
+    index = null;
+    H.d.changer("herbier");
+  }
+
   // Ajoute au schéma de l'herbier les rubriques nouvelles de la base
   // (sauf celles qu'ƟvƟ a retirées volontairement).
   function completerSchema() {
@@ -123,6 +158,7 @@
       H.local = Object.assign({ son: true, musique: true, theme: "auto" }, (await H.kv.lire("local")) || {});
       completerSchema();
       index = null;
+      tisaneDeDepart();
     },
 
     // --- schéma ---
