@@ -1757,6 +1757,14 @@
   }
 
   function appelerMesi(demande, plante) {
+    // pendant le tour en hongrois, Mesi est déjà là, à côté d'ƟvƟ : pas de deuxième Mesi
+    if (vue.hongrois || vue.mesiSuit) {
+      if (demande && !H.$(".dialogue")) {
+        H.jouerCri();
+        H.dialogue.dire([{ qui: "luigi", texte: "Je suis juste à côté de toi ! Montre-moi une plante ou un animal, je te dis son nom en hongrois." }]);
+      }
+      return;
+    }
     if (demande) H.jouerCri();
     if (vue.luigi) {
       if (demande && !vue.luigi.occupe) {
