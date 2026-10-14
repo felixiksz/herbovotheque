@@ -209,9 +209,11 @@
     for (const p of plantes) {
       const prof = PROF[p.e];
       if (!prof) continue;
-      // la tranche de gauche (bord j = N) et celle de droite (bord i = N)
-      for (const [d, pt] of [[N - p.y, iso(p.x, N)], [N - p.x, iso(N, p.y)]]) {
-        if (d > 2.4) continue;
+      // la tranche de gauche (bord j = N) et celle de droite (bord i = N) : le point de la tranche
+      // qui est pile à la verticale du tronc (même x à l'écran)
+      const iG = p.x - p.y + N, jD = N - p.x + p.y;
+      for (const [d, pt, ok] of [[N - p.y, iso(iG, N), iG >= 0 && iG <= N], [N - p.x, iso(N, jD), jD >= 0 && jD <= N]]) {
+        if (d > 2.4 || !ok) continue;
         const force = 1 - d / 2.4, L = Math.round(4 + prof * force * (p.taille || 1)), x0 = Math.round(pt[0]), y0 = Math.round(pt[1]) + 2;
         const g = hash(Math.round(p.x * 10), Math.round(p.y * 10));
         // le pivot, qui descend en ondulant, et ses racines latérales en biais
@@ -1201,9 +1203,12 @@
     if (id === "poules") poulailler();
   }
 
-  function dessiner(t) {
+  // seulementMaj : on fait avancer tout le monde sans redessiner (le dessin est le plus coûteux)
+  function dessiner(t, seulementMaj) {
     const { ctx } = scene, perso = scene.ovo;
-    const mo = moment();
+    // le soleil et la lune ne bougent pas d'une image à l'autre : on les recalcule chaque seconde
+    if (!scene.mo || t - scene.moT > 1000 || t < scene.moT) { scene.mo = moment(); scene.moT = t; }
+    const mo = scene.mo;
     drapeau = !!(H.lettres && H.lettres.aLire() > 0);
     if (fondCle !== mo.periode + mo.cote + W) {
       nuit = mo.nuit; cote = mo.cote; periode = mo.periode;
@@ -1220,6 +1225,7 @@
       if (perso.i >= perso.trajet.length - 1) { perso.trajet = null; arriver(perso.but); }
     }
     const cx = Math.round(scene.cam.x), cy = Math.round(scene.cam.y);
+    if (!seulementMaj) {
     ctx.fillStyle = nuit ? "#15124a" : "#2f8fe0";
     ctx.fillRect(0, 0, W, Ht);
     ctx.drawImage(fond, -40 - Math.round(cx * 0.05), Math.round(-cy * 0.08) - 10);
@@ -1236,6 +1242,7 @@
       }
     }
     ctx.drawImage(sol0, -cx, -cy);
+    }
     // Lóló : la première fois, il arrive au galop depuis le bord ; ensuite il suit ƟvƟ
     const lo = scene.lolo;
     if (lo.course) {
@@ -1257,6 +1264,7 @@
     majPoules(t);
     majMesi();
     majVisiteur(t, mo.nuit);
+    if (seulementMaj) return;
     // tout ce qui se dresse, trié du fond vers le devant
     const objets = [];
     for (const p of scene.poules) if (!p.dedans) objets.push({ prof: p.x + p.y, poule: p });
@@ -1356,11 +1364,27 @@
     scene.toile.style.cursor = scene.amenager ? (scene.amenager.outil === "deplacer" ? "grab" : "crosshair") : montre || scene.surLolo ? "pointer" : "default";
   }
 
+  // Tout avance à 60 pas par seconde, quel que soit l'écran (avant, sur un écran à 120 Hz, tout
+  // allait deux fois plus vite) ; sur téléphone on ne redessine que 30 fois par seconde, pour
+  // laisser du souffle au processeur (et à la musique, qui saccadait).
+  const TELEPHONE = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+  const PAS = 1000 / 60, ENTRE_DEUX_DESSINS = TELEPHONE ? 1000 / 30 : 1000 / 60;
   function boucle() {
     const pas = (t) => {
       if (!scene) return;
-      dessiner(t);
       scene.anim = requestAnimationFrame(pas);
+      const dt = scene.tPrec ? t - scene.tPrec : PAS;
+      scene.tPrec = t;
+      scene.reste = Math.min(PAS * 6, (scene.reste || 0) + dt);
+      let n = 0;
+      while (scene.reste >= PAS && n < 6) {
+        scene.reste -= PAS;
+        n++;
+        const dernier = scene.reste < PAS || n === 6;
+        const dessine = dernier && t - (scene.dernierDessin || 0) >= ENTRE_DEUX_DESSINS - 2;
+        dessiner(t, !dessine);
+        if (dessine) scene.dernierDessin = t;
+      }
     };
     scene.anim = requestAnimationFrame(pas);
   }

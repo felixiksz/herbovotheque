@@ -49,8 +49,29 @@
     filtre = ctx.createBiquadFilter();
     filtre.type = "lowpass";
     filtre.frequency.value = mode.clarte;
-    reverb = ctx.createConvolver();
-    reverb.buffer = impulsion(window.matchMedia && matchMedia("(pointer: coarse)").matches ? 1.8 : 3.2);
+    // sur téléphone, une réverbération « à l'ancienne » (quatre échos qui se répètent en
+    // s'adoucissant) : bien moins gourmande qu'une convolution, et le son ne saccade plus
+    const telephone = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    let reverbEntree, reverbSortie;
+    if (telephone) {
+      reverbEntree = ctx.createGain();
+      reverbSortie = ctx.createGain();
+      reverbSortie.gain.value = 0.55;
+      for (const d of [0.0297, 0.0371, 0.0411, 0.0437]) {
+        const ligne = ctx.createDelay(0.1), retour = ctx.createGain(), doux = ctx.createBiquadFilter();
+        ligne.delayTime.value = d * 3.2;
+        retour.gain.value = 0.72;
+        doux.type = "lowpass"; doux.frequency.value = 2200;
+        reverbEntree.connect(ligne);
+        ligne.connect(doux).connect(retour).connect(ligne);
+        doux.connect(reverbSortie);
+      }
+      reverb = reverbEntree;
+    } else {
+      reverb = ctx.createConvolver();
+      reverb.buffer = impulsion(3.2);
+      reverbEntree = reverbSortie = reverb;
+    }
     const sec = ctx.createGain();
     sec.gain.value = 0.35;
     const humide = ctx.createGain();
@@ -58,7 +79,8 @@
     entree = ctx.createGain();
     entree.connect(filtre);
     filtre.connect(sec).connect(sortie);
-    filtre.connect(reverb).connect(humide).connect(sortie);
+    filtre.connect(reverbEntree);
+    reverbSortie.connect(humide).connect(sortie);
   }
 
   function choisirMode() {
@@ -103,7 +125,7 @@
       if (i >= Math.round(VOIX.length * Math.min(1, mode.densite))) return;
       const p = periode * mode.tempo * (nuit ? 1.35 : 1);
       while (prochaines[i] < maintenant) prochaines[i] += p;
-      while (prochaines[i] < maintenant + 1.5) {
+      while (prochaines[i] < maintenant + 4) {
         // l'orage bouscule les voix : petites notes rapides, parfois une octave plus haut
         const saut = mode.orage && Math.random() < 0.3 ? mode.gamme.length : 0;
         note(hz(hauteur(degre + saut)), prochaines[i], mode.orage ? 0.05 : 0.07);
@@ -112,7 +134,7 @@
     });
     // pendant l'orage, quelques notes graves supplémentaires, comme des éclairs
     if (mode.orage && Math.random() < 0.08) note(hz(mode.fond - 12 + mode.gamme[Math.floor(Math.random() * 3)]), maintenant + 0.2, 0.09);
-    minuteur = setTimeout(programmer, 400);
+    minuteur = setTimeout(programmer, 700);
   }
 
   function lancerBourdon() {
@@ -485,12 +507,13 @@
       sequence.n++;
       sequence.t += d;
     }
-    while (sequence.t < ctx.currentTime + 1) {
+    // programmée 2,5 s à l'avance : si le téléphone a un hoquet, la musique ne s'arrête pas
+    while (sequence.t < ctx.currentTime + 2.5) {
       S.pas(sequence.n, sequence.t, d, sequence);
       sequence.n++;
       sequence.t += d;
     }
-    minuteur = setTimeout(programmerStyle, 250);
+    minuteur = setTimeout(programmerStyle, 500);
   }
 
   // la météo ou la nuit changent : on glisse doucement vers la nouvelle couleur

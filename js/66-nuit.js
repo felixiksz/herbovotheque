@@ -1238,11 +1238,17 @@
     }
   }
 
+  const TELEPHONE = window.matchMedia && matchMedia("(pointer: coarse)").matches;
   function dessinerBalade() {
     const b = balade;
     if (!b) return;
     const S = b.s, { ctx, dpr, w, h } = S;
     const t = performance.now();
+    // sur téléphone, une image sur deux suffit : le filtre en gros pixels coûte cher
+    if (TELEPHONE && S.derniere && t - S.derniere < 30) {
+      b.anim = requestAnimationFrame(dessinerBalade);
+      return;
+    }
     const dt = Math.min(0.1, (t - S.derniere) / 1000);
     S.derniere = t;
     if (!b.pause) S.decalage += dt * 40;
