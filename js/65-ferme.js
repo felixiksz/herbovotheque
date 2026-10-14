@@ -870,24 +870,34 @@
   // --- la nuit, des animaux traversent la ferme : un renard, ou une laie et ses marcassins ---
   const RENARD = ["........o.o..", "........ooooo", "ww.oooooooow.", ".wooooooooo..", "...n.n...n.n.", "...n.n...n.n."];
   const RENARD_PAS = RENARD.slice(0, 4).concat(["..n...n.n...n", "...n.n...n.n."]);
-  const SANGLIER = ["...ssssss....", ".ssbbbbbbss..", "sbbbbbbbbbbs.", "sbbbbbbbbbbbb", ".bbbbbbbbbbwP", "..n.n...n.n..", "..n.n...n.n.."];
-  const SANGLIER_PAS = SANGLIER.slice(0, 5).concat([".n...n.n...n.", "..n.n...n.n.."]);
+  // le sanglier de profil : la hure basse et longue, le groin clair, la défense, la bosse du garrot,
+  // le dos qui descend vers la croupe, la petite queue à touffe, des pattes fines et sombres
+  const SANGLIER = [
+    ".............k...",
+    "......kkkkkkbk...",
+    "....kkBbbbbbbk...",
+    "..kkBbbbbbbbbbk..",
+    ".k.kbbbbbbbbbbekk",
+    "k..kbbbbbbbbbbbbs",
+    "...kbbbbbbbbbbbwk",
+    "....kbbkkkkkbbk..",
+    ".....n.n....n.n..",
+    ".....n.n....n.n..",
+    ".....N.N....N.N..",
+  ];
+  const SANGLIER_PAS = SANGLIER.slice(0, 8).concat(["....n...n..n...n.", ".....n.n....n.n..", "....N...N..N...N."]);
   const MARCASSIN = [".rRrRr.", "rRrRrRr", "rRrRrRp", ".n.n.n."];
   const MARCASSIN_PAS = MARCASSIN.slice(0, 3).concat(["n.n..n."]);
-  const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#23214a", s: "#3e2210", b: "#6b5442", P: "#9a9a9a", r: "#b9834f", R: "#7a4520", p: "#9a9a9a" };
+  const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#3e2210", N: "#1b1414", k: "#2a1d1b", b: "#6b5442", B: "#8a7258", e: "#c9b090", s: "#b8a090", r: "#b9834f", R: "#7a4520", p: "#9a9a9a" };
   function dessinBete(c, x, y, g, gauche) {
     const L = g[0].length;
     g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BETES[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, PAL_BETES[ch]); }));
   }
-  // un passage d'un bord de l'île à l'autre, en contournant les maisons
-  function bordAuHasard() {
-    const u = 1 + Math.random() * (N - 2), cote2 = Math.floor(Math.random() * 4);
-    return [[u, 0.6], [u, N - 0.6], [0.6, u], [N - 0.6, u]][cote2];
-  }
+  // une traversée de l'île, en contournant les maisons
   function nouveauVisiteur() {
-    const a = bordAuHasard();
-    let b = bordAuHasard();
-    for (let k = 0; k < 6 && Math.hypot(b[0] - a[0], b[1] - a[1]) < N * 0.6; k++) b = bordAuHasard();
+    // le coin gauche de l'écran est vers (0, N), le coin droit vers (N, 0) : on traverse de l'un à l'autre
+    const gauche = [1 + Math.random() * 5, N - 1 - Math.random() * 5], droite = [N - 1 - Math.random() * 5, 1 + Math.random() * 5];
+    const [a, b] = Math.random() < 0.5 ? [gauche, droite] : [droite, gauche];
     const pts = passage(a, b), cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const espece = Math.random() < 0.55 ? "renard" : "sanglier";
