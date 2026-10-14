@@ -375,11 +375,15 @@
       { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: fenetreBalade },
       { id: "meme", x: 152, y: 192, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
       { id: "lolo", x: 116, y: 156, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
+        // le premier matin de la journée, on lui demande seulement s'il a bien dormi
+        if (H.lolo.leMatin()) {
+          const d = await H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Bonjour !", choix: [{ valeur: "dormi", libelle: "Tu as bien dormi ?" }] }]);
+          if (d) await H.lolo.bienDormi();
+          return;
+        }
         const choix = [{ valeur: "drame", libelle: "Un drame !" }, { valeur: "blague", libelle: "Une blague !" }];
-        if (H.lolo.leMatin()) choix.unshift({ valeur: "dormi", libelle: "Tu as bien dormi ?" });
         const q = await H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Un drame ou une blague ?", choix: choix.concat({ valeur: null, libelle: "Plus tard" }) }]);
-        if (q === "dormi") H.lolo.bienDormi();
-        else if (q === "drame") raconter("lolo");
+        if (q === "drame") raconter("lolo");
         else if (q === "blague") blagueLolo();
       } },
       { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: nuit ? "Aller dormir" : "Le lit", agir: () => (nuit ? H.lolo.cacherLaLumiere().then(() => H.aller("dodo/dormir")) : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },

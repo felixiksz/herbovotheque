@@ -109,12 +109,17 @@
       if (opts.etape) opts.etape(null);
     }
   }
-  // Le matin, on demande à Lóló s'il a bien dormi.
-  const leMatin = () => new Date().getHours() >= 5 && new Date().getHours() < 12;
-  const bienDormi = () => H.dialogue.dire([
-    { qui: "duo", texte: "Lóló, tu as bien dormi ?" },
-    { qui: "lolo", texte: "Hiiiii !" },
-  ]);
+  // Le matin, à la première visite de la journée, on demande d'abord à Lóló s'il a bien dormi
+  // (c'est alors la seule chose qu'on lui demande).
+  const aujourdhui = () => new Date().toDateString();
+  const leMatin = () => new Date().getHours() >= 5 && new Date().getHours() < 12 && (H.local.bonjourLolo || "") !== aujourdhui();
+  const bienDormi = async () => {
+    H.d.majLocal((l) => (l.bonjourLolo = aujourdhui()));
+    await H.dialogue.dire([
+      { qui: "duo", texte: "Lóló, tu as bien dormi ?" },
+      { qui: "lolo", texte: "Hiiiii !" },
+    ]);
+  };
   // Le soir, quand il y a trop de lumière pour dormir, Lóló se couche sur nos yeux.
   async function cacherLaLumiere(opts) {
     opts = opts || {};
@@ -224,6 +229,11 @@
 
   async function parler(ile) {
     const L = (texte, choix) => H.dialogue.dire([{ qui: "lolo", texte, choix }]);
+    if (leMatin()) {
+      const d = await H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Bonjour !", choix: [{ valeur: "dormi", libelle: "Tu as bien dormi ?" }] }]);
+      if (!d) return;
+      await bienDormi();
+    }
     let intro = "Hiii ! Qu’est-ce que je peux faire pour toi ?";
     for (;;) {
       const q = await L(intro, [
@@ -232,15 +242,9 @@
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
         { valeur: "compliment", libelle: "Lui faire un compliment" },
-      ].concat(leMatin() ? [{ valeur: "dormi", libelle: "Tu as bien dormi ?" }] : [], [
         { valeur: null, libelle: "Merci Lóló !" },
-      ]));
+      ]);
       if (!q) break;
-      if (q === "dormi") {
-        await bienDormi();
-        intro = "Autre chose ?";
-        continue;
-      }
       if (q === "compliment") {
         await complimenter();
         intro = "Autre chose ?";
