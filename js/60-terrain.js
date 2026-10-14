@@ -960,6 +960,8 @@
         ctx.fillRect(0, 0, toile.width, toile.height);
       }
     }
+    // les gros pixels aux couleurs des pochettes
+    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5));
   }
 
   function dessinerCiel() {

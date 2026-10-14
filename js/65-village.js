@@ -606,23 +606,6 @@
     ctx.drawImage(scene.fond, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (scene.traitEnCours) dessinerTrait(ctx, scene.traitEnCours.type, scene.traitEnCours.pts, k, H.alea("apercu"));
-    // le nom d'un lieu n'apparaît qu'au survol (ou au premier toucher, sur téléphone)
-    ctx.textAlign = "center";
-    for (const [id, l] of Object.entries(LIEUX)) {
-      if (id !== scene.survol && id !== scene.choisi) continue;
-      let [x, y] = position(id);
-      const survol = true;
-      ctx.font = Math.round(19 * Math.max(0.8, k)) + "px 'Beth Ellen', cursive";
-      const tw = ctx.measureText(l.nom).width + 16;
-      const ey = y + 24 * Math.max(0.8, k);
-      x = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, x));
-      ctx.fillStyle = survol ? "#ff7b00" : "#c9a878";
-      ctx.fillRect(x - tw / 2, ey - 14, tw, 24);
-      ctx.strokeStyle = "rgba(60,40,20,0.5)";
-      ctx.strokeRect(x - tw / 2 + 0.5, ey - 13.5, tw - 1, 23);
-      ctx.fillStyle = "#23214a";
-      ctx.fillText(l.nom, x, ey + 4);
-    }
     // Lóló et Mémé viennent se promener au village une fois leur île découverte
     if (H.lolo && H.lolo.disponible()) {
       // elle s'arrête juste devant ƟvƟ, la tête tournée vers iel
@@ -704,6 +687,26 @@
           }
         });
       }
+    }
+    // les gros pixels aux couleurs des pochettes ; les noms des lieux restent nets, par-dessus
+    H.retro.appliquer(scene.toile, H.retro.taillePour(3));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // le nom d'un lieu n'apparaît qu'au survol (ou au premier toucher, sur téléphone)
+    ctx.textAlign = "center";
+    for (const [id, l] of Object.entries(LIEUX)) {
+      if (id !== scene.survol && id !== scene.choisi) continue;
+      let [x, y] = position(id);
+      const survol = true;
+      ctx.font = Math.round(19 * Math.max(0.8, k)) + "px 'Beth Ellen', cursive";
+      const tw = ctx.measureText(l.nom).width + 16;
+      const ey = y + 24 * Math.max(0.8, k);
+      x = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, x));
+      ctx.fillStyle = survol ? "#ff7b00" : "#c9a878";
+      ctx.fillRect(x - tw / 2, ey - 14, tw, 24);
+      ctx.strokeStyle = "rgba(60,40,20,0.5)";
+      ctx.strokeRect(x - tw / 2 + 0.5, ey - 13.5, tw - 1, 23);
+      ctx.fillStyle = "#23214a";
+      ctx.fillText(l.nom, x, ey + 4);
     }
   }
 
@@ -1065,6 +1068,11 @@
       const boite = H.el("div.village");
       const toile = H.el("canvas.toile-village", { "aria-label": "La ferme" });
       boite.appendChild(toile);
+      // par-dessus la scène, seulement deux petites pastilles : aménager, et les réglages
+      boite.appendChild(H.el("div.pastilles-scene", null,
+        H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
+        H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
+      ));
       c.appendChild(boite);
       const liens = H.el("nav.liens-village", { "aria-label": "Lieux de la ferme" },
         Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom)),

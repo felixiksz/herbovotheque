@@ -170,8 +170,6 @@
     // les murs, deux couleurs, avec un lavis d'aquarelle
     ctx.fillStyle = M.murG; ctx.fillRect(0, 0, 214, 230);
     ctx.fillStyle = M.murD; ctx.fillRect(214, 0, 426, 230);
-    H.aqua.lavis(ctx, r, [[0, 0], [214, 0], [214, 230], [0, 230]], "#ffffff", { alpha: 0.05, couches: 6, bord: 0.3 });
-    H.aqua.lavis(ctx, r, [[214, 0], [640, 0], [640, 230], [214, 230]], "#ffffff", { alpha: 0.05, couches: 6, bord: 0.3 });
     ctx.beginPath(); ctx.moveTo(214, 0); ctx.lineTo(214, 230); ctx.stroke();
     // le sol en terrazzo
     ctx.fillStyle = M.sol; ctx.fillRect(0, 230, 640, 130);
@@ -272,17 +270,6 @@
       ctx.restore();
     }
     if (M.lampe) lumiereLampe(ctx, moment);
-    // le grain de risographie
-    const grain = document.createElement("canvas");
-    grain.width = grain.height = 128;
-    const gc = grain.getContext("2d");
-    for (let i = 0; i < 900; i++) {
-      gc.fillStyle = i % 3 ? "rgba(35,33,74,0.10)" : "rgba(255,255,255,0.14)";
-      gc.fillRect(r() * 128, r() * 128, 1, 1);
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = ctx.createPattern(grain, "repeat");
-    ctx.fillRect(0, 0, w, h);
     return c;
   }
 
@@ -728,6 +715,9 @@
         ctx.fillStyle = "rgba(255,226,90," + v + ")";
         ctx.beginPath(); ctx.moveTo(240, 163); ctx.lineTo(278, 163); ctx.lineTo(470, 300); ctx.lineTo(50, 300); ctx.closePath(); ctx.fill();
       }
+      // les gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
+      H.retro.appliquer(toile, H.retro.taillePour(3));
+      ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       // le nom de ce qu'on survole
       if (survol) {
         ctx.font = "13px 'Suez One', serif";
@@ -1117,6 +1107,7 @@
         ctx.fillRect(0, 0, b.toile.width, b.toile.height);
       }
     }
+    H.retro.appliquer(b.toile, H.retro.taillePour(3));
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 
@@ -1246,12 +1237,11 @@
         bouton("Continuer la balade", () => { fin.hidden = true; deroulerBalade(compagnons); }),
         bouton("Rentrer à la maison", () => H.aller("maison"))
       );
-      c.append(
-        H.el("h1", null, titre),
-        H.el("div.cadre-balade", null, toile),
-        H.el("div.pastilles.actions-balade", null, bain, sortir),
-        fin
-      );
+      c.append(H.el("div.cadre-balade", { "aria-label": titre },
+        toile,
+        H.el("a.sortie-maison", { href: "#maison", title: "Rentrer à la maison" }, "‹ Maison"),
+        H.el("div.pastilles.actions-balade", null, bain, sortir, fin)
+      ));
       balade = { toile, fin, bain, sortir, s: scene(toile, compagnons) };
       dessinerBalade();
       setTimeout(() => balade && deroulerBalade(compagnons), 700);

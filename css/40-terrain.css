@@ -309,3 +309,19 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 .bulle-plante .nom-bulle { font-weight: 600; line-height: 1.2; }
 .bulle-plante .latin-bulle { font-size: 0.8rem; opacity: 0.75; line-height: 1.2; }
 .bulle-plante .etat-bulle { font-family: var(--terrain); font-size: 0.7rem; opacity: 0.85; margin-top: 2px; }
+
+/* les scènes en plein écran (ferme, balade) : pas d'en-tête, pas de papier autour */
+:root:is([data-vue="village"], [data-vue="balade"]) #entete, :root:is([data-vue="village"], [data-vue="balade"]) #ciel { display: none !important; }
+:root:is([data-vue="village"], [data-vue="balade"]) body { background: #23214a; }
+:root:is([data-vue="village"], [data-vue="balade"]) #vue { padding: 0; max-width: none; }
+:root[data-vue="village"] .liens-village, :root[data-vue="village"] .nouvelles { display: none; }
+:root[data-vue="village"] .village { border: 0; border-radius: 0; position: relative; margin: 0 auto; max-width: calc(100vh / 0.6); }
+.pastilles-scene { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: 10px; display: flex; gap: 6px; z-index: 2; }
+.pastille-scene {
+  font: 0.85rem "Suez One", var(--texte); color: #f2f0e8; text-decoration: none; cursor: pointer;
+  background: rgba(35, 33, 74, 0.72); border: 0; border-radius: 999px; padding: 3px 12px 4px;
+}
+.pastille-scene:hover, .pastille-scene:focus-visible { background: #23214a; outline: 2px solid #ff5b4f; }
+:root[data-vue="balade"] .cadre-balade { position: relative; min-height: 100vh; display: grid; align-content: center; }
+:root[data-vue="balade"] .actions-balade { position: absolute; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); justify-content: center; z-index: 2; }
+:root[data-vue="balade"] .actions-balade .bouton { background: rgba(35, 33, 74, 0.82); color: #f2f0e8; border-color: #f2f0e8; }
