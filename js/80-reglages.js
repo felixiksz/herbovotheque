@@ -93,7 +93,7 @@
             H.musique.changerStyle();
           },
         }, Object.entries(H.musique.STYLES).map(([id, nom]) => H.el("option", { value: id, selected: (H.local.styleMusique || "eno") === id }, nom)))),
-      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + ". Sur iPhone, si on n’entend rien, vérifie le volume du téléphone."),
+      H.el("p.discret", null, "La musique suit la météo du lieu : en ce moment, " + H.musique.description() + "."),
       H.el("div.volumes", null,
         H.VOLUMES.map(([cat, nom]) => {
           const sortie = H.el("span.valeur-volume", null, Math.round(H.volume(cat) * 100) + " %");

@@ -67,11 +67,12 @@
     { id: "serre", hash: "serre", nom: "Serre", i: 17, j: 13, w: 3, d: 4, h: 11, genre: "serre" },
     { id: "lettres", hash: "lettres", nom: "Boîte aux lettres", i: 9, j: 17, w: 1, d: 1, h: 0, genre: "boite" },
     { id: "ponton", hash: "terrain", nom: "Ponton vers les îles", i: 23, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
+    { id: "poules", nom: "Poulailler", i: 16, j: 8, w: 2, d: 1, h: 7, genre: "poulailler" },
   ];
   const parId = Object.fromEntries(MAISONS.map((m) => [m.id, m]));
   const porte = (m) => [m.i + m.w / 2, m.j + m.d + 0.7];
   const LIENS = [["maison", "herbo"], ["maison", "cartes"], ["maison", "labo"], ["maison", "serre"], ["maison", "lettres"], ["maison", "ponton"],
-    ["herbo", "cartes"], ["cartes", "serre"], ["herbo", "labo"], ["serre", "ponton"], ["labo", "lettres"]];
+    ["herbo", "cartes"], ["cartes", "serre"], ["herbo", "labo"], ["serre", "ponton"], ["labo", "lettres"], ["maison", "poules"]];
   // la grille des passages, en demi-cases : on ne traverse ni les maisons ni l'eau
   const RG = 2, G = N * RG;
   const occupe = (x, y, marge) => MAISONS.some((m) => m.genre !== "ponton" && x > m.i - marge && x < m.i + m.w + marge && y > m.j - marge && y < m.j + m.d + marge);
@@ -119,7 +120,9 @@
   }
   const surChemin = (x, y, marge) => chemins.some((c) => c.pts.some(([px, py]) => Math.hypot(px - x, py - y) < (marge || 1)));
   const dansMaison = (x, y) => MAISONS.some((m) => x > m.i - 1 && x < m.i + m.w + 1 && y > m.j - 1 && y < m.j + m.d + 1.8);
-  const dansJardin = () => false;
+  // la cour des poules, devant le poulailler : de l'herbe rase, pas d'arbres
+  const COUR = { x0: 14.8, x1: 20.2, y0: 7, y1: 12.4 };
+  const dansJardin = (x, y) => x > COUR.x0 && x < COUR.x1 && y > COUR.y0 && y < COUR.y1;
 
 
   // --- aménager : des objets posés et des sols peints, rangés avec les éléments de la ferme ---
@@ -180,8 +183,9 @@
   const plantes = [];
   for (let n = 0; n < 420 && plantes.length < 150; n++) {
     const x = 0.6 + alea() * (N - 1.2), y = 0.6 + alea() * (N - 1.2), e = ESPECES[Math.floor(alea() * ESPECES.length)];
-    if (dansMaison(x, y) || dansJardin(x, y) || surChemin(x, y, 1.2)) continue;
     const grand = e === "pin" || e === "cedre" || e === "araucaria";
+    // les grands arbres restent assez loin de la cour pour que leur feuillage ne cache pas les poules
+    if (dansMaison(x, y) || dansJardin(x, y) || (grand && (dansJardin(x - 1.5, y - 1.5) || dansJardin(x - 3, y - 3))) || surChemin(x, y, 1.2)) continue;
     if (plantes.some((p) => Math.hypot(p.x - x, p.y - y) < (grand ? 2 : 0.9))) continue;
     plantes.push({ x, y, e, v: Math.floor(alea() * 3), fleur: e === "agave" && alea() < 0.08 });
   }
@@ -333,6 +337,29 @@
         // le drapeau levé : une lettre attend
         if (drapeau) { for (let y = 0; y < 5; y++) pixel(c, w / 2 + 3, h - 20 + y, "#e04bb0"); pixel(c, w / 2 + 4, h - 20, "#e04bb0"); pixel(c, w / 2 + 5, h - 20, "#e04bb0"); pixel(c, w / 2 + 4, h - 19, "#e04bb0"); }
         else for (let x = 0; x < 4; x++) pixel(c, w / 2 + 3 + x, h - 12, "#e04bb0");
+        return;
+      }
+      if (m.genre === "poulailler") {
+        const lev = 4, T = { clair: "#f3f0dc", ombre: "#c9c4b0", trait: "#7a6a56", grain: "#e9e3cd" };
+        for (const [x, y] of [[ox - m.d * 8 + 1, oy - m.d * 4], [ox, oy], [ox + m.w * 8 - 1, oy - m.w * 4]]) ligne(c, x, y, x, y - lev, "#4b3427");
+        const { A, B, C, D } = boiteIso(c, ox, oy - lev, m.w, m.d, m.h, T);
+        for (let k = 2; k < m.h; k += 2) ligne(c, B[0] + 1, B[1] - k, C[0] - 1, C[1] - k, cote < 0 ? "#e9e3cd" : "#b8ae94");
+        // une lucarne grillagée sur le long côté
+        const lx = B[0] + (C[0] - B[0]) * 0.55, ly = B[1] + (C[1] - B[1]) * 0.55 - m.h + 2;
+        for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 3; dy++) pixel(c, lx + dx, ly + dy - Math.round(dx * 0.5), (dx + dy) % 2 ? "#4b3427" : nuit ? "#f6ee55" : "#6b6578");
+        // la porte ronde et la rampe à barreaux qui descend jusqu'à l'herbe
+        const px = Math.round(A[0] + (B[0] - A[0]) * 0.5), py = Math.round(A[1] + (B[1] - A[1]) * 0.5);
+        ovale(c, px, py - 3, 2, 3, "#4b3427");
+        const bx = px - 7, by = py + lev + 3;
+        for (let k = 0; k <= 7; k++) { const x = Math.round(px + (bx - px) * k / 7), y = Math.round(py + (by - py) * k / 7); pixel(c, x, y, "#9a6a3c"); pixel(c, x + 1, y, "#b9834f"); pixel(c, x, y + 1, "#7a4520"); }
+        // le toit à deux pans, rouge
+        const H2 = m.h, fh = 6;
+        const P = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - H2 - fh], Q = [(C[0] + D[0]) / 2, (C[1] + D[1]) / 2 - H2 - fh];
+        const a = [A[0] - 1, A[1] - H2], b = [B[0], B[1] - H2 + 1], cc = [C[0] + 1, C[1] - H2], dd = [D[0], D[1] - H2];
+        remplir(c, [dd, a, P, Q], "#c93f6e"); contour(c, [dd, a, P, Q], "#7a2e1e");
+        remplir(c, [a, b, P], T.clair); contour(c, [a, b, P], T.trait);
+        remplir(c, [b, cc, Q, P], "#ff5b4f"); contour(c, [b, cc, Q, P], "#7a2e1e");
+        for (let k = 1; k < 3; k++) { const u = k / 3; ligne(c, b[0] + (P[0] - b[0]) * u, b[1] + (P[1] - b[1]) * u, cc[0] + (Q[0] - cc[0]) * u, cc[1] + (Q[1] - cc[1]) * u, "#c93f6e"); }
         return;
       }
       if (m.genre === "ponton") {
@@ -519,46 +546,89 @@
 
   // ƟvƟ en pixels : boucles brunes, lunettes, chemise rouge, salopette bleue
   const OVO = ["..hhhh..", ".hhhhhh.", ".hssssh.", ".haaaah.", "..ssss..", ".rrbbrr.", ".rbbbbr.", "..bbbb..", "..b..b..", "..n..n.."];
-  const OVO2 = OVO.slice(0, 8).concat(["..b..b..", ".n....n."]);
+  // la marche, en quatre images : jambes et bras alternés, et le corps qui monte d'un pixel
+  const PAS_JAMBES = [["..b..b..", "..n..n.."], [".b...b..", ".n....n."], ["..b..b..", "..n..n.."], ["..b...b.", ".n....n."]];
+  const PAS_BRAS = [null, ["rrbbrr..", ".rbbbbr."], null, ["..rrbbrr", ".rbbbbr."]];
+  function marche(g, f) {
+    if (!f) return { g, monte: 0 };
+    const k = f % 4, r = g.slice();
+    [r[8], r[9]] = PAS_JAMBES[k];
+    if (PAS_BRAS[k]) { r[5] = r[5].replace(/^.rrbbrr.$/, PAS_BRAS[k][0]); }
+    return { g: r, monte: k % 2 ? 1 : 0 };
+  }
   const PAL = { h: "#3b2416", s: "#f2c29b", a: "#9a9a9a", r: "#e03a3a", b: "#3a5fd0", n: "#7a4520" };
   function dessinOvo(c, x, y, image) {
-    const g = image ? OVO2 : OVO;
-    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL[ch]) pixel(c, x - 4 + i, y - g.length + j, PAL[ch]); }));
+    const { g, monte } = marche(OVO, image);
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL[ch]) pixel(c, x - 4 + i, y - g.length + j - (j < 8 ? monte : 0), PAL[ch]); }));
   }
   // Mesi, toute petite : mulet châtain, lunettes, chemise verte
   const MESI = ["..cccc..", ".cccccc.", ".cssssc.", ".cqqqqc.", "..ssss..", ".ggbbgg.", ".gbbbbg.", "..bbbb..", "..b..b..", "..n..n.."];
   const PAL_MESI = { c: "#8a4b22", s: "#f2c29b", q: "#ee9a7e", g: "#3aa04a", b: "#3a5fd0", n: "#7a4520" };
-  function dessinMesi(c, x, y) { MESI.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_MESI[ch]) pixel(c, x - 4 + i, y - MESI.length + j, PAL_MESI[ch]); })); }
-  // Lóló, la peluche caramel (assez grand pour qu'on le voie bien), avec Mémé roulée sur son dos ;
-  // deux images pour le pas
+  function dessinMesi(c, x, y, image) {
+    const { g, monte } = marche(MESI.map((l) => l.replace(/g/g, "r")), image);
+    g.forEach((l, j) => [...l].forEach((ch, i) => { const col = ch === "r" ? PAL_MESI.g : PAL_MESI[ch]; if (col) pixel(c, x - 4 + i, y - g.length + j - (j < 8 ? monte : 0), col); }));
+  }
+  // Lóló, la peluche caramel, avec Mémé roulée en boule sur son dos (cernée d'encre, le ventre
+  // clair, pour qu'on la voie bien) ; la queue part de la croupe et retombe en souplesse.
+  // Les jambes sont dessinées à part, pour le pas : quatre images, et le corps qui monte et descend.
   const LOLO = [
-    "...............kk...",
-    "..............kMk...",
-    ".............kMnnk..",
-    "............kMnwnnk.",
-    "............kMnnnnnk",
-    "...tTt.....kMnnkkkk.",
-    "..tTtTt...kMnnnk....",
-    "MkkkkkkkkkMnnnnk....",
-    "Mknnnnnnnnnnnnnk....",
-    "MknnnnnnnnnnnnnK....",
-    ".kKnnnnnnnnnnnKk....",
-    "..kKKKKKKKKKKKk.....",
-    "..kn.kn....kn.kn....",
-    "..kn.kn....kn.kn....",
-    "..kn.kn....kn.kn....",
-    "..NN.NN....NN.NN....",
+    ".................kk.....",
+    "................kMnk....",
+    "...............kMnnnk...",
+    "..............kMnwnnnk..",
+    "..............kMnnnennk.",
+    "......o.o....kMnnnnnnnk.",
+    ".....otoTo...kMnnkkkkk..",
+    "....otttTtoo.kMnnk......",
+    "....ouutTtTtokMnnk......",
+    "..kMkooooooooMnnnk......",
+    ".kMMknnnnnnnnnnnnk......",
+    ".kMknnnnnnnnnnnnnk......",
+    "kMk.knnnnnnnnnnnKk......",
+    "kMk..kKKKKKKKKKKk.......",
+    ".k......................",
   ];
-  const LOLO2 = LOLO.slice(0, 12).concat([
-    "..kn..kn..kn..kn....",
-    "...kn.kn..kn.kn.....",
-    "...kn..kn.kn.kn.....",
-    "...NN..NN.NN.NN.....",
-  ]);
-  const PAL_LOLO = { k: "#7a4520", K: "#9a6a3c", n: "#b9834f", N: "#4b3427", M: "#4b3427", w: "#f3f0dc", t: "#c9ad8a", T: "#6b5442" };
-  function dessinLolo(c, x, y, image, gauche) {
-    const g = image ? LOLO2 : LOLO;
-    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_LOLO[ch]) pixel(c, gauche ? x + 10 - i : x - 10 + i, y - g.length + j, PAL_LOLO[ch]); }));
+  // les quatre jambes (arrière, arrière, avant, avant) : où elles partent, et de combien le sabot avance
+  const JAMBES = [5, 8, 13, 16];
+  const FOULEES = [[0, 0, 0, 0], [-1, 1, 1, -1], [0, 0, 0, 0], [1, -1, -1, 1]];
+  const PAL_LOLO = { k: "#5a3418", K: "#9a6a3c", n: "#c08850", N: "#3e2210", M: "#3e2210", w: "#f3f0dc", e: "#1b1d4a", o: "#2a2246", t: "#d8bf98", T: "#6b5442", u: "#f3ead8" };
+  function dessinLolo(c, x, y, image, gauche, sansMeme) {
+    const f = image === false || image == null ? 0 : image, monte = f % 2 ? 1 : 0, haut = LOLO.length + 4;
+    const px = (i, j, col) => pixel(c, gauche ? x + 11 - i : x - 12 + i, y - haut + j, col);
+    LOLO.forEach((l, j) => [...l].forEach((ch, i) => {
+      if (!PAL_LOLO[ch]) return;
+      if (sansMeme && "otTu".includes(ch)) { if (j === 9 && ch === "o") px(i, j - monte, PAL_LOLO.k); return; }
+      px(i, j - monte, PAL_LOLO[ch]);
+    }));
+    // les jambes : trois pixels de jambe, puis le sabot
+    JAMBES.forEach((x0, n) => {
+      const d = FOULEES[f % 4][n];
+      for (let r = 0; r < 4; r++) {
+        const xx = x0 + Math.round((d * r) / 3), yy = 14 + r - (r === 0 ? monte : 0);
+        if (r < 3) { px(xx, yy, PAL_LOLO.k); px(xx + 1, yy, n % 2 ? PAL_LOLO.K : PAL_LOLO.n); }
+        else { px(xx, yy, PAL_LOLO.N); px(xx + 1, yy, PAL_LOLO.N); }
+      }
+    });
+  }
+  // Mémé, la chatte tigrée, qui trottine (les yeux toujours fermés)
+  const MEME = ["t.t......", "tkt....T.", "ttTtTtTT.", ".tTtTtTt.", ".t.t..t.t"];
+  const MEME2 = MEME.slice(0, 4).concat(["..t.t.t.."]);
+  const PAL_MEME = { t: "#c9ad8a", T: "#6b5442", k: "#4b3427" };
+  function dessinMeme(c, x, y, image, gauche) {
+    const g = image && image % 2 ? MEME2 : MEME;
+    if (image && image % 2) y -= 1;
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_MEME[ch]) pixel(c, gauche ? x - 4 + i : x + 4 - i, y - g.length + j, PAL_MEME[ch]); }));
+  }
+  // les poules : rousse, blanche, noire et grise ; une image debout, une qui picore
+  const POULE = [".r.....", "yeH..T.", ".HHHHT.", "..HWWH.", "..HHH..", "...l.l."];
+  const POULE_PICORE = [".......", ".....T.", "rHHHHT.", "yeHWWH.", "..HHH..", "...l.l."];
+  const POULE_PAS = POULE.slice(0, 5).concat(["..l..l."]);
+  const ROBES = [["#c96a3a", "#9a6a3c", "#7a4520"], ["#f3f0dc", "#c9c4b0", "#9a9a9a"], ["#3a3a6a", "#23214a", "#2a2c6a"], ["#b8b6cc", "#9a9a9a", "#6b6578"], ["#d9824f", "#b2552e", "#7a4520"]];
+  function dessinPoule(c, x, y, p, image) {
+    const g = p.picore && image ? POULE_PICORE : p.marche && image ? POULE_PAS : POULE, [H0, W0, T0] = ROBES[p.robe];
+    if (p.marche && image) x += p.gauche ? -1 : 1;
+    const pal = { r: "#ff5b4f", y: "#e9b44c", e: "#23214a", H: H0, W: W0, T: T0, l: "#e9b44c" };
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (pal[ch]) pixel(c, p.gauche ? x - 3 + i : x + 3 - i, y - g.length + j, pal[ch]); }));
   }
   // les objets posés en aménageant
   function dessinObjet(c, e, x, y) {
@@ -571,19 +641,45 @@
       ovale(c, x, y - 3, 4, 3, null, (dx, dy) => (hash(x + dx, y + dy) < 0.15 ? fleur : dy < 0 ? "#4aa63e" : "#2f6b35"));
     }
   }
-  // --- le fond : le ciel en bandes, deux rangées de montagnes bleuies, la forêt, la mer ---
+  // Le ciel : un dégradé lisse mais toujours en pixels. Entre deux couleurs voisines, on passe par
+  // des teintes intermédiaires, et d'une teinte à l'autre les pixels se mélangent en damier
+  // (une trame ordonnée 4 × 4, comme sur les vieilles consoles) au lieu de bandes franches.
+  const TRAME = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const rvb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  function cielTrame(couleurs, hauteur, total) {
+    const largeur = fond.width, PAS = 4; // 4 teintes entre deux couleurs : 17 teintes en tout
+    const teintes = [];
+    for (let k = 0; k < couleurs.length - 1; k++) {
+      const [a, b] = [rvb(couleurs[k]), rvb(couleurs[k + 1])];
+      for (let n = 0; n < PAS; n++) teintes.push(a.map((v, i) => Math.round(v + (b[i] - v) * (n / PAS))));
+    }
+    teintes.push(rvb(couleurs[couleurs.length - 1]));
+    const img = fc.createImageData(largeur, total);
+    for (let y = 0; y < total; y++) {
+      const v = Math.min(1, y / hauteur) * (teintes.length - 1);
+      const bas = Math.floor(v), frac = v - bas;
+      for (let x = 0; x < largeur; x++) {
+        const t = teintes[frac * 16 > TRAME[(y & 3) * 4 + (x & 3)] + 0.5 ? Math.min(bas + 1, teintes.length - 1) : bas];
+        const o = (y * largeur + x) * 4;
+        img.data[o] = t[0]; img.data[o + 1] = t[1]; img.data[o + 2] = t[2]; img.data[o + 3] = 255;
+      }
+    }
+    fc.putImageData(img, 0, 0);
+  }
+
+  // --- le fond : le ciel, deux rangées de montagnes bleuies, la forêt, la mer ---
   let fond = null, fc = null;
   function peindreFond() {
     [fond, fc] = toileDe(W + 80, Math.max(Ht + 40, 220));
     const CIELS = {
-      aube: ["#3a3aa8", "#8a58cc", "#d07ab8", "#ffb3a8", "#ffd23a"],
-      matin: ["#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec"],
-      midi: ["#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec"],
-      apres: ["#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#d6eef7"],
-      crepuscule: ["#2a2c6a", "#5b3c8f", "#c93f6e", "#ff5b4f", "#e9b44c"],
-      nuit: ["#15124a", "#1b1d4a", "#232a63", "#2a2c6a", "#3a3aa8"],
+      aube: ["#2a2c6a", "#3a3aa8", "#8a58cc", "#d07ab8", "#ffb3a8", "#ffd2c0", "#ffd23a"],
+      matin: ["#2a7ad8", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec", "#d6eef7"],
+      midi: ["#2370d0", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec", "#c8e6f2"],
+      apres: ["#2a7ad8", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#a8d8ec", "#d6eef7", "#f3f0dc"],
+      crepuscule: ["#1b1d4a", "#2a2c6a", "#5b3c8f", "#c93f6e", "#ff5b4f", "#ff9a5a", "#e9b44c"],
+      nuit: ["#0f0d3a", "#15124a", "#1b1d4a", "#232a63", "#2a2c6a", "#323a8a", "#3a3aa8"],
     };
-    CIELS[periode].forEach((col, k) => { fc.fillStyle = col; fc.fillRect(0, k * 12, W + 80, 12); });
+    cielTrame(CIELS[periode], 66, 92);
     if (nuit) for (let k = 0; k < 50; k++) pixel(fc, hash(k, 1) * (W + 80), hash(1, k) * hash(k, 2) * 60, "#f3f0dc");
     else for (const [x, y] of [[40, 14], [180, 8], [270, 18]]) { ovale(fc, x, y, 14, 3, periode === "crepuscule" ? "#ffb3a8" : "#f3f0dc"); ovale(fc, x + 6, y - 3, 8, 3, periode === "crepuscule" ? "#ffd23a" : "#ffffff"); }
     // les calanques : des crêtes de calcaire découpées, des à-pics, une face au soleil, une à
@@ -661,6 +757,143 @@
     return { astre: "lune", u, periode: "nuit", cote: u < 0.45 ? -1 : 1, nuit: true, phase: s.lune.phase };
   }
 
+  // --- les poules ---
+  // Le jour, elles picorent dans la cour. Le soir (après 15 h, quand le soleil est bas), Mémé
+  // descend du dos de Lóló, passe derrière elles et les pousse jusqu'au poulailler, puis remonte.
+  // La nuit et avant l'aube, elles dorment dedans. Elles pondent un œuf toutes les deux heures et
+  // demie (six au plus) : Mesi va les chercher pour faire des crêpes.
+  const PONTE = 2.5 * 3600e3, OEUFS_MAX = 6, OEUFS_CREPE = 3;
+  const aujourdhui = () => new Date().toDateString();
+  function heurePoules() {
+    const s = H.ciel.etat(), h = new Date().getHours(), soir = h >= 15 && s.soleil.alt < 3;
+    return { jour: s.soleil.alt > 0 && !soir && !H.ciel.nuitCalme(), soir: soir && !H.ciel.nuitCalme() };
+  }
+  function oeufs() {
+    const ramasse = (H.jeu.poules || {}).ramasse || H.maintenant() - OEUFS_CREPE * PONTE;
+    return Math.max(0, Math.min(OEUFS_MAX, Math.floor((H.maintenant() - ramasse) / PONTE)));
+  }
+  const dansCour = (x, y) => dansJardin(x, y) && !occupe(x, y, 0.4) && x > COUR.x0 + 0.4 && x < COUR.x1 - 0.4 && y > COUR.y0 + 0.4 && y < COUR.y1 - 0.4;
+  function placeDansCour() {
+    for (let n = 0; n < 40; n++) { const x = COUR.x0 + alea() * (COUR.x1 - COUR.x0), y = COUR.y0 + alea() * (COUR.y1 - COUR.y0); if (dansCour(x, y)) return [x, y]; }
+    return porte(parId.poules);
+  }
+  function nouvellesPoules() {
+    const { jour } = heurePoules(), rentreesCeSoir = H.local.poulesRentrees === aujourdhui();
+    const dehors = jour || (new Date().getHours() >= 15 && !rentreesCeSoir && heurePoules().soir);
+    return ROBES.map((_, k) => { const [x, y] = placeDansCour(); return { x, y, robe: k, dedans: !dehors, attente: 0, gauche: alea() < 0.5 }; });
+  }
+  function bouger(o, cx, cy, v) {
+    const dx = cx - o.x, dy = cy - o.y, d = Math.hypot(dx, dy);
+    if (d < v) { o.x = cx; o.y = cy; return true; }
+    o.x += (dx / d) * v; o.y += (dy / d) * v;
+    if (Math.abs(dx - dy) > 0.01) o.gauche = dx - dy < 0;
+    return false;
+  }
+  function majPoules(t) {
+    const poules = scene.poules, { jour, soir } = heurePoules(), pc = porte(parId.poules), lo = scene.lolo;
+    const dehors = poules.filter((p) => !p.dedans);
+    // le matin, elles sortent une à une par la rampe
+    if (jour && !scene.rentree) poules.forEach((p, k) => { if (p.dedans && !p.sortie) { p.sortie = t + 800 + k * 1300; } if (p.dedans && p.sortie && t > p.sortie) { p.dedans = false; p.sortie = 0; [p.x, p.y] = pc; p.attente = 0; } });
+    // le soir : Mémé les fait rentrer
+    if (!jour && soir && dehors.length && !scene.rentree && H.local.poulesRentrees !== aujourdhui()) {
+      const depart = lo.x != null ? [lo.x + 0.3, lo.y] : porte(parId.maison);
+      scene.rentree = { phase: "va", meme: { x: depart[0], y: depart[1], gauche: false } };
+    }
+    const r = scene.rentree;
+    if (r) {
+      const m = r.meme, reste = poules.filter((p) => !p.dedans);
+      const centre = reste.length ? [reste.reduce((a, p) => a + p.x, 0) / reste.length, reste.reduce((a, p) => a + p.y, 0) / reste.length] : pc;
+      const loin = Math.hypot(centre[0] - pc[0], centre[1] - pc[1]) || 1;
+      const derriere = [centre[0] + ((centre[0] - pc[0]) / loin) * 1.2, centre[1] + ((centre[1] - pc[1]) / loin) * 1.2];
+      m.marche = true;
+      if (r.phase === "va") { if (bouger(m, derriere[0], derriere[1], 0.045)) r.phase = "pousse"; }
+      else if (r.phase === "pousse") {
+        bouger(m, derriere[0], derriere[1], 0.02);
+        for (const p of reste) {
+          p.marche = true; p.picore = false;
+          if (bouger(p, pc[0] + Math.sin(t / 300 + p.robe) * 0.05, pc[1], 0.016 + p.robe * 0.002) || Math.hypot(p.x - pc[0], p.y - pc[1]) < 0.2) {
+            p.dedans = true;
+            if (Math.random() < 0.5) H.sons.poule(0, 0.3);
+          }
+        }
+        if (!reste.length) r.phase = "revient";
+      } else if (r.phase === "revient") {
+        const cible = lo.x != null ? [lo.x + 0.3, lo.y] : porte(parId.maison);
+        if (bouger(m, cible[0], cible[1], 0.045)) { scene.rentree = null; H.d.majLocal((l) => (l.poulesRentrees = aujourdhui())); }
+      }
+      return;
+    }
+    if (!jour) return;
+    // la journée : elles vont et viennent, s'arrêtent, picorent ; de temps en temps, l'une caquette
+    for (const p of dehors) {
+      if (t < p.attente) { p.marche = false; continue; }
+      if (!p.cible) {
+        p.cible = placeDansCour();
+        if (Math.hypot(p.cible[0] - p.x, p.cible[1] - p.y) > 2.5) p.cible = [p.x + (p.cible[0] - p.x) * 0.4, p.y + (p.cible[1] - p.y) * 0.4];
+        p.picore = false;
+      }
+      p.marche = true;
+      if (bouger(p, p.cible[0], p.cible[1], 0.012)) { p.cible = null; p.marche = false; p.picore = Math.random() < 0.7; p.attente = t + 1200 + Math.random() * 3800; }
+    }
+    if (!scene.caquet) scene.caquet = t + 4000 + Math.random() * 8000;
+    if (t > scene.caquet && dehors.length) {
+      const p = dehors[Math.floor(Math.random() * dehors.length)], [x] = iso(p.x, p.y);
+      H.sons.poule(Math.max(-1, Math.min(1, (x - scene.cam.x - W / 2) / (W / 2))), 0.2);
+      scene.caquet = t + 9000 + Math.random() * 16000;
+    }
+  }
+
+  // Mesi va chercher les œufs au poulailler, puis rentre faire des crêpes au chocolat fondu
+  async function poulailler() {
+    if (!scene || scene.mesiVa) return;
+    const { jour } = heurePoules(), n = oeufs();
+    if (!jour && scene.poules.every((p) => p.dedans)) {
+      await H.dialogue.dire([{ qui: "ovo", texte: "Chut… les poules dorment. On reviendra demain matin pour les œufs." }]);
+      return;
+    }
+    if (n < OEUFS_CREPE) {
+      await H.dialogue.dire([{ qui: "ovo", texte: n ? (n > 1 ? "Seulement " + n + " œufs pour l’instant." : "Un seul œuf pour l’instant.") + " Il en faut trois pour les crêpes, on repassera." : "Pas encore d’œuf. Les poules picorent, on repassera plus tard." }]);
+      return;
+    }
+    const c = chemins.find((x) => x.a === "maison" && x.b === "poules");
+    const pts = [];
+    for (let u = 0; u <= 1; u += 0.1 / c.long) pts.push(point(c, u));
+    scene.mesiVa = { pts, i: 0, retour: false };
+  }
+  function majMesi() {
+    const v = scene.mesiVa;
+    if (!v) return;
+    v.i = Math.min(v.pts.length - 1, v.i + 0.5);
+    const k = v.retour ? v.pts.length - 1 - Math.floor(v.i) : Math.floor(v.i);
+    const [x, y] = v.pts[k], avant = v.pos;
+    v.pos = [x, y];
+    if (avant) v.gauche = (x - avant[0]) - (y - avant[1]) < 0;
+    if (v.i < v.pts.length - 1 || v.pause) return;
+    if (v.retour) { scene.mesiVa = null; return; }
+    v.pause = true;
+    const n = oeufs(), crepes = Math.floor(n / OEUFS_CREPE);
+    H.sons.poule(0, 0);
+    H.dialogue.dire([
+      { qui: "luigi", texte: n + " œufs tout chauds ! Je rentre faire " + (crepes > 1 ? crepes + " crêpes" : "une crêpe") + " au chocolat fondu." },
+      { qui: "ovo", texte: H.histoires.auHasard(["Avec double chocolat ?", "Je mets la table !", "Merci les poules !"]) },
+    ]).then(() => {
+      H.ressources.ajouter("crepe", crepes);
+      H.jeu.poules = Object.assign({}, H.jeu.poules, { ramasse: H.maintenant() - (n % OEUFS_CREPE) * PONTE });
+      H.d.changer("jeu");
+      H.toast(crepes > 1 ? "+" + crepes + " crêpes au chocolat fondu" : "+1 crêpe au chocolat fondu");
+      if (scene && scene.mesiVa === v) Object.assign(v, { retour: true, i: 0, pause: false });
+    });
+  }
+
+  // l'heure et le temps qu'il fait au lieu choisi, en petit dans un coin
+  function majHeureMeteo() {
+    if (!scene) return;
+    const m = H.ciel.meteo, lieu = (H.jeu.lieu && H.jeu.lieu.nom) || "Marseille";
+    const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    scene.heureMeteo.textContent = [heure, m && m.temperature != null ? m.temperature + " °C" : null, m && m.libelle ? m.libelle.toLowerCase() : null, lieu].filter(Boolean).join(" · ");
+  }
+  H.sur("meteo", majHeureMeteo);
+
   // --- la scène ---
   let scene = null, galopDejaVu = false;
   const laboActif = () => !!(H.labo && H.labo.enCours && H.labo.enCours());
@@ -712,6 +945,7 @@
     scene.ovo.lieu = id;
     H.d.majLocal((l) => (l.dernierLieu = id));
     if (m && m.hash) H.aller(m.hash);
+    if (id === "poules") poulailler();
   }
 
   function dessiner(t) {
@@ -765,8 +999,13 @@
       lo.gauche = tx < lo.x;
       lo.x += (tx - lo.x) * 0.2; lo.y += (ty - lo.y) * 0.2;
     } else lo.marche = false;
+    majPoules(t);
+    majMesi();
     // tout ce qui se dresse, trié du fond vers le devant
     const objets = [];
+    for (const p of scene.poules) if (!p.dedans) objets.push({ prof: p.x + p.y, poule: p });
+    if (scene.rentree) objets.push({ prof: scene.rentree.meme.x + scene.rentree.meme.y, meme: scene.rentree.meme });
+    if (scene.mesiVa && scene.mesiVa.pos) objets.push({ prof: scene.mesiVa.pos[0] + scene.mesiVa.pos[1] + 0.03, mesiVa: scene.mesiVa });
     for (const p of plantes) objets.push({ prof: p.x + p.y, p });
     for (const m of MAISONS) objets.push({ prof: m.i + m.w + m.j + m.d, m });
     for (const e of elementsIso()) if (e.type) objets.push({ prof: e.i + e.j, e });
@@ -774,7 +1013,7 @@
     if (lo.x != null) objets.push({ prof: lo.x + lo.y + 0.01, lolo: true });
     const soir = (H.ciel.etat().soleil.alt < 3 && new Date().getHours() >= 15) || H.ciel.nuitCalme();
     const pm = porte(parId.maison);
-    if (soir) objets.push({ prof: pm[0] + pm[1] - 0.6 + 0.5, mesi: true });
+    if (soir && !scene.mesiVa) objets.push({ prof: pm[0] + pm[1] - 0.6 + 0.5, mesi: true });
     objets.sort((a, b) => a.prof - b.prof);
     // les ombres portées, comme celles d'un modèle en relief
     {
@@ -804,7 +1043,7 @@
       ctx.drawImage(ombres, 0, 0);
       ctx.globalAlpha = 1;
     }
-    const pas = Math.floor(t / 150) % 2;
+    const pas = Math.floor(t / 150) % 2, temps = Math.floor(t / 110) % 4;
     for (const o of objets) {
       if (o.p) { const s = dessinPlante(o.p), [x, y] = iso(o.p.x, o.p.y); ctx.drawImage(s, Math.round(x - s.width / 2) - cx, Math.round(y + 4 - s.height) - cy); }
       else if (o.m) {
@@ -813,9 +1052,12 @@
         ctx.drawImage(s, px, py);
         m.posSprite = [px, py];
       } else if (o.e) { const [x, y] = iso(o.e.i, o.e.j); dessinObjet(ctx, o.e, Math.round(x) - cx, Math.round(y) + 4 - cy); }
-      else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet && pas); }
-      else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.marche && pas, lo.gauche); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
-      else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
+      else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet ? temps : 0); }
+      else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.marche ? Math.floor(t / (lo.course ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
+      else if (o.poule) { const [x, y] = iso(o.poule.x, o.poule.y); dessinPoule(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.poule, Math.floor(t / (o.poule.picore ? 260 : 170) + o.poule.robe) % 2); }
+      else if (o.meme) { const [x, y] = iso(o.meme.x, o.meme.y); dessinMeme(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.meme.marche ? temps : 0, o.meme.gauche); }
+      else if (o.mesiVa) { const [x, y] = iso(o.mesiVa.pos[0], o.mesiVa.pos[1]); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
+      else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.mesiVa.pause ? 0 : temps); }
     }
     // un filet de fumée sort du tuyau de poêle du labo, quand une préparation est en cours
     const labo = parId.labo;
@@ -844,7 +1086,7 @@
     const montre = scene.survol || scene.choisi;
     if (montre) {
       const [x0, y0] = iso(montre.i + montre.w / 2, montre.j + montre.d / 2);
-      scene.etiquette.textContent = montre.nom;
+      scene.etiquette.textContent = montre.id === "poules" ? montre.nom + (heurePoules().jour ? " · " + (oeufs() === 1 ? "1 œuf" : oeufs() + " œufs") : " · les poules dorment") : montre.nom;
       scene.etiquette.style.left = (x0 - cx) * scene.k + "px";
       scene.etiquette.style.top = Math.max(14, y0 - cy - 34) * scene.k + "px";
       scene.etiquette.hidden = false;
@@ -949,7 +1191,8 @@
       const boite = H.el("div.village");
       const toile = H.el("canvas.toile-village", { "aria-label": "La ferme" });
       const etiquette = H.el("div.etiquette-ferme", { hidden: true });
-      boite.append(toile, etiquette, H.el("div.pastilles-scene", null,
+      const heureMeteo = H.el("div.heure-ferme", { "aria-live": "off" });
+      boite.append(toile, etiquette, heureMeteo, H.el("div.pastilles-scene", null,
         H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
         H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
       ));
@@ -957,6 +1200,10 @@
       const depart = H.ciel.nuitCalme() ? "maison" : H.local.dernierLieu && parId[H.local.dernierLieu] ? H.local.dernierLieu : "maison";
       const [px, py] = porte(parId[depart]);
       scene = { boite, toile, etiquette, cam: { x: 0, y: 0 }, ovo: { x: px, y: py, trajet: null, i: 0, lieu: depart }, traces: [], lolo: { x: null, y: null } };
+      scene.poules = nouvellesPoules();
+      scene.heureMeteo = heureMeteo;
+      majHeureMeteo();
+      scene.minuteur = setInterval(majHeureMeteo, 20e3);
       dimensionner();
       peindreSol(); peindreSol2();
       const [sx, sy] = iso(px, py);
@@ -976,7 +1223,7 @@
       toile.addEventListener("pointermove", (e) => {
         const p = pos(e);
         if (e.pointerType === "mouse") scene.pointeur = p;
-        scene.surLolo = !!(scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 11 && p.y > scene.lolo.ecran[1] - 17 && p.y < scene.lolo.ecran[1] + 2);
+        scene.surLolo = !!(scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 12 && p.y > scene.lolo.ecran[1] - 19 && p.y < scene.lolo.ecran[1] + 2);
         if (scene.amenager && scene.peint) {
           const a = scene.amenager;
           if (a.prise) { const [i, j] = versMonde(p.x, p.y); Object.assign(a.prise, { i, j }); }
@@ -993,7 +1240,7 @@
         if (scene.amenager) return;
         const p = pos(e);
         // toucher Lóló : il parle (astuces, plantes du moment)
-        if (scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 11 && p.y > scene.lolo.ecran[1] - 17 && p.y < scene.lolo.ecran[1] + 2) {
+        if (scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 12 && p.y > scene.lolo.ecran[1] - 19 && p.y < scene.lolo.ecran[1] + 2) {
           if (!H.$(".dialogue")) H.lolo.parler(null);
           return;
         }
@@ -1019,6 +1266,7 @@
     quitter() {
       if (!scene) return;
       cancelAnimationFrame(scene.anim);
+      clearInterval(scene.minuteur);
       if (scene.obs) scene.obs.disconnect();
       scene = null;
     },

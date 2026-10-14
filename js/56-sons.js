@@ -493,6 +493,53 @@
     });
   }
 
+  // Les poules : quelques « cot » courts et nasillards, et parfois un « codêêt » qui monte puis retombe.
+  function cot(t, f, d, vol, pan) {
+    const o = ctx.createOscillator(), bp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(f * 1.25, t);
+    o.frequency.exponentialRampToValueAtTime(f, t + d * 0.35);
+    o.frequency.exponentialRampToValueAtTime(f * 0.8, t + d);
+    bp.type = "bandpass"; bp.frequency.value = 1300; bp.Q.value = 2.5;
+    lp.type = "lowpass"; lp.frequency.value = 3200;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.setTargetAtTime(0.0001, t + d * 0.6, d * 0.25);
+    o.connect(bp).connect(lp).connect(g);
+    if (p) { p.pan.value = pan; g.connect(p).connect(H.audio.sortie()); } else g.connect(H.audio.sortie());
+    o.start(t);
+    o.stop(t + d + 0.2);
+  }
+  function codet(t, f, vol, pan) {
+    const o = ctx.createOscillator(), bp = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.linearRampToValueAtTime(f * 1.45, t + 0.12);
+    o.frequency.linearRampToValueAtTime(f * 1.1, t + 0.4);
+    lfo.frequency.value = 28; lg.gain.value = f * 0.03;
+    lfo.connect(lg).connect(o.frequency);
+    bp.type = "bandpass"; bp.frequency.value = 1500; bp.Q.value = 2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.setTargetAtTime(0.0001, t + 0.32, 0.06);
+    o.connect(bp).connect(g);
+    if (p) { p.pan.value = pan; g.connect(p).connect(H.audio.sortie()); } else g.connect(H.audio.sortie());
+    o.start(t); lfo.start(t);
+    o.stop(t + 0.6); lfo.stop(t + 0.6);
+  }
+  // pan : de -1 (à gauche) à 1 (à droite) ; loin : de 0 à 1
+  function poule(pan, loin) {
+    if (!actif() || !contexte()) return;
+    const v = 0.05 * H.volume("bruitages") * (1 - 0.6 * (loin || 0)), f = 520 + Math.random() * 160;
+    let t = ctx.currentTime + 0.05;
+    const n = 2 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < n; k++) { cot(t, f * (0.95 + Math.random() * 0.1), 0.09, v, pan || 0); t += 0.16 + Math.random() * 0.14; }
+    if (Math.random() < 0.4) codet(t + 0.05, f * 1.1, v * 0.9, pan || 0);
+  }
+  H.sons.poule = poule;
+
   // Les oiseaux de nuit : le hibou (un « ouh-hou » grave, en deux notes) et la chouette hulotte
   // (un long « hou… », un silence, puis « hou-hou-houuuu » qui chevrote), chacun de son côté.
   function noteHibou(t, f, d, vol, pan, vibrato) {

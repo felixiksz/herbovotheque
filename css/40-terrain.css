@@ -415,3 +415,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
   font: 1.35rem/1.1 var(--menu-police); color: var(--menu-trait); background: var(--menu-fond); padding: 0 10px 1px;
   box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 5px 5px 0 6px rgba(15, 16, 53, 0.6); }
 .etiquette-ferme[hidden] { display: none; }
+
+/* l'heure et la météo du lieu, en petit, dans le coin de la ferme */
+.heure-ferme { position: absolute; left: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; pointer-events: none;
+  font: 1.15rem/1 var(--menu-police); color: var(--menu-trait); background: rgba(27, 29, 74, 0.72); padding: 3px 8px 4px; }
