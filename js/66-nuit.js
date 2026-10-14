@@ -93,9 +93,9 @@
   // Mesi, ƟvƟ, Lóló et Mémé sont là ; la fenêtre suit le ciel (nuages, étoiles, vraie lune).
   const ENCRE = "#23214a";
   const MOMENTS = {
-    jour: { murG: "#5fb44f", murD: "#d5dc6a", sol: "#efe4d3", plinthe: "#c9b9a2", lampe: true },
-    soir: { murG: "#478f3d", murD: "#b9bf55", sol: "#dccdb8", plinthe: "#b3a28b", lampe: true },
-    nuit: { murG: "#2f6136", murD: "#858a45", sol: "#b9aa95", plinthe: "#968670", lampe: true },
+    jour: { murG: "#4aa63e", murD: "#c6cf55", sol: "#c93f6e", plinthe: "#a8325b", lampe: true },
+    soir: { murG: "#3f8a42", murD: "#a9b34a", sol: "#b2365f", plinthe: "#8e2a4e", lampe: true },
+    nuit: { murG: "#2f6b35", murD: "#858a45", sol: "#9a2f55", plinthe: "#7a2444", lampe: true },
   };
   function momentMaison() {
     const alt = H.ciel.etat().soleil.alt;
@@ -143,22 +143,29 @@
   // La lumière de la lampe, à la manière des pochettes : des aplats aux bords nets, plus clairs
   // vers la lampe, un éventail au mur au-dessus de l'abat-jour et une flaque sur le sol. Elle est
   // toujours allumée ; le soir et la nuit, elle se voit d'autant plus que la pièce est sombre.
-  function lumiereLampe(ctx, moment) {
-    const k = moment === "nuit" ? 1.5 : moment === "soir" ? 1.2 : 1;
+  // partie « fond » : sur le mur et le sol, derrière les meubles ; partie « dessus » : un reflet
+  // léger sur les meubles et les personnages, qui ne les délave pas
+  function lumiereLampe(ctx, moment, partie) {
+    const k = moment === "nuit" ? 1.25 : moment === "soir" ? 1.1 : 1;
     const aplat = (pts, a, c) => {
       ctx.beginPath();
-      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      pts.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.closePath();
-      ctx.fillStyle = "rgba(" + (c || "255,228,90") + "," + Math.min(0.7, a * k) + ")";
+      ctx.fillStyle = "rgba(" + c + "," + Math.min(0.9, a * k) + ")";
       ctx.fill();
     };
-    aplat([[247, 141], [271, 141], [306, 52], [212, 52]], 0.16, "255,240,150");
-    aplat([[240, 163], [278, 163], [470, 300], [50, 300]], 0.2);
-    aplat([[246, 163], [272, 163], [392, 300], [128, 300]], 0.16, "255,244,170");
-    ctx.beginPath(); ctx.ellipse(259, 300, 186, 15, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255,236,130," + Math.min(0.6, 0.16 * k) + ")";
-    ctx.fill();
+    if (partie === "dessus") {
+      aplat([[240, 163], [278, 163], [430, 232], [88, 232]], 0.14, "255,226,90");
+      return;
+    }
+    // un éventail au mur au-dessus de l'abat-jour, le cône jaune franc jusqu'au sol
+    aplat([[247, 141], [271, 141], [306, 52], [212, 52]], 0.34, "255,226,70");
+    aplat([[240, 163], [278, 163], [430, 232], [88, 232]], 0.62, "255,221,60");
+    // et là où la lumière touche le sol magenta, une flaque corail
+    aplat([[88, 232], [430, 232], [520, 360], [10, 360]], 0.66, "255,91,79");
   }
+
+
 
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
   function decorMaison(w, h, dpr, moment) {
@@ -178,7 +185,8 @@
     ctx.beginPath(); ctx.moveTo(214, 0); ctx.lineTo(214, 230); ctx.stroke();
     // le sol en terrazzo
     ctx.fillStyle = M.sol; ctx.fillRect(0, 230, 640, 130);
-    const eclats = ["#ff5b4f", "#3d5ee8", "#ffd23a", "#4aa63e", "#c93f6e", "#23214a", "#ffffff"];
+    // un terrazzo dans les tons du sol magenta, avec quelques éclats vifs
+    const eclats = ["#e04bb0", "#a8325b", "#ff5b4f", "#e04bb0", "#a8325b", "#ffd23a", "#3d5ee8"];
     for (let i = 0; i < 320; i++) {
       const x = r() * 640, y = 234 + r() * 126, t = 1.2 + r() * 3.2;
       ctx.fillStyle = eclats[Math.floor(r() * eclats.length)];
@@ -192,10 +200,12 @@
     ctx.beginPath(); ctx.moveTo(0, 232); ctx.lineTo(640, 232); ctx.stroke();
     // le tapis rond, rose, sous Lóló
     ctx.beginPath(); ctx.ellipse(338, 322, 118, 22, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#c93f6e"; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(338, 322, 96, 15, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = "#ffb3a8"; ctx.stroke(); ctx.strokeStyle = ENCRE;
+    ctx.strokeStyle = "#7f97f2"; ctx.stroke(); ctx.strokeStyle = ENCRE;
 
+    // la lumière de la lampe sur le mur et le sol, derrière les meubles
+    if (M.lampe) lumiereLampe(ctx, moment, "fond");
     // la fenêtre : volets bleus, encadrement, rebord et géraniums
     bloc(ctx, 266, 40, 26, 102, 6, "#3d5ee8");
     bloc(ctx, 376, 40, 26, 102, 6, "#3d5ee8");
@@ -274,7 +284,7 @@
       ctx.fillRect(0, 0, 640, 360);
       ctx.restore();
     }
-    if (M.lampe) lumiereLampe(ctx, moment);
+    if (M.lampe) lumiereLampe(ctx, moment, "dessus");
     return c;
   }
 
@@ -685,7 +695,7 @@
         cc.fillStyle = moment === "nuit" ? "rgba(20,18,64,0.42)" : "rgba(40,30,90,0.22)";
         cc.fillRect(0, 0, 640, 360);
       }
-      lumiereLampe(cc, moment);
+      lumiereLampe(cc, moment, "dessus");
       cc.globalCompositeOperation = "source-over";
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);

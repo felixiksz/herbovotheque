@@ -4,19 +4,24 @@
 // et les fenêtres ne passent pas par là : ils restent nets.
 (function () {
   const H = window.H;
+  // d'après les pochettes de Betonkust (Parallel B, Center Parcs, Hotel Breukelen, Sent Items,
+  // Concrete Coast) : des fonds très sombres mais jamais noirs (marine, indigo, vert profond)
+  // contre des couleurs claires et saturées ; ni noir ni blanc absolus
   const PALETTE = [
-    // encres et nuits
-    "#23214a", "#15124a", "#2a2c6a", "#3a3aa8", "#8a58cc", "#d07ab8",
-    // ciels et mer
-    "#2f8fe0", "#7cc4f0", "#a9dcf7", "#d6eef7", "#12aec4", "#0d8fae", "#26406a",
-    // papier, calcaire, gris
-    "#ffffff", "#f2f0e8", "#e6dfcf", "#c9c1ae", "#9e9585", "#6b6578",
+    // les sombres : marine, indigo, nuit, vert profond, brun
+    "#1b1d4a", "#232a63", "#2a2c6a", "#3a3aa8", "#1e3d25", "#4b3427",
+    // les ciels et l'eau
+    "#2f8fe0", "#6fb6ee", "#a8d8ec", "#d6eef7", "#12aec4", "#0d8fae", "#26406a",
+    // les clairs : crème, calcaire, gris de route
+    "#f3f0dc", "#e9e3cd", "#c9c9c4", "#9a9a9a",
     // jaunes, corail, rouges, roses, peau
-    "#fff06a", "#ffd23a", "#e9b44c", "#ff5b4f", "#e8714a", "#e03a3a", "#c93f6e", "#ffb3a8", "#f2c29b", "#d9a07a",
-    // verts
-    "#d5dc6a", "#9cc77a", "#5fb44f", "#3f8a42", "#2f7a3e", "#1f6b34", "#173a26",
+    "#f6ee55", "#ffd23a", "#e9b44c", "#ff5b4f", "#e8714a", "#d23a2a", "#c93f6e", "#e04bb0", "#ffb3a8", "#f2c29b", "#d9a07a",
+    // violets
+    "#5b3c8f", "#8a58cc", "#d07ab8",
+    // verts : chartreuse, prairie, garrigue, pin
+    "#c6cf55", "#9cc77a", "#6cbd5c", "#4aa63e", "#3f8a42", "#2f6b35",
     // bruns et terre rouge
-    "#b9834f", "#9a6a3c", "#7a4520", "#4b3427", "#c96a3a",
+    "#b9834f", "#9a6a3c", "#7a4520", "#c96a3a",
     // outremer
     "#3d5ee8", "#7f97f2",
   ].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
@@ -61,8 +66,11 @@
     for (let y = 0, i = 0; y < sh; y++) {
       for (let x = 0; x < sw; x++, i += 4) {
         if (d[i + 3] < 10) continue;
+        // un peu plus saturé et contrasté, comme les pochettes, avant de choisir la couleur
         const o = TRAME[((y & 3) << 2) | (x & 3)];
-        const r = Math.max(0, Math.min(255, d[i] + o)), g = Math.max(0, Math.min(255, d[i + 1] + o)), b = Math.max(0, Math.min(255, d[i + 2] + o));
+        const m = (d[i] + d[i + 1] + d[i + 2]) / 3;
+        const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
+        const r = rs(d[i]), g = rs(d[i + 1]), b = rs(d[i + 2]);
         const c = PALETTE[proche(r, g, b)];
         d[i] = c[0];
         d[i + 1] = c[1];

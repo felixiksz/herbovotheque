@@ -913,7 +913,7 @@
     const outil = (id, nom) => H.el("button.bouton.petit" + (a.outil === id ? ".actif" : ""), { type: "button", onclick: () => { a.outil = id; majBarre(); } }, nom);
     const plante = a.plante && H.d.plante(a.plante);
     barre.append(
-      H.el("p.discret", null, "Clique sur la ferme pour poser un élément, ou glisse pour peindre. Tout reste accroché à la maison la plus proche."),
+      H.el("p.discret", null, "Clique sur la ferme pour poser, glisse pour peindre."),
       H.el("div.pastilles", null,
         H.el("button.bouton.petit" + (a.outil === "plante" ? ".actif" : ""), {
           type: "button",
@@ -938,7 +938,7 @@
             peindreFond();
           },
         }, "Annuler le dernier"),
-        H.el("button.bouton.petit.actif", { type: "button", onclick: () => basculerAmenager(false) }, "Terminer"))
+        H.el("button.bouton.petit.terminer", { type: "button", onclick: () => basculerAmenager(false) }, "Terminer"))
     );
     return barre;
   }
@@ -953,7 +953,7 @@
     if (oui) {
       scene.amenager = { outil: "pierre", plante: null, poses: [] };
       scene.barre = barreAmenager();
-      scene.boite.after(scene.barre);
+      scene.boite.appendChild(scene.barre);
       majBarre();
     } else {
       scene.amenager = null;
