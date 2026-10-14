@@ -719,14 +719,18 @@
     // le museau plus clair, et la naseau
     ctx.save(); ctx.clip();
     ctx.beginPath(); ctx.ellipse(-19, 5, 6, 5, 0.2, 0, Math.PI * 2); ctx.fillStyle = clair; ctx.fill();
+    // l'étoile blanche sur le front, assez grande pour rester visible une fois passée en gros
+    // pixels, même dans la pénombre de la chambre
+    ctx.save(); ctx.translate(-9, -2.4); ctx.scale(1.7, 1.7);
+    ctx.beginPath(); ctx.moveTo(-1.8, 0.1); ctx.lineTo(-0.4, -1.7); ctx.lineTo(0.6, -0.1); ctx.lineTo(2.2, -0.3); ctx.lineTo(0.9, 1.3); ctx.lineTo(-1, 1.7); ctx.closePath();
+    ctx.fillStyle = "#ffffff"; ctx.fill();
+    ctx.restore();
     ctx.restore();
     ctx.beginPath(); ctx.ellipse(-20.5, 3.5, 1.5, 1, 0.5, 0, Math.PI * 2); ctx.fillStyle = choco; ctx.fill();
     // la joue ronde
     ctx.beginPath(); ctx.arc(1.5, 3.5, 3.8, 0.4, 2.6); ctx.stroke();
-    // le toupet chocolat entre les oreilles, et la petite étoile blanche sur le front
+    // le toupet chocolat entre les oreilles
     ctx.beginPath(); ctx.moveTo(2, -6.5); ctx.quadraticCurveTo(-3, -9, -6, -4.5); ctx.quadraticCurveTo(-2, -5.5, 1, -4); ctx.closePath(); ctx.fillStyle = choco; ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-9, -3.2); ctx.lineTo(-7.6, -5); ctx.lineTo(-6.6, -3.4); ctx.lineTo(-5, -3.6); ctx.lineTo(-6.3, -2); ctx.lineTo(-8.2, -1.6); ctx.closePath();
-    ctx.fillStyle = "#ffffff"; ctx.fill();
     // l'œil, haut sur le côté de la tête
     if (o.ouvert) {
       ctx.beginPath(); ctx.arc(-2.5, -2, 2, 0, Math.PI * 2); ctx.fillStyle = "#151325"; ctx.fill();

@@ -3,7 +3,8 @@
 (function () {
   const H = window.H;
   const FICHIERS = { miaou: "sons/miaou.mp3", attention: "sons/attention.mp3", pas: "sons/pas.mp3", pluie: "sons/roll.mp3", galop: "sons/galop.mp3",
-    criquets: "sons/criquets.wav", criquetsLoin: "sons/criquets-loin.wav", cigales: "sons/cigales.wav" };
+    criquets: "sons/criquets.wav", criquetsLoin: "sons/criquets-loin.wav", cigales: "sons/cigales.wav",
+    sanglier: "sons/sanglier.wav" };
   const boucles = {};
 
   const actif = () => H.local && H.local.son && document.visibilityState === "visible";

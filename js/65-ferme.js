@@ -936,6 +936,36 @@
     ".....N.N....N.N..",
   ];
   const SANGLIER_PAS = SANGLIER.slice(0, 8).concat(["....n...n..n...n.", ".....n.n....n.n..", "....N...N..N...N."]);
+  // la hure au ras du sol, le groin dans la terre
+  const SANGLIER_FOUILLE = [
+    "......kkkkkk.....",
+    "....kkBbbbbbkk...",
+    "..kkBbbbbbbbbbk..",
+    ".k.kbbbbbbbbbbbk.",
+    "k..kbbbbbbbbbbbbk",
+    "...kbbbbbbbbbbbek",
+    "....kbbkkkkkbbbbs",
+    ".....n.n....n.nwk",
+    ".....n.n....n.n..",
+    ".....N.N....N.N..",
+  ];
+  // la terre retournée par les sangliers s'efface en quatre jours
+  const FOUILLE_DUREE = 4 * 86400e3;
+  function tracesFouilles(c, cx, cy) {
+    const l = H.local.fouilles;
+    if (!l || !l.length) return;
+    for (const f of l) {
+      const age = (H.maintenant() - f.le) / FOUILLE_DUREE;
+      if (age >= 1 || age < 0) continue;
+      const [px, py] = iso(f.x, f.y), x0 = Math.round(px) - cx, y0 = Math.round(py) + 4 - cy;
+      // une plaque sombre et irrégulière, des mottes plus claires ; elle se morcelle en vieillissant
+      ovale(c, x0, y0, 7, 3, null, (dx, dy) => {
+        const v = hash(x0 + dx + f.g, y0 + dy), bord = (dx * dx) / 49 + (dy * dy) / 9;
+        if (v < age * 0.9 + bord * 0.5) return null;
+        return v > 0.93 ? "#7a4520" : v > 0.6 ? "#3e2210" : "#2a1d1b";
+      });
+    }
+  }
   const MARCASSIN = [".rRrRr.", "rRrRrRr", "rRrRrRp", ".n.n.n."];
   const MARCASSIN_PAS = MARCASSIN.slice(0, 3).concat(["n.n..n."]);
   const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#3e2210", N: "#1b1414", k: "#2a1d1b", b: "#6b5442", B: "#8a7258", e: "#c9b090", s: "#b8a090", r: "#b9834f", R: "#7a4520", p: "#9a9a9a" };
@@ -951,7 +981,18 @@
     const pts = passage(a, b), cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const espece = Math.random() < 0.55 ? "renard" : "sanglier";
-    return { espece, c: { pts, cum, long: cum[cum.length - 1] }, u: 0, petits: espece === "sanglier" && Math.random() < 0.6 ? 2 + Math.floor(Math.random() * 2) : 0, pause: 0 };
+    const v = { espece, c: { pts, cum, long: cum[cum.length - 1] }, u: 0, petits: espece === "sanglier" && Math.random() < 0.6 ? 2 + Math.floor(Math.random() * 2) : 0, pause: 0 };
+    // une fois sur deux, la laie s'arrête au pied d'un pin pour retourner la terre (elle cherche
+    // des champignons) : on prend le pin le plus proche du chemin, entre le premier et le dernier quart
+    if (espece === "sanglier" && Math.random() < 0.5) {
+      let mieux = null;
+      for (let q = 0.2; q <= 0.8; q += 0.02) {
+        const [x, y] = point(v.c, q);
+        for (const p of plantes) if (p.e === "pin") { const d = Math.hypot(p.x - x, p.y - y); if (d < 1.6 && (!mieux || d < mieux.d)) mieux = { d, q, p }; }
+      }
+      if (mieux) v.fouille = { u: mieux.q, x: mieux.p.x, y: mieux.p.y };
+    }
+    return v;
   }
   function majVisiteur(t, nuitDehors) {
     if (!nuitDehors || scene.amenager) { scene.visiteur = null; scene.prochainVisiteur = null; return; }
@@ -959,12 +1000,20 @@
     if (!scene.visiteur && t > scene.prochainVisiteur) scene.visiteur = nouveauVisiteur();
     const v = scene.visiteur;
     if (!v) return;
-    // les sangliers trottent bruyamment, comme Lóló : au début de la traversée et à mi-chemin ;
-    // la laie suivie de ses marcassins fait plus de bruit
-    if (v.espece === "sanglier" && H.sons && H.sons.jouer) {
-      const vol = 0.22 + 0.1 * v.petits;
-      if (!v.bruit1 && v.u > 0.02) { v.bruit1 = true; H.sons.jouer("galop", vol); }
-      if (!v.bruit2 && v.u > 0.5) { v.bruit2 = true; H.sons.jouer("galop", vol * 0.9); }
+    // les pas lourds des sangliers, tant qu'ils marchent ; la laie suivie de ses marcassins fait
+    // plus de bruit
+    if (v.espece === "sanglier" && H.sons && H.sons.jouer && t >= v.pause && v.u > 0.02 && v.u < 1 && t > (v.prochainBruit || 0)) {
+      H.sons.jouer("sanglier", 0.3 + 0.1 * v.petits);
+      v.prochainBruit = t + 4400;
+    }
+    // arrivée au pied du pin : elle fouille quelques secondes, et la terre reste retournée
+    if (v.fouille && !v.fouille.fait && v.u >= v.fouille.u) {
+      v.fouille.fait = true;
+      v.pause = t + 5000 + Math.random() * 4000;
+      v.prochainBruit = v.pause;
+      // la terre retournée au pied du tronc, côté qu'on voit (le feuillage cache ce qui est derrière)
+      const trace = { x: v.fouille.x + 0.45, y: v.fouille.y + 0.45, le: H.maintenant(), g: Math.floor(Math.random() * 1000) };
+      H.d.majLocal((l) => { l.fouilles = (l.fouilles || []).filter((f) => H.maintenant() - f.le < FOUILLE_DUREE).concat([trace]).slice(-12); });
     }
     // le renard trotte, s'arrête parfois pour humer l'air ; la laie avance d'un pas lourd
     if (t < v.pause) return;
@@ -1249,6 +1298,7 @@
       }
     }
     ctx.drawImage(sol0, -cx, -cy);
+    tracesFouilles(ctx, cx, cy);
     }
     // Lóló : la première fois, il arrive au galop depuis le bord ; ensuite il suit ƟvƟ
     const lo = scene.lolo;
@@ -1329,6 +1379,8 @@
       else if (o.poule) { const [x, y] = iso(o.poule.x, o.poule.y); dessinPoule(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.poule, Math.floor(t / (o.poule.picore ? 260 : 170) + o.poule.robe) % 2); }
       else if (o.bete) {
         const [x, y] = iso(o.x, o.y), arret = scene.visiteur && t < scene.visiteur.pause, f = !arret && temps % 2;
+        // la laie qui fouille baisse et relève la hure
+        if (arret && o.bete === "sanglier" && scene.visiteur.fouille && scene.visiteur.fouille.fait && Math.floor(t / 240) % 2) { dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 5 - cy, SANGLIER_FOUILLE, o.gauche); continue; }
         const g = o.bete === "renard" ? (f ? RENARD_PAS : RENARD) : o.bete === "sanglier" ? (f ? SANGLIER_PAS : SANGLIER) : (f ? MARCASSIN_PAS : MARCASSIN);
         dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, g, o.gauche);
       }
