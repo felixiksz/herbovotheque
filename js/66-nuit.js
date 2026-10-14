@@ -299,25 +299,11 @@
       ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
     }
 
-    // au-dessus du lit, une photo d'ƟvƟ et Mesi au bord de la mer, dans un cadre en bois naturel
-    {
-      const fx = 66, fy = 58, fw = 96, fh = 72;
-      bloc(ctx, fx, fy, fw, fh, 2, "#c9a878");
-      ctx.fillStyle = "#9a6a3c"; ctx.fillRect(fx + 6, fy + 6, fw - 12, fh - 12);
-      const px = fx + 8, py = fy + 8, pw = fw - 16, ph = fh - 16;
-      ctx.fillStyle = "#6fb6ee"; ctx.fillRect(px, py, pw, ph * 0.5);
-      ctx.fillStyle = "#12aec4"; ctx.fillRect(px, py + ph * 0.5, pw, ph * 0.2);
-      ctx.fillStyle = "#efe8d4"; ctx.fillRect(px, py + ph * 0.7, pw, ph * 0.3);
-      ctx.fillStyle = "#f3f0dc"; ctx.beginPath(); ctx.moveTo(px, py + ph * 0.5); ctx.lineTo(px + pw * 0.35, py + ph * 0.28); ctx.lineTo(px + pw * 0.45, py + ph * 0.5); ctx.fill();
-      ctx.save();
-      ctx.imageSmoothingEnabled = false;
-      const so = H.pixel.sprite("ovo", 0), sm = H.pixel.sprite("luigi", 0), k = (ph - 4) / so.height;
-      ctx.drawImage(sm, px + pw / 2 - so.width * k - 1, py + ph - so.height * k, sm.width * k, sm.height * k);
-      ctx.drawImage(so, px + pw / 2 + 1, py + ph - so.height * k, so.width * k, so.height * k);
-      ctx.restore();
-      ctx.strokeRect(px, py, pw, ph);
-      arrondi(ctx, fx, fy, fw, fh, 2); ctx.stroke();
-    }
+    // au-dessus du lit, deux photos dans des cadres en bois naturel : ƟvƟ et Mesi qui se tiennent
+    // la main au bord de la mer, et Lóló et Mémé qui sourient. Elles sont dessinées case par case,
+    // chaque case tombant pile sur un gros pixel de l'écran, pour que les visages restent nets.
+    photoEncadree(ctx, 24, 56, PHOTO_DUO, w);
+    photoEncadree(ctx, 126, 66, PHOTO_LOLO, w);
 
     // le lit et ses coussins
     bloc(ctx, 22, 150, 16, 94, 7, "#e9b44c");
@@ -379,6 +365,54 @@
     if (M.lampe) lumiereLampe(ctx, moment, "dessus");
     plafonnier(ctx, moment);
     return c;
+  }
+
+  // --- les photos du mur ---
+  const PAL_PHOTO = {
+    C: "#6fb6ee", B: "#a8d8ec", S: "#12aec4", W: "#f3f0dc", Y: "#efe8d4", y: "#ddd2ba", G: "#6cbd5c", g: "#3f8a42",
+    h: "#3b2416", c: "#8a4b22", s: "#f2c29b", a: "#9a9a9a", q: "#ee9a7e", m: "#b8404e", r: "#e03a3a", e: "#3aa04a", b: "#3a5fd0", n: "#7a4520",
+    k: "#5a3418", M: "#3e2210", L: "#c08850", w: "#f3f0dc", E: "#1b1d4a", N: "#3e2210", z: "#3a2216",
+    o: "#2a2246", t: "#d8bf98", T: "#6b5442", u: "#f3ead8", p: "#f4a3b8",
+  };
+  // une grille de cases : chaque ligne a son fond, puis les personnages posés par-dessus
+  function grillePhoto(fonds, poses, largeur) {
+    return fonds.map((f, y) => {
+      const l = (typeof f === "function" ? Array.from({ length: largeur }, (_, x) => f(x)) : Array(largeur).fill(f));
+      for (const [gx, gy, motif] of poses) {
+        const ligne = motif[y - gy];
+        if (ligne) [...ligne].forEach((ch, i) => { if (ch !== ".") l[gx + i] = ch; });
+      }
+      return l.join("");
+    });
+  }
+  // ƟvƟ (boucles brunes, lunettes argentées, chemise rouge) et Mesi (cheveux courts, lunettes pêche,
+  // chemise verte), en salopette, avec un petit sourire ; leurs mains se rejoignent au milieu
+  const OVO_PHOTO = [".hhh.", "hhhhh", "hasah", "hsssh", ".sms.", "rbbbr", "rbbbr", "sbbbs", ".bbb.", ".b.b.", ".n.n."];
+  const MESI_PHOTO = [".ccc.", "ccccc", "cqsqc", ".sss.", ".sms.", "ebbbe", "ebbbe", "sbbbs", ".bbb.", ".b.b.", ".n.n."];
+  const PHOTO_DUO = grillePhoto(
+    ["C", "C", "C", "C", "B", "B", "B", "B", "S", "S", (x) => (x % 2 ? "W" : "S"), "Y", (x) => (x % 5 === 2 ? "y" : "Y"), "Y", (x) => (x % 7 === 4 ? "y" : "Y"), "Y"],
+    [[6, 4, OVO_PHOTO], [13, 4, MESI_PHOTO], [10, 11, ["ssss"]]],
+    24
+  );
+  // Lóló de profil (tête et encolure, l'étoile, le sourire) et Mémé de face, les yeux fermés, qui sourit
+  const LOLO_PHOTO = ["...........", "...kk......", "..kMLk.....", ".kMLLLk....", ".kMLwLLk...", "kMLLLELLk..", "kMLLLLLLLk.", "kMLLLLLLLLk", "kMLLLLLLNLk", ".kMLLLzzLLk", ".kMLLLLLzk.", "..kMLLLLk..", "..kMLLLLk..", "..kMLLLLLk.", "..kMLLLLLk.", "..kMLLLLLk."];
+  const MEME_PHOTO = ["........", "........", "........", "........", "........", ".o....o.", "oTo..oTo", "otttttto", "oTttttTo", "otottoto", "ouuppuuo", "ououuouo", ".ouuuuo.", "otttttto", "oTttttTo", "otttttto"];
+  const PHOTO_LOLO = grillePhoto(
+    ["C", "C", "C", "B", "B", "B", "B", "B", "B", "B", "B", "G", (x) => (x % 4 === 1 ? "g" : "G"), "G", (x) => (x % 3 === 0 ? "g" : "G"), "G"],
+    [[0, 0, LOLO_PHOTO], [12, 0, MEME_PHOTO]],
+    20
+  );
+  function photoEncadree(ctx, x0, y0, grille, largeurToile) {
+    // la taille d'une case : un gros pixel de l'écran (sur les petits écrans, la photo rétrécit)
+    const S = largeurToile / 640, gros = 4 / S, larg = grille[0].length, haut = grille.length;
+    const cell = Math.min(gros, 92 / larg), aligne = (v) => (cell === gros ? Math.round(v / cell) * cell : v);
+    const bord = cell * 2, x = aligne(x0), y = aligne(y0), W2 = larg * cell + bord * 2, H2 = haut * cell + bord * 2;
+    ctx.fillStyle = "#c9a878"; ctx.fillRect(x, y, W2, H2);
+    ctx.fillStyle = "#e0c49a"; ctx.fillRect(x, y, W2, cell);
+    ctx.fillStyle = "#9a6a3c"; ctx.fillRect(x, y + H2 - cell, W2, cell); ctx.fillRect(x + W2 - cell, y, cell, H2);
+    grille.forEach((l, j) => [...l].forEach((ch, i) => { ctx.fillStyle = PAL_PHOTO[ch] || "#a8d8ec"; ctx.fillRect(x + bord + i * cell, y + bord + j * cell, cell + 0.05, cell + 0.05); }));
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+    ctx.strokeRect(x, y, W2, H2);
   }
 
   // Le plafonnier : une boule orange qui pend du plafond au bout d'un fil couleur cuivre,
