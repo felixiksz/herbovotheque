@@ -1,7 +1,7 @@
 // Musique ambiante, à la manière de Brian Eno (Music for Airports) : quelques voix
 // répètent chacune une note à des périodes différentes, qui ne retombent jamais en phase,
 // dans une grande réverbération. Le mode suit la vraie météo du lieu :
-// soleil → lydien (très majeur), nuages → dorien, pluie → éolien (mineur),
+// soleil → majeur, nuages → dorien, pluie → éolien (mineur),
 // orage → phrygien, agité, avec un grondement ; la nuit, tout est plus lent et plus feutré.
 // Elle démarre au premier geste (les navigateurs l'exigent) et se coupe dans les réglages.
 // D'autres styles, au choix dans les réglages : steeldrum, kora, synthwave, vaporwave
@@ -10,7 +10,7 @@
   const H = window.H;
 
   const MODES = {
-    clair: { nom: "soleil, lydien", gamme: [0, 2, 4, 6, 7, 9, 11], fond: 50, clarte: 2600, tempo: 1, attaque: 2.2, duree: 7, densite: 1 },
+    clair: { nom: "soleil, majeur", gamme: [0, 2, 4, 5, 7, 9, 11], fond: 50, clarte: 2600, tempo: 1, attaque: 2.2, duree: 7, densite: 1 },
     voile: { nom: "voilé, ionien", gamme: [0, 2, 4, 5, 7, 9, 11], fond: 50, clarte: 2200, tempo: 1.05, attaque: 2.4, duree: 7, densite: 1 },
     nuages: { nom: "nuageux, dorien", gamme: [0, 2, 3, 5, 7, 9, 10], fond: 48, clarte: 1700, tempo: 1.15, attaque: 2.8, duree: 8, densite: 0.9 },
     brume: { nom: "brume, dorien", gamme: [0, 2, 3, 5, 7, 9, 10], fond: 46, clarte: 1100, tempo: 1.5, attaque: 3.5, duree: 10, densite: 0.6 },
@@ -18,8 +18,10 @@
     neige: { nom: "neige, pentatonique", gamme: [0, 3, 5, 7, 10], fond: 57, clarte: 3200, tempo: 1.6, attaque: 0.05, duree: 5, densite: 0.55, cloche: true },
     orage: { nom: "orage, phrygien agité", gamme: [0, 1, 3, 5, 7, 8, 10], fond: 43, clarte: 1500, tempo: 0.32, attaque: 0.08, duree: 1.6, densite: 1.3, orage: true },
   };
-  // degrés et périodes (en secondes) des voix ; les périodes ne se divisent pas entre elles
-  const VOIX = [[0, 17.8], [2, 20.1], [4, 23.6], [1, 26.3], [5, 29.9], [3, 31.4], [6, 34.0], [7, 39.7]];
+  // degrés et périodes (en secondes) des voix ; les périodes ne se divisent pas entre elles.
+  // Seulement la fondamentale, la tierce, la quinte, la sixte et leurs octaves : aucune seconde
+  // ni septième qui frotte, pour une musique sans tension.
+  const VOIX = [[0, 17.8], [4, 20.1], [2, 23.6], [7, 26.3], [5, 29.9], [9, 31.4], [11, 34.0], [12, 39.7]];
 
   let ctx = null, sortie = null, entree = null, filtre = null, reverb = null;
   let actif = false, minuteur = null, mode = MODES.clair, nuit = false;
@@ -40,6 +42,7 @@
 
   function construire() {
     ctx = H.audio.contexte();
+    caisseKora = null;
     sortie = ctx.createGain();
     sortie.gain.value = 0.0001;
     sortie.connect(H.audio.sortie());
@@ -213,33 +216,83 @@
     o.stop(fin);
     return o;
   }
+  // Une corde pincée (algorithme de Karplus-Strong) : un petit éclat de bruit qui tourne dans une
+  // boucle de la longueur de la corde, adouci à chaque tour. C'est le son d'une harpe en nylon.
+  const cordes = new Map();
+  function corde(f) {
+    const cle = Math.round(f * 10);
+    if (!cordes.has(cle)) {
+      const sr = ctx.sampleRate, P = Math.max(2, Math.round(sr / f - 0.5)), n = Math.floor(sr * 2.4);
+      const b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+      // l'éclat de départ : du bruit adouci (le doigt pince, il ne frappe pas)
+      let prec = 0;
+      for (let i = 0; i < P; i++) { const x = Math.random() * 2 - 1; prec = prec * 0.55 + x * 0.45; d[i] = prec; }
+      // les cordes aiguës s'éteignent plus vite que les graves
+      const amorti = 0.9985 - Math.min(0.004, f / 260000);
+      for (let i = P; i < n; i++) d[i] = amorti * 0.5 * (d[i - P] + d[i - P - 1 < 0 ? 0 : i - P - 1]);
+      cordes.set(cle, { b, f0: sr / (P + 0.5) });
+    }
+    return cordes.get(cle);
+  }
+  let caisseKora = null;
+  function resonanceKora() {
+    // la grande calebasse tendue de peau : des médiums ronds, des aigus un peu feutrés
+    if (!caisseKora) {
+      const corps = ctx.createBiquadFilter(), doux = ctx.createBiquadFilter();
+      corps.type = "peaking"; corps.frequency.value = 240; corps.Q.value = 1.1; corps.gain.value = 5;
+      doux.type = "highshelf"; doux.frequency.value = 3200; doux.gain.value = -6;
+      corps.connect(doux).connect(entree);
+      caisseKora = corps;
+    }
+    return caisseKora;
+  }
   const INSTRUMENTS = {
-    // le steeldrum : fondamentale, octave et douzième, frappe nette, léger glissé vers le bas
-    acier(f, t, vol) {
-      const g = ctx.createGain();
-      enveloppe(g, t, 0.006, vol, 1.3);
+    // Le steelpan de Trinidad : un fût d'acier martelé, frappé avec une baguette gainée de
+    // caoutchouc. Une fondamentale très chantante, l'octave forte, une douzième discrète, deux
+    // fondamentales à peine désaccordées qui battent (le scintillement), et le petit choc de la baguette.
+    acier(f, t, vol, duree) {
+      const g = ctx.createGain(), fin = t + (duree || 1.4);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(vol * 0.35, t + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.0001, fin);
       g.connect(entree);
-      for (const [k, v] of [[1, 1], [2, 0.5], [3, 0.22], [4.2, 0.06]]) {
+      for (const [k, v, det] of [[1, 1, -3], [1, 0.6, 4], [2, 0.55, 0], [3, 0.12, 6], [4.02, 0.05, 0]]) {
         const gg = ctx.createGain();
-        gg.gain.value = v;
+        gg.gain.setValueAtTime(v, t);
+        if (k > 1) gg.gain.exponentialRampToValueAtTime(v * 0.25, t + 0.3);
         gg.connect(g);
-        const o = oscillateur("sine", f * k * 1.012, t, t + 1.5, gg);
-        o.frequency.exponentialRampToValueAtTime(f * k, t + 0.06);
+        oscillateur("sine", f * k, t, fin + 0.05, gg, det);
       }
+      const choc = ctx.createGain(), lp = ctx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 900;
+      enveloppe(choc, t, 0.001, vol * 0.5, 0.025);
+      const src = sourceBruit();
+      src.connect(lp).connect(choc).connect(entree);
+      src.start(t); src.stop(t + 0.05);
     },
-    // la kora : une corde pincée, brillante au départ puis plus ronde
+    // une note tenue au steelpan : on la « roule », baguettes qui alternent très vite
+    roule(f, t, duree, vol) {
+      for (let x = 0, k = 0; x < duree; x += 0.07, k++) INSTRUMENTS.acier(f, t + x, vol * (k ? 0.55 : 1), 0.35);
+    },
+    // la kora : une corde pincée qui résonne dans la calebasse
     kora(f, t, vol) {
-      const g = ctx.createGain(), lp = ctx.createBiquadFilter();
-      lp.type = "lowpass";
-      lp.frequency.setValueAtTime(4200, t);
-      lp.frequency.exponentialRampToValueAtTime(900, t + 0.6);
-      enveloppe(g, t, 0.004, vol, 1.1);
-      lp.connect(g).connect(entree);
-      oscillateur("triangle", f, t, t + 1.3, lp);
-      const g2 = ctx.createGain();
-      g2.gain.value = 0.35;
-      g2.connect(lp);
-      oscillateur("sawtooth", f * 2, t, t + 0.4, g2, 3);
+      const c = corde(f), src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = c.b;
+      src.playbackRate.value = f / c.f0;
+      g.gain.value = vol * 2.2;
+      src.connect(g).connect(resonanceKora());
+      src.start(t);
+      src.stop(t + 2.4);
+    },
+    // l'« iron » du steelband : un tambour de frein frappé avec une tige de fer
+    fer(t, vol) {
+      const g = ctx.createGain(), bp = ctx.createBiquadFilter();
+      bp.type = "bandpass"; bp.frequency.value = 3400; bp.Q.value = 6;
+      enveloppe(g, t, 0.001, vol, 0.09);
+      g.connect(sortie);
+      bp.connect(g);
+      for (const k of [1, 1.47, 2.09]) oscillateur("square", 1150 * k, t, t + 0.12, bp);
     },
     // une nappe de synthé : deux dents de scie désaccordées par note
     nappe(fs, t, duree, vol) {
@@ -322,7 +375,7 @@
   };
   // la hauteur d'un degré de la gamme du moment (octave 0 : autour du do du milieu)
   function degre(d, octave) {
-    const g = mode.gamme, n = g.length, o = Math.floor(d / n);
+    const g = sequence && sequence.S.majeur ? [0, 2, 4, 5, 7, 9, 11] : mode.gamme, n = g.length, o = Math.floor(d / n);
     return hz(mode.fond + 12 + (nuit ? -2 : 0) + 12 * (o + (octave || 0)) + g[((d % n) + n) % n]);
   }
   const accord = (d, n) => [0, 2, 4, 6].slice(0, n || 3).map((k) => d + k);
@@ -330,39 +383,64 @@
 
   const STYLES = {
     eno: { nom: "ambiante, à la Brian Eno" },
+    // Le calypso de Trinidad, joué par un steelband : toujours en majeur, la grille I – IV – V7 – I,
+    // une mélodie syncopée (3 + 3 + 2) jouée en tierces parallèles, les notes longues roulées,
+    // les basses (les grands fûts) sur la fondamentale et la quinte, et l'« iron » qui tient le temps.
     steeldrum: {
-      nom: "steeldrum",
-      bpm: 108, division: 2, clarte: 1.7,
-      pas(n, t, d, e) {
-        const mesure = Math.floor(n / 8) % 4, s = n % 8, racine = [0, 3, 4, 0][mesure];
-        const I = INSTRUMENTS;
-        if (s === 0 || s === 3 || s === 4) I.basse(degre(racine, -2), t, d * 1.6, 0.16, "sine");
-        // la mélodie danse autour des notes de l'accord, avec des contretemps
-        if ([1, 0, 1, 1, 0, 1, 1, 0][s] && hasard() < 0.85) {
-          const cibles = accord(racine);
-          e.m = e.m == null ? racine + 4 : e.m;
-          e.m += Math.round((hasard() - 0.5) * 3);
-          if (hasard() < 0.5) e.m = cibles[Math.floor(hasard() * 3)] + 7;
-          e.m = Math.max(4, Math.min(16, e.m));
-          I.acier(degre(e.m, 0), t, 0.1);
-          if (s === 0) I.acier(degre(e.m, 0), t + d * 0.5, 0.05);
+      nom: "steeldrum, calypso de Trinidad",
+      bpm: 116, division: 2, clarte: 1.7, majeur: true,
+      pas(n, t, d) {
+        const I = INSTRUMENTS, mesure = Math.floor(n / 8) % 8, s = n % 8;
+        const GRILLE = [0, 3, 4, 0, 0, 3, 4, 0], racine = GRILLE[mesure];
+        // la mélodie : [pas, degré, durée en croches] ; deux phrases qui se répondent
+        const MELODIE = [
+          [[0, 4, 1], [3, 4, 1], [4, 5, 1], [6, 4, 2]],
+          [[0, 5, 1], [3, 5, 1], [4, 7, 1], [6, 5, 2]],
+          [[0, 6, 1], [2, 4, 1], [3, 3, 1], [4, 1, 1], [6, 3, 2]],
+          [[0, 2, 6]],
+          [[0, 4, 1], [3, 4, 1], [4, 5, 1], [6, 7, 2]],
+          [[0, 8, 1], [3, 7, 1], [4, 5, 1], [6, 3, 2]],
+          [[0, 4, 1], [2, 6, 1], [3, 5, 1], [4, 3, 1], [6, 1, 2]],
+          [[0, 0, 6]],
+        ][mesure];
+        for (const [pas, deg, long] of MELODIE) {
+          if (pas !== s) continue;
+          const notes = [degre(deg + 7, 0), degre(deg + 5, 0)]; // la mélodie, et sa tierce en dessous
+          if (long >= 2) notes.forEach((f, k) => I.roule(f, t, d * long, k ? 0.05 : 0.075));
+          else notes.forEach((f, k) => I.acier(f, t, k ? 0.05 : 0.08));
         }
-        if (s === 0) accord(racine).forEach((k, i) => I.acier(degre(k, 0), t + i * 0.03, 0.035));
-        I.charley(t, s % 2 ? 0.035 : 0.018);
+        // les accords des pans d'accompagnement, sur les contretemps
+        if (s === 1 || s === 3 || s === 5 || s === 7) [racine, racine + 2, racine + 4].forEach((k) => I.acier(degre(k + 7, -1), t, 0.025, 0.5));
+        // la basse : fondamentale, quinte, fondamentale, et une note de passage vers l'accord suivant
+        const basse = { 0: racine, 3: racine + 4, 4: racine + 7, 6: racine + 4 }[s];
+        if (basse != null) I.acier(degre(basse, -2), t, 0.11, 0.9);
+        // l'iron : toutes les croches, plus fort à contretemps
+        I.fer(t, s % 2 ? 0.05 : 0.025);
       },
     },
+    // La kora des griots mandingues, une harpe à 21 cordes sur une calebasse. On y joue en
+    // 12/8 le kumbengo : une boucle qui tourne sans fin, où le pouce tient la basse et l'index
+    // la mélodie, en s'entrecroisant ; de temps en temps, le birimintingo, une cascade improvisée.
+    // L'accord de la kora (« silaba ») est une gamme majeure ; ici, deux accords qui alternent.
     kora: {
-      nom: "kora",
-      bpm: 84, division: 3, clarte: 1.4,
+      nom: "kora, kumbengo mandingue",
+      bpm: 92, division: 3, clarte: 1.5, majeur: true,
       pas(n, t, d) {
-        const mesure = Math.floor(n / 12) % 4, s = n % 12, racine = [0, 3, 0, 4][mesure];
-        const I = INSTRUMENTS;
-        // le kumbengo : une petite boucle qui tourne, toujours la même, comme une ronde
-        const boucle = [0, 4, 7, 2, 4, 9, 7, 4, 0, 4, 2, 7];
-        I.kora(degre(racine + boucle[s], 0), t, 0.1);
-        if (s === 0 || s === 6) I.kora(degre(racine, -1), t, 0.13);
-        // de temps en temps, une cascade de notes qui descend (le birimintingo)
-        if (mesure === 3 && s >= 6) I.kora(degre(racine + 14 - (s - 6), 0), t + d * 0.5, 0.08);
+        const I = INSTRUMENTS, cycle = Math.floor(n / 12), s = n % 12;
+        const racine = [0, 0, 4, 4, 0, 0, 3, 4][cycle % 8];
+        // le pouce : la basse, sur les temps (fondamentale, quinte, octave, quinte)
+        const pouce = { 0: racine, 3: racine + 4, 6: racine + 7, 9: racine + 4 }[s];
+        if (pouce != null) I.kora(degre(pouce, -1), t, 0.11);
+        // l'index : la petite phrase qui tourne entre les notes du pouce
+        const INDEX = [null, 9, 7, null, 11, 9, null, 8, 9, null, 7, 6];
+        const birimintingo = cycle % 8 === 7 && s >= 4;
+        if (birimintingo) {
+          // la cascade : des notes qui descendent deux fois plus vite
+          for (let k = 0; k < 2; k++) I.kora(degre(racine + 16 - (s - 4) * 2 - k, 0), t + k * d * 0.5, 0.075);
+        } else if (INDEX[s] != null) {
+          const v = cycle % 4 === 3 && s > 6 ? 2 : 0; // une petite variation, une fois sur quatre
+          I.kora(degre(racine + INDEX[s] + v, -1), t, 0.085);
+        }
       },
     },
     synthwave: {
@@ -496,7 +574,8 @@
     // pour les réglages : l'ambiance du moment
     description() {
       choisirMode();
-      return STYLES[styleChoisi()].nom + ", " + mode.nom + (nuit ? ", feutrée pour la nuit" : "");
+      const S = STYLES[styleChoisi()];
+      return S.nom + (S.majeur ? "" : ", " + mode.nom) + (nuit ? ", feutrée pour la nuit" : "");
     },
   };
 
