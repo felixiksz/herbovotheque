@@ -65,7 +65,361 @@
       })));
   }
 
+  // --- l'intérieur du mazet ---------------------------------------------------------------
+  // Entre la pochette et l'aquarelle : des aplats aux formes arrondies cernés d'encre nuit, un
+  // lavis léger sur les murs, un sol en terrazzo et le grain de risographie. Le lit et ses
+  // coussins, la table de chevet et sa lampe (qui éclaire le lit et le canapé), le canapé sous
+  // la fenêtre aux volets bleus, la table, les deux chaises et la plante derrière la chaise.
+  // Mesi, ƟvƟ, Lóló et Mémé sont là ; la fenêtre suit le ciel (nuages, étoiles, vraie lune).
+  const ENCRE = "#23214a";
+  const MOMENTS = {
+    jour: { murG: "#5fb44f", murD: "#d5dc6a", sol: "#efe4d3", plinthe: "#c9b9a2", lampe: false },
+    soir: { murG: "#478f3d", murD: "#b9bf55", sol: "#dccdb8", plinthe: "#b3a28b", lampe: true },
+    nuit: { murG: "#2f6136", murD: "#858a45", sol: "#b9aa95", plinthe: "#968670", lampe: true },
+  };
+  function momentMaison() {
+    const alt = H.ciel.etat().soleil.alt;
+    return alt > 6 ? "jour" : alt > -6 ? "soir" : "nuit";
+  }
+  function arrondi(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    if (ctx.roundRect) return ctx.roundRect(x, y, w, h, r);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function bloc(ctx, x, y, w, h, r, couleur, sansTrait) {
+    arrondi(ctx, x, y, w, h, r);
+    ctx.fillStyle = couleur;
+    ctx.fill();
+    if (!sansTrait) ctx.stroke();
+  }
+  function feuille(ctx, x, y, l, angle, couleur) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(l * 0.5, -l * 0.32, l, 0);
+    ctx.quadraticCurveTo(l * 0.5, l * 0.32, 0, 0);
+    ctx.fillStyle = couleur;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  // la fenêtre en plein cintre, comme dans les mazets
+  function cheminFenetre(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(296, 140);
+    ctx.lineTo(296, 74);
+    ctx.arc(334, 74, 38, Math.PI, 0);
+    ctx.lineTo(372, 140);
+    ctx.closePath();
+  }
+
+  // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
+  function decorMaison(w, h, dpr, moment) {
+    const M = MOMENTS[moment];
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+    const ctx = c.getContext("2d"), S = w / 640, r = H.alea("mazet");
+    ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = ENCRE;
+    ctx.lineWidth = 1.6;
+    // les murs, deux couleurs, avec un lavis d'aquarelle
+    ctx.fillStyle = M.murG; ctx.fillRect(0, 0, 214, 230);
+    ctx.fillStyle = M.murD; ctx.fillRect(214, 0, 426, 230);
+    H.aqua.lavis(ctx, r, [[0, 0], [214, 0], [214, 230], [0, 230]], "#ffffff", { alpha: 0.05, couches: 6, bord: 0.3 });
+    H.aqua.lavis(ctx, r, [[214, 0], [640, 0], [640, 230], [214, 230]], "#ffffff", { alpha: 0.05, couches: 6, bord: 0.3 });
+    ctx.beginPath(); ctx.moveTo(214, 0); ctx.lineTo(214, 230); ctx.stroke();
+    // le sol en terrazzo
+    ctx.fillStyle = M.sol; ctx.fillRect(0, 230, 640, 130);
+    const eclats = ["#ff5b4f", "#3d5ee8", "#ffd23a", "#4aa63e", "#c93f6e", "#23214a", "#ffffff"];
+    for (let i = 0; i < 320; i++) {
+      const x = r() * 640, y = 234 + r() * 126, t = 1.2 + r() * 3.2;
+      ctx.fillStyle = eclats[Math.floor(r() * eclats.length)];
+      ctx.globalAlpha = 0.55 + r() * 0.35;
+      ctx.beginPath();
+      ctx.ellipse(x, y, t, t * (0.5 + r() * 0.4), r() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = M.plinthe; ctx.fillRect(0, 226, 640, 6);
+    ctx.beginPath(); ctx.moveTo(0, 232); ctx.lineTo(640, 232); ctx.stroke();
+    // le tapis rond, rose, sous Lóló
+    ctx.beginPath(); ctx.ellipse(338, 322, 118, 22, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#c93f6e"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(338, 322, 96, 15, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = "#ffb3a8"; ctx.stroke(); ctx.strokeStyle = ENCRE;
+
+    // la fenêtre : volets bleus, encadrement, rebord et géraniums
+    bloc(ctx, 266, 40, 26, 102, 6, "#3d5ee8");
+    bloc(ctx, 376, 40, 26, 102, 6, "#3d5ee8");
+    for (const x of [270, 380]) for (let y = 52; y < 136; y += 12) { ctx.beginPath(); ctx.moveTo(x + 3, y); ctx.lineTo(x + 15, y); ctx.stroke(); }
+    ctx.lineWidth = 7; ctx.strokeStyle = "#f2f0e8"; cheminFenetre(ctx); ctx.stroke();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
+    ctx.save(); ctx.translate(0, 0); cheminFenetre(ctx); ctx.restore();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    cheminFenetre(ctx); ctx.fill();
+    ctx.restore();
+    cheminFenetre(ctx); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(334, 36); ctx.lineTo(334, 140); ctx.moveTo(296, 96); ctx.lineTo(372, 96); ctx.strokeStyle = "#f2f0e8"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
+    bloc(ctx, 286, 138, 96, 8, 3, "#f2f0e8");
+    bloc(ctx, 300, 124, 22, 15, 4, "#c96a3a");
+    bloc(ctx, 346, 124, 22, 15, 4, "#c96a3a");
+    for (const [x, y] of [[305, 118], [313, 113], [318, 120], [351, 117], [358, 112], [364, 119]]) {
+      ctx.beginPath(); ctx.arc(x, y, 4.2, 0, Math.PI * 2); ctx.fillStyle = "#e5333f"; ctx.fill(); ctx.stroke();
+    }
+
+    // le lit et ses coussins
+    bloc(ctx, 22, 150, 16, 94, 7, "#e9b44c");
+    bloc(ctx, 34, 202, 198, 32, 11, "#f2f0e8");
+    bloc(ctx, 74, 196, 160, 40, 13, "#3d5ee8");
+    bloc(ctx, 74, 196, 30, 40, 12, "#7f97f2");
+    bloc(ctx, 40, 182, 42, 23, 11, "#ffffff");
+    bloc(ctx, 64, 187, 40, 21, 10, "#ffb3a8");
+    bloc(ctx, 42, 234, 8, 12, 3, "#e9b44c");
+    bloc(ctx, 218, 234, 8, 12, 3, "#e9b44c");
+
+    // la table de chevet et sa lampe
+    bloc(ctx, 240, 196, 38, 52, 7, "#e9b44c");
+    ctx.beginPath(); ctx.moveTo(244, 220); ctx.lineTo(274, 220); ctx.stroke();
+    ctx.beginPath(); ctx.arc(259, 210, 2.2, 0, Math.PI * 2); ctx.fillStyle = ENCRE; ctx.fill();
+    bloc(ctx, 251, 188, 16, 9, 4, ENCRE, true);
+    ctx.beginPath(); ctx.moveTo(259, 188); ctx.lineTo(259, 162); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(247, 141); ctx.lineTo(271, 141); ctx.quadraticCurveTo(275, 141, 277, 147);
+    ctx.lineTo(280, 160); ctx.quadraticCurveTo(281, 164, 277, 164);
+    ctx.lineTo(241, 164); ctx.quadraticCurveTo(237, 164, 238, 160);
+    ctx.lineTo(241, 147); ctx.quadraticCurveTo(243, 141, 247, 141);
+    ctx.fillStyle = M.lampe ? "#fff06a" : "#ffd23a"; ctx.fill(); ctx.stroke();
+
+    // le canapé corail sous la fenêtre
+    bloc(ctx, 292, 170, 136, 46, 17, "#ff5b4f");
+    bloc(ctx, 304, 180, 36, 30, 11, "#ffd23a");
+    bloc(ctx, 384, 182, 34, 28, 11, "#f2f0e8");
+    bloc(ctx, 286, 206, 148, 30, 13, "#ff7a6b");
+    bloc(ctx, 278, 188, 24, 50, 11, "#ff5b4f");
+    bloc(ctx, 418, 188, 24, 50, 11, "#ff5b4f");
+    bloc(ctx, 292, 236, 8, 9, 3, ENCRE);
+    bloc(ctx, 420, 236, 8, 9, 3, ENCRE);
+
+    // la table et ses deux chaises ; la plante dans son grand pot, derrière la chaise de droite
+    bloc(ctx, 438, 196, 7, 54, 3, "#3d5ee8");
+    bloc(ctx, 436, 246, 38, 8, 3, "#3d5ee8");
+    bloc(ctx, 438, 254, 6, 40, 2, "#3d5ee8");
+    bloc(ctx, 466, 254, 6, 40, 2, "#3d5ee8");
+    bloc(ctx, 468, 212, 134, 11, 4, "#e9b44c");
+    bloc(ctx, 478, 223, 9, 70, 3, "#e9b44c");
+    bloc(ctx, 584, 223, 9, 70, 3, "#e9b44c");
+    bloc(ctx, 526, 201, 13, 12, 3, "#ffffff");
+    ctx.beginPath(); ctx.arc(540, 207, 3.4, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+    for (const [x, y, l, a, c2] of [[618, 238, 46, -1.9, "#2f7a3e"], [618, 238, 54, -1.45, "#4f9a46"], [618, 238, 44, -1.1, "#2f7a3e"], [618, 238, 38, -2.4, "#4f9a46"], [618, 238, 36, -0.7, "#3f8a42"], [618, 200, 34, -1.7, "#3f8a42"], [622, 205, 30, -0.95, "#2f7a3e"], [614, 206, 30, -2.25, "#4f9a46"]]) feuille(ctx, x, y, l, a, c2);
+    ctx.beginPath();
+    ctx.moveTo(600, 236); ctx.lineTo(636, 236); ctx.lineTo(631, 290); ctx.quadraticCurveTo(630, 294, 626, 294);
+    ctx.lineTo(610, 294); ctx.quadraticCurveTo(606, 294, 605, 290); ctx.closePath();
+    ctx.fillStyle = "#c96a3a"; ctx.fill(); ctx.stroke();
+    bloc(ctx, 597, 232, 42, 8, 3, "#d9824f");
+    bloc(ctx, 626, 196, 7, 54, 3, "#3d5ee8");
+    bloc(ctx, 596, 246, 38, 8, 3, "#3d5ee8");
+    bloc(ctx, 598, 254, 6, 40, 2, "#3d5ee8");
+    bloc(ctx, 626, 254, 6, 40, 2, "#3d5ee8");
+
+    // le soir et la nuit, la pièce s'assombrit, sauf là où la lampe éclaire (le lit et le canapé)
+    if (moment !== "jour") {
+      ctx.fillStyle = moment === "nuit" ? "rgba(20,18,64,0.42)" : "rgba(40,30,90,0.22)";
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, 640, 360); cheminFenetre(ctx); ctx.clip("evenodd");
+      ctx.fillRect(0, 0, 640, 360);
+      ctx.restore();
+    }
+    if (M.lampe) {
+      const g = ctx.createRadialGradient(259, 160, 6, 259, 190, 210);
+      g.addColorStop(0, "rgba(255,226,90,0.55)");
+      g.addColorStop(0.55, "rgba(255,214,80,0.22)");
+      g.addColorStop(1, "rgba(255,214,80,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(240, 162); ctx.lineTo(278, 162); ctx.lineTo(460, 300); ctx.lineTo(60, 300); ctx.closePath();
+      ctx.fill();
+    }
+    // le grain de risographie
+    const grain = document.createElement("canvas");
+    grain.width = grain.height = 128;
+    const gc = grain.getContext("2d");
+    for (let i = 0; i < 900; i++) {
+      gc.fillStyle = i % 3 ? "rgba(35,33,74,0.10)" : "rgba(255,255,255,0.14)";
+      gc.fillRect(r() * 128, r() * 128, 1, 1);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = ctx.createPattern(grain, "repeat");
+    ctx.fillRect(0, 0, w, h);
+    return c;
+  }
+
+  // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin de 640 × 360)
+  function zonesMaison(nuit) {
+    return [
+      { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: () => { const b = H.$(".choix-compagnons"); if (b) b.scrollIntoView({ behavior: "smooth", block: "center" }); } },
+      { id: "meme", x: 188, y: 180, w: 44, h: 26, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
+      { id: "lit", x: 22, y: 150, w: 166, h: 96, nom: nuit ? "Aller dormir" : "Le lit", agir: () => (nuit ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
+      { id: "lolo", x: 284, y: 248, w: 104, h: 84, nom: "Un drame de Lóló", agir: () => raconter("lolo") },
+      { id: "canape", x: 278, y: 168, w: 164, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
+      { id: "mesi", x: 502, y: 262, w: 40, h: 60, nom: "Un compliment de Mesi", agir: complimentMesi },
+      { id: "table", x: 466, y: 196, w: 138, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
+        ? crepeMesi(() => H.aller("maison"))
+        : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
+    ];
+  }
+
+  // Mémé roulée en boule au pied du lit, qui respire doucement
+  function memeEnBoule(ctx, x, y, t) {
+    const souffle = 1 + Math.sin(t / 700) * 0.035;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(souffle, 1 / souffle);
+    ctx.beginPath(); ctx.ellipse(0, 0, 19, 10, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#6b5442"; ctx.lineWidth = 2.2;
+    for (const dx of [-8, -1, 6]) { ctx.beginPath(); ctx.moveTo(dx, -9); ctx.quadraticCurveTo(dx + 3, -3, dx, 2); ctx.stroke(); }
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
+    // la queue qui fait le tour, la tête posée dessus, les yeux fermés
+    ctx.beginPath(); ctx.moveTo(16, 4); ctx.quadraticCurveTo(10, 13, -10, 9); ctx.lineWidth = 4.2; ctx.strokeStyle = ENCRE; ctx.stroke();
+    ctx.lineWidth = 2.4; ctx.strokeStyle = "#c9ad8a"; ctx.stroke();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
+    ctx.beginPath(); ctx.ellipse(-13, 1, 8, 7, 0, 0, Math.PI * 2); ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(-13 + s * 2, -5); ctx.lineTo(-13 + s * 6, -10); ctx.lineTo(-13 + s * 7, -3); ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(-17, 1); ctx.quadraticCurveTo(-15.5, 2.5, -14, 1); ctx.moveTo(-12, 1); ctx.quadraticCurveTo(-10.5, 2.5, -9, 1); ctx.stroke();
+    ctx.restore();
+  }
+
+  function sceneMaison(toile) {
+    const ctx = toile.getContext("2d");
+    const nuit = H.ciel.nuitCalme();
+    const zones = zonesMaison(nuit);
+    let decor = null, cle = "", survol = null, derniere = 0;
+    const etoiles = Array.from({ length: 26 }, (_, i) => [296 + ((i * 37) % 76), 36 + ((i * 53) % 100), i % 4]);
+    const zoneSous = (e) => {
+      const r = toile.getBoundingClientRect(), k = 640 / r.width;
+      const x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
+      return zones.find((z) => x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) || null;
+    };
+    toile.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      survol = zoneSous(e);
+      toile.style.cursor = survol ? "pointer" : "default";
+    });
+    toile.addEventListener("pointerleave", () => (survol = null));
+    let pointeur = "mouse";
+    toile.addEventListener("pointerdown", (e) => (pointeur = e.pointerType));
+    // sur téléphone : un premier toucher montre ce que c'est, le second le fait
+    toile.addEventListener("click", (e) => {
+      const z = zoneSous(e);
+      if (!z || H.$(".dialogue")) return;
+      if (pointeur !== "mouse" && survol !== z) {
+        survol = z;
+        return;
+      }
+      survol = null;
+      z.agir();
+    });
+    function image(t) {
+      if (!document.body.contains(toile)) return;
+      requestAnimationFrame(image);
+      if (t - derniere < 66) return;
+      derniere = t;
+      const dpr = Math.min(2, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / 640);
+      const moment = momentMaison();
+      if (cle !== w + "|" + moment + "|" + dpr) {
+        cle = w + "|" + moment + "|" + dpr;
+        toile.width = Math.round(w * dpr);
+        toile.height = Math.round(h * dpr);
+        decor = decorMaison(w, h, dpr, moment);
+      }
+      const S = w / 640;
+      ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+      ctx.clearRect(0, 0, 640, 360);
+      // le ciel dans la fenêtre
+      ctx.save();
+      cheminFenetre(ctx); ctx.clip();
+      const etat = H.ciel.etat();
+      if (moment === "jour") {
+        ctx.fillStyle = "#7cc4f0"; ctx.fillRect(290, 30, 90, 116);
+        ctx.fillStyle = "#ffffff";
+        for (const [v, y, l] of [[0.012, 62, 30], [0.008, 104, 22]]) {
+          const x = 280 + ((t * v) % 130);
+          arrondi(ctx, x, y, l, 9, 4.5); ctx.fill();
+          arrondi(ctx, x + l * 0.25, y - 5, l * 0.5, 9, 4.5); ctx.fill();
+        }
+      } else {
+        const g = ctx.createLinearGradient(0, 36, 0, 140);
+        if (moment === "soir") { g.addColorStop(0, "#5a4ab0"); g.addColorStop(1, "#f29a6b"); }
+        else { g.addColorStop(0, "#131246"); g.addColorStop(1, "#3a3a9a"); }
+        ctx.fillStyle = g; ctx.fillRect(290, 30, 90, 116);
+        for (const [x, y, n] of etoiles) {
+          ctx.fillStyle = "rgba(255,245,230," + (moment === "nuit" ? 0.5 + 0.5 * Math.sin(t / 600 + n * 2 + x) : 0.35) + ")";
+          ctx.fillRect(x, y, 1.6, 1.6);
+        }
+        if (etat.lune.alt > -2 || moment === "nuit") lunePlate(ctx, 352, 62, 10, etat.lune.phase);
+      }
+      ctx.restore();
+      ctx.drawImage(decor, 0, 0, 640, 360);
+      // la vapeur du tilleul
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 2; i++) {
+        const u = ((t / 1600) + i * 0.5) % 1;
+        ctx.globalAlpha = 1 - u;
+        ctx.beginPath();
+        for (let k = 0; k <= 10; k++) {
+          const y = 199 - k * 2.2 - u * 10, x = 530 + i * 5 + Math.sin(k / 2 + t / 400 + i) * 2.2;
+          k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.strokeStyle = ENCRE;
+      ctx.lineWidth = 1.6;
+      memeEnBoule(ctx, 210, 194, t);
+      // Lóló sur le tapis, Mesi près de la table, ƟvƟ à côté d'elle ; un petit souffle chacun·e
+      const bouge = (p) => (Math.sin(t / 900 + p) > 0.6 ? 1 : 0);
+      H.pixel.dessiner(ctx, "loloSeule", 336, 330 - bouge(0), 2.5, 1);
+      H.pixel.dessiner(ctx, "ovo", 466, 322 - bouge(2), 2.2, 0);
+      H.pixel.dessiner(ctx, "luigi", 522, 322 - bouge(4), 2.2, 0);
+      if (moment !== "jour") {
+        const v = 0.04 + 0.03 * Math.sin(t / 170) * Math.sin(t / 430);
+        ctx.fillStyle = "rgba(255,220,90," + v + ")";
+        ctx.beginPath(); ctx.moveTo(240, 162); ctx.lineTo(278, 162); ctx.lineTo(460, 300); ctx.lineTo(60, 300); ctx.closePath(); ctx.fill();
+      }
+      // le nom de ce qu'on survole
+      if (survol) {
+        ctx.font = "13px 'Suez One', serif";
+        const l = ctx.measureText(survol.nom).width + 18;
+        const x = Math.max(4, Math.min(636 - l, survol.x + survol.w / 2 - l / 2)), y = Math.max(4, survol.y - 26);
+        ctx.lineWidth = 1.4;
+        bloc(ctx, x, y, l, 22, 11, "#f2f0e8");
+        ctx.fillStyle = ENCRE;
+        ctx.textBaseline = "middle";
+        ctx.fillText(survol.nom, x + 9, y + 12);
+      }
+    }
+    requestAnimationFrame(image);
+  }
+
   // --- la maison ------------------------------------------------------------------------
+  let toileMaison = null;
   H.vues.maison = {
     afficher(c) {
       const nuit = H.ciel.nuitCalme();
@@ -77,6 +431,8 @@
           : soir
             ? "Mesi t’attend avec une tisane de tilleul. On se retrouve ici chaque soir."
             : "Le mazet est calme. Mesi arrose les géraniums de la fenêtre."),
+        (toileMaison = H.el("canvas.scene-maison", { role: "img", "aria-label": "L’intérieur du mazet : le lit, le canapé sous la fenêtre, la table, Mesi, Lóló et Mémé" })),
+        H.el("p.discret.aide-maison", null, "Clique sur Mesi, Lóló, Mémé, le canapé, la table, la fenêtre ou le lit."),
         H.el("h2", null, "Faire une balade"),
         choixCompagnons(),
         H.el("h2", null, "Écouter une histoire"),
@@ -93,6 +449,7 @@
         nuit ? H.el("div", null, H.el("h2", null, "Bonne nuit"), H.el("div.pastilles", null, bouton("Aller dormir", () => H.aller("dodo/dormir")))) : null,
         H.el("p", null, H.el("a.bouton.discret-bouton", { href: "#village" }, "Retour à la ferme"))
       ));
+      sceneMaison(toileMaison);
     },
   };
 
