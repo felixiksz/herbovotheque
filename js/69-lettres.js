@@ -143,7 +143,7 @@
         H.el("button.bouton", { type: "button", onclick: ecrire }, "Écrire une lettre à " + NOMS[autre()]),
         H.el("span.discret", null, moi() === "mesi" ? "Tes lettres partent dans la boîte de la ferme d’ƟvƟ." : "Les lettres de Mesi arrivent ici. Tu peux lui répondre.")),
       H.el("div.messagerie", null, liste, H.el("div.lecture-mail", null, lecture)),
-      !H.local.jeton ? H.el("p.discret", null, "Pour que les lettres partent vers l’autre appareil, il faut la synchronisation (Réglages, « Mac et iPhone »).") : null
+      !H.local.jeton ? H.el("p.discret", null, "Pour que les lettres partent vers l’autre appareil, il faut la synchronisation (Réglages, « Mac et iPhone »).") : ""
     );
   }
 

@@ -1161,12 +1161,12 @@
     if (bulle.dataset.cle !== cleBulle) {
       bulle.dataset.cle = cleBulle;
       bulle.innerHTML = "";
-      bulle.append(
+      bulle.append(...[
         H.el("img", { src: apercuPlante(p), alt: "" }),
         H.el("span.nom-bulle", null, p.nom),
         p.latin ? H.el("em.latin-bulle", null, p.latin) : null,
         etat ? H.el("span.etat-bulle", null, etat) : null
-      );
+      ].filter(Boolean));
     }
     bulle.hidden = false;
     // à côté du doigt ou du pointeur, sans sortir de l'écran
@@ -1482,11 +1482,12 @@
     const caisse = vue.ile.croquis ? [] : caisseIci(vue.ile, x, y);
     if (caisse.length) {
       const bien = caisse.filter((e) => e.f >= SE_PLAIT), moins = caisse.filter((e) => e.f < SE_PLAIT);
-      vue.panneau.append(
+      // (append écrit « null » en toutes lettres : on ne garde que les morceaux présents)
+      vue.panneau.append(...[
         H.el("p", null, H.el("b", null, "De ta caisse, se plairaient ici : "), bien.length ? bien.map((e) => e.p.nom).join(", ") : "aucune."),
         bien.length ? H.el("div.pastilles", null, bien.map((e) => H.el("button.bouton.petit", { type: "button", onclick: () => { vue.plante = e.p.id; vue.depuisSerre = true; vue.outil = "planter"; dessinerOutils(); dessiner(); } }, "Repiquer " + e.p.nom))) : null,
         moins.length ? H.el("details.caisse-moins", null, H.el("summary.discret", null, "Moins bien ici : " + moins.map((e) => e.p.nom).join(", ")),
-          H.el("ul", null, moins.map((e) => H.el("li", null, H.el("b", null, e.p.nom + " : "), e.raisons.join(" ") || "elle ne serait pas à son aise.")))) : null);
+          H.el("ul", null, moins.map((e) => H.el("li", null, H.el("b", null, e.p.nom + " : "), e.raisons.join(" ") || "elle ne serait pas à son aise.")))) : null].filter(Boolean));
     }
     dessiner();
   }
@@ -1505,7 +1506,7 @@
     P.innerHTML = "";
     const pourcent = Math.round(Math.min(1, ev.facteur) * 100);
     const humeur = pourcent >= 90 ? "Elle se plaît beaucoup ici" : pourcent >= 65 ? "Elle se plaît bien ici" : pourcent >= 40 ? "Elle pousse, mais sans enthousiasme" : "Elle n’est pas vraiment à son aise";
-    P.append(
+    P.append(...[
       H.el("button.bouton.petit.discret-bouton.fermer-panneau", { type: "button", onclick: () => { P.hidden = true; vue.choisie = null; dessiner(); } }, "Fermer"),
       H.el("h3.nom-plante-ile", null, p.nom),
       H.el("p.discret", null,
@@ -1522,7 +1523,7 @@
         ? H.el("p.discret", null, "Améliore le sol autour d’elle : " + p.valeurs.amendeSol.join(", ").toLowerCase() + (pl.solAmende ? " (c’est fait)." : " (une fois adulte depuis un jour)."))
         : null,
       conseilsSol(ile, x, y, p)
-    );
+    ].filter(Boolean));
     const actions = H.el("div.pastilles");
     if (!ile.croquis) {
       const act = (nom, couts, fn, fluo) => actions.appendChild(H.el("button.bouton.petit" + (fluo ? ".actif" : ""), { type: "button", title: cout(couts), onclick: () => { if (payer(couts)) { fn(); sauver(ile); dessiner(); inspecter(x, y); } } }, nom));
