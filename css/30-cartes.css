@@ -7,7 +7,7 @@
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .vue-cartes { max-width: 820px; }
-.cartes-resume { border-top: 1px solid var(--filet); border-bottom: 1px solid var(--filet); padding: 12px 0 14px; margin-bottom: 8px; }
+.cartes-resume { padding: 12px 16px 14px; margin-bottom: 18px; }
 .cartes-resume .chiffres { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; margin: 0 0 12px; }
 .commencer { font-size: 1.05rem; padding: 8px 20px; }
 
@@ -15,10 +15,10 @@
 .bandeau-pause p { margin: 0 0 8px; }
 .bandeau-pause img { image-rendering: pixelated; height: 16px; }
 
-.vue-cartes details { border-bottom: 1px solid var(--filet); padding: 6px 0 12px; }
+.vue-cartes details { padding: 0 16px 14px; }
 .vue-cartes details > summary { list-style: none; cursor: pointer; }
 .vue-cartes details > summary::-webkit-details-marker { display: none; }
-.vue-cartes details > summary h2 { margin: 6px 0 4px; font-size: 1.5rem; }
+.vue-cartes details > summary h2 { margin: 0; font: inherit; }
 .vue-cartes details > summary h2::after { content: " +"; font-family: var(--texte); font-size: 1rem; color: var(--encre-douce); }
 .vue-cartes details[open] > summary h2::after { content: " −"; }
 .vue-cartes details h3 { margin: 12px 0 6px; font-size: 0.95rem; }
@@ -74,3 +74,9 @@
   .stats-ligne { grid-template-columns: minmax(0, 1fr) 60px 3em; }
   .stats-ligne > .discret { display: none; }
 }
+
+/* la touche du clavier, en petit sur les boutons de réponse */
+.touche { display: inline-block; min-width: 1.4em; margin-right: 6px; padding: 0 4px; border: 1.5px solid currentColor; border-radius: 3px;
+  font: 1rem/1.15 var(--menu-police, monospace); text-align: center; opacity: 0.75; }
+.retourner .touche { margin: 0 0 0 8px; }
+@media (hover: none) { .touche { display: none; } }

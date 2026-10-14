@@ -932,6 +932,49 @@
       ctx.closePath();
       ctx.fill();
     }
+    return profilY;
+  }
+  // Les calanques au loin, comme à la ferme et sur les affiches de Cassis : un cap bleui par l'air
+  // qui finit en falaise dans la mer, puis des massifs de calcaire clair, coiffés de pins, avec des
+  // plaques de garrigue sur les pentes ; l'ombre est bleu lilas.
+  const hasardX = (n) => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  function calanquesBalade(ctx, w, base, haut, decal, valeurs, air, nuit, ici) {
+    const C = nuit
+      ? { loin: "#2e3270", clair: "#4a4a82", ombre: "#2a2c6a", pins: ["#1e3d35", "#173a26", "#10241d"], tronc: "#2a1d1b" }
+      : { loin: brume("#94a6d2", 0.35, air), clair: brume(melange("#efe8d4", "#d98a5c", ici), 0.3, air), ombre: brume(melange("#a7b0d0", "#b0583a", ici), 0.3, air), pins: [brume("#4aa63e", 0.3, air), brume("#2f6b35", 0.3, air), brume("#1e3d25", 0.3, air)], tronc: "#7a4520" };
+    // le cap lointain, qui glisse très lentement
+    const periode = w * 2.2, x0 = ((w * 0.5 - decal * 0.4) % periode + periode) % periode - w * 0.3, L = w * 0.55;
+    ctx.fillStyle = C.loin;
+    ctx.beginPath();
+    ctx.moveTo(x0, base);
+    for (let k = 0; k <= 30; k++) { const u = k / 30; ctx.lineTo(x0 + u * L, base - haut * 0.95 * Math.pow(u, 0.75) - Math.sin(u * 9) * 2); }
+    ctx.lineTo(x0 + L + haut * 0.35, base);
+    ctx.closePath();
+    ctx.fill();
+    // les massifs, avec leur face d'ombre
+    const profil = falaisesPlates(ctx, w, base, haut, decal, valeurs, C.clair, C.ombre, 110);
+    // des plaques de garrigue accrochées aux pentes
+    for (let x = 0; x < w; x += 6) {
+      const wx = Math.floor((x + decal) / 6), y = profil(x);
+      if (hasardX(wx) < 0.22) {
+        const yy = y + 6 + hasardX(wx + 7) * (base - y - 10);
+        ctx.fillStyle = C.pins[hasardX(wx + 3) < 0.5 ? 1 : 2];
+        ctx.fillRect(x, yy, 6 + hasardX(wx + 5) * 6, 3);
+      }
+    }
+    // les pins qui coiffent les sommets, et çà et là un pin parasol qui dépasse
+    for (let x = 0; x < w; x += 3) {
+      const y = profil(x), pente = Math.abs(profil(x + 4) - profil(x - 4));
+      if (pente > 7) continue;
+      const wx = Math.floor((x + decal) / 3), ep = 2 + hasardX(wx) * 4;
+      ctx.fillStyle = C.pins[1]; ctx.fillRect(x, y - 1, 3, ep);
+      ctx.fillStyle = C.pins[0]; ctx.fillRect(x, y - 1, 3, 1.5);
+      if (hasardX(wx + 11) < 0.04) {
+        ctx.fillStyle = C.tronc; ctx.fillRect(x + 1, y - 8, 1.5, 8);
+        ctx.fillStyle = C.pins[1]; ctx.fillRect(x - 6, y - 11, 15, 3);
+        ctx.fillStyle = C.pins[0]; ctx.fillRect(x - 4, y - 13, 11, 2);
+      }
+    }
   }
   // des collines lisses (la nuit)
   function collinesPlates(ctx, w, base, haut, decal, valeurs, couleur, pas) {
@@ -1103,12 +1146,7 @@
     // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit ;
     // bleuies par l'air qui les sépare de nous
     const air = nuit ? "#3a3aa8" : alt > 8 ? "#9fcdf0" : H.ciel.teinteCiel(alt, H.ciel.estMatin ? H.ciel.estMatin() : undefined).bas;
-    if (nuit) {
-      collinesPlates(ctx, w, h * 0.58, h * 0.14, avance * 0.1, S.profils.collines, brume("#2a2c6a", 0.25, air), 160);
-    } else {
-      falaisesPlates(ctx, w, h * 0.58, h * 0.26, avance * 0.1, S.profils.falaises, brume(melange("#f4f1e8", "#d98a5c", ici), 0.42, air), brume(melange("#cfc8b8", "#b0583a", ici), 0.48, air), 110);
-      for (let i = 0; i < 9; i++) buissonPlat(ctx, boucler(i * 140 - avance * 0.1, w, 60), h * 0.58, 16, brume("#4a9a4e", 0.5, air));
-    }
+    calanquesBalade(ctx, w, h * 0.58, h * 0.24, avance * 0.1, S.profils.falaises, air, nuit, ici);
     // la mer
     ctx.fillStyle = nuit ? "#26406a" : melange("#12aec4", "#19c1c7", ici);
     ctx.fillRect(0, h * 0.58, w, h * 0.14);
@@ -1123,12 +1161,12 @@
     if (f0 > 0.01 && !nuit) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, f0 * 1.4);
-      falaisesPlates(ctx, w, h * 0.76, h * 0.62, avance * 0.7, S.profils.falaises, brume("#efeadf", 0.1, air), brume("#c9c1ae", 0.12, air), 140);
+      falaisesPlates(ctx, w, h * 0.76, h * 0.62, avance * 0.7, S.profils.falaises, brume("#efe8d4", 0.1, air), brume("#a7b0d0", 0.12, air), 140);
       ctx.restore();
     }
     // les rochers du rivage : calcaire blanc, ou rouges dans la terre rouge
     if (nuit) collinesPlates(ctx, w, h * 0.73, h * 0.08, avance * 0.55, S.profils.collines2, "#22443c", 110);
-    else falaisesPlates(ctx, w, h * 0.73, h * 0.13, avance * 0.6, S.profils.rochers, brume(melange("#ebe6da", "#c9643f", ici), 0.14, air), brume(melange("#bdb5a3", "#9a4527", ici), 0.16, air), 70);
+    else falaisesPlates(ctx, w, h * 0.73, h * 0.13, avance * 0.6, S.profils.rochers, brume(melange("#efe8d4", "#c9643f", ici), 0.14, air), brume(melange("#a7b0d0", "#9a4527", ici), 0.16, air), 70);
     // le sol du chemin à l'abscisse x de l'écran : il monte et descend avec le relief
     const X = (x) => avance + x - w * 0.42;
     const sol = (x) => h * 0.92 - relief(X(x)) * h * 0.1;

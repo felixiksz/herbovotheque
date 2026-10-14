@@ -527,10 +527,11 @@
       const maintenant = H.maintenant();
       NOTES.forEach(({ n, nom }) => {
         const apres = prochainEtat(s, n, maintenant);
-        boutons.appendChild(H.el("button.bouton.note-" + n, { type: "button", onclick: () => repondre(n) },
-          H.el("span", null, nom), H.el("span.delai", null, duree(apres.due - maintenant))));
+        // la touche du clavier qui donne la même réponse, écrite sur le bouton
+        boutons.appendChild(H.el("button.bouton.note-" + n, { type: "button", onclick: () => repondre(n), title: "Touche " + (n + 1) },
+          H.el("kbd.touche", null, String(n + 1)), H.el("span", null, nom), H.el("span.delai", null, duree(apres.due - maintenant))));
       });
-      const retourner = H.el("button.bouton.retourner", { type: "button", onclick: montrer }, "Voir la réponse");
+      const retourner = H.el("button.bouton.retourner", { type: "button", onclick: montrer, title: "Touche Espace ou Entrée" }, "Voir la réponse", H.el("kbd.touche", null, "espace"));
       zone.append(progression, carte, retourner, boutons);
       carte.addEventListener("click", () => verso.hidden && montrer());
       carte.focus({ preventScroll: true });

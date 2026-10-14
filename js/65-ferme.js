@@ -179,7 +179,7 @@
   { const [ax, ay] = iso(0, N), [bx, by] = iso(N, N), [cx, cy] = iso(N, 0); coteBloc(sc, ax, ay, bx, by, true); coteBloc(sc, bx, by, cx, cy, false); }
   }
   // la terre rouge sous les pins, posée avant les chemins
-  const ESPECES = ["pin", "pin", "pin", "pin", "cedre", "araucaria", "figuier", "yucca", "romarin", "romarin", "romarin", "genevrier", "agave", "agave"];
+  const ESPECES = ["pin", "pin", "pin", "pin", "pin", "araucaria", "figuier", "yucca", "romarin", "romarin", "romarin", "genevrier", "agave", "agave"];
   const plantes = [];
   for (let n = 0; n < 420 && plantes.length < 150; n++) {
     const x = 0.6 + alea() * (N - 1.2), y = 0.6 + alea() * (N - 1.2), e = ESPECES[Math.floor(alea() * ESPECES.length)];
@@ -348,6 +348,15 @@
     for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 5; dy++) pixel(c, x + dx, y + dy + Math.round(dx * pente), dy === 0 || (dx === 1 && !allume) ? "#6fb6ee" : col);
     for (let dy = -1; dy < 6; dy++) { pixel(c, x - 1, y + dy - Math.round(pente), "#4b3427"); }
   }
+  // les couleurs du ciel à chaque moment, du zénith à l'horizon (le fond, et le toit de la serre qui le reflète)
+  const CIELS = {
+    aube: ["#2a2c6a", "#3a3aa8", "#8a58cc", "#d07ab8", "#ffb3a8", "#ffd2c0", "#ffd23a"],
+    matin: ["#2a7ad8", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec", "#d6eef7"],
+    midi: ["#2370d0", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec", "#c8e6f2"],
+    apres: ["#2a7ad8", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#a8d8ec", "#d6eef7", "#f3f0dc"],
+    crepuscule: ["#1b1d4a", "#2a2c6a", "#5b3c8f", "#c93f6e", "#ff5b4f", "#ff9a5a", "#e9b44c"],
+    nuit: ["#0f0d3a", "#15124a", "#1b1d4a", "#232a63", "#2a2c6a", "#323a8a", "#3a3aa8"],
+  };
   function dessinMaison(m) {
     const larg = (m.w + m.d) * 8 + 24, haut = m.h + (m.w + m.d) * 4 + 44;
     return sprite(m.id + (nuit ? "n" : "j") + (m.genre === "boite" && drapeau ? "d" : ""), larg, haut, (c, w, h) => {
@@ -454,6 +463,24 @@
         remplir(c, [dd, a, P, Q], T.toitO); contour(c, [dd, a, P, Q], T.trait);
         remplir(c, [a, b, P], m.genre === "serre" ? "#e9f6fb" : T.clair); contour(c, [a, b, P], T.trait);
         remplir(c, [b, cc, Q, P], T.toitC); contour(c, [b, cc, Q, P], T.trait);
+        // le toit de verre de la serre reflète le ciel du moment : le zénith près du faîtage,
+        // l'horizon vers la gouttière, l'autre pan plus sombre, et deux traits de reflet
+        if (m.genre === "serre") {
+          const ciel = CIELS[periode], lerp = (p1, p2, u) => [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u];
+          const pan = (e1, e2, f1, f2, decal) => {
+            const n = ciel.length;
+            for (let k = 0; k < n; k++) {
+              const u0 = k / n, u1 = (k + 1) / n;
+              remplir(c, [lerp(f1, e1, u0), lerp(f2, e2, u0), lerp(f2, e2, u1), lerp(f1, e1, u1)], ciel[Math.min(n - 1, k + decal)]);
+            }
+          };
+          pan(b, cc, P, Q, 0);
+          pan(a, dd, P, Q, 1);
+          const reflet = nuit ? "#d6eef7" : "#f3f0dc";
+          for (const u of [0.28, 0.36]) { const p1 = lerp(b, cc, u), p2 = lerp(P, Q, u + 0.12); ligne(c, p1[0], p1[1] - 1, p2[0], p2[1] + 1, reflet); }
+          for (let k = 1; k < 4; k++) { const u = k / 4, p1 = lerp(b, cc, u), p2 = lerp(P, Q, u); ligne(c, p1[0], p1[1], p2[0], p2[1], T.trait); }
+          contour(c, [b, cc, Q, P], T.trait); contour(c, [dd, a, P, Q], T.trait);
+        }
         // les tuiles en rangées sur le pan au soleil
         if (m.genre === "mazet" || m.genre === "labo") for (let k = 1; k < 5; k++) { const u = k / 5; ligne(c, b[0] + (P[0] - b[0]) * u, b[1] + (P[1] - b[1]) * u, cc[0] + (Q[0] - cc[0]) * u, cc[1] + (Q[1] - cc[1]) * u, T.toitO); }
         if (m.genre === "roulotte") for (let k = 0; k < 4; k++) remplir(c, [[a[0] + 4 + k * 4, a[1] + 2 + k * 2], [a[0] + 7 + k * 4, a[1] + 3 + k * 2], [a[0] + 7 + k * 4, a[1] + 7 + k * 2], [a[0] + 4 + k * 4, a[1] + 6 + k * 2]], k % 2 ? "#f3f0dc" : "#ff5b4f");
@@ -700,14 +727,6 @@
   let fond = null, fc = null;
   function peindreFond() {
     [fond, fc] = toileDe(W + 80, Math.max(Ht + 40, 220));
-    const CIELS = {
-      aube: ["#2a2c6a", "#3a3aa8", "#8a58cc", "#d07ab8", "#ffb3a8", "#ffd2c0", "#ffd23a"],
-      matin: ["#2a7ad8", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec", "#d6eef7"],
-      midi: ["#2370d0", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#8fc7f0", "#a8d8ec", "#c8e6f2"],
-      apres: ["#2a7ad8", "#2f8fe0", "#4a9ee6", "#6fb6ee", "#a8d8ec", "#d6eef7", "#f3f0dc"],
-      crepuscule: ["#1b1d4a", "#2a2c6a", "#5b3c8f", "#c93f6e", "#ff5b4f", "#ff9a5a", "#e9b44c"],
-      nuit: ["#0f0d3a", "#15124a", "#1b1d4a", "#232a63", "#2a2c6a", "#323a8a", "#3a3aa8"],
-    };
     cielTrame(CIELS[periode], 66, 92);
     if (nuit) for (let k = 0; k < 50; k++) pixel(fc, hash(k, 1) * (W + 80), hash(1, k) * hash(k, 2) * 60, "#f3f0dc");
     else for (const [x, y] of [[40, 14], [180, 8], [270, 18]]) { ovale(fc, x, y, 14, 3, periode === "crepuscule" ? "#ffb3a8" : "#f3f0dc"); ovale(fc, x + 6, y - 3, 8, 3, periode === "crepuscule" ? "#ffd23a" : "#ffffff"); }
@@ -812,6 +831,56 @@
     const debut = maintenant >= coucher ? coucher : coucher - 864e5, fin = maintenant >= coucher ? lever + 864e5 : lever;
     const u = Math.max(0, Math.min(1, (maintenant - debut) / (fin - debut)));
     return { astre: "lune", u, periode: "nuit", cote: u < 0.45 ? -1 : 1, nuit: true, phase: s.lune.phase };
+  }
+
+  // --- la nuit, des animaux traversent la ferme : un renard, ou une laie et ses marcassins ---
+  const RENARD = ["........o.o..", "........ooooo", "ww.oooooooow.", ".wooooooooo..", "...n.n...n.n.", "...n.n...n.n."];
+  const RENARD_PAS = RENARD.slice(0, 4).concat(["..n...n.n...n", "...n.n...n.n."]);
+  const SANGLIER = ["...ssssss....", ".ssbbbbbbss..", "sbbbbbbbbbbs.", "sbbbbbbbbbbbb", ".bbbbbbbbbbwP", "..n.n...n.n..", "..n.n...n.n.."];
+  const SANGLIER_PAS = SANGLIER.slice(0, 5).concat([".n...n.n...n.", "..n.n...n.n.."]);
+  const MARCASSIN = [".rRrRr.", "rRrRrRr", "rRrRrRp", ".n.n.n."];
+  const MARCASSIN_PAS = MARCASSIN.slice(0, 3).concat(["n.n..n."]);
+  const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#23214a", s: "#3e2210", b: "#6b5442", P: "#9a9a9a", r: "#b9834f", R: "#7a4520", p: "#9a9a9a" };
+  function dessinBete(c, x, y, g, gauche) {
+    const L = g[0].length;
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BETES[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, PAL_BETES[ch]); }));
+  }
+  // un passage d'un bord de l'île à l'autre, en contournant les maisons
+  function bordAuHasard() {
+    const u = 1 + Math.random() * (N - 2), cote2 = Math.floor(Math.random() * 4);
+    return [[u, 0.6], [u, N - 0.6], [0.6, u], [N - 0.6, u]][cote2];
+  }
+  function nouveauVisiteur() {
+    const a = bordAuHasard();
+    let b = bordAuHasard();
+    for (let k = 0; k < 6 && Math.hypot(b[0] - a[0], b[1] - a[1]) < N * 0.6; k++) b = bordAuHasard();
+    const pts = passage(a, b), cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const espece = Math.random() < 0.55 ? "renard" : "sanglier";
+    return { espece, c: { pts, cum, long: cum[cum.length - 1] }, u: 0, petits: espece === "sanglier" && Math.random() < 0.6 ? 2 + Math.floor(Math.random() * 2) : 0, pause: 0 };
+  }
+  function majVisiteur(t, nuitDehors) {
+    if (!nuitDehors || scene.amenager) { scene.visiteur = null; scene.prochainVisiteur = null; return; }
+    if (!scene.prochainVisiteur) scene.prochainVisiteur = t + 15000 + Math.random() * 45000;
+    if (!scene.visiteur && t > scene.prochainVisiteur) scene.visiteur = nouveauVisiteur();
+    const v = scene.visiteur;
+    if (!v) return;
+    // le renard trotte, s'arrête parfois pour humer l'air ; la laie avance d'un pas lourd
+    if (t < v.pause) return;
+    v.u += (v.espece === "renard" ? 0.045 : 0.03) / Math.max(1, v.c.long);
+    if (v.espece === "renard" && Math.random() < 0.004) v.pause = t + 900 + Math.random() * 1400;
+    if (v.u >= 1 + (v.petits ? 0.12 : 0)) { scene.visiteur = null; scene.prochainVisiteur = t + 40000 + Math.random() * 90000; }
+  }
+  function objetsVisiteur(objets) {
+    const v = scene.visiteur;
+    if (!v) return;
+    const pose = (u) => { const q = Math.max(0, Math.min(1, u)), a = point(v.c, q), b = point(v.c, Math.min(1, q + 0.01)); return { x: a[0], y: a[1], gauche: (b[0] - a[0]) - (b[1] - a[1]) < 0 }; };
+    if (v.u <= 1) objets.push(Object.assign({ prof: 0, bete: v.espece, arret: false }, pose(v.u)));
+    for (let k = 1; k <= v.petits; k++) {
+      const u = v.u - (k * 0.9) / v.c.long;
+      if (u > 0 && u <= 1) objets.push(Object.assign({ prof: 0, bete: "marcassin" }, pose(u)));
+    }
+    for (const o of objets) if (o.bete && !o.prof) o.prof = o.x + o.y;
   }
 
   // --- les poules ---
@@ -1058,10 +1127,12 @@
     } else lo.marche = false;
     majPoules(t);
     majMesi();
+    majVisiteur(t, mo.nuit);
     // tout ce qui se dresse, trié du fond vers le devant
     const objets = [];
     for (const p of scene.poules) if (!p.dedans) objets.push({ prof: p.x + p.y, poule: p });
     if (scene.rentree) objets.push({ prof: scene.rentree.meme.x + scene.rentree.meme.y, meme: scene.rentree.meme });
+    objetsVisiteur(objets);
     if (scene.mesiVa && scene.mesiVa.pos) objets.push({ prof: scene.mesiVa.pos[0] + scene.mesiVa.pos[1] + 0.03, mesiVa: scene.mesiVa });
     for (const p of plantes) objets.push({ prof: p.x + p.y, p });
     for (const m of MAISONS) objets.push({ prof: m.i + m.w + m.j + m.d, m });
@@ -1112,6 +1183,11 @@
       else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet ? temps : 0); }
       else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.marche ? Math.floor(t / (lo.course ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
       else if (o.poule) { const [x, y] = iso(o.poule.x, o.poule.y); dessinPoule(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.poule, Math.floor(t / (o.poule.picore ? 260 : 170) + o.poule.robe) % 2); }
+      else if (o.bete) {
+        const [x, y] = iso(o.x, o.y), arret = scene.visiteur && t < scene.visiteur.pause, f = !arret && temps % 2;
+        const g = o.bete === "renard" ? (f ? RENARD_PAS : RENARD) : o.bete === "sanglier" ? (f ? SANGLIER_PAS : SANGLIER) : (f ? MARCASSIN_PAS : MARCASSIN);
+        dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, g, o.gauche);
+      }
       else if (o.meme) { const [x, y] = iso(o.meme.x, o.meme.y); dessinMeme(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.meme.marche ? temps : 0, o.meme.gauche); }
       else if (o.mesiVa) { const [x, y] = iso(o.mesiVa.pos[0], o.mesiVa.pos[1]); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
       else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.mesiVa.pause ? 0 : temps); }
