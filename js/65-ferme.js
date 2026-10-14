@@ -187,8 +187,21 @@
     // les grands arbres restent assez loin de la cour pour que leur feuillage ne cache pas les poules
     if (dansMaison(x, y) || dansJardin(x, y) || (grand && (dansJardin(x - 1.5, y - 1.5) || dansJardin(x - 3, y - 3))) || surChemin(x, y, 1.2)) continue;
     if (plantes.some((p) => Math.hypot(p.x - x, p.y - y) < (grand ? 2 : 0.9))) continue;
-    plantes.push({ x, y, e, v: Math.floor(alea() * 3), fleur: e === "agave" && alea() < 0.08 });
+    if (e !== "agave") { plantes.push({ x, y, e, v: Math.floor(alea() * 3) }); continue; }
+    // les agaves poussent en famille : une grande mère et ses rejets, serrés autour d'elle
+    const mere = { x, y, e, v: Math.floor(alea() * 3), taille: 0.85 + alea() * 0.35 };
+    plantes.push(mere);
+    const n = 2 + Math.floor(alea() * 4);
+    for (let k = 0; k < n; k++) {
+      const a = alea() * Math.PI * 2, d = 0.45 + alea() * 0.6, rx = x + Math.cos(a) * d, ry = y + Math.sin(a) * d;
+      if (rx < 0.5 || ry < 0.5 || rx > N - 0.5 || ry > N - 0.5 || dansMaison(rx, ry) || dansJardin(rx, ry) || surChemin(rx, ry, 1)) continue;
+      if (plantes.some((q) => Math.hypot(q.x - rx, q.y - ry) < (q.e === "agave" ? 0.4 : 0.8))) continue;
+      plantes.push({ x: rx, y: ry, e, v: Math.floor(alea() * 3), taille: 0.4 + alea() * 0.35 });
+    }
   }
+  // trois agaves en fleur au plus, parmi les plus grandes mères (c'est rare : la plante fleurit une fois dans sa vie)
+  plantes.filter((q) => q.e === "agave" && q.taille > 0.95).sort((a, b) => hash(a.x, a.y) - hash(b.x, b.y)).slice(0, 3)
+    .forEach((q) => { q.fleur = true; q.penche = hash(q.y, q.x) < 0.5 ? -1 : 1; });
   function peindreSol2() {
   for (const p of plantes) if (p.e === "pin") { const [x, y] = iso(p.x, p.y); ovale(sc, x, y + 4, 9, 4, null, (dx, dy) => (hash(x + dx, y + dy) < 0.15 ? "#9a9a9a" : hash(x + dx * 2, y + dy) < 0.5 ? "#c96a3a" : "#b2552e")); }
   // des chemins de terre battue : la largeur varie, ils ondulent un peu, quelques cailloux,
@@ -285,24 +298,40 @@
         remplir(c, [[6, 0], [11, 21], [1, 21]], "#1e3d25"); remplir(c, [[6, 1], [6, 21], [2, 21]], "#2f6b35");
         for (let k = 0; k < 10; k++) pixel(c, 3 + (k % 4), 6 + k * 1.5, "#3f8a42");
       });
-      case "agave": return sprite("aga" + p.v + (p.fleur ? "f" : ""), 24, p.fleur ? 58 : 14, (c, w, h) => {
-        // la grosse rosette bleu-gris, aux feuilles épaisses et pointues
-        for (let k = 0; k < 11; k++) {
-          const a = -Math.PI + (k / 10) * Math.PI, l = 8 + (k % 3);
-          for (let s = 0; s <= l; s++) { const x = 12 + Math.cos(a) * s, y = h - 2 + Math.sin(a) * s * 0.75; pixel(c, x, y, s < l - 2 ? "#5b8f8a" : "#7fb0a6"); if (s < l - 3) pixel(c, x + 1, y, "#7fb0a6"); }
-        }
-        if (p.fleur) {
-          // la hampe, très haute, comme une asperge géante
-          for (let y = 0; y < 44; y++) { pixel(c, 12, h - 5 - y, y < 30 ? "#7a8a4a" : "#9a6a3c"); pixel(c, 13, h - 5 - y, "#5a6a3a"); }
-          // en haut, de courts bras horizontaux, chacun avec un bouquet de fleurs jaunes
-          for (let k = 0; k < 6; k++) {
-            const y = h - 47 + k * 3, dir = k % 2 ? 1 : -1, l = 3 + (k < 3 ? k : 5 - k);
-            for (let s = 1; s <= l; s++) pixel(c, 12.5 + dir * s, y, "#9a6a3c");
-            const bx = 12.5 + dir * l;
-            for (const [dx, dy, col] of [[0, -1, "#f6ee55"], [-1, -2, "#ffd23a"], [1, -2, "#ffd23a"], [0, -2, "#f6ee55"], [-1, -1, "#e9b44c"], [1, -1, "#e9b44c"], [0, -3, "#f6ee55"]]) pixel(c, bx + dx, y + dy, col);
+      case "agave": {
+        // plus la mère est grande, plus sa hampe est haute ; la hampe penche un peu, et se courbe
+        const t = p.taille || 1, hampe = p.fleur ? Math.round(30 + (t - 0.95) * 70) : 0, W2 = 40, H2 = 16 + hampe;
+        return sprite("aga" + p.v + Math.round(t * 10) + (p.fleur ? "f" + p.penche : ""), W2, H2, (c, w, h) => {
+          const cx = W2 / 2;
+          // la rosette bleu-gris, aux feuilles épaisses et pointues, un peu recourbées
+          for (let k = 0; k < 11; k++) {
+            const a = -Math.PI + (k / 10) * Math.PI, l = Math.max(3, Math.round((8 + (k % 3)) * t));
+            for (let s2 = 0; s2 <= l; s2++) {
+              const x = cx + Math.cos(a) * s2, y = h - 2 + Math.sin(a) * s2 * 0.75 + (s2 > l - 2 && Math.abs(Math.cos(a)) > 0.6 ? 1 : 0);
+              pixel(c, x, y, s2 < l - 2 ? "#5b8f8a" : "#7fb0a6");
+              if (s2 < l - 3) pixel(c, x + 1, y, k % 2 ? "#7fb0a6" : "#4a7a76");
+            }
           }
-        }
-      });
+          if (!p.fleur) return;
+          // la hampe : verte en bas, brune en haut ; elle penche de plus en plus en montant
+          const dir = p.penche || 1, base = h - 5;
+          const xh = (y) => cx + dir * Math.round(5 * Math.pow(y / hampe, 2));
+          for (let y = 0; y < hampe; y++) { const x = xh(y); pixel(c, x, base - y, y < hampe * 0.6 ? "#7a8a4a" : "#9a6a3c"); pixel(c, x + 1, base - y, "#5a6a3a"); }
+          // dans le tiers du haut, des branches qui montent en biais, de longueurs inégales,
+          // chacune avec une touffe de fleurs jaunes serrées : un candélabre, pas un lampadaire
+          const nb = 5 + p.v;
+          for (let k = 0; k < nb; k++) {
+            const y = Math.round(hampe * (0.62 + (k / nb) * 0.36)), cote2 = k % 2 ? 1 : -1, l = 2 + Math.round(hash(k, p.v) * 3) + (k < nb / 2 ? 1 : 0);
+            const x0 = xh(y);
+            let bx = x0, by = base - y;
+            for (let s2 = 1; s2 <= l; s2++) { bx = x0 + cote2 * s2; by = base - y - Math.round(s2 * 0.6); pixel(c, bx, by, "#9a6a3c"); }
+            for (let dy = -3; dy <= 0; dy++) for (let dx = -2; dx <= 2; dx++) {
+              if (Math.abs(dx) + Math.abs(dy + 1.5) > 2.6 || hash(k * 7 + dx, dy + k) < 0.2) continue;
+              pixel(c, bx + dx, by + dy - 1, dy === -3 || hash(dx + k, dy) < 0.3 ? "#ffd23a" : dy === 0 ? "#e9b44c" : "#f6ee55");
+            }
+          }
+        });
+      }
     }
   }
   // une maison isométrique, pixel par pixel : face gauche au soleil, face droite à l'ombre, un trait foncé de la même teinte
@@ -682,50 +711,78 @@
     cielTrame(CIELS[periode], 66, 92);
     if (nuit) for (let k = 0; k < 50; k++) pixel(fc, hash(k, 1) * (W + 80), hash(1, k) * hash(k, 2) * 60, "#f3f0dc");
     else for (const [x, y] of [[40, 14], [180, 8], [270, 18]]) { ovale(fc, x, y, 14, 3, periode === "crepuscule" ? "#ffb3a8" : "#f3f0dc"); ovale(fc, x + 6, y - 3, 8, 3, periode === "crepuscule" ? "#ffd23a" : "#ffffff"); }
-    // les calanques : des crêtes de calcaire découpées, des à-pics, une face au soleil, une à
-    // l'ombre ; la plus lointaine bleuie par l'air
-    const crete = (base, haut, graineC) => {
-      graine = graineC;
-      // des massifs arrondis aux crêtes dentelées, et de vraies falaises, raides mais jamais verticales
-      const ph = [alea() * 6, alea() * 6, alea() * 6];
-      const prof = [];
-      let y = base - haut * 0.5;
-      for (let x = 0; x < W + 80; x++) {
-        const voulu = base - haut * (0.45 + 0.3 * Math.sin(x / 41 + ph[0]) + 0.18 * Math.sin(x / 17 + ph[1]) + 0.07 * Math.sin(x / 5 + ph[2])) + (alea() - 0.5) * 2;
-        const pas = alea() < 0.15 ? 3 : 1.2; // ici et là, une pente de falaise
-        y += Math.max(-pas, Math.min(pas, voulu - y));
-        y = Math.max(base - haut, Math.min(base - 2, y));
-        prof.push(Math.round(y));
-      }
-      return prof;
-    };
-    // les faces au soleil prennent la couleur de la lumière (rose à l'aube, crème le jour, orangée
-    // au couchant) ; les faces à l'ombre sont bleu-violet
-    const LUM = { aube: ["#e0b8d8", "#ffd2c0"], matin: ["#c8d6ea", "#f3f0dc"], midi: ["#c8d6ea", "#f3f0dc"], apres: ["#c8d6ea", "#f3f0dc"], crepuscule: ["#d8a0b8", "#ffc890"], nuit: ["#2a2c6a", "#3a3a6a"] }[periode];
-    const OMB = { aube: ["#7f6fb8", "#8a58cc"], crepuscule: ["#6a4a9a", "#8a58cc"], nuit: ["#1b1d4a", "#232a63"] }[periode] || ["#8fa6c8", "#7f97c8"];
-    const couches = [
-      { base: 70, haut: 30, g: 5, clair: LUM[0], ombre: OMB[0] },
-      { base: 78, haut: 24, g: 9, clair: LUM[1], ombre: OMB[1], fissures: nuit ? "#1b1d4a" : "#9a9a9a" },
-    ];
-    for (const k of couches) {
-      const prof = crete(k.base, k.haut, k.g);
-      for (let x = 0; x < W + 80; x++) {
-        // la pente qui regarde à l'opposé du soleil reste à l'ombre
-        // la pente moyenne sur quelques pixels : de vraies faces d'ombre, pas des rayures
-        const pente = (prof[Math.min(W + 79, x + 4)] - prof[Math.max(0, x - 4)]) * (cote < 0 ? -1 : 1);
-        for (let y = prof[x]; y < 92; y++) {
-          // une trame à la limite entre lumière et ombre, comme sur les pixels d'époque
-          let col = pente > 2.6 ? k.ombre : pente > 1.4 ? ((x + y) % 2 ? k.ombre : k.clair) : k.clair;
-          if (k.fissures && hash(x, 4) < 0.04 && y > prof[x] + 3) col = k.fissures;
-          pixel(fc, x, y, col);
+    // Les calanques, comme sur les affiches de Cassis : au loin, un cap bleui par l'air qui finit
+    // en falaise dans la mer ; devant, des massifs de calcaire clair aux sommets arrondis, coiffés
+    // de pins, qui tombent à pic dans l'eau. Face au soleil la roche prend la couleur de la lumière,
+    // à l'ombre elle devient bleu lilas.
+    const LW = W + 80, MER = 90;
+    const C = {
+      jour: { loin: ["#b4c2e2", "#94a6d2"], clair: "#efe8d4", moyen: "#d9d0ba", ombre: "#a7b0d0", fente: "#8e8aa8", pins: ["#4aa63e", "#2f6b35", "#1e3d25"] },
+      aube: { loin: ["#c4a6d8", "#9a84c4"], clair: "#f6d0c8", moyen: "#e2b4b8", ombre: "#9c84c0", fente: "#7a68a0", pins: ["#4a8a5a", "#2f5a45", "#1e3d35"] },
+      crepuscule: { loin: ["#b07ab8", "#8a5aa0"], clair: "#ffc0a0", moyen: "#eaa090", ombre: "#7c5ca4", fente: "#5b3c8f", pins: ["#3f6a4a", "#2a4a3a", "#1b2d2a"] },
+      nuit: { loin: ["#2e3270", "#262a63"], clair: "#4a4a82", moyen: "#3c3c74", ombre: "#2a2c6a", fente: "#1b1d4a", pins: ["#1e3d35", "#173a26", "#10241d"] },
+    }[periode === "aube" || periode === "crepuscule" || periode === "nuit" ? periode : "jour"];
+    // le cap lointain : il monte doucement depuis la gauche et finit à droite par une haute falaise
+    {
+      const x0 = Math.round(LW * 0.52), x1 = Math.round(LW * 0.93);
+      for (let x = x0; x < LW; x++) {
+        const u = Math.min(1, (x - x0) / (x1 - x0));
+        let y = Math.round(MER - 4 - 30 * Math.pow(u, 0.8) - Math.sin(x / 9) * 1.2);
+        if (x > x1) y = Math.round(MER - 34 + (x - x1) * 3.2); // la falaise qui plonge
+        if (y >= MER) continue;
+        for (let yy = y; yy < MER; yy++) {
+          const face = x > x1 - 2;
+          pixel(fc, x, yy, face ? (cote > 0 ? C.loin[1] : C.loin[0]) : yy < y + 2 ? C.loin[0] : (x + yy) % 2 && yy > y + 6 ? C.loin[1] : C.loin[0]);
+          if (face && yy % 4 === 0) pixel(fc, x, yy, C.loin[1]); // les strates de la falaise
         }
       }
-      // un peu de garrigue au pied des falaises
-      if (k.fissures) for (let x = 0; x < W + 80; x += 2) { const hh = Math.round(hash(x, 5) * 3); for (let y = 0; y < hh; y++) pixel(fc, x, k.base - 1 - y, nuit ? "#173a26" : "#3f8a42"); }
     }
-    // la forêt devant les calanques
-    for (let x = 0; x < W + 80; x += 3) { const hh = 6 + Math.round(hash(x, 3) * 5); for (let y = 0; y < hh; y++) pixel(fc, x, 86 - y, y > hh - 2 ? (nuit ? "#2f6b35" : "#3f8a42") : nuit ? "#173a26" : "#2f6b35"); pixel(fc, x + 1, 86 - hh + 1, nuit ? "#173a26" : "#1e3d25"); }
-    fc.fillStyle = nuit ? "#173a26" : "#1e3d25"; fc.fillRect(0, 86, W + 80, 4);
+    // les massifs de devant : [début, fin, hauteur, graine]
+    const MASSIFS = [[-10, 92, 30, 3], [70, 150, 22, 7], [128, 196, 34, 11], [184, 236, 18, 5], [LW - 120, LW - 70, 14, 13]];
+    const prof = new Array(LW).fill(MER), qui = new Array(LW).fill(-1);
+    MASSIFS.forEach(([a, b, h, g], n) => {
+      for (let x = Math.max(0, a); x < Math.min(LW, b); x++) {
+        const u = (x - a) / (b - a);
+        // un dôme au sommet arrondi, aux flancs raides : la falaise
+        const dome = Math.pow(Math.max(0, Math.sin(Math.PI * u)), 0.38);
+        const y = Math.round(MER - h * dome - Math.sin(x / 6 + g) * 1.3 - hash(x, g) * 1.2);
+        if (y < prof[x]) { prof[x] = y; qui[x] = n; }
+      }
+    });
+    for (let x = 0; x < LW; x++) {
+      if (prof[x] >= MER) continue;
+      const pente = (prof[Math.min(LW - 1, x + 5)] - prof[Math.max(0, x - 5)]) * 0.6 * (cote < 0 ? -1 : 1);
+      const haut = MER - prof[x];
+      for (let y = prof[x]; y < MER; y++) {
+        const prof2 = (y - prof[x]) / Math.max(1, haut);
+        // à l'ombre si la pente tourne le dos au soleil ; plus sombre vers le pied, près de l'eau
+        let col = pente > 2.2 ? C.ombre : pente > 1.1 ? ((x + y) % 2 ? C.ombre : C.clair) : prof2 > 0.72 ? ((x + y) % 2 ? C.moyen : C.clair) : C.clair;
+        if (prof2 > 0.85 && pente > 1.1) col = C.fente;
+        // des plaques de garrigue accrochées aux pentes, et des strates à peine marquées
+        const tache = hash(Math.floor(x / 4), Math.floor(y / 3) + qui[x] * 31);
+        if (prof2 < 0.65 && tache < 0.14) col = (x + y) % 2 && tache > 0.05 ? col : C.pins[tache < 0.05 ? 2 : 1];
+        else if (y % 5 === 0 && hash(x >> 3, y) < 0.5 && col === C.clair) col = C.moyen;
+        pixel(fc, x, y, col);
+      }
+      // de courtes fissures en biais, ici et là (jamais de longues lignes droites)
+      if (hash(x, 21) < 0.07 && haut > 10) { const y0 = prof[x] + 4 + Math.round(hash(21, x) * (haut - 10)); for (let k = 0; k < 4; k++) pixel(fc, x + (k > 1 ? 1 : 0), y0 + k, C.fente); }
+      // des touffes de garrigue sur les corniches
+      if (hash(x, 22) < 0.1 && haut > 12) { const y0 = prof[x] + 6 + Math.round(hash(22, x) * (haut - 14)); pixel(fc, x, y0, C.pins[1]); pixel(fc, x + 1, y0, C.pins[2]); pixel(fc, x, y0 - 1, C.pins[0]); }
+      // les pins qui coiffent les sommets, plus épais là où c'est plat
+      if (Math.abs(pente) < 1.6) {
+        const ep = 1 + Math.round(hash(x, 23) * 3);
+        for (let k = 0; k < ep; k++) pixel(fc, x, prof[x] + k, k === 0 ? C.pins[0] : k === ep - 1 ? C.pins[2] : C.pins[1]);
+      }
+      // de temps en temps, un pin parasol qui dépasse de la crête
+      if (hash(x, 24) < 0.035 && Math.abs(pente) < 1.2 && haut > 8) {
+        const y0 = prof[x];
+        for (let k = 1; k <= 3; k++) pixel(fc, x, y0 - k, nuit ? "#2a1d1b" : "#7a4520");
+        for (let dx = -3; dx <= 3; dx++) { pixel(fc, x + dx, y0 - 4, C.pins[1]); if (Math.abs(dx) < 3) pixel(fc, x + dx, y0 - 5, C.pins[0]); }
+        pixel(fc, x - 3, y0 - 3, C.pins[2]); pixel(fc, x + 3, y0 - 3, C.pins[2]);
+      }
+      // l'écume au pied des falaises
+      if (hash(x, 25) < 0.45) pixel(fc, x, MER - 1, nuit ? "#3a5a8a" : "#f3f0dc");
+    }
     fc.fillStyle = nuit ? "#26406a" : "#12aec4"; fc.fillRect(0, 90, W + 80, 400);
     fc.fillStyle = nuit ? "#3a5a8a" : "#a8d8ec";
     for (let k = 0; k < 60; k++) fc.fillRect(hash(k, 9) * (W + 80), 94 + hash(9, k) * 86, 4, 1);
@@ -1185,7 +1242,7 @@
     }
   }
 
-  H.ferme = { scene: () => scene };
+  H.ferme = { scene: () => scene, fond: () => fond };
   H.vues.village = {
     afficher(c) {
       const boite = H.el("div.village");
