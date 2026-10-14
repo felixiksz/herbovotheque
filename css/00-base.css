@@ -459,10 +459,6 @@ label { font-size: 0.95rem; }
 @keyframes veille-apparait { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .veille { animation: none; } }
 
-/* le fond d'écran à enregistrer */
-.fond-ecran { display: grid; gap: 10px; justify-items: center; text-align: left; }
-.apercu-fond-ecran { max-height: 55vh; width: auto; max-width: 100%; image-rendering: pixelated; border: 1.5px solid var(--encre); border-radius: 10px; }
-.fond-ecran p { margin: 0; justify-self: stretch; }
 
 /* pendant le chargement : un fond uni, sans rien d'autre */
 html.chargement body { background: #1b1d4a; }

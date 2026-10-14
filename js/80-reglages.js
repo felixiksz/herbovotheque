@@ -66,19 +66,6 @@
     );
   }
 
-  // Les scènes de l'écran d'accueil, en fond d'écran pour le téléphone (la ferme se photographie
-  // depuis la ferme, avec le bouton « Photo »)
-  function blocFondEcran() {
-    if (!H.accueil || !H.accueil.imageScene) return null;
-    const scene = (nuit, nom) => () => H.accueil.montrerFondEcran(H.accueil.imageScene(nuit), nom);
-    return H.el("section.reglage", null,
-      H.el("h2", null, "Fond d’écran du téléphone"),
-      H.el("p", null, "Les scènes de l’écran d’accueil, à la taille de ton écran, pour en faire le fond d’écran de ton téléphone. Pour la ferme, utilise le bouton « Photo » sur la ferme."),
-      H.el("div.pastilles", null,
-        H.el("button.bouton.petit", { type: "button", onclick: scene(false, "jour") }, "Les plantes au soleil"),
-        H.el("button.bouton.petit", { type: "button", onclick: scene(true, "nuit") }, "La serre la nuit")));
-  }
-
   function blocTheme() {
     const choix = [["auto", "Selon le soleil"], ["jour", "Toujours le jour"], ["nuit", "Toujours la nuit"]];
     return H.el("section.reglage", null,
@@ -439,7 +426,7 @@
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
       // comme les préférences d'un vieux Mac : la liste des sections à gauche
-      const blocs = [blocLieu(), blocTheme(), blocMiaou(), blocFondEcran(), blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
+      const blocs = [blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
       c.appendChild(H.bureau.onglets(blocs.map((b) => ({ nom: b.querySelector("h2").textContent, el: b })), { cle: "reglages", lateral: true }));
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },

@@ -1,6 +1,6 @@
 // L'écran d'accueil, là où l'on tape le mot de passe : une scène en pixels dans les calanques.
-// Le jour, des plantes médicinales en gros plan devant la mer ; la nuit, la serre allumée sur sa
-// corniche, la lune sur l'eau et des lucioles. (Les fiches ne sont pas encore ouvertes : l'heure
+// Le jour, des plantes médicinales en gros plan devant la mer ; la nuit, un jardin sauvage sous de
+// grands pins parasols, la lune sur l'eau et des lucioles. (Les fiches ne sont pas encore ouvertes : l'heure
 // du lever et du coucher vient d'une petite table pour Marseille.)
 (function () {
   const H = (window.H = window.H || {});
@@ -82,7 +82,65 @@
     for (let k = -3; k <= 3; k++) { if (hash(x + k, y) < 0.25) continue; const hh = 2 + Math.round(hash(k, x) * 2); for (let j = 0; j < hh; j++) P(c, x + k, y - 3 - j, j === hh - 1 ? C.fleurClair : (j + k) % 2 ? C.fleur : C.fleurOmbre); }
   }
 
-  // --- la nuit : la serre allumée ---
+  // Un pin parasol : un tronc qui penche et se partage en Y, et une couronne large et plate faite de
+  // nuages d'aiguilles. Tout est sombre, sauf le bord tourné vers la lune.
+  const PIN = "#07061f", PIN_BORD = "#24285e", PIN_TRONC = "#0b0820";
+  function pinParasol(c, xPied, xCime, yCime, largeur, lune) {
+    const yPied = HAUT + 2, haut = yPied - yCime;
+    // le tronc, épais en bas, et la fourche aux deux tiers
+    const fourche = 0.62;
+    const tronc = (u) => [xPied + (xCime - xPied) * Math.pow(u, 1.3) + Math.sin(u * 3) * 2, yPied - haut * u];
+    for (let u = 0; u < fourche; u += 0.004) { const [x, y] = tronc(u); R(c, x - 1, y, 2 + (u < 0.3 ? 1 : 0), 1, PIN_TRONC); }
+    const [fx, fy] = tronc(fourche);
+    const branches = [[-largeur * 0.55, yCime + 7], [largeur * 0.5, yCime + 6], [-largeur * 0.1, yCime + 4], [largeur * 0.2, yCime + 4]];
+    for (const [dx, by] of branches) for (let u = 0; u <= 1; u += 0.02) R(c, fx + (xCime + dx - fx) * u + Math.sin(u * 3) * 1.5, fy + (by - fy) * u, u < 0.5 ? 2 : 1, 1, PIN_TRONC);
+    // la couronne : des nuages plats, le dessous presque droit
+    const nuages = [];
+    for (let k = 0; k < 12; k++) {
+      const u = (k / 11 - 0.5) * 2;
+      nuages.push([xCime + u * largeur * 0.78 + (hash(k, xPied) - 0.5) * 6, yCime + 5 + u * u * 4 + (hash(xPied, k) - 0.5) * 3, largeur * (0.2 + hash(k, 7) * 0.1), 5 + hash(7, k) * 3]);
+    }
+    // le dôme, par-dessus
+    for (let k = 0; k < 5; k++) {
+      const u = (k / 4 - 0.5) * 2;
+      nuages.push([xCime + u * largeur * 0.45 + (hash(k, 3) - 0.5) * 4, yCime + 1 + u * u * 2, largeur * (0.22 + hash(3, k) * 0.08), 5 + hash(k, 5) * 2]);
+    }
+    const dedans = (x, y) => nuages.some(([cx, cy, rx, ry]) => ((x - cx) * (x - cx)) / (rx * rx) + ((y - cy) * (y - cy)) / (ry * ry) < 1 - hash(x, y) * 0.25);
+    const x0 = Math.floor(xCime - largeur * 1.2), x1 = Math.ceil(xCime + largeur * 1.2);
+    for (let y = yCime - 6; y < yCime + 18; y++) for (let x = x0; x <= x1; x++) {
+      if (x < 0 || x >= W || y < 0 || !dedans(x, y)) continue;
+      // le bord vers la lune : si le pixel d'à côté, côté lune, est du ciel
+      const sx = Math.sign(lune[0] - x), sy = Math.sign(lune[1] - y);
+      P(c, x, y, !dedans(x + sx, y + sy) && hash(x, y + 9) < 0.8 ? PIN_BORD : PIN);
+    }
+  }
+  // Les herbes folles du premier plan : graminées, fenouil sauvage aux ombelles, carotte sauvage
+  // blanche sous la lune, chardons.
+  function herbesFolles(c) {
+    for (let x = 0; x < W; x += 1 + Math.round(hash(x, 31) * 2)) {
+      const h = 8 + Math.round(hash(x, 32) * 18), pente = (hash(x, 33) - 0.5) * 6;
+      for (let j = 0; j < h; j++) P(c, x + Math.round((j / h) * (j / h) * pente), HAUT - j, j > h - 3 ? "#2e5048" : j > h * 0.6 ? "#1a3a30" : "#0e261e");
+      if (hash(x, 34) < 0.18) for (let j = 0; j < 4; j++) P(c, x + Math.round(pente) + (j % 2), HAUT - h - j, "#3a5a50");
+    }
+    for (let k = 0; k < Math.max(2, W / 40); k++) {
+      const x = Math.round(((k + 0.5) / Math.max(2, W / 40)) * W + (hash(k, 41) - 0.5) * 20), h = 44 + Math.round(hash(41, k) * 20);
+      for (let j = 0; j < h; j++) P(c, x + Math.round(Math.sin(j / 15) * 2), HAUT - j, "#14302a");
+      const tx = x + Math.round(Math.sin(h / 15) * 2), ty = HAUT - h;
+      for (let r = -6; r <= 6; r++) { const yy = ty - 2 + Math.round((r * r) / 12); P(c, tx + r, yy, hash(r, x) < 0.5 ? "#6a6a3a" : "#4a5030"); if (r % 3 === 0) for (let m = 1; m < 3; m++) P(c, tx + Math.round((r * m) / 3), ty + 2 - m, "#14302a"); }
+    }
+    for (let k = 0; k < Math.max(3, W / 22); k++) {
+      const x = Math.round(hash(k, 51) * W), h = 18 + Math.round(hash(51, k) * 14);
+      for (let j = 0; j < h; j++) P(c, x, HAUT - j, "#173a2e");
+      for (let r = -3; r <= 3; r++) { P(c, x + r, HAUT - h - Math.round((3 - Math.abs(r)) / 2), hash(r, k) < 0.7 ? "#c8c8e0" : "#9a9ac0"); }
+    }
+    for (let k = 0; k < Math.max(2, W / 50); k++) {
+      const x = Math.round(hash(k, 61) * W), h = 14 + Math.round(hash(61, k) * 8);
+      for (let j = 0; j < h; j++) P(c, x, HAUT - j, "#1a3a30");
+      ovale(c, x, HAUT - h - 1, 1, 1, "#5b3c8f"); P(c, x, HAUT - h - 3, "#8a58cc"); P(c, x - 2, HAUT - h - 2, "#1a3a30"); P(c, x + 2, HAUT - h - 2, "#1a3a30");
+    }
+  }
+
+  // --- la nuit : le jardin sauvage sous les pins ---
   const NUIT = {
     peindre(c) {
       degrade(c, ["#0f0d3a", "#15124a", "#1b1d4a", "#232a63", "#3a3aa8", "#5b3c8f"], 0, 88);
@@ -94,19 +152,17 @@
       calanques(c, 88, [[-0.05, 0.27, 30, 1], [0.19, 0.46, 22, 2], [0.41, 0.66, 16, 3]], { clair: "#4a4a82", moyen: "#3c3c74", ombre: "#2a2c6a", pins: ["#2e4a5a", "#26405a", "#20344e"], tronc: "#2a1d1b" }, 1);
       mer(c, 88, 112, ["#3a3aa8", "#26406a", "#1e3358", "#1b1d4a"], "#3a5a8a");
       for (let y = 90; y < 112; y++) { const l = 2 + ((y - 90) / 4) | 0; if (hash(y, 5) < 0.7) R(c, lx - l / 2 + Math.round(Math.sin(y) * 2), y, l, 1, "#a8d8ec"); }
-      for (let y = 112; y < HAUT; y++) for (let x = 0; x < W; x++) P(c, x, y, hash(x, y) < 0.2 ? "#10241d" : "#173a26");
-      for (let x = 0; x < W; x++) P(c, x, 112, "#2a4a3a");
-      // la serre allumée, bien en vue en bas, et sa lumière sur le sol
-      const sx = Math.round(W > 200 ? W * 0.1 : W / 2 - 17), sy = 140;
-      for (let r = 34; r > 0; r -= 2) ovale(c, sx + 16, sy + 8, r + 10, Math.round(r / 2.6), (dx, dy) => (tr(sx + dx, sy + dy) < (34 - r) / 2.4 ? (r < 14 ? "#e9b44c" : "#5a6a3a") : null));
-      R(c, sx, sy - 14, 34, 16, "#ffd23a");
-      for (let k = 0; k < 9; k++) R(c, sx + 1 + k, sy - 15 - k, 32 - k * 2, 1, k < 8 ? "#fff3b0" : "#2f6b35");
-      for (let x = sx; x <= sx + 34; x += 6) R(c, x, sy - 14, 1, 16, "#2f6b35");
-      R(c, sx, sy - 14, 34, 1, "#2f6b35"); R(c, sx, sy + 1, 34, 1, "#1e3d25");
-      for (let k = 0; k < 6; k++) ovale(c, sx + 4 + k * 5, sy - 3, 2, 2, "#4aa63e");
-      const SOMBRE = { feuille: "#2a4a3a", feuilleOmbre: "#1e3d35", fleur: "#5b3c8f", fleurOmbre: "#3a2a6a", fleurClair: "#8a58cc" };
-      const PRES = { feuille: "#6b7a5a", feuilleOmbre: "#4a5a3a", fleur: "#8a58cc", fleurOmbre: "#5b3c8f", fleurClair: "#e9b44c" };
-      for (const [y, d] of [[122, 10], [132, 9], [160, 8]]) for (let x = 6 + (y % 7); x < W; x += d) if (!(y === 160 && Math.abs(x - sx - 16) < 24)) lavande(c, x, y, Math.abs(x - sx - 16) < 38 ? PRES : SOMBRE);
+      // le jardin sauvage, au clair de lune
+      for (let y = 112; y < HAUT; y++) for (let x = 0; x < W; x++) P(c, x, y, hash(x, y) < 0.2 ? "#0c1f19" : hash(x >> 1, y) < 0.55 ? "#123024" : "#163a2a");
+      for (let x = 0; x < W; x++) P(c, x, 112, "#22403a");
+      const SOMBRE = { feuille: "#22403a", feuilleOmbre: "#1a3530", fleur: "#4a3480", fleurOmbre: "#33265e", fleurClair: "#7a54b8" };
+      for (const [y, d] of [[121, 11], [131, 13]]) for (let x = 4 + (y % 7); x < W; x += d + Math.round(hash(x, y) * 6)) lavande(c, x, y, SOMBRE);
+      herbesFolles(c);
+      // les grands pins parasols, en silhouette contre le ciel ; la lune éclaire le bord de leurs couronnes
+      const lune = [lx, ly];
+      pinParasol(c, Math.round(W * 0.06), Math.round(W * 0.14), 13, Math.max(30, W * 0.24), lune);
+      if (W > 150) pinParasol(c, Math.round(W * 0.98), Math.round(W * 0.9), 18, W * 0.17, lune);
+      if (W > 230) pinParasol(c, Math.round(W * 0.4), Math.round(W * 0.46), 30, W * 0.1, lune);
     },
     animer(c, t) {
       for (let k = 0; k < 14; k++) {
@@ -232,47 +288,7 @@
   document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && guetter());
   guetter();
 
-  // la taille de l'écran du téléphone, en vrais pixels, en portrait
-  function tailleEcran() {
-    const dpr = window.devicePixelRatio || 1;
-    let l = Math.round(screen.width * dpr), h = Math.round(screen.height * dpr);
-    if (l > h) [l, h] = [h, l];
-    return [Math.max(360, l), Math.max(640, h)];
-  }
-  // La scène de l'accueil (jour ou nuit) comme fond d'écran : peinte à la forme de l'écran, puis
-  // agrandie sans flou, chaque gros pixel bien net.
-  function imageScene(nuit) {
-    const [L, Hh] = tailleEcran(), avant = W;
-    W = Math.max(70, Math.round((HAUT * L) / Hh));
-    const petit = document.createElement("canvas");
-    petit.width = W; petit.height = HAUT;
-    (nuit ? NUIT : JOUR).peindre(petit.getContext("2d"));
-    W = avant;
-    return agrandir(petit, L, Hh);
-  }
-  function agrandir(petit, L, Hh) {
-    const c = document.createElement("canvas");
-    c.width = L; c.height = Hh;
-    const g = c.getContext("2d");
-    g.imageSmoothingEnabled = false;
-    // on remplit tout l'écran, en rognant ce qui dépasse sur les côtés
-    const k = Math.max(L / petit.width, Hh / petit.height);
-    g.drawImage(petit, Math.round((L - petit.width * k) / 2), Math.round((Hh - petit.height * k) / 2), Math.round(petit.width * k), Math.round(petit.height * k));
-    return c.toDataURL("image/png");
-  }
-  // la fenêtre qui montre l'image et explique comment en faire son fond d'écran
-  function montrerFondEcran(src, nom) {
-    if (!H.fenetre || !H.el) return;
-    const fichier = "herbotheque-" + nom + ".png";
-    H.fenetre(H.el("div.fond-ecran", null,
-      H.el("h2", null, "Fond d’écran"),
-      H.el("img.apercu-fond-ecran", { src, alt: "La scène en fond d’écran" }),
-      H.el("p", null, H.el("b", null, "iPhone : "), "appuie longuement sur l’image, puis « Ajouter à Photos ». Ensuite, dans Réglages › Fond d’écran, choisis-la dans tes photos."),
-      H.el("p", null, H.el("b", null, "Android : "), "appuie longuement sur l’image, puis « Télécharger l’image » (ou le bouton ci-dessous). Ensuite, Paramètres › Fond d’écran."),
-      H.el("a.bouton", { href: src, download: fichier }, "Enregistrer l’image")
-    ));
-  }
-  H.accueil = { preparer, endormir, imageScene, agrandir, tailleEcran, montrerFondEcran };
+  H.accueil = { preparer, endormir };
   let attente = null;
   window.addEventListener("resize", () => { clearTimeout(attente); attente = setTimeout(() => !document.getElementById("verrou").hidden && preparer(), 200); });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => preparer());
