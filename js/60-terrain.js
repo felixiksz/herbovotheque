@@ -1805,6 +1805,9 @@
   H.vues.terrain = {
     afficher(c, params) {
       vue = null;
+      // une île ouverte : la scène en plein écran, seules les ressources restent en haut
+      if (params[0]) document.documentElement.dataset.ile = "1";
+      else delete document.documentElement.dataset.ile;
       if (params[0]) ouvrirIle(c, params[0]);
       else archipel(c);
     },
@@ -1814,6 +1817,7 @@
         clearInterval(vue.minuteurMesi);
       }
       H.sons.boucle("pas", false);
+      delete document.documentElement.dataset.ile;
       if (bulle) bulle.remove();
       bulle = null;
       vue = null;

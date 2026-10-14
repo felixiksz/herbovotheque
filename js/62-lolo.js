@@ -51,7 +51,7 @@
     "Tu es la plus douce des juments.",
     "Tes yeux pétillent comme la mer aux calanques.",
   ];
-  // Les blagues de Lóló, ce sont des farces : il se cache, il fait semblant d'être une plante, il
+  // Les blagues de Lóló (seulement à la maison, jamais dehors), ce sont des farces : il se cache, il fait semblant d'être une plante, il
   // s'assoit sur la tête de quelqu'un. Chaque farce a deux temps : on ne se doute de rien, puis
   // Lóló se montre. ƟvƟ et Mesi disent alors d'une seule voix « Sacré Lóló ! ».
   const FARCES = [
@@ -232,18 +232,12 @@
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
         { valeur: "compliment", libelle: "Lui faire un compliment" },
-        { valeur: "blague", libelle: "Une blague !" },
       ].concat(leMatin() ? [{ valeur: "dormi", libelle: "Tu as bien dormi ?" }] : [], [
         { valeur: null, libelle: "Merci Lóló !" },
       ]));
       if (!q) break;
       if (q === "dormi") {
         await bienDormi();
-        intro = "Autre chose ?";
-        continue;
-      }
-      if (q === "blague") {
-        await blague();
         intro = "Autre chose ?";
         continue;
       }
