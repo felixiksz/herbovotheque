@@ -406,3 +406,12 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 .choix-nuit .bouton:hover, .choix-nuit .bouton:focus-visible { color: var(--menu-choix); outline: none; }
 .choix-nuit .bouton:hover::before, .choix-nuit .bouton:focus-visible::before { opacity: 1; }
 :root[data-vue="dodo"] .page-maison { min-height: 100vh; }
+
+/* la ferme en pixel art isométrique : tout l'écran, des pixels entiers, les noms nets par-dessus */
+:root[data-vue="village"] #vue { min-height: 0; display: block; }
+:root[data-vue="village"] .village { position: relative; width: 100%; height: 100vh; height: 100dvh; max-width: none; margin: 0; overflow: hidden; display: grid; place-items: center; border: 0; border-radius: 0; }
+.toile-village { display: block; image-rendering: pixelated; touch-action: manipulation; }
+.etiquette-ferme { position: absolute; transform: translate(-50%, -100%); pointer-events: none; white-space: nowrap; z-index: 2;
+  font: 1.35rem/1.1 var(--menu-police); color: var(--menu-trait); background: var(--menu-fond); padding: 0 10px 1px;
+  box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 5px 5px 0 6px rgba(15, 16, 53, 0.6); }
+.etiquette-ferme[hidden] { display: none; }

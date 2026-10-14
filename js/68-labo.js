@@ -239,7 +239,13 @@
     await H.dialogue.dire([{ qui: "ovo", texte: H.histoires.auHasard(["Mmmh, ça sent la garrigue.", "Une gorgée, et tout va mieux.", "Je la bois tant qu’elle est chaude."]) + " (+" + ENERGIE_TISANE + " d’énergie)" }]);
   }
 
-  H.labo = { ajouterRecolte };
+  // pour la ferme : la fumée sort du tuyau de poêle quand une préparation est en cours
+  function enCours() {
+    const l = labo();
+    const t = l.tisane;
+    return l.postes.some((p) => p && FACONS[p.prep] && avancement(p) < 1) || !!(t && t.le && H.maintenant() - t.le < INFUSION);
+  }
+  H.labo = { ajouterRecolte, enCours };
 
   H.vues.labo = {
     afficher(c) {
