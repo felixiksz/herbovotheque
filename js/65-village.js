@@ -913,7 +913,6 @@
     const outil = (id, nom) => H.el("button.bouton.petit" + (a.outil === id ? ".actif" : ""), { type: "button", onclick: () => { a.outil = id; majBarre(); } }, nom);
     const plante = a.plante && H.d.plante(a.plante);
     barre.append(
-      H.el("p.discret", null, "Clique sur la ferme pour poser, glisse pour peindre."),
       H.el("div.pastilles", null,
         H.el("button.bouton.petit" + (a.outil === "plante" ? ".actif" : ""), {
           type: "button",
@@ -955,6 +954,7 @@
       scene.barre = barreAmenager();
       scene.boite.appendChild(scene.barre);
       majBarre();
+      H.toast("Clique sur la ferme pour poser, glisse pour peindre.");
     } else {
       scene.amenager = null;
       if (scene.barre) scene.barre.remove();

@@ -383,3 +383,12 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 :root[data-vue="balade"] .actions-balade > [hidden] { display: none; }
 :root[data-vue="balade"] .actions-balade .fin-balade { display: flex; gap: 6px; }
 :root[data-vue="village"] #vue { min-height: 100vh; display: grid; align-content: center; }
+
+/* Aménager : une fine bande d'une ligne en bas de la ferme, qui défile de côté, pour ne rien cacher */
+:root[data-vue="village"] .outils-ferme {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 0 2px;
+  overflow-x: auto; scrollbar-width: thin; padding: 2px 8px; right: auto; max-width: calc(100% - 36px);
+}
+:root[data-vue="village"] .outils-ferme .pastilles { display: flex; flex-wrap: nowrap; gap: 0 2px; margin: 0; }
+:root[data-vue="village"] .outils-ferme .pastilles + .pastilles { border-left: 2px solid rgba(243, 240, 220, 0.3); padding-left: 6px; margin-left: 4px; }
+:root[data-vue="village"] .outils-ferme .bouton { white-space: nowrap; }
