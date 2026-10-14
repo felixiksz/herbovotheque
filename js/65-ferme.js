@@ -757,10 +757,10 @@
     // à l'ombre elle devient bleu lilas.
     const LW = W + 80, MER = 90;
     const C = {
-      jour: { loin: ["#b4c2e2", "#94a6d2"], clair: "#efe8d4", moyen: "#d9d0ba", ombre: "#a7b0d0", fente: "#8e8aa8", pins: ["#4aa63e", "#2f6b35", "#1e3d25"] },
-      aube: { loin: ["#c4a6d8", "#9a84c4"], clair: "#f6d0c8", moyen: "#e2b4b8", ombre: "#9c84c0", fente: "#7a68a0", pins: ["#4a8a5a", "#2f5a45", "#1e3d35"] },
-      crepuscule: { loin: ["#b07ab8", "#8a5aa0"], clair: "#ffc0a0", moyen: "#eaa090", ombre: "#7c5ca4", fente: "#5b3c8f", pins: ["#3f6a4a", "#2a4a3a", "#1b2d2a"] },
-      nuit: { loin: ["#2e3270", "#262a63"], clair: "#4a4a82", moyen: "#3c3c74", ombre: "#2a2c6a", fente: "#1b1d4a", pins: ["#1e3d35", "#173a26", "#10241d"] },
+      jour: { loin: ["#b4c2e2", "#94a6d2"], clair: "#efe8d4", moyen: "#d9d0ba", ombre: "#a7b0d0", fente: "#8e8aa8", pins: ["#b4d0a0", "#9cbc96", "#86a896"] },
+      aube: { loin: ["#c4a6d8", "#9a84c4"], clair: "#f6d0c8", moyen: "#e2b4b8", ombre: "#9c84c0", fente: "#7a68a0", pins: ["#a8b8a8", "#8e9aa8", "#7a84a0"] },
+      crepuscule: { loin: ["#b07ab8", "#8a5aa0"], clair: "#ffc0a0", moyen: "#eaa090", ombre: "#7c5ca4", fente: "#5b3c8f", pins: ["#9a8aa0", "#7a6a96", "#6a5a8a"] },
+      nuit: { loin: ["#2e3270", "#262a63"], clair: "#4a4a82", moyen: "#3c3c74", ombre: "#2a2c6a", fente: "#1b1d4a", pins: ["#2e4a5a", "#26405a", "#20344e"] },
     }[periode === "aube" || periode === "crepuscule" || periode === "nuit" ? periode : "jour"];
     // le cap lointain : il monte doucement depuis la gauche et finit à droite par une haute falaise
     {

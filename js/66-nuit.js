@@ -67,6 +67,8 @@
       { qui: "ovo", texte: H.histoires.auHasard(["Mmmh… Tu es le·la meilleur·e.", "J’ai du chocolat jusqu’aux lunettes.", "Merci Mesi ! Je repars plein·e d’énergie."]) },
     ]);
     H.toast("+30 d’énergie, et la pause est finie");
+    await H.dialogue.dire([{ qui: "luigi", texte: H.histoires.auHasard(["On va sur le canapé écouter un peu de musique ?", "Viens, on se met sur le canapé, je mets de la musique.", "Allez, canapé et musique !"]) }]);
+    allerSurLeCanape();
     apres && apres();
   }
 
@@ -329,14 +331,14 @@
     ctx.fillStyle = M.lampe ? "#fff06a" : "#ffd23a"; ctx.fill(); ctx.stroke();
 
     // le canapé corail sous la fenêtre
-    bloc(ctx, 292, 170, 136, 46, 17, "#ff5b4f");
+    bloc(ctx, 292, 170, 126, 46, 17, "#ff5b4f");
     bloc(ctx, 304, 180, 36, 30, 11, "#ffd23a");
-    bloc(ctx, 384, 182, 34, 28, 11, "#f2f0e8");
-    bloc(ctx, 286, 206, 148, 30, 13, "#ff7a6b");
+    bloc(ctx, 374, 182, 34, 28, 11, "#f2f0e8");
+    bloc(ctx, 286, 206, 138, 30, 13, "#ff7a6b");
     bloc(ctx, 278, 188, 24, 50, 11, "#ff5b4f");
-    bloc(ctx, 418, 188, 24, 50, 11, "#ff5b4f");
+    bloc(ctx, 406, 188, 24, 50, 11, "#ff5b4f");
     bloc(ctx, 292, 236, 8, 9, 3, ENCRE);
-    bloc(ctx, 420, 236, 8, 9, 3, ENCRE);
+    bloc(ctx, 410, 236, 8, 9, 3, ENCRE);
 
     // la table et ses deux chaises ; la plante dans son grand pot, derrière la chaise de droite
     bloc(ctx, 438, 196, 7, 54, 3, "#3d5ee8");
@@ -468,8 +470,8 @@
   // (grosse tête, jambes courtes), c'est comme des enfants sur des chaises d'adulte : les
   // cuisses posées sur l'assise, les jambes qui pendent sans toucher le sol et se balancent
   // l'une après l'autre. dos : le bord du dossier ; sens 1 = tourné·e vers la droite.
-  function assis(ctx, nom, dos, sens, t, phase, retourne) {
-    const k = 4.4, siege = 246, genou = 30;
+  function assis(ctx, nom, dos, sens, t, phase, retourne, hauteurSiege) {
+    const k = 4.4, siege = hauteurSiege || 246, genou = 30;
     const mois = new Date().getMonth(), ete = nom === "ovo" && mois >= 4 && mois <= 8;
     const s = H.pixel.sprite(nom + "Profil", 4);
     const souffle = Math.sin(t / 900 + phase) > 0.6 ? 1 : 0;
@@ -509,7 +511,14 @@
 
   // La chanson d'ƟvƟ et Mesi : Mesi commence, ƟvƟ répond « Na-na-nana ! » sur un petit air,
   // et des notes s'envolent au-dessus de la table.
-  let chantJusqua = 0;
+  let chantJusqua = 0, canapeJusqua = 0;
+  // après le goûter, ƟvƟ et Mesi vont s'asseoir sur le canapé pour écouter de la musique
+  function allerSurLeCanape() {
+    canapeJusqua = performance.now() + 150000;
+    chantJusqua = canapeJusqua;
+    if (H.local.musique && H.musique) H.musique.jouer();
+  }
+  H.maison = { canape: allerSurLeCanape };
   function airNanana() {
     if (!H.local || !H.local.son) return;
     const ctx = H.audio.contexte();
@@ -558,7 +567,7 @@
         else if (q === "blague") blagueLolo();
       } },
       { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
-      { id: "canape", x: 278, y: 168, w: 164, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
+      { id: "canape", x: 278, y: 168, w: 152, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
       { id: "mesi", x: 572, y: 160, w: 66, h: 136, nom: "Un compliment de Mesi", agir: complimentMesi },
       { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: chanson },
       { id: "table", x: 500, y: 196, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
@@ -856,8 +865,15 @@
       cc.lineWidth = 2.2;
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
       memeEnBoule(cc, 168, 203, t, 0.75);
-      assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
-      assis(cc, "luigi", 626, -1, t, 4);
+      const surCanape = canapeJusqua > t;
+      if (surCanape) {
+        // sur le canapé, face à face, les jambes qui se balancent au-dessus du tapis
+        assis(cc, "ovo", 300, 1, t, 2, loloRaconte, 216);
+        assis(cc, "luigi", 412, -1, t, 4, false, 216);
+      } else {
+        assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
+        assis(cc, "luigi", 626, -1, t, 4);
+      }
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;
       tableGouter(cc);
@@ -895,8 +911,9 @@
         for (let i = 0; i < 6; i++) {
           const u = ((t / 1400) + i / 6) % 1;
           ctx.globalAlpha = Math.min(1, (chantJusqua - t) / 600) * (1 - u);
-          ctx.fillStyle = i % 2 ? "#ff5b4f" : ENCRE;
-          ctx.fillText(i % 3 ? "♪" : "♫", 470 + (i % 3) * 50 + Math.sin(u * 6 + i) * 6, 170 - u * 60);
+          ctx.fillStyle = i % 2 ? "#ff5b4f" : "#f3f0dc";
+          const base = canapeJusqua > t ? 318 : 470;
+          ctx.fillText(i % 3 ? "♪" : "♫", base + (i % 3) * 40 + Math.sin(u * 6 + i) * 6, 170 - u * 60);
         }
         ctx.globalAlpha = 1;
         ctx.textAlign = "start";
@@ -1020,7 +1037,7 @@
   function calanquesBalade(ctx, w, base, haut, decal, valeurs, air, nuit, ici) {
     const C = nuit
       ? { loin: "#2e3270", clair: "#4a4a82", ombre: "#2a2c6a", pins: ["#1e3d35", "#173a26", "#10241d"], tronc: "#2a1d1b" }
-      : { loin: brume("#94a6d2", 0.35, air), clair: brume(melange("#efe8d4", "#d98a5c", ici), 0.3, air), ombre: brume(melange("#a7b0d0", "#b0583a", ici), 0.3, air), pins: [brume("#4aa63e", 0.3, air), brume("#2f6b35", 0.3, air), brume("#1e3d25", 0.3, air)], tronc: "#7a4520" };
+      : { loin: brume("#94a6d2", 0.35, air), clair: brume(melange("#efe8d4", "#d98a5c", ici), 0.3, air), ombre: brume(melange("#a7b0d0", "#b0583a", ici), 0.3, air), pins: [brume("#9cc77a", 0.5, air), brume("#6a9a7a", 0.5, air), brume("#4a7a6a", 0.5, air)], tronc: brume("#7a4520", 0.4, air) };
     // le cap lointain, qui glisse très lentement
     const periode = w * 2.2, x0 = ((w * 0.5 - decal * 0.4) % periode + periode) % periode - w * 0.3, L = w * 0.55;
     ctx.fillStyle = C.loin;
