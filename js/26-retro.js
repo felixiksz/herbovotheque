@@ -15,7 +15,7 @@
     // les clairs : crème, calcaire, gris de route
     "#f3f0dc", "#e9e3cd", "#c9c9c4", "#9a9a9a",
     // jaunes, corail, rouges, roses, peau
-    "#f6ee55", "#ffd23a", "#e9b44c", "#ff5b4f", "#e8714a", "#d23a2a", "#c93f6e", "#e04bb0", "#ffb3a8", "#f2c29b", "#d9a07a",
+    "#f6ee55", "#ffd23a", "#e9b44c", "#ffc46b", "#ff8f2e", "#ff5b4f", "#e8714a", "#d23a2a", "#c93f6e", "#e04bb0", "#ffb3a8", "#f2c29b", "#d9a07a",
     // violets
     "#5b3c8f", "#8a58cc", "#d07ab8",
     // verts : chartreuse, prairie, garrigue, pin
@@ -45,8 +45,10 @@
   const TRAME = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v / 16 - 0.47) * 9);
 
   let petit = null, pc = null;
-  // taille : la taille d'un gros pixel, en pixels de la toile
-  function appliquer(toile, taille) {
+  // taille : la taille d'un gros pixel, en pixels de la toile ; trame : de 0 (aplats francs,
+  // dégradés en paliers) à 1 (la trame habituelle)
+  function appliquer(toile, taille, trame) {
+    const forceTrame = trame == null ? 1 : trame;
     const W = toile.width, Hh = toile.height;
     if (!W || !Hh) return;
     const sw = Math.max(1, Math.ceil(W / taille)), sh = Math.max(1, Math.ceil(Hh / taille));
@@ -67,7 +69,7 @@
       for (let x = 0; x < sw; x++, i += 4) {
         if (d[i + 3] < 10) continue;
         // un peu plus saturé et contrasté, comme les pochettes, avant de choisir la couleur
-        const o = TRAME[((y & 3) << 2) | (x & 3)];
+        const o = TRAME[((y & 3) << 2) | (x & 3)] * forceTrame;
         const m = (d[i] + d[i + 1] + d[i + 2]) / 3;
         const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
         const r = rs(d[i]), g = rs(d[i + 1]), b = rs(d[i + 2]);

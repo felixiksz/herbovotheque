@@ -93,9 +93,9 @@
   // Mesi, ƟvƟ, Lóló et Mémé sont là ; la fenêtre suit le ciel (nuages, étoiles, vraie lune).
   const ENCRE = "#23214a";
   const MOMENTS = {
-    jour: { murG: "#4aa63e", murD: "#c6cf55", sol: "#c93f6e", plinthe: "#a8325b", lampe: true },
-    soir: { murG: "#3f8a42", murD: "#a9b34a", sol: "#b2365f", plinthe: "#8e2a4e", lampe: true },
-    nuit: { murG: "#2f6b35", murD: "#858a45", sol: "#9a2f55", plinthe: "#7a2444", lampe: true },
+    jour: { murG: "#3f9a45", murD: "#d2db58", sol: "#c93f6e", plinthe: "#7a2444", ombreMur: "rgba(30,61,37,0.55)", lampe: true },
+    soir: { murG: "#36853d", murD: "#b8c24c", sol: "#b2365f", plinthe: "#6a1f3d", ombreMur: "rgba(27,29,74,0.55)", lampe: true },
+    nuit: { murG: "#2a6a32", murD: "#8f9644", sol: "#9a2f55", plinthe: "#5a1a34", ombreMur: "rgba(15,13,58,0.6)", lampe: true },
   };
   function momentMaison() {
     const alt = H.ciel.etat().soleil.alt;
@@ -130,14 +130,84 @@
     ctx.stroke();
     ctx.restore();
   }
-  // la fenêtre en plein cintre, comme dans les mazets
+  // la baie vitrée, au-dessus du canapé : on voit le dehors, les arbres et le ciel
+  const BAIE = { x: 290, y: 24, w: 146, h: 150 };
   function cheminFenetre(ctx) {
     ctx.beginPath();
-    ctx.moveTo(296, 140);
-    ctx.lineTo(296, 74);
-    ctx.arc(334, 74, 38, Math.PI, 0);
-    ctx.lineTo(372, 140);
-    ctx.closePath();
+    ctx.rect(BAIE.x, BAIE.y, BAIE.w, BAIE.h);
+  }
+  // Le dehors, derrière la vitre : le ciel du moment, des arbres au loin, plus sombres et bleuis,
+  // puis des arbres tout proches. Le jour, le soleil les éclaire par le haut ; le soir et la nuit,
+  // c'est la lumière du salon qui éclaire le bas de leur feuillage et leurs troncs.
+  function dehorsBaie(ctx, t, moment, etat) {
+    const { x: X, y: Y, w: L, h: Hh } = BAIE, bas = Y + Hh;
+    const matin = new Date().getHours() < 12;
+    const CIEL = moment === "jour" ? ["#2f8fe0", "#6fb6ee", "#a8d8ec", "#d6eef7"]
+      : moment === "soir" ? (matin ? ["#3a3aa8", "#8a58cc", "#d07ab8", "#ffb3a8", "#ffd23a"] : ["#2a2c6a", "#5b3c8f", "#c93f6e", "#ff5b4f", "#ffb36b"])
+      : ["#15124a", "#1b1d4a", "#232a63", "#2a2c6a", "#3a3aa8"];
+    const g = ctx.createLinearGradient(0, Y, 0, bas - 30);
+    CIEL.forEach((c, k) => g.addColorStop(k / (CIEL.length - 1), c));
+    ctx.fillStyle = g;
+    ctx.fillRect(X, Y, L, Hh);
+    const r = H.alea("baie");
+    if (moment === "jour") {
+      ctx.fillStyle = "#f3f0dc";
+      for (const [v, y, l] of [[0.010, 44, 34], [0.006, 70, 24]]) {
+        const x = X - 40 + ((t * v) % (L + 80));
+        arrondi(ctx, x, y, l, 9, 4.5); ctx.fill();
+        arrondi(ctx, x + l * 0.25, y - 5, l * 0.5, 9, 4.5); ctx.fill();
+      }
+    } else {
+      for (let i = 0; i < 22; i++) {
+        const x = X + r() * L, y = Y + r() * 70, n = i % 4;
+        ctx.fillStyle = "rgba(255,245,230," + (moment === "nuit" ? 0.5 + 0.5 * Math.sin(t / 600 + n * 2 + x) : 0.3) + ")";
+        ctx.fillRect(x, y, 1.8, 1.8);
+      }
+      if (etat.lune.alt > -2 || moment === "nuit") lunePlate(ctx, X + L - 30, Y + 30, 10, etat.lune.phase);
+    }
+    // au loin, une rangée d'arbres ronds, plus sombres et bleuis par l'air
+    const loin = moment === "jour" ? "#9cc77a" : moment === "soir" ? "#4a3a7a" : "#1b1d4a";
+    ctx.fillStyle = loin;
+    for (let x = X - 6; x < X + L + 6; x += 9 + r() * 6) {
+      const hh = 26 + r() * 22;
+      ctx.beginPath(); ctx.ellipse(x, bas - hh, 8 + r() * 5, 10 + r() * 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(x - 8, bas - hh, 16, hh);
+    }
+    // tout près, deux pins et un cyprès ; le côté éclairé change avec le moment
+    const pres = moment === "jour" ? "#2f6b35" : moment === "soir" ? "#2a2450" : "#10102e";
+    const eclaire = moment === "jour" ? "#4aa63e" : moment === "soir" ? "#ff9a5a" : "#e9b44c";
+    const tronc = moment === "jour" ? "#7a4520" : moment === "soir" ? "#3a2440" : "#1a1430";
+    const lumBas = moment !== "jour";
+    const houppe = (cx, cy, rx, ry) => {
+      ctx.fillStyle = pres;
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+      // le bord éclairé : en haut le jour (le soleil), en bas le soir (la lumière du salon)
+      ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = eclaire;
+      ctx.beginPath(); ctx.ellipse(cx + (lumBas ? 0 : -rx * 0.2), cy + (lumBas ? ry * 0.75 : -ry * 0.7), rx * 0.95, ry * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = pres;
+      ctx.beginPath(); ctx.ellipse(cx + (lumBas ? 0 : -rx * 0.2), cy + (lumBas ? ry * 1.05 : -ry * 1.0), rx * 0.95, ry * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    };
+    const pin = (x, haut, rx, penche) => {
+      ctx.strokeStyle = tronc; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(x, bas + 4); ctx.quadraticCurveTo(x + penche * 0.4, bas - haut * 0.5, x + penche, bas - haut); ctx.stroke();
+      if (lumBas) { ctx.strokeStyle = eclaire; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 2, bas + 4); ctx.quadraticCurveTo(x - 2 + penche * 0.4, bas - haut * 0.5, x - 2 + penche, bas - haut * 0.8); ctx.stroke(); }
+      houppe(x + penche - rx * 0.4, bas - haut - 6, rx * 0.7, 9);
+      houppe(x + penche + rx * 0.35, bas - haut - 2, rx * 0.75, 10);
+      houppe(x + penche, bas - haut - 12, rx * 0.6, 8);
+    };
+    pin(X + 26, 92, 30, 8);
+    pin(X + L - 40, 104, 34, -10);
+    // le cyprès, fin et sombre
+    ctx.fillStyle = pres;
+    ctx.beginPath(); ctx.moveTo(X + 72, bas - 112); ctx.quadraticCurveTo(X + 86, bas - 60, X + 82, bas); ctx.lineTo(X + 62, bas); ctx.quadraticCurveTo(X + 58, bas - 60, X + 72, bas - 112); ctx.fill();
+    ctx.fillStyle = eclaire;
+    ctx.beginPath(); ctx.moveTo(lumBas ? X + 64 : X + 70, lumBas ? bas - 40 : bas - 108); ctx.quadraticCurveTo(lumBas ? X + 72 : X + 62, lumBas ? bas - 20 : bas - 70, lumBas ? X + 70 : X + 64, lumBas ? bas : bas - 40); ctx.lineTo(lumBas ? X + 64 : X + 66, lumBas ? bas : bas - 40); ctx.fill();
+    // des reflets sur la vitre : deux traits de lumière le jour, la lampe qui se reflète le soir
+    ctx.fillStyle = moment === "jour" ? "rgba(255,255,255,0.16)" : "rgba(255,200,110,0.1)";
+    for (const [dx, l] of [[22, 7], [36, 3]]) { ctx.beginPath(); ctx.moveTo(X + dx, bas); ctx.lineTo(X + dx + l, bas); ctx.lineTo(X + dx + l + 60, Y); ctx.lineTo(X + dx + 60, Y); ctx.fill(); }
+    ctx.lineWidth = 2.2;
   }
 
   // La lumière de la lampe, à la manière des pochettes : des aplats aux bords nets, plus clairs
@@ -162,7 +232,7 @@
     aplat([[247, 141], [271, 141], [306, 52], [212, 52]], 0.34, "255,226,70");
     aplat([[240, 163], [278, 163], [430, 232], [88, 232]], 0.62, "255,221,60");
     // et là où la lumière touche le sol magenta, une flaque corail
-    aplat([[88, 232], [430, 232], [520, 360], [10, 360]], 0.66, "255,91,79");
+    aplat([[150, 232], [370, 232], [440, 312], [80, 312]], 0.7, "255,91,79");
   }
 
 
@@ -178,10 +248,16 @@
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.strokeStyle = ENCRE;
-    ctx.lineWidth = 1.6;
-    // les murs, deux couleurs, avec un lavis d'aquarelle
+    ctx.lineWidth = 2.2;
+    // les murs, deux couleurs franches, plus sombres vers le plafond et dans le coin
     ctx.fillStyle = M.murG; ctx.fillRect(0, 0, 214, 230);
     ctx.fillStyle = M.murD; ctx.fillRect(214, 0, 426, 230);
+    const plafond = ctx.createLinearGradient(0, 0, 0, 70);
+    plafond.addColorStop(0, M.ombreMur); plafond.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = plafond; ctx.fillRect(0, 0, 640, 70);
+    const coin = ctx.createLinearGradient(214, 0, 260, 0);
+    coin.addColorStop(0, M.ombreMur); coin.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = coin; ctx.fillRect(214, 0, 46, 230);
     ctx.beginPath(); ctx.moveTo(214, 0); ctx.lineTo(214, 230); ctx.stroke();
     // le sol en terrazzo
     ctx.fillStyle = M.sol; ctx.fillRect(0, 230, 640, 130);
@@ -206,25 +282,20 @@
 
     // la lumière de la lampe sur le mur et le sol, derrière les meubles
     if (M.lampe) lumiereLampe(ctx, moment, "fond");
-    // la fenêtre : volets bleus, encadrement, rebord et géraniums
-    bloc(ctx, 266, 40, 26, 102, 6, "#3d5ee8");
-    bloc(ctx, 376, 40, 26, 102, 6, "#3d5ee8");
-    for (const x of [270, 380]) for (let y = 52; y < 136; y += 12) { ctx.beginPath(); ctx.moveTo(x + 3, y); ctx.lineTo(x + 15, y); ctx.stroke(); }
-    ctx.lineWidth = 7; ctx.strokeStyle = "#f2f0e8"; cheminFenetre(ctx); ctx.stroke();
-    ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
-    ctx.save(); ctx.translate(0, 0); cheminFenetre(ctx); ctx.restore();
+    // la baie vitrée : on la découpe (le dehors se peint derrière), puis le cadre et les montants
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "#000";
     cheminFenetre(ctx); ctx.fill();
     ctx.restore();
-    cheminFenetre(ctx); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(334, 36); ctx.lineTo(334, 140); ctx.moveTo(296, 96); ctx.lineTo(372, 96); ctx.strokeStyle = "#f2f0e8"; ctx.lineWidth = 3; ctx.stroke();
-    ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
-    bloc(ctx, 286, 138, 96, 8, 3, "#f2f0e8");
-    bloc(ctx, 300, 124, 22, 15, 4, "#c96a3a");
-    bloc(ctx, 346, 124, 22, 15, 4, "#c96a3a");
-    for (const [x, y] of [[305, 118], [313, 113], [318, 120], [351, 117], [358, 112], [364, 119]]) {
-      ctx.beginPath(); ctx.arc(x, y, 4.2, 0, Math.PI * 2); ctx.fillStyle = "#e5333f"; ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 7; ctx.strokeStyle = "#f3f0dc"; cheminFenetre(ctx); ctx.stroke();
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
+    ctx.strokeRect(BAIE.x - 4, BAIE.y - 4, BAIE.w + 8, BAIE.h + 8);
+    ctx.strokeRect(BAIE.x + 3, BAIE.y + 3, BAIE.w - 6, BAIE.h - 6);
+    for (const u of [1 / 3, 2 / 3]) {
+      const x = BAIE.x + BAIE.w * u;
+      ctx.fillStyle = "#f3f0dc"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
+      ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
     }
 
     // le lit et ses coussins
@@ -285,7 +356,38 @@
       ctx.restore();
     }
     if (M.lampe) lumiereLampe(ctx, moment, "dessus");
+    plafonnier(ctx, moment);
     return c;
+  }
+
+  // Le plafonnier : une boule orange qui pend du plafond au bout d'un fil couleur cuivre,
+  // au-dessus de la table du goûter, avec son halo chaud au mur et sur la table.
+  const BOULE = { x: 535, y: 116, r: 15 };
+  function plafonnier(ctx, moment) {
+    const { x, y, r } = BOULE, fort = moment === "nuit" ? 1.3 : moment === "soir" ? 1.15 : 1;
+    const halo = ctx.createRadialGradient(x, y, r, x, y, r * 4.5);
+    halo.addColorStop(0, "rgba(255,170,70," + 0.34 * fort + ")");
+    halo.addColorStop(0.45, "rgba(255,143,46," + 0.1 * fort + ")");
+    halo.addColorStop(1, "rgba(255,143,46,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x, y, r * 4.5, 0, Math.PI * 2); ctx.fill();
+    // le cône de lumière sur la table
+    ctx.fillStyle = "rgba(255,196,107," + 0.2 * fort + ")";
+    ctx.beginPath(); ctx.moveTo(x - 10, y + r - 2); ctx.lineTo(x + 10, y + r - 2); ctx.lineTo(x + 70, 214); ctx.lineTo(x - 70, 214); ctx.closePath(); ctx.fill();
+    // le fil de cuivre, et la petite cloche qui le tient au plafond
+    ctx.strokeStyle = "#c87533"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, y - r - 3); ctx.stroke();
+    ctx.fillStyle = "#c87533"; ctx.fillRect(x - 7, 0, 14, 4);
+    ctx.fillRect(x - 3, y - r - 5, 6, 5);
+    // la boule : orange vif, plus claire là où l'ampoule brille, plus sombre en dessous
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = "#ff8f2e"; ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = "#d9601a"; ctx.beginPath(); ctx.arc(x, y + r * 0.9, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffc46b"; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff0b0"; ctx.beginPath(); ctx.arc(x - r * 0.38, y - r * 0.4, r * 0.18, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
   }
 
   // la table du goûter : deux tasses de tilleul et deux assiettes de crêpes au chocolat fondu
@@ -384,7 +486,7 @@
     // on peut aller faire dodo à partir de 21 h
     const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     return [
-      { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: fenetreBalade },
+      { id: "fenetre", x: 290, y: 24, w: 146, h: 140, nom: "Faire une balade", agir: fenetreBalade },
       { id: "meme", x: 152, y: 192, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
       { id: "lolo", x: 116, y: 156, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
         // le premier matin de la journée, on lui demande seulement s'il a bien dormi
@@ -640,29 +742,11 @@
       const S = w / 640;
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       ctx.clearRect(0, 0, 640, 360);
-      // le ciel dans la fenêtre
+      // le dehors, derrière la baie vitrée
       ctx.save();
       cheminFenetre(ctx); ctx.clip();
       const etat = H.ciel.etat();
-      if (moment === "jour") {
-        ctx.fillStyle = "#7cc4f0"; ctx.fillRect(290, 30, 90, 116);
-        ctx.fillStyle = "#ffffff";
-        for (const [v, y, l] of [[0.012, 62, 30], [0.008, 104, 22]]) {
-          const x = 280 + ((t * v) % 130);
-          arrondi(ctx, x, y, l, 9, 4.5); ctx.fill();
-          arrondi(ctx, x + l * 0.25, y - 5, l * 0.5, 9, 4.5); ctx.fill();
-        }
-      } else {
-        const g = ctx.createLinearGradient(0, 36, 0, 140);
-        if (moment === "soir") { g.addColorStop(0, "#5a4ab0"); g.addColorStop(1, "#f29a6b"); }
-        else { g.addColorStop(0, "#131246"); g.addColorStop(1, "#3a3a9a"); }
-        ctx.fillStyle = g; ctx.fillRect(290, 30, 90, 116);
-        for (const [x, y, n] of etoiles) {
-          ctx.fillStyle = "rgba(255,245,230," + (moment === "nuit" ? 0.5 + 0.5 * Math.sin(t / 600 + n * 2 + x) : 0.35) + ")";
-          ctx.fillRect(x, y, 1.6, 1.6);
-        }
-        if (etat.lune.alt > -2 || moment === "nuit") lunePlate(ctx, 352, 62, 10, etat.lune.phase);
-      }
+      dehorsBaie(ctx, t, moment, etat);
       ctx.restore();
       ctx.drawImage(decor, 0, 0, 640, 360);
       // la vapeur du tilleul
@@ -685,7 +769,7 @@
       cc.lineJoin = "round";
       cc.lineCap = "round";
       cc.strokeStyle = ENCRE;
-      cc.lineWidth = 1.6;
+      cc.lineWidth = 2.2;
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
       memeEnBoule(cc, 168, 203, t, 0.75);
       assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
@@ -738,8 +822,8 @@
         ctx.fillStyle = "rgba(255,226,90," + v + ")";
         ctx.beginPath(); ctx.moveTo(240, 163); ctx.lineTo(278, 163); ctx.lineTo(470, 300); ctx.lineTo(50, 300); ctx.closePath(); ctx.fill();
       }
-      // les gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
-      H.retro.appliquer(toile, H.retro.taillePour(3));
+      // de gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
+      H.retro.appliquer(toile, H.retro.taillePour(4), 0.3);
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       // le nom de ce qu'on survole
       if (survol) {
