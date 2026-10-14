@@ -580,8 +580,14 @@
     ctx.beginPath();
     ctx.moveTo(-22, -26); ctx.quadraticCurveTo(-40, -26, -46, -12); ctx.lineTo(-36, -6); ctx.quadraticCurveTo(-32, -16, -18, -12); ctx.closePath();
     ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-20, -27); ctx.quadraticCurveTo(-38, -30, -44, -17);
-    ctx.lineWidth = 4; ctx.strokeStyle = choco; ctx.stroke();
+    // la crinière chocolat, bien épaisse pour qu'on la voie en gros pixels, avec des mèches
+    ctx.beginPath(); ctx.moveTo(-18, -28); ctx.quadraticCurveTo(-38, -32, -45, -16);
+    ctx.lineWidth = 8; ctx.strokeStyle = ENCRE; ctx.stroke();
+    ctx.lineWidth = 5.5; ctx.strokeStyle = choco; ctx.stroke();
+    ctx.fillStyle = choco;
+    for (const [mx, my, dx, dy] of [[-24, -31, -3, -5], [-31, -31, -4, -4], [-38, -27, -6, -2], [-43, -21, -6, 1]]) {
+      ctx.beginPath(); ctx.moveTo(mx + 3, my + 2); ctx.lineTo(mx + dx, my + dy); ctx.lineTo(mx - 2, my + 3); ctx.closePath(); ctx.fill();
+    }
     ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
     ctx.restore();
     // la tête de peluche, au bout du cou
@@ -603,22 +609,45 @@
     ctx.scale(o.echelle || 1.3, o.echelle || 1.3);
     ctx.lineWidth = 1.6 / (o.echelle || 1.3);
     ctx.strokeStyle = ENCRE;
-    for (const dx of [-3, 2]) {
-      ctx.beginPath(); ctx.moveTo(dx - 3.2, -5); ctx.quadraticCurveTo(dx - 2.6, -13.5, dx, -16.5); ctx.quadraticCurveTo(dx + 2.4, -12, dx + 2.4, -5); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    // une vraie tête de cheval : longue, le front plat qui descend vers un grand museau doux,
+    // les joues rondes à l'arrière, de petites oreilles pointues couchées vers l'arrière
+    for (const [dx, pench] of [[1.5, -0.35], [4.5, -0.15]]) {
+      ctx.save(); ctx.translate(dx, -6.5); ctx.rotate(pench);
+      ctx.beginPath(); ctx.moveTo(-2.2, 1); ctx.quadraticCurveTo(-1.4, -5, 0.6, -7.5); ctx.quadraticCurveTo(2, -4.5, 2, 1); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+      ctx.restore();
     }
-    ctx.beginPath(); ctx.ellipse(0, 0, 8.5, 7.2, 0, 0, Math.PI * 2); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(-10.5, 2.6, 8.5, 6, 0.15, 0, Math.PI * 2); ctx.fillStyle = clair; ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-4, -5); ctx.lineTo(-2.5, -2.5); ctx.lineTo(-0.5, -4.5); ctx.lineTo(-1, -1); ctx.lineTo(-4, 0); ctx.closePath();
+    ctx.beginPath();
+    ctx.moveTo(5, -4);
+    ctx.quadraticCurveTo(0, -8, -6, -5.5);
+    ctx.lineTo(-18, 0);
+    ctx.quadraticCurveTo(-24, 2.5, -22.5, 6.5);
+    ctx.quadraticCurveTo(-21, 9.5, -16, 8.5);
+    ctx.quadraticCurveTo(-10, 7.5, -4, 8);
+    ctx.quadraticCurveTo(5, 9.5, 7, 3);
+    ctx.quadraticCurveTo(8, -1.5, 5, -4);
+    ctx.closePath();
+    ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    // le museau plus clair, et la naseau
+    ctx.save(); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(-19, 5, 6, 5, 0.2, 0, Math.PI * 2); ctx.fillStyle = clair; ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.ellipse(-20.5, 3.5, 1.5, 1, 0.5, 0, Math.PI * 2); ctx.fillStyle = choco; ctx.fill();
+    // la joue ronde
+    ctx.beginPath(); ctx.arc(1.5, 3.5, 3.8, 0.4, 2.6); ctx.stroke();
+    // le toupet chocolat entre les oreilles, et la petite étoile blanche sur le front
+    ctx.beginPath(); ctx.moveTo(2, -6.5); ctx.quadraticCurveTo(-3, -9, -6, -4.5); ctx.quadraticCurveTo(-2, -5.5, 1, -4); ctx.closePath(); ctx.fillStyle = choco; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-9, -3.2); ctx.lineTo(-7.6, -5); ctx.lineTo(-6.6, -3.4); ctx.lineTo(-5, -3.6); ctx.lineTo(-6.3, -2); ctx.lineTo(-8.2, -1.6); ctx.closePath();
     ctx.fillStyle = "#ffffff"; ctx.fill();
-    ctx.beginPath(); ctx.ellipse(-16, 2.5, 1.4, 0.9, 0.3, 0, Math.PI * 2); ctx.fillStyle = choco; ctx.fill();
+    // l'œil, haut sur le côté de la tête
     if (o.ouvert) {
-      ctx.beginPath(); ctx.arc(1, -0.5, 2.3, 0, Math.PI * 2); ctx.fillStyle = "#151325"; ctx.fill();
-      ctx.beginPath(); ctx.arc(0.3, -1.3, 0.8, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+      ctx.beginPath(); ctx.arc(-2.5, -2, 2, 0, Math.PI * 2); ctx.fillStyle = "#151325"; ctx.fill();
+      ctx.beginPath(); ctx.arc(-3.1, -2.7, 0.7, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
     } else {
-      ctx.beginPath(); ctx.moveTo(-1.5, 0); ctx.quadraticCurveTo(0.8, 1.8, 3, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-4.5, -1.5); ctx.quadraticCurveTo(-2.5, 0.2, -0.5, -1.5); ctx.stroke();
     }
+    // la bouche qui bouge quand il raconte
     if (o.parle) {
-      ctx.beginPath(); ctx.ellipse(-14, 6, 2.6, 0.5 + Math.abs(Math.sin((o.t || 0) / 120)) * 1.8, 0, 0, Math.PI * 2); ctx.fillStyle = "#3a2216"; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-18.5, 7.8, 2.6, 0.5 + Math.abs(Math.sin((o.t || 0) / 120)) * 1.6, 0.1, 0, Math.PI * 2); ctx.fillStyle = "#3a2216"; ctx.fill();
     }
     ctx.restore();
   }
@@ -817,11 +846,6 @@
         ctx.globalAlpha = 1;
         ctx.textAlign = "start";
       }
-      {
-        const v = 0.03 + 0.025 * Math.sin(t / 170) * Math.sin(t / 430);
-        ctx.fillStyle = "rgba(255,226,90," + v + ")";
-        ctx.beginPath(); ctx.moveTo(240, 163); ctx.lineTo(278, 163); ctx.lineTo(470, 300); ctx.lineTo(50, 300); ctx.closePath(); ctx.fill();
-      }
       // de gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
       H.retro.appliquer(toile, H.retro.taillePour(4), 0.3);
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
@@ -992,6 +1016,8 @@
   }
   // un pin parasol en aplat : tronc sinueux, branches, couronne en nuage plat
   function pinPlat(ctx, x, base, t, couleur, dessous, tronc) {
+    // un pin sur trois environ pousse en Y : le tronc se sépare en deux, et la couronne aussi
+    if (Math.round(t) % 3 === 0) return pinEnY(ctx, x, base, t, couleur, dessous, tronc);
     ctx.strokeStyle = tronc;
     ctx.lineWidth = Math.max(2.5, t * 0.045);
     ctx.lineCap = "round";
@@ -1012,6 +1038,27 @@
     ctx.lineTo(x + t * 0.54, cy + t * 0.02);
     ctx.closePath();
     ctx.fill();
+  }
+  function pinEnY(ctx, x, base, t, couleur, dessous, tronc) {
+    ctx.strokeStyle = tronc;
+    ctx.lineCap = "round";
+    ctx.lineWidth = Math.max(2.5, t * 0.05);
+    const fx = x + t * 0.04, fy = base - t * 0.42;
+    ctx.beginPath(); ctx.moveTo(x, base); ctx.quadraticCurveTo(x + t * 0.08, base - t * 0.22, fx, fy); ctx.stroke();
+    ctx.lineWidth = Math.max(2, t * 0.035);
+    const couronnes = [[x - t * 0.3, base - t * 0.84, 0.3], [x + t * 0.34, base - t * 0.92, 0.34]];
+    for (const [cx, cy] of couronnes) { ctx.beginPath(); ctx.moveTo(fx, fy); ctx.quadraticCurveTo((fx + cx) / 2 + (cx - fx) * 0.1, cy + t * 0.2, cx, cy + t * 0.02); ctx.stroke(); }
+    for (const [cx, cy, l] of couronnes) {
+      ctx.fillStyle = dessous;
+      ctx.beginPath(); ctx.ellipse(cx, cy + t * 0.03, t * l, t * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = couleur;
+      ctx.beginPath();
+      ctx.moveTo(cx - t * l, cy + t * 0.02);
+      for (const [dx, ry] of [[-0.55, 0.08], [-0.15, 0.11], [0.3, 0.09]]) ctx.ellipse(cx + dx * t * l, cy, t * l * 0.42, ry * t, 0, Math.PI, 0);
+      ctx.lineTo(cx + t * l, cy + t * 0.02);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
   // un buisson de garrigue, en aplat
   function buissonPlat(ctx, x, base, t, couleur) {
@@ -1251,9 +1298,14 @@
         ctx.stroke();
       }
     }
-    // le grain de risographie, puis la lumière de l'aube ou du couchant
-    ctx.fillStyle = ctx.createPattern(S.grain, "repeat");
-    ctx.fillRect(0, 0, w, h);
+    // le grain de risographie (celui du sol avance avec le chemin), puis la lumière de l'aube ou du couchant
+    const grain = ctx.createPattern(S.grain, "repeat");
+    ctx.fillStyle = grain;
+    ctx.fillRect(0, 0, w, h * 0.72);
+    ctx.save();
+    ctx.translate(-(avance % S.grain.width), 0);
+    ctx.fillRect(avance % S.grain.width, h * 0.72, w, h * 0.28);
+    ctx.restore();
     if (!nuit) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       for (const v of H.ciel.lumiere(alt)) {
@@ -1261,7 +1313,8 @@
         ctx.fillRect(0, 0, b.toile.width, b.toile.height);
       }
     }
-    H.retro.appliquer(b.toile, H.retro.taillePour(3));
+    // la trame des gros pixels glisse avec le chemin, sous la ligne du rivage
+    H.retro.appliquer(b.toile, H.retro.taillePour(3), 0.7, { x: avance * (b.toile.width / w), depuis: 0.72 });
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 

@@ -47,7 +47,9 @@
   let petit = null, pc = null;
   // taille : la taille d'un gros pixel, en pixels de la toile ; trame : de 0 (aplats francs,
   // dégradés en paliers) à 1 (la trame habituelle)
-  function appliquer(toile, taille, trame) {
+  // defile : { x, depuis } fait glisser la trame avec le décor, sous la ligne « depuis » (de 0 à 1),
+  // pour qu'un sol qui défile emporte ses petits points avec lui
+  function appliquer(toile, taille, trame, defile) {
     const forceTrame = trame == null ? 1 : trame;
     const W = toile.width, Hh = toile.height;
     if (!W || !Hh) return;
@@ -65,11 +67,13 @@
     pc.clearRect(0, 0, sw, sh);
     pc.drawImage(toile, 0, 0, W, Hh, 0, 0, sw, sh);
     const img = pc.getImageData(0, 0, sw, sh), d = img.data;
+    const dx = defile ? Math.round(defile.x / taille) : 0, ligneDefile = defile ? Math.floor(defile.depuis * sh) : sh;
     for (let y = 0, i = 0; y < sh; y++) {
+      const decale = y >= ligneDefile ? dx : 0;
       for (let x = 0; x < sw; x++, i += 4) {
         if (d[i + 3] < 10) continue;
         // un peu plus saturé et contrasté, comme les pochettes, avant de choisir la couleur
-        const o = TRAME[((y & 3) << 2) | (x & 3)] * forceTrame;
+        const o = TRAME[((y & 3) << 2) | ((x + decale) & 3)] * forceTrame;
         const m = (d[i] + d[i + 1] + d[i + 2]) / 3;
         const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
         const r = rs(d[i]), g = rs(d[i + 1]), b = rs(d[i + 2]);

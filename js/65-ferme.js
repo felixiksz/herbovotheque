@@ -58,12 +58,12 @@
   const iso = (i, j) => [OX + (i - j) * 8, OY + (i + j) * 4];
   const MAISONS = [
     { id: "maison", hash: "maison", nom: "Chez ƟvƟ et Mesi", i: 11, j: 11, w: 2, d: 4, h: 14, genre: "tiny", terrasse: true, solaire: true,
-      t: { clair: "#e8714a", ombre: "#b2552e", planche: "#c95a3a", trait: "#7a2e1e", toitC: "#3a5a8a", toitO: "#26406a", porte: "#7f97f2" } },
+      t: { clair: "#e8714a", ombre: "#b2552e", planche: "#c95a3a", trait: "#7a2e1e", toitC: "#e8714a", toitO: "#b2552e", porte: "#7f97f2" } },
     { id: "herbo", hash: "herbotheque", nom: "Herbothèque", i: 5, j: 6, w: 2, d: 4, h: 13, genre: "tiny", roues: true,
-      t: { clair: "#b9834f", ombre: "#8a5c34", planche: "#9a6a3c", trait: "#4b3427", toitC: "#6b6578", toitO: "#4a4560", porte: "#2f6b35" } },
+      t: { clair: "#b9834f", ombre: "#8a5c34", planche: "#9a6a3c", trait: "#4b3427", toitC: "#e8714a", toitO: "#b2552e", porte: "#2f6b35" } },
     { id: "cartes", hash: "cartes", nom: "Cabane à flashcartes", i: 11, j: 4, w: 3, d: 2, h: 11, genre: "roulotte" },
     { id: "labo", hash: "labo", nom: "Labo", i: 4, j: 15, w: 2, d: 3, h: 12, genre: "tiny", poele: true, treille: true,
-      t: { clair: "#6cbd5c", ombre: "#3f8a42", planche: "#4aa63e", trait: "#1e3d25", toitC: "#9a9a9a", toitO: "#6b6578", porte: "#e9b44c" } },
+      t: { clair: "#6cbd5c", ombre: "#3f8a42", planche: "#4aa63e", trait: "#1e3d25", toitC: "#e8714a", toitO: "#b2552e", porte: "#e9b44c" } },
     { id: "serre", hash: "serre", nom: "Serre", i: 17, j: 13, w: 3, d: 4, h: 11, genre: "serre" },
     { id: "lettres", hash: "lettres", nom: "Boîte aux lettres", i: 9, j: 17, w: 1, d: 1, h: 0, genre: "boite" },
     { id: "ponton", hash: "terrain", nom: "Ponton vers les îles", i: 23, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
@@ -248,11 +248,26 @@
   const VERTS_PIN = ["#1e3d25", "#2f6b35", "#4aa63e", "#173a26"], VERTS_BLEUS = ["#1e3d25", "#26406a", "#3f8a42", "#173a26"];
   function dessinPlante(p) {
     switch (p.e) {
-      case "pin": return sprite("pin" + p.v, 36, 40, (c) => {
-        const h = 22 + p.v * 4;
-        for (let y = 0; y < h; y++) { const x = 18 + Math.round(Math.sin(y / 6) * 1.5); pixel(c, x, 39 - y, "#7a4520"); pixel(c, x + 1, 39 - y, "#4b3427"); }
-        feuillage(c, 17, 39 - h - 1, 15, 4, VERTS_PIN); feuillage(c, 15, 39 - h - 4, 10, 3, VERTS_PIN);
-      });
+      case "pin": {
+        // un pin sur trois environ pousse en Y : deux branches maîtresses, deux couronnes
+        const fourche = hash(Math.round(p.x * 10), Math.round(p.y * 10)) < 0.33;
+        if (!fourche) return sprite("pin" + p.v, 36, 40, (c) => {
+          const h = 22 + p.v * 4;
+          for (let y = 0; y < h; y++) { const x = 18 + Math.round(Math.sin(y / 6) * 1.5); pixel(c, x, 39 - y, "#7a4520"); pixel(c, x + 1, 39 - y, "#4b3427"); }
+          feuillage(c, 17, 39 - h - 1, 15, 4, VERTS_PIN); feuillage(c, 15, 39 - h - 4, 10, 3, VERTS_PIN);
+        });
+        return sprite("pinY" + p.v, 48, 44, (c) => {
+          const h = 24 + p.v * 4, f = Math.round(h * 0.45), cx = 24;
+          for (let y = 0; y < f; y++) { pixel(c, cx, 43 - y, "#7a4520"); pixel(c, cx + 1, 43 - y, "#4b3427"); }
+          // les deux branches qui s'écartent en montant
+          const bras = [[-1, h - 3, 9], [1, h, 10]];
+          for (const [sens, hb, ecart] of bras) for (let y = f; y < hb; y++) { const u = (y - f) / (hb - f), x = cx + sens * Math.round(ecart * Math.pow(u, 0.8)); pixel(c, x, 43 - y, "#7a4520"); pixel(c, x + 1, 43 - y, "#4b3427"); }
+          for (const [sens, hb, ecart] of bras) {
+            const x = cx + sens * ecart + 1, y = 43 - hb - 1;
+            feuillage(c, x, y, 10, 3, VERTS_PIN); feuillage(c, x - sens, y - 3, 7, 2, VERTS_PIN);
+          }
+        });
+      }
       case "cedre": return sprite("cedre" + p.v, 26, 36, (c) => {
         for (let y = 0; y < 8; y++) { pixel(c, 13, 35 - y, "#4b3427"); pixel(c, 12, 35 - y, "#7a4520"); }
         for (let k = 0; k < 4; k++) feuillage(c, 13, 26 - k * 6, 11 - k * 2, 3, VERTS_BLEUS);
@@ -363,8 +378,8 @@
       const ox = m.d * 8 + 12, oy = h - 6;
       const T = {
         mazet: { clair: "#f3f0dc", ombre: "#c9c4b0", trait: "#7a6a56", grain: "#e9e3cd", toitC: "#e8714a", toitO: "#b2552e" },
-        herbo: { clair: "#b9834f", ombre: "#8a5c34", trait: "#4b3427", grain: "#9a6a3c", toitC: "#3a5a8a", toitO: "#26406a" },
-        roulotte: { clair: "#ffd23a", ombre: "#e9a83a", trait: "#9a6a3c", grain: "#f6ee55", toitC: "#ff5b4f", toitO: "#c93f6e" },
+        herbo: { clair: "#b9834f", ombre: "#8a5c34", trait: "#4b3427", grain: "#9a6a3c", toitC: "#e8714a", toitO: "#b2552e" },
+        roulotte: { clair: "#ffd23a", ombre: "#e9a83a", trait: "#9a6a3c", grain: "#f6ee55", toitC: "#e8714a", toitO: "#b2552e" },
         labo: { clair: "#e9e3cd", ombre: "#b8ae94", trait: "#6b6578", grain: "#c9c9c4", toitC: "#e8714a", toitO: "#b2552e" },
         serre: { clair: "#d6eef7", ombre: "#a8d8ec", trait: "#2f6b35", grain: "#ffffff", toitC: "#e9f6fb", toitO: "#bfe3f2" },
       }[m.genre];
@@ -394,10 +409,10 @@
         const H2 = m.h, fh = 6;
         const P = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - H2 - fh], Q = [(C[0] + D[0]) / 2, (C[1] + D[1]) / 2 - H2 - fh];
         const a = [A[0] - 1, A[1] - H2], b = [B[0], B[1] - H2 + 1], cc = [C[0] + 1, C[1] - H2], dd = [D[0], D[1] - H2];
-        remplir(c, [dd, a, P, Q], "#c93f6e"); contour(c, [dd, a, P, Q], "#7a2e1e");
+        remplir(c, [dd, a, P, Q], "#b2552e"); contour(c, [dd, a, P, Q], "#7a2e1e");
         remplir(c, [a, b, P], T.clair); contour(c, [a, b, P], T.trait);
-        remplir(c, [b, cc, Q, P], "#ff5b4f"); contour(c, [b, cc, Q, P], "#7a2e1e");
-        for (let k = 1; k < 3; k++) { const u = k / 3; ligne(c, b[0] + (P[0] - b[0]) * u, b[1] + (P[1] - b[1]) * u, cc[0] + (Q[0] - cc[0]) * u, cc[1] + (Q[1] - cc[1]) * u, "#c93f6e"); }
+        remplir(c, [b, cc, Q, P], "#e8714a"); contour(c, [b, cc, Q, P], "#7a2e1e");
+        for (let k = 1; k < 3; k++) { const u = k / 3; ligne(c, b[0] + (P[0] - b[0]) * u, b[1] + (P[1] - b[1]) * u, cc[0] + (Q[0] - cc[0]) * u, cc[1] + (Q[1] - cc[1]) * u, "#b2552e"); }
         return;
       }
       if (m.genre === "ponton") {
@@ -535,8 +550,12 @@
     fen(R1[0] - 2, R1[1] + 9, 3, 3, -0.5);
     const devant = [a, b, R1, R2];
     remplir(c, devant, T.toitC); contour(c, devant, T.trait);
-    // les joints debout de la tôle
-    for (let k = 1; k < 9; k++) { const u = k / 9; ligne(c, a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, R2[0] + (R1[0] - R2[0]) * u, R2[1] + (R1[1] - R2[1]) * u, T.toitO); }
+    // des tuiles en terre cuite : des rangées parallèles à la gouttière, et les tuiles décalées d'une rangée à l'autre
+    for (let k = 1; k < 6; k++) {
+      const u = k / 6, p1 = [a[0] + (R2[0] - a[0]) * u, a[1] + (R2[1] - a[1]) * u], p2 = [b[0] + (R1[0] - b[0]) * u, b[1] + (R1[1] - b[1]) * u];
+      ligne(c, p1[0], p1[1], p2[0], p2[1], T.toitO);
+      for (let q = (k % 2) * 0.5 + 0.5; q < 9; q += 1.5) { const v = q / 9; pixel(c, p1[0] + (p2[0] - p1[0]) * v, p1[1] + (p2[1] - p1[1]) * v - 1, T.toitO); }
+    }
     // des panneaux solaires sur le pan au soleil : bleu nuit, une grille claire, un reflet du ciel
     if (m.solaire) {
       const sur = (u, v) => [a[0] + (b[0] - a[0]) * u + (R2[0] - a[0]) * v, a[1] + (b[1] - a[1]) * u + (R2[1] - a[1]) * v];
@@ -581,7 +600,7 @@
     remplir(c, g, cote < 0 ? T.ombre : T.clair); contour(c, g, T.trait);
     const px = A[0] + (B[0] - A[0]) * 0.5, py = A[1] + (B[1] - A[1]) * 0.5;
     remplir(c, [[px - 2, py - 1], [px + 3, py + 1], [px + 3, py - 10], [px - 2, py - 12]], "#3d5ee8"); contour(c, [[px - 2, py - 1], [px + 3, py + 1], [px + 3, py - 10], [px - 2, py - 12]], "#26406a");
-    for (let k = 1; k < 6; k++) { const u = k / 6, x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u - h - Math.sin(Math.PI * u) * 5 + 2; pixel(c, x, y, k % 2 ? "#ff5b4f" : "#f3f0dc"); pixel(c, x, y + 1, k % 2 ? "#ff5b4f" : "#f3f0dc"); }
+    for (let k = 1; k < 6; k++) { const u = k / 6, x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u - h - Math.sin(Math.PI * u) * 5 + 2; pixel(c, x, y, k % 2 ? "#e8714a" : "#f3f0dc"); pixel(c, x, y + 1, k % 2 ? "#e8714a" : "#f3f0dc"); }
     // l'escalier de bois devant la porte
     for (let k = 0; k < 3; k++) remplir(c, [[px - 3 - k, py + 1 + k * 2], [px + 3 - k, py + 4 + k * 2], [px + 3 - k, py + 5 + k * 2], [px - 3 - k, py + 2 + k * 2]], k % 2 ? "#9a6a3c" : "#b9834f");
     // deux grandes roues à rayons, sous la longue face
