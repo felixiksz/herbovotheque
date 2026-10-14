@@ -202,7 +202,34 @@
   // trois agaves en fleur au plus, parmi les plus grandes mères (c'est rare : la plante fleurit une fois dans sa vie)
   plantes.filter((q) => q.e === "agave" && q.taille > 0.95).sort((a, b) => hash(a.x, a.y) - hash(b.x, b.y)).slice(0, 3)
     .forEach((q) => { q.fleur = true; q.penche = hash(q.y, q.x) < 0.5 ? -1 : 1; });
+  // Les racines des arbres plantés près du bord : on les voit dans la tranche de terre, comme sur
+  // une maquette coupée. Plus l'arbre est grand et près du bord, plus elles descendent loin.
+  function racinesBords() {
+    const PROF = { pin: 24, araucaria: 26, figuier: 18, cedre: 22, yucca: 12, genevrier: 14, romarin: 8, agave: 7 };
+    for (const p of plantes) {
+      const prof = PROF[p.e];
+      if (!prof) continue;
+      // la tranche de gauche (bord j = N) et celle de droite (bord i = N)
+      for (const [d, pt] of [[N - p.y, iso(p.x, N)], [N - p.x, iso(N, p.y)]]) {
+        if (d > 2.4) continue;
+        const force = 1 - d / 2.4, L = Math.round(4 + prof * force * (p.taille || 1)), x0 = Math.round(pt[0]), y0 = Math.round(pt[1]) + 2;
+        const g = hash(Math.round(p.x * 10), Math.round(p.y * 10));
+        // le pivot, qui descend en ondulant, et ses racines latérales en biais
+        let x = x0;
+        for (let k = 0; k < L; k++) {
+          if (k > 2 && hash(k, g * 97) < 0.3) x += hash(g * 31, k) < 0.5 ? -1 : 1;
+          pixel(sc, x, y0 + k, k < L * 0.6 ? "#4b3427" : "#5a3418");
+          if (k < L * 0.4) pixel(sc, x + 1, y0 + k, "#7a4520");
+          if (k > 1 && k < L - 2 && hash(k * 7, g * 13) < 0.28) {
+            const sens = hash(k, g * 7) < 0.5 ? -1 : 1, l = 2 + Math.round(hash(g, k * 3) * (3 + prof * force * 0.25));
+            for (let q = 1; q <= l; q++) pixel(sc, x + sens * q, y0 + k + Math.round(q * 0.6), q < l ? "#4b3427" : "#7a4520");
+          }
+        }
+      }
+    }
+  }
   function peindreSol2() {
+  racinesBords();
   for (const p of plantes) if (p.e === "pin") { const [x, y] = iso(p.x, p.y); ovale(sc, x, y + 4, 9, 4, null, (dx, dy) => (hash(x + dx, y + dy) < 0.15 ? "#9a9a9a" : hash(x + dx * 2, y + dy) < 0.5 ? "#c96a3a" : "#b2552e")); }
   // des chemins de terre battue : la largeur varie, ils ondulent un peu, quelques cailloux,
   // et l'herbe mord sur les bords
