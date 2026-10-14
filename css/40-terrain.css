@@ -338,40 +338,39 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 :root[data-ile] .outils-terrain .bouton.actif, :root[data-ile] .options-outil .bouton.actif { background: #ff5b4f; color: #23214a; border-color: #ff5b4f; }
 :root[data-ile] .options-outil, :root[data-ile] .options-outil .cout, :root[data-ile] .discret { color: #c9c4e6; }
 
-/* Les menus des scènes, comme dans les jeux 8 bits (Dragon Quest, Zelda, Final Fantasy sur NES) :
-   une boîte bleu nuit aux angles presque droits, un double liseré crème, des capitales crème,
-   et un petit curseur ▶ devant le choix en cours. */
-:root { --menu-fond: #1b1d4a; --menu-trait: #f3f0dc; --menu-choix: #f6ee55; }
+/* Les menus des scènes, comme dans Zelda sur NES : un bloc d'encre carré, cerné de corail, avec
+   une ombre décalée ; la police pixel VT323 en crème, et un petit curseur ▶ jaune devant le choix. */
+:root { --menu-fond: #1b1d4a; --menu-trait: #f3f0dc; --menu-choix: #f6ee55; --menu-cerne: #ff5b4f; --menu-police: "VT323", "Suez One", monospace; }
 .pastille-scene, .sortie-maison,
 :root[data-vue="village"] .outils-ferme,
 :root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile,
 :root[data-vue="balade"] .actions-balade > * {
   background: var(--menu-fond); color: var(--menu-trait);
-  border: 3px solid var(--menu-trait); border-radius: 4px;
-  box-shadow: 0 0 0 3px var(--menu-fond), inset 0 0 0 2px var(--menu-fond);
-  font-family: "Suez One", var(--texte); text-transform: uppercase; letter-spacing: 0.06em;
+  border: 0; border-radius: 0;
+  box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 6px 6px 0 6px rgba(15, 16, 53, 0.6);
+  font-family: var(--menu-police); text-transform: none; letter-spacing: 0.02em;
 }
-.pastille-scene, .sortie-maison { padding: 2px 10px 3px; font-size: 0.78rem; }
+.pastille-scene, .sortie-maison { padding: 0 10px 1px; font-size: 1.2rem; line-height: 1.3; }
 .pastille-scene:hover, .pastille-scene:focus-visible, .sortie-maison:hover, .sortie-maison:focus-visible { background: var(--menu-fond); color: var(--menu-choix); outline: none; }
 .pastille-scene:hover::before, .pastille-scene:focus-visible::before, .sortie-maison:hover::before, .sortie-maison:focus-visible::before { content: "▶ "; }
 :root[data-vue="village"] .outils-ferme {
-  position: absolute; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 3;
+  position: absolute; left: 18px; right: 18px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 3;
   margin: 0; padding: 10px 14px; gap: 4px;
 }
 :root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile { padding: 6px 10px; margin: 8px 0; }
 :root[data-ile] .options-outil:empty { display: none; }
-:root[data-vue="village"] .outils-ferme p, :root[data-ile] .options-outil, :root[data-ile] .options-outil .cout { color: var(--menu-trait); opacity: 0.85; text-transform: none; letter-spacing: 0; font-family: var(--texte); font-size: 0.85rem; }
+:root[data-vue="village"] .outils-ferme p, :root[data-ile] .options-outil, :root[data-ile] .options-outil .cout { color: var(--menu-trait); opacity: 0.85; font-family: var(--menu-police); font-size: 1.15rem; }
 :root[data-vue="village"] .outils-ferme .bouton,
 :root[data-ile] .outils-terrain .bouton, :root[data-ile] .options-outil .bouton, :root[data-ile] .pied-ile .bouton, :root[data-ile] .terrain-tete a.bouton,
 :root[data-vue="balade"] .actions-balade .bouton {
   position: relative; background: none; border: 0; box-shadow: none; border-radius: 0;
-  color: var(--menu-trait); font: inherit; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 2px 6px 2px 16px; min-height: 0;
+  color: var(--menu-trait); font: inherit; font-size: 1.25rem; line-height: 1.2; text-transform: none; letter-spacing: 0.02em;
+  padding: 0 6px 0 16px; min-height: 0;
 }
 :root[data-vue="village"] .outils-ferme .bouton::before,
 :root[data-ile] .outils-terrain .bouton::before, :root[data-ile] .options-outil .bouton::before, :root[data-ile] .pied-ile .bouton::before, :root[data-ile] .terrain-tete a.bouton::before,
 :root[data-vue="balade"] .actions-balade .bouton::before {
-  content: "▶"; position: absolute; left: 2px; top: 50%; transform: translateY(-50%); font-size: 0.6rem; opacity: 0;
+  content: "▶"; position: absolute; left: 2px; top: 50%; transform: translateY(-50%); font-size: 0.7rem; opacity: 0;
 }
 :root[data-vue="village"] .outils-ferme .bouton:is(.actif, :hover, :focus-visible),
 :root[data-ile] :is(.outils-terrain, .options-outil, .pied-ile) .bouton:is(.actif, :hover, :focus-visible), :root[data-ile] .terrain-tete a.bouton:is(:hover, :focus-visible),
@@ -379,7 +378,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 :root[data-vue="village"] .outils-ferme .bouton:is(.actif, :hover, :focus-visible)::before,
 :root[data-ile] :is(.outils-terrain, .options-outil, .pied-ile) .bouton:is(.actif, :hover, :focus-visible)::before, :root[data-ile] .terrain-tete a.bouton:is(:hover, :focus-visible)::before,
 :root[data-vue="balade"] .actions-balade .bouton:is(:hover, :focus-visible)::before { opacity: 1; }
-:root[data-ile] .terrain-tete a.bouton { background: var(--menu-fond); border: 3px solid var(--menu-trait); box-shadow: 0 0 0 3px var(--menu-fond); border-radius: 4px; padding: 2px 10px 3px 16px; }
+:root[data-ile] .terrain-tete a.bouton { background: var(--menu-fond); border: 0; border-radius: 0; box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 6px 6px 0 6px rgba(15, 16, 53, 0.6); padding: 0 10px 1px 16px; margin: 6px; }
 :root[data-vue="balade"] .actions-balade > * { padding: 6px 10px; }
 :root[data-vue="balade"] .actions-balade > [hidden] { display: none; }
 :root[data-vue="balade"] .actions-balade .fin-balade { display: flex; gap: 6px; }

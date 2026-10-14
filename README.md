@@ -9,7 +9,7 @@ Une herbothèque (des bocaux sur des étagères, une fiche page d’herbier par 
 - `index.html` : la page unique. Les fichiers `css/` et `js/` sont numérotés dans l’ordre de chargement, avec un `?v=` à changer à chaque modification (`python tools/version.py` le fait partout, y compris dans `sw.js`).
 - `data/base.enc` : les fiches plantes, **chiffrées** (mot de passe demandé au premier lancement). Les fiches d’origine ne doivent jamais être publiées en clair.
 - `prive/` : les fiches en clair et les messages personnels, jamais envoyés sur GitHub (dans `.gitignore`).
-- `fonts/` : Beth Ellen (titres, étiquettes), Kumar One (terrain), Caudex (texte), sous licence OFL. J’ai ajouté le caractère Ɵ (un O avec un point au milieu, comme des yeux) dans Beth Ellen et Kumar One (`tools/polices.py`).
+- `fonts/` : Beth Ellen (titres, étiquettes), Kumar One (terrain), Caudex (texte), Suez One (boutons), VT323 (menus des scènes), sous licence OFL. J’ai ajouté le caractère Ɵ (un O avec un point au milieu, comme des yeux) dans Beth Ellen et Kumar One (`tools/polices.py`).
 - `sw.js` : le jeu marche hors connexion.
 
 ## Refaire les fiches chiffrées
