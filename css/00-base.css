@@ -438,3 +438,12 @@ label { font-size: 0.95rem; }
 .verrou[data-moment="jour"] input { color: #3e2210; font: 1.6rem/1.1 "VT323", monospace; letter-spacing: 0.15em; }
 .verrou[data-moment="jour"] button[type=submit] { color: #7a2e1e; font: 1.5rem/1 "VT323", monospace; }
 .verrou[data-moment="jour"] #verrou-message { color: #7a2e1e; font: 1.2rem "VT323", monospace; margin: 0; }
+/* l'écran d'accueil : un titre et une étiquette plus discrets, pour laisser voir la scène */
+.verrou[data-moment] .titre-jeu { font-size: clamp(1.5rem, 6.5vw, 2.6rem); }
+.verrou[data-moment="nuit"] .titre-jeu { font-size: clamp(1.3rem, 5.5vw, 2.4rem); }
+.verrou[data-moment] form { width: min(250px, calc(100% - 48px)); gap: 6px; padding: 10px 14px 9px; }
+.verrou[data-moment="jour"] form { clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%, 0 16px); }
+.verrou[data-moment="jour"] label { font-size: 1.35rem; }
+.verrou[data-moment="nuit"] label { font-size: 1.2rem; }
+.verrou[data-moment] input { font-size: 1.25rem; }
+.verrou[data-moment] button[type=submit] { font-size: 1.15rem; }
