@@ -1,5 +1,5 @@
 // Les noms hongrois des plantes et des animaux : sur l'île de Lóló et Mémé, Mesi les donne
-// quand on l'appelle. (Rangés par nom français de la fiche.)
+// quand on l'appelle. (Rangés par nom français de la fiche ; quand on dit les deux, les deux.)
 (function () {
   const H = window.H;
   const PLANTES = {
@@ -53,7 +53,7 @@
     "Cyprès": "ciprus",
     "Desmodium": "deszmódium",
     "Echinacée": "kasvirág",
-    "Églantier": "gyepűrózsa",
+    "Églantier": "gyepűrózsa / vadrózsa",
     "Eleuthérocoque": "tajgagyökér",
     "Epilobes": "füzikék",
     "Estragon": "tárkony",
@@ -80,7 +80,7 @@
     "Harpagophyton": "ördögcsáklya",
     "Houblon": "komló",
     "Hysope": "izsóp",
-    "Karkadé ou hibiscus": "rózsamályva (hibiszkusz)",
+    "Karkadé ou hibiscus": "rozella / hibiszkusz / rózsamályva",
     "Lamier blanc": "fehér árvacsalán",
     "Laurier noble": "nemes babér",
     "Lavande officinale": "közönséges levendula",
@@ -109,9 +109,9 @@
     "Pariétaire": "közönséges falgyom",
     "Passiflore": "golgotavirág",
     "Pavot de Californie": "kaliforniai kakukkmák",
-    "Pensée sauvage": "vadárvácska",
+    "Pensée sauvage": "vadárvácska / háromszínű árvácska",
     "Petite centaurée": "kis ezerjófű",
-    "Petite pervenche": "kis télizöld meténg",
+    "Petite pervenche": "kis meténg / kis télizöld meténg",
     "Piloselle": "ezüstös hölgymál",
     "Pin sylvestre": "erdeifenyő",
     "Pissenlit": "pitypang",
@@ -126,11 +126,11 @@
     "Ronce": "szeder",
     "Safran": "sáfrány",
     "Sapin pectiné": "közönséges jegenyefenyő",
-    "Sarriette": "csombord",
+    "Sarriette": "hegyi pereszlény / csombord",
     "Sauge officinale": "orvosi zsálya",
     "Sauge sclarée": "muskotályzsálya",
     "Saule blanc": "fehér fűz",
-    "Scrofulaire noueuse": "göcsös görvélyfű",
+    "Scrofulaire noueuse": "göcsös görvélyfű / csomós görvélyfű",
     "Serpolet": "mezei kakukkfű",
     "Solidage": "közönséges aranyvessző",
     "Souci officinal": "körömvirág",

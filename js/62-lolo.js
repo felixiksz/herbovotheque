@@ -51,17 +51,18 @@
     "Tu es la plus douce des juments.",
     "Tes yeux pétillent comme la mer aux calanques.",
   ];
-  // Les blagues de Lóló : la question, puis la chute. ƟvƟ et Mesi répondent d'une seule voix.
+  // Les blagues de Lóló : l'humour d'un enfant de 7 ans. Chaque blague est une petite suite de
+  // répliques ; à la fin, ƟvƟ et Mesi disent d'une seule voix « Sacré Lóló ! ».
   const BLAGUES = [
-    ["Quel est le comble pour un cheval ?", "D’être à cheval sur les principes ! Hiii !"],
-    ["Pourquoi le thym est-il toujours en retard ?", "Parce qu’il prend tout son thym ! Hiii hiii !"],
-    ["Quel est le légume préféré des chevaux ?", "Le céleri : on galope à toute célérité ! Hiii !"],
-    ["Pourquoi la camomille ne se dispute jamais ?", "Parce qu’elle reste toujours calme… o-mille ! Hiii !"],
-    ["Tu sais ce que fait un cheval qui a le hoquet ?", "Il hennit… hic ! Il hennit… hic ! Et Mémé n’a même pas ouvert un œil."],
-    ["Quelle est la plante préférée de Mémé ?", "L’herbe à chat, bien sûr. Mais elle dit que c’est pour moi. Hiii !"],
-    ["Tu connais l’histoire du cheval jardinier ?", "Il plantait des fers à cheval, pour faire pousser des poulains ! Hiii !"],
-    ["Pourquoi l’ortie n’a pas beaucoup d’amis ?", "Parce qu’elle pique au vif ! Mais en soupe, elle est adorable. Hiii !"],
-    ["Qu’est-ce qui est tout doux, couleur caramel, et qui fait « hiii » ?", "Moi ! Hiii !"],
+    [["lolo", "Qu’est-ce qui est jaune et qui attend ?"], ["lolo", "Jonathan ! Hiii hiii !"]],
+    [["lolo", "Pourquoi les poissons ne jouent jamais au tennis ?"], ["lolo", "Parce qu’ils ont peur du filet ! Hiii !"]],
+    [["lolo", "Qu’est-ce qui fait « nioc nioc » ?"], ["lolo", "Un canard qui recule ! Hiii hiii !"]],
+    [["lolo", "Pourquoi les chevaux ne mettent jamais de chaussettes ?"], ["lolo", "Parce qu’ils ont déjà des sabots ! Hiii !"]],
+    [["lolo", "Qu’est-ce que dit une carotte à une autre carotte ?"], ["lolo", "Rien ! Les carottes, ça parle pas ! Hiii hiii hiii !"]],
+    [["lolo", "Toc toc !"], ["ovo", "Qui est là ?"], ["lolo", "Lóló."], ["ovo", "Lóló qui ?"], ["lolo", "Lóló… euh… j’ai oublié la suite ! Hiii !"]],
+    [["lolo", "Quel est l’animal le plus content ?"], ["lolo", "Le hibou, parce que sa femme est chouette ! Hiii !"]],
+    [["lolo", "Tu sais pourquoi Mémé dort tout le temps ?"], ["lolo", "Parce que sinon elle serait réveillée ! Hiii hiii !"]],
+    [["lolo", "Qu’est-ce qui est tout doux, couleur caramel, et qui fait « hiii » ?"], ["lolo", "C’est moi ! Hiii !"]],
   ];
   const DUREE_PLUIE = 10 * 60e3;
   // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
@@ -73,14 +74,10 @@
   async function blague() {
     const toutes = BLAGUES;
     if (blaguesDites.length >= toutes.length) blaguesDites = [];
-    const restantes = toutes.filter((b) => !blaguesDites.includes(b[0]));
-    const [question, chute] = restantes[Math.floor(Math.random() * restantes.length)];
-    blaguesDites.push(question);
-    await H.dialogue.dire([
-      { qui: "lolo", texte: question },
-      { qui: "lolo", texte: chute },
-      { qui: "duo", texte: "Sacré Lóló !" },
-    ]);
+    const restantes = toutes.filter((x) => !blaguesDites.includes(x[0][1]));
+    const b = restantes[Math.floor(Math.random() * restantes.length)];
+    blaguesDites.push(b[0][1]);
+    await H.dialogue.dire(b.map(([qui, texte]) => ({ qui, texte })).concat({ qui: "duo", texte: "Sacré Lóló !" }));
   }
 
   // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins.

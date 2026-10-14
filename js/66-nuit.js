@@ -464,7 +464,8 @@
     ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
     ctx.restore();
     // la tête de peluche : ronde, un long museau doux, les oreilles, l'étoile blanche
-    const hx = -22 + -30 * Math.cos(a) - 13 * Math.sin(a), hy = -20 + -30 * Math.sin(a) + 13 * Math.cos(a);
+    const [ox, oy] = raconte ? [-25, 11] : [-30, 13];
+    const hx = -22 + ox * Math.cos(a) - oy * Math.sin(a), hy = -20 + ox * Math.sin(a) + oy * Math.cos(a);
     ctx.save();
     ctx.translate(hx, hy);
     if (raconte) {
