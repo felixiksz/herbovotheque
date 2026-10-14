@@ -33,6 +33,7 @@
     "Au labo, infuse une tisane de ton placard : elle redonne de l’énergie. Mais les bocaux de plantes sèches baissent un peu à chaque tasse.",
     "Pendant la balade, quand le chemin passe par la terre rouge, on peut aller se baigner au pied des rochers.",
     "Chez toi, Mesi te prépare une crêpe au chocolat fondu, s’il en reste dans tes ressources.",
+    "Certaines plantes soignent la terre : le trèfle l’enrichit, la consoude lui donne de l’humus… Note-le dans leur fiche, rubrique « Améliore le sol ». Plantées là où la terre est fatiguée, une fois adultes, elles changent le sol autour d’elles. Pratique pour le jardin de tes client·es !",
   ];
   const MEME = [
     "Rrrrrrrr… rrrrrrrr… rrrrrrrr…",

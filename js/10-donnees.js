@@ -88,6 +88,13 @@
     };
   }
 
+  // Les rubriques propres au jeu, qui ne viennent pas des fiches : ƟvƟ les remplit lui·elle-même.
+  // « Améliore le sol » : ce qu'une plante fait à la terre autour d'elle, une fois adulte.
+  const CHAMPS_JEU = [
+    { id: "amendeSol", nom: "Améliore le sol", type: "choix", multiple: true, section: "jardin",
+      options: ["Enrichit (azote)", "Apporte de l’humus", "Décompacte", "Draine", "Garde la fraîcheur", "Acidifie", "Adoucit le calcaire"] },
+  ];
+
   // Ajoute au schéma de l'herbier les rubriques nouvelles de la base
   // (sauf celles qu'ƟvƟ a retirées volontairement).
   function completerSchema() {
@@ -104,6 +111,8 @@
         if (!ids.has(x.id) && !s.retires.includes(x.id)) s[cle].push(copie(x));
       }
     }
+    const idsChamps = new Set(s.champs.map((x) => x.id));
+    for (const x of CHAMPS_JEU) if (!idsChamps.has(x.id) && !s.retires.includes(x.id)) s.champs.push(copie(x));
   }
 
   H.d = {

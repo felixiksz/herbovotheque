@@ -140,6 +140,50 @@
     return 0.3 + 0.7 * (pl.eau / besoin);
   }
 
+  // Ce que les plantes « qui améliorent le sol » font à la terre (rubrique remplie par ƟvƟ) :
+  // une qualité gagnée, une qualité qui part.
+  const EFFETS_SOL = {
+    "Enrichit (azote)": ["Riche", "Pauvre"],
+    "Apporte de l’humus": ["Humifère", "Pauvre"],
+    "Décompacte": ["Profond", "Argileux"],
+    "Draine": ["Bien drainé", "Humide"],
+    "Garde la fraîcheur": ["Frais", "Sec"],
+    "Acidifie": ["Acide", "Calcaire"],
+    "Adoucit le calcaire": ["Neutre", "Calcaire"],
+  };
+  const JOUR = 24 * HEURE;
+  let solsAmeliores = [];
+  // une plante adulte depuis un jour améliore le sol de sa case et des huit cases autour
+  function amenderSol(ile, x, y, pl, p, maintenant) {
+    const effets = ((p.valeurs || {}).amendeSol || []).filter((e) => EFFETS_SOL[e]);
+    if (!effets.length || pl.c < 70 || pl.solAmende) return;
+    if (!pl.adulteDepuis) pl.adulteDepuis = maintenant;
+    if (maintenant - pl.adulteDepuis < JOUR) return;
+    ile.cases = ile.cases || {};
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const cx = x + dx, cy = y + dy;
+        if (cx < 0 || cy < 0 || cx >= ile.cols || cy >= ile.lignes) continue;
+        const k = cle(cx, cy), c = Object.assign({}, ile.cases[k]);
+        const sol = new Set(c.sol || ile.sol || []);
+        for (const e of effets) {
+          const [gagne, part] = EFFETS_SOL[e];
+          sol.delete(part);
+          sol.add(gagne);
+        }
+        c.sol = [...sol];
+        ile.cases[k] = c;
+      }
+    }
+    pl.solAmende = maintenant;
+    solsAmeliores.push(p.nom + " (" + effets.map((e) => EFFETS_SOL[e][0].toLowerCase()).join(", ") + ")");
+  }
+  // les plantes qu'ƟvƟ a notées comme apportant une qualité de sol
+  function plantesQuiApportent(qualite) {
+    const effets = Object.entries(EFFETS_SOL).filter(([, [gagne]]) => gagne === qualite).map(([e]) => e);
+    return H.d.plantes().filter((q) => ((q.valeurs || {}).amendeSol || []).some((e) => effets.includes(e)));
+  }
+
   // Fait pousser une plante depuis sa dernière mise à jour (pas d'une heure).
   function pousser(ile, x, y, pl, maintenant) {
     if (ile.croquis) return;
@@ -166,6 +210,7 @@
       heures -= pas;
     }
     pl.maj = maintenant;
+    amenderSol(ile, x, y, pl, p, maintenant);
   }
 
   function stade(ile, pl) {
@@ -577,9 +622,14 @@
       return;
     }
     const maintenant = H.maintenant();
+    solsAmeliores = [];
     for (const [k, pl] of Object.entries(ile.plantes || {})) {
       const [x, y] = k.split(",").map(Number);
       pousser(ile, x, y, pl, maintenant);
+    }
+    if (solsAmeliores.length) {
+      sauver(ile);
+      setTimeout(() => H.toast("Le sol s’est amélioré autour de : " + solsAmeliores.join(" ; "), 6000), 800);
     }
 
     vue = {
@@ -1390,7 +1440,11 @@
         H.el("span", null, " Bien-être "), H.el("span.jauge", null, H.el("span.jauge-plein", { style: { width: pourcent + "%" } }))
       ) : null,
       H.el("p", null, humeur + " (" + pourcent + " %)."),
-      ev.raisons.length ? H.el("ul.raisons", null, ev.raisons.map((t) => H.el("li", null, t))) : null
+      ev.raisons.length ? H.el("ul.raisons", null, ev.raisons.map((t) => H.el("li", null, t))) : null,
+      ((p.valeurs || {}).amendeSol || []).length
+        ? H.el("p.discret", null, "Améliore le sol autour d’elle : " + p.valeurs.amendeSol.join(", ").toLowerCase() + (pl.solAmende ? " (c’est fait)." : " (une fois adulte depuis un jour)."))
+        : null,
+      conseilsSol(ile, x, y, p)
     );
     const actions = H.el("div.pastilles");
     if (!ile.croquis) {
@@ -1516,6 +1570,20 @@
       await H.dialogue.dire(repliques.map((texte) => ({ qui: "luigi", texte })));
     }
     await L(["À tout à l’heure !", "À ce soir !", "À toute !", "Le temps n’est qu’un concept."][Math.floor(Math.random() * 4)]);
+  }
+
+  // Pour une plante qui n'aime pas son sol : les plantes qu'ƟvƟ a notées comme capables de
+  // l'arranger (utile aussi pour adapter le terrain d'un·e client·e, sur une île croquis).
+  function conseilsSol(ile, x, y, p) {
+    const voulu = (p.valeurs || {}).sol || [];
+    const ici = new Set(caseDe(ile, x, y).sol);
+    const manque = voulu.filter((q) => !ici.has(q));
+    const idees = [];
+    for (const q of manque) {
+      const plantes = plantesQuiApportent(q).filter((x2) => x2.id !== p.id).slice(0, 4);
+      if (plantes.length) idees.push("pour un sol " + q.toLowerCase() + " : " + plantes.map((x2) => x2.nom).join(", "));
+    }
+    return idees.length ? H.el("p.conseil-sol", null, "Pour arranger le sol : " + idees.join(" ; ") + ".") : null;
   }
 
   // Un câlin et des bisous : Mesi et ƟvƟ se serrent l'un·e contre l'autre en se balançant,
