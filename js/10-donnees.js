@@ -96,21 +96,33 @@
   ];
 
   // La première fois qu'on ouvre le jeu, une seule tisane attend dans le placard : celle de
-  // Pizsoma (réglisse, aubépine, pétales de rose). Les mélanges d'essai faits avant l'ouverture
+  // Pizsoma (réglisse, aubépine, mélisse). Les mélanges d'essai faits avant l'ouverture
   // sont rangés (pas effacés : ils restent dans les données, marqués supprimés). Les tisanes
   // créées ensuite par ƟvƟ ne sont jamais touchées.
   const OUVERTURE = Date.parse("2026-10-15T00:00:00+02:00");
   function tisaneDeDepart() {
     const h = H.herbier;
     h.tisanes = h.tisanes || {};
-    if (h.tisanes.pizsoma) return;
+    if (h.tisanes.pizsoma) {
+      // la première version avait des pétales de rose, et une fiche « Rose » ajoutée exprès :
+      // la mélisse remplace la rose, et la fiche Rose disparaît
+      const t = h.tisanes.pizsoma, maintenant = H.maintenant();
+      let change = false;
+      if ((t.plantes || []).some((x) => x.id === "rose")) {
+        t.plantes = t.plantes.map((x) => (x.id === "rose" ? { id: "melissa-officinalis", part: "feuilles", role: "Calme et apaise, et son parfum citronné" } : x));
+        t.modifieLe = maintenant;
+        change = true;
+      }
+      if (h.plantes.rose && !h.plantes.rose.supprime && h.plantes.rose.nom === "Rose") {
+        h.plantes.rose = { id: "rose", supprime: true, modifieLe: maintenant };
+        change = true;
+      }
+      if (change) { index = null; H.d.changer("herbier"); }
+      return;
+    }
     const t = H.maintenant();
     for (const x of Object.values(h.tisanes)) {
       if (!x.supprime && (x.creeLe || x.modifieLe || 0) < OUVERTURE) Object.assign(x, { supprime: true, modifieLe: t });
-    }
-    // la rose (ses pétales) n'a pas de fiche : on l'ajoute à l'herbothèque, à compléter
-    if (!h.plantes.rose && !(H.base.plantes || []).some((p) => p.id === "rose")) {
-      h.plantes.rose = { id: "rose", nom: "Rose", latin: "Rosa gallica", creeLe: t, modifieLe: t };
     }
     h.tisanes.pizsoma = {
       id: "pizsoma",
@@ -118,7 +130,7 @@
       plantes: [
         { id: "glycyrrhiza-glabra", part: "racine", role: "La douceur, et le goût sucré" },
         { id: "crataegus-monogyna", part: "fleurs et feuilles", role: "Apaise le cœur et la nervosité" },
-        { id: "rose", part: "pétales", role: "Le parfum, et la douceur pour l’humeur" },
+        { id: "melissa-officinalis", part: "feuilles", role: "Calme et apaise, et son parfum citronné" },
       ],
       usage: "",
       preparation: "Infusion 10 min à couvert.",
