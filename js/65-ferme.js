@@ -650,8 +650,8 @@
     ".................kk.....",
     "................kMnk....",
     "...............kMnnnk...",
-    "..............kMnwnnnk..",
-    "..............kMnnnennk.",
+    "..............kMnnwwnk..",
+    "..............kMennnnnk.",
     "......o.o....kMnnnnnnnk.",
     ".....otoTo...kMnnkkkkk..",
     "....otttTtoo.kMnnk......",
@@ -1233,8 +1233,8 @@
         dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, g, o.gauche);
       }
       else if (o.meme) { const [x, y] = iso(o.meme.x, o.meme.y); dessinMeme(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.meme.marche ? temps : 0, o.meme.gauche); }
-      else if (o.mesiVa) { const [x, y] = iso(o.mesiVa.pos[0], o.mesiVa.pos[1]); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
-      else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.mesiVa.pause ? 0 : temps); }
+      else if (o.mesiVa) { const [x, y] = iso(o.mesiVa.pos[0], o.mesiVa.pos[1]); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.mesiVa.pause ? 0 : temps); }
+      else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
     }
     // un filet de fumée sort du tuyau de poêle du labo, quand une préparation est en cours
     const labo = parId.labo;

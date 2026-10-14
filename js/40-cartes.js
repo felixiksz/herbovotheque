@@ -213,7 +213,9 @@
   let conteneur = null;
   let choixOuvert = null; // le panneau « Choisir quoi réviser » reste ouvert entre deux clics
 
+  let derniersParams = [];
   function accueil(params) {
+    derniersParams = params || [];
     const y = window.scrollY;
     conteneur.innerHTML = "";
     requestAnimationFrame(() => window.scrollTo(0, y));
@@ -247,7 +249,7 @@
     );
     // une fenêtre à onglets : réviser, puis ce qu'il y a autour
     conteneur.appendChild(H.bureau.onglets([
-      { nom: "Réviser", el: [resume].concat(!p && !f.ile ? [choix(f)] : []) },
+      { nom: "Réviser", el: [resume].concat(!p ? [choix(f, !!f.ile)] : []) },
       { nom: "Réussite", el: statistiques() },
       { nom: "Mes cartes", el: cartesPerso() },
       { nom: "Ce qu’elles rapportent", el: recompenses() },
@@ -265,11 +267,12 @@
     );
   }
 
-  function choix(f) {
+  // rubriquesSeules : pour les plantes d'une île, on choisit seulement les rubriques à réviser
+  function choix(f, rubriquesSeules) {
     if (choixOuvert == null) choixOuvert = !H.local.filtreCartes;
-    const det = H.el("details.cartes-choix", { open: choixOuvert });
+    const det = H.el("details.cartes-choix", { open: rubriquesSeules || choixOuvert });
     det.addEventListener("toggle", () => (choixOuvert = det.open));
-    det.appendChild(H.el("summary", null, H.el("h2", null, "Choisir quoi réviser")));
+    det.appendChild(H.el("summary", null, H.el("h2", null, rubriquesSeules ? "Quelles rubriques réviser" : "Choisir quoi réviser")));
     // rubriques
     for (const g of groupesDeRubriques()) {
       det.appendChild(H.el("h3", null, g.titre));
@@ -283,12 +286,14 @@
               majFiltre((x) => {
                 x.rubriques = actif ? x.rubriques.filter((r) => r !== it.cle) : x.rubriques.concat(it.cle);
               });
-              setTimeout(() => accueil([]), 0);
+              // on reste sur la même révision (les plantes d'une île, par exemple)
+              setTimeout(() => accueil(derniersParams), 0);
             },
           }, it.nom);
         })
       ));
     }
+    if (rubriquesSeules) return det;
     // plantes
     det.appendChild(H.el("h3", null, "Quelles plantes"));
     const rg = H.herbier.rangements.find((r) => r.id === f.rangement);
