@@ -493,6 +493,70 @@
     });
   }
 
+  // Les oiseaux de nuit : le hibou (un « ouh-hou » grave, en deux notes) et la chouette hulotte
+  // (un long « hou… », un silence, puis « hou-hou-houuuu » qui chevrote), chacun de son côté.
+  function noteHibou(t, f, d, vol, pan, vibrato) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(), p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    o.type = "sine";
+    o.frequency.setValueAtTime(f * 1.04, t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.08);
+    o.frequency.exponentialRampToValueAtTime(f * 0.93, t + d);
+    if (vibrato) {
+      const lfo = ctx.createOscillator(), lg = ctx.createGain();
+      lfo.frequency.value = 22;
+      lg.gain.value = f * 0.025;
+      lfo.connect(lg).connect(o.frequency);
+      lfo.start(t);
+      lfo.stop(t + d + 0.05);
+    }
+    lp.type = "lowpass";
+    lp.frequency.value = f * 2.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.07);
+    g.gain.setTargetAtTime(0.0001, t + d - 0.08, 0.06);
+    o.connect(lp).connect(g);
+    if (p) { p.pan.value = pan; g.connect(p).connect(H.audio.sortie()); } else g.connect(H.audio.sortie());
+    o.start(t);
+    o.stop(t + d + 0.3);
+  }
+  function hibou() {
+    const t = ctx.currentTime + 0.05, pan = Math.random() * 1.6 - 0.8, v = 0.05 * H.volume("bruitages") * (0.6 + Math.random() * 0.4);
+    noteHibou(t, 330, 0.32, v, pan);
+    noteHibou(t + 0.55, 300, 0.42, v * 0.9, pan);
+  }
+  function chouette() {
+    const t = ctx.currentTime + 0.05, pan = Math.random() * 1.6 - 0.8, v = 0.045 * H.volume("bruitages") * (0.6 + Math.random() * 0.4);
+    noteHibou(t, 520, 0.6, v, pan);
+    noteHibou(t + 2.6, 540, 0.14, v * 0.8, pan);
+    noteHibou(t + 2.95, 520, 1.0, v, pan, true);
+  }
+  let oiseauxDeNuit = null;
+  function chanterLaNuit() {
+    oiseauxDeNuit = setTimeout(() => {
+      if (!oiseauxDeNuit) return;
+      if (actif() && contexte()) (Math.random() < 0.5 ? hibou : chouette)();
+      chanterLaNuit();
+    }, (14 + Math.random() * 26) * 1000);
+  }
+  // dehors, la nuit : les criquets, et de temps en temps un hibou ou une chouette au loin
+  function majNuit() {
+    const s = H.ciel && H.jeu ? H.ciel.etat() : null;
+    const nuitDehors = !!s && s.soleil.alt < -4 && dehors() && actif();
+    criquetsDeNuit(nuitDehors);
+    if (nuitDehors && !oiseauxDeNuit) {
+      oiseauxDeNuit = true;
+      if (contexte()) setTimeout(() => oiseauxDeNuit && actif() && (Math.random() < 0.5 ? hibou : chouette)(), 3000);
+      chanterLaNuit();
+    } else if (!nuitDehors && oiseauxDeNuit) {
+      clearTimeout(oiseauxDeNuit);
+      oiseauxDeNuit = null;
+    }
+  }
+  H.sur("ciel", majNuit);
+  window.addEventListener("hashchange", () => setTimeout(majNuit, 80));
+  document.addEventListener("pointerdown", majNuit);
+  document.addEventListener("visibilitychange", majNuit);
+
   // La pluie : quand il pleut vraiment (d'après la météo du lieu choisi)
   function pluie() {
     const m = H.ciel && H.ciel.meteo;
