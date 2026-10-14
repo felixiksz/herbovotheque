@@ -51,6 +51,11 @@
     const c = histoires().auHasard(restants);
     H.d.majLocal((l) => (l.complimentsVus = (l.complimentsVus || []).concat(c).slice(-12)));
     await H.dialogue.dire([{ qui: "luigi", texte: c }]);
+    // après celui-là, on chante ensemble
+    if (/^Le monde a de la chance de t’avoir/.test(c)) {
+      airNanana();
+      await H.dialogue.dire([{ qui: "duo", texte: "Ta-ta-tata !" }]);
+    }
   }
 
   // Mesi prépare une crêpe au chocolat fondu (s'il en reste dans les ressources)
