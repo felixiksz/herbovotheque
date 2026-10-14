@@ -232,7 +232,47 @@
   document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && guetter());
   guetter();
 
-  H.accueil = { preparer, endormir };
+  // la taille de l'écran du téléphone, en vrais pixels, en portrait
+  function tailleEcran() {
+    const dpr = window.devicePixelRatio || 1;
+    let l = Math.round(screen.width * dpr), h = Math.round(screen.height * dpr);
+    if (l > h) [l, h] = [h, l];
+    return [Math.max(360, l), Math.max(640, h)];
+  }
+  // La scène de l'accueil (jour ou nuit) comme fond d'écran : peinte à la forme de l'écran, puis
+  // agrandie sans flou, chaque gros pixel bien net.
+  function imageScene(nuit) {
+    const [L, Hh] = tailleEcran(), avant = W;
+    W = Math.max(70, Math.round((HAUT * L) / Hh));
+    const petit = document.createElement("canvas");
+    petit.width = W; petit.height = HAUT;
+    (nuit ? NUIT : JOUR).peindre(petit.getContext("2d"));
+    W = avant;
+    return agrandir(petit, L, Hh);
+  }
+  function agrandir(petit, L, Hh) {
+    const c = document.createElement("canvas");
+    c.width = L; c.height = Hh;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    // on remplit tout l'écran, en rognant ce qui dépasse sur les côtés
+    const k = Math.max(L / petit.width, Hh / petit.height);
+    g.drawImage(petit, Math.round((L - petit.width * k) / 2), Math.round((Hh - petit.height * k) / 2), Math.round(petit.width * k), Math.round(petit.height * k));
+    return c.toDataURL("image/png");
+  }
+  // la fenêtre qui montre l'image et explique comment en faire son fond d'écran
+  function montrerFondEcran(src, nom) {
+    if (!H.fenetre || !H.el) return;
+    const fichier = "herbotheque-" + nom + ".png";
+    H.fenetre(H.el("div.fond-ecran", null,
+      H.el("h2", null, "Fond d’écran"),
+      H.el("img.apercu-fond-ecran", { src, alt: "La scène en fond d’écran" }),
+      H.el("p", null, H.el("b", null, "iPhone : "), "appuie longuement sur l’image, puis « Ajouter à Photos ». Ensuite, dans Réglages › Fond d’écran, choisis-la dans tes photos."),
+      H.el("p", null, H.el("b", null, "Android : "), "appuie longuement sur l’image, puis « Télécharger l’image » (ou le bouton ci-dessous). Ensuite, Paramètres › Fond d’écran."),
+      H.el("a.bouton", { href: src, download: fichier }, "Enregistrer l’image")
+    ));
+  }
+  H.accueil = { preparer, endormir, imageScene, agrandir, tailleEcran, montrerFondEcran };
   let attente = null;
   window.addEventListener("resize", () => { clearTimeout(attente); attente = setTimeout(() => !document.getElementById("verrou").hidden && preparer(), 200); });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => preparer());

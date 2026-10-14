@@ -959,6 +959,13 @@
     if (!scene.visiteur && t > scene.prochainVisiteur) scene.visiteur = nouveauVisiteur();
     const v = scene.visiteur;
     if (!v) return;
+    // les sangliers trottent bruyamment, comme Lóló : au début de la traversée et à mi-chemin ;
+    // la laie suivie de ses marcassins fait plus de bruit
+    if (v.espece === "sanglier" && H.sons && H.sons.jouer) {
+      const vol = 0.22 + 0.1 * v.petits;
+      if (!v.bruit1 && v.u > 0.02) { v.bruit1 = true; H.sons.jouer("galop", vol); }
+      if (!v.bruit2 && v.u > 0.5) { v.bruit2 = true; H.sons.jouer("galop", vol * 0.9); }
+    }
     // le renard trotte, s'arrête parfois pour humer l'air ; la laie avance d'un pas lourd
     if (t < v.pause) return;
     v.u += (v.espece === "renard" ? 0.045 : 0.03) / Math.max(1, v.c.long);
@@ -1147,6 +1154,31 @@
     }
     if (lo.broute) { lo.marche = false; return true; }
     return false;
+  }
+
+  // La photo de la ferme pour le fond d'écran : on redessine la ferme dans une toile à la forme
+  // de l'écran du téléphone (assez grande pour voir toute l'île), puis on l'agrandit sans flou.
+  function photoFerme() {
+    if (!scene || !H.accueil) return;
+    const [L, Hh] = H.accueil.tailleEcran();
+    const sauve = { W, Ht, ctx: scene.ctx, toile: scene.toile, cam: Object.assign({}, scene.cam), sh: scene.sh, ombres: scene.ombres };
+    // une toile assez haute pour toute l'île, à la proportion de l'écran
+    Ht = 300; W = Math.max(180, Math.round((Ht * L) / Hh));
+    const c = document.createElement("canvas");
+    c.width = W; c.height = Ht;
+    const [o0, o1] = iso(N / 2, N / 2);
+    scene.ctx = c.getContext("2d");
+    scene.ctx.imageSmoothingEnabled = false;
+    [scene.ombres, scene.sh] = toileDe(W, Ht);
+    scene.cam.x = o0 - W / 2; scene.cam.y = o1 - Ht / 2 + 10;
+    fondCle = null;
+    const mo = scene.mo;
+    scene.mo = null;
+    dessiner(performance.now());
+    // et on remet la ferme comme elle était
+    W = sauve.W; Ht = sauve.Ht; scene.ctx = sauve.ctx; scene.toile = sauve.toile; scene.cam = sauve.cam; scene.sh = sauve.sh; scene.ombres = sauve.ombres;
+    scene.mo = mo; fondCle = null;
+    H.accueil.montrerFondEcran(H.accueil.agrandir(c, L, Hh), "ferme");
   }
 
   // --- la scène ---
@@ -1480,7 +1512,8 @@
       const heureMeteo = H.el("div.heure-ferme", { "aria-live": "off" });
       boite.append(toile, etiquette, heureMeteo, H.el("div.pastilles-scene", null,
         H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
-        H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
+        H.el("a.pastille-scene", { href: "#reglages" }, "Réglages"),
+        H.el("button.pastille-scene", { type: "button", title: "Une photo de la ferme, en fond d’écran pour ton téléphone", onclick: photoFerme }, "Photo")
       ));
       c.appendChild(boite);
       const depart = H.ciel.nuitCalme() ? "maison" : H.local.dernierLieu && parId[H.local.dernierLieu] ? H.local.dernierLieu : "maison";

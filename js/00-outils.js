@@ -204,7 +204,7 @@ window.H = window.H || {};
   };
 
   // Volumes réglables (0 à 1) : musique, bruitages, pluie, babillage des bulles.
-  H.VOLUMES = [["musique", "Musique", 0.7], ["bruitages", "Bruitages (miaou, galop, pas…)", 0.8], ["pluie", "Pluie", 0.7], ["voix", "Babillage des bulles", 0.8]];
+  H.VOLUMES = [["musique", "Musique", 0.7], ["bruitages", "Bruitages (pas, galop, criquets, cigales…)", 0.8], ["pluie", "Pluie", 0.7], ["voix", "Babillage des bulles", 0.8]];
   H.volume = function (cat) {
     const v = H.local && H.local.volumes && H.local.volumes[cat];
     if (v != null) return v;

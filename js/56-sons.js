@@ -424,7 +424,7 @@
       m.type !== "pluie" && m.type !== "orage" && dehors() && actif();
     boucles.cigales = boucles.cigales || {};
     boucles.cigales.voulu = chant;
-    boucleContinue("cigales", chant, 0.28 * H.volume("bruitages"));
+    boucleContinue("cigales", chant, 0.12 * H.volume("bruitages"));
   }
   H.sur("ciel", majCigales);
   H.sur("meteo", majCigales);
@@ -434,7 +434,7 @@
   // Les criquets, la nuit dehors : deux enregistrements en boucle, des criquets tout près et
   // d'autres au loin (avec un oiseau qui chante dans le lointain), plus discrets.
   function criquetsDeNuit(oui) {
-    for (const [nom, vol] of [["criquets", 0.3], ["criquetsLoin", 0.16]]) {
+    for (const [nom, vol] of [["criquets", 0.13], ["criquetsLoin", 0.07]]) {
       boucles[nom] = boucles[nom] || {};
       boucles[nom].voulu = !!oui;
       boucleContinue(nom, !!oui && actif(), vol * H.volume("bruitages"));
@@ -559,6 +559,8 @@
     H.sons.boucle("pluie", pleut && !!H.jeu, m && m.type === "orage" ? 0.5 : 0.32);
   }
   H.sons.majPluie = pluie;
+  // le curseur « Bruitages » a bougé : les criquets, les cigales et la pluie suivent aussitôt
+  H.sons.majVolumes = () => { majNuit(); majCigales(); pluie(); };
   // dans les réglages : faire entendre la pluie quelques secondes, même s'il fait beau
   let finApercu = null;
   H.sons.apercuPluie = function () {
