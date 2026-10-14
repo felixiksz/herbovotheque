@@ -969,12 +969,22 @@
       return;
     }
     if (!jour) return;
-    // la journée : elles vont et viennent, s'arrêtent, picorent ; de temps en temps, l'une caquette
+    // la journée : elles se promènent en groupe où elles veulent sur la ferme. Le groupe dérive au
+    // hasard d'un coin à l'autre ; chacune picore autour, s'arrête, repart ; parfois l'une caquette
+    const g = scene.troupeau || (scene.troupeau = { x: pc[0], y: pc[1] + 1.5, but: null, repos: 0 });
+    if (!g.but || (Math.hypot(g.but[0] - g.x, g.but[1] - g.y) < 0.1 && t > g.repos)) {
+      for (let n = 0; n < 30; n++) {
+        const a = Math.random() * Math.PI * 2, d = 2 + Math.random() * 5, bx = g.x + Math.cos(a) * d, by = g.y + Math.sin(a) * d;
+        if (bx > 1.5 && by > 1.5 && bx < N - 1.5 && by < N - 1.5 && !occupe(bx, by, 0.8)) { g.but = [bx, by]; break; }
+      }
+      g.repos = t + 6000 + Math.random() * 12000;
+    }
+    if (g.but && Math.hypot(g.but[0] - g.x, g.but[1] - g.y) >= 0.1) bouger(g, g.but[0], g.but[1], 0.006);
     for (const p of dehors) {
       if (t < p.attente) { p.marche = false; continue; }
       if (!p.cible) {
-        p.cible = placeDansCour();
-        if (Math.hypot(p.cible[0] - p.x, p.cible[1] - p.y) > 2.5) p.cible = [p.x + (p.cible[0] - p.x) * 0.4, p.y + (p.cible[1] - p.y) * 0.4];
+        for (let n = 0; n < 12 && !p.cible; n++) { const a = Math.random() * Math.PI * 2, d = Math.random() * 1.4, cx = g.x + Math.cos(a) * d, cy = g.y + Math.sin(a) * d; if (!occupe(cx, cy, 0.3)) p.cible = [cx, cy]; }
+        if (!p.cible) p.cible = [g.x, g.y];
         p.picore = false;
       }
       p.marche = true;
