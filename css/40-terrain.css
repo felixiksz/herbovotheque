@@ -459,3 +459,12 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 :root[data-theme="nuit"] .liste-caisse .bon { color: #9cc77a; }
 :root[data-theme="nuit"] .liste-caisse .pas-bon { color: #ffb3a8; }
 .caisse-moins ul { margin: 6px 0 0; padding-left: 18px; }
+/* « Aller se baigner » et « Sortir de l'eau » sont des boutons seuls : ils gardent leur cadre de menu */
+:root[data-vue="balade"] .actions-balade > .bouton {
+  background: var(--menu-fond);
+  box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 6px 6px 0 6px rgba(15, 16, 53, 0.6);
+  padding: 6px 12px 6px 24px;
+}
+:root[data-vue="balade"] .actions-balade > .bouton::before { left: 10px; }
+:root[data-vue="balade"] .actions-balade > .bouton:is(:hover, :focus-visible) { background: var(--menu-fond); }
+:root[data-vue="balade"] .actions-balade { gap: 18px; flex-wrap: wrap; }
