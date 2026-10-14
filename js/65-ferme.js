@@ -529,21 +529,36 @@
   const MESI = ["..cccc..", ".cccccc.", ".cssssc.", ".cqqqqc.", "..ssss..", ".ggbbgg.", ".gbbbbg.", "..bbbb..", "..b..b..", "..n..n.."];
   const PAL_MESI = { c: "#8a4b22", s: "#f2c29b", q: "#ee9a7e", g: "#3aa04a", b: "#3a5fd0", n: "#7a4520" };
   function dessinMesi(c, x, y) { MESI.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_MESI[ch]) pixel(c, x - 4 + i, y - MESI.length + j, PAL_MESI[ch]); })); }
-  // Lóló, la peluche caramel, avec Mémé roulée sur son dos ; deux images pour le pas
+  // Lóló, la peluche caramel (assez grand pour qu'on le voie bien), avec Mémé roulée sur son dos ;
+  // deux images pour le pas
   const LOLO = [
-    "........kk..",
-    ".......knwk.",
-    "...tt.knnnnk",
-    "Nnnnnnnnnk..",
-    ".nnnnnnnnk..",
-    ".n.n...n.n..",
-    ".N.N...N.N..",
+    "...............kk...",
+    "..............kMk...",
+    ".............kMnnk..",
+    "............kMnwnnk.",
+    "............kMnnnnnk",
+    "...tTt.....kMnnkkkk.",
+    "..tTtTt...kMnnnk....",
+    "MkkkkkkkkkMnnnnk....",
+    "Mknnnnnnnnnnnnnk....",
+    "MknnnnnnnnnnnnnK....",
+    ".kKnnnnnnnnnnnKk....",
+    "..kKKKKKKKKKKKk.....",
+    "..kn.kn....kn.kn....",
+    "..kn.kn....kn.kn....",
+    "..kn.kn....kn.kn....",
+    "..NN.NN....NN.NN....",
   ];
-  const LOLO2 = LOLO.slice(0, 5).concat(["..n.n.n.n...", "..N.N.N.N..."]);
-  const PAL_LOLO = { k: "#7a4520", n: "#b9834f", N: "#4b3427", w: "#f3f0dc", t: "#c9ad8a" };
+  const LOLO2 = LOLO.slice(0, 12).concat([
+    "..kn..kn..kn..kn....",
+    "...kn.kn..kn.kn.....",
+    "...kn..kn.kn.kn.....",
+    "...NN..NN.NN.NN.....",
+  ]);
+  const PAL_LOLO = { k: "#7a4520", K: "#9a6a3c", n: "#b9834f", N: "#4b3427", M: "#4b3427", w: "#f3f0dc", t: "#c9ad8a", T: "#6b5442" };
   function dessinLolo(c, x, y, image, gauche) {
     const g = image ? LOLO2 : LOLO;
-    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_LOLO[ch]) pixel(c, gauche ? x + 6 - i : x - 6 + i, y - g.length + j, PAL_LOLO[ch]); }));
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_LOLO[ch]) pixel(c, gauche ? x + 10 - i : x - 10 + i, y - g.length + j, PAL_LOLO[ch]); }));
   }
   // les objets posés en aménageant
   function dessinObjet(c, e, x, y) {
@@ -740,12 +755,12 @@
       const pos = H.sons.position(lo.course, performance.now());
       if (pos) {
         const k = pos.x / 100;
-        lo.x = lo.x0 + (perso.x - 1 - lo.x0) * k; lo.y = lo.y0 + (perso.y + 0.4 - lo.y0) * k;
+        lo.x = lo.x0 + (perso.x - 1.6 - lo.x0) * k; lo.y = lo.y0 + (perso.y + 0.4 - lo.y0) * k;
         lo.marche = pos.enCourse;
         if (!pos.enCourse) lo.course = null;
       }
-    } else if (lo.x != null && scene.traces.length > 14 && perso.trajet) {
-      const [tx, ty] = scene.traces[scene.traces.length - 14];
+    } else if (lo.x != null && scene.traces.length > 20 && perso.trajet) {
+      const [tx, ty] = scene.traces[scene.traces.length - 20];
       lo.marche = Math.hypot(tx - lo.x, ty - lo.y) > 0.05;
       lo.gauche = tx < lo.x;
       lo.x += (tx - lo.x) * 0.2; lo.y += (ty - lo.y) * 0.2;
@@ -947,7 +962,7 @@
       const [sx, sy] = iso(px, py);
       scene.cam.x = sx - W / 2; scene.cam.y = sy - Ht / 2 - 10;
       // Lóló : la première fois de la visite, il arrive au galop ; ensuite il est là, à côté d'ƟvƟ
-      if (galopDejaVu) Object.assign(scene.lolo, { x: px - 1, y: py + 0.4 });
+      if (galopDejaVu) Object.assign(scene.lolo, { x: px - 1.6, y: py + 0.4 });
       else {
         galopDejaVu = true;
         Object.assign(scene.lolo, { x0: -1, y0: py + 0.4, x: null, y: null });
@@ -961,7 +976,7 @@
       toile.addEventListener("pointermove", (e) => {
         const p = pos(e);
         if (e.pointerType === "mouse") scene.pointeur = p;
-        scene.surLolo = !!(scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 8 && p.y > scene.lolo.ecran[1] - 10 && p.y < scene.lolo.ecran[1] + 2);
+        scene.surLolo = !!(scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 11 && p.y > scene.lolo.ecran[1] - 17 && p.y < scene.lolo.ecran[1] + 2);
         if (scene.amenager && scene.peint) {
           const a = scene.amenager;
           if (a.prise) { const [i, j] = versMonde(p.x, p.y); Object.assign(a.prise, { i, j }); }
@@ -978,7 +993,7 @@
         if (scene.amenager) return;
         const p = pos(e);
         // toucher Lóló : il parle (astuces, plantes du moment)
-        if (scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 8 && p.y > scene.lolo.ecran[1] - 10 && p.y < scene.lolo.ecran[1] + 2) {
+        if (scene.lolo.ecran && Math.abs(p.x - scene.lolo.ecran[0]) < 11 && p.y > scene.lolo.ecran[1] - 17 && p.y < scene.lolo.ecran[1] + 2) {
           if (!H.$(".dialogue")) H.lolo.parler(null);
           return;
         }
