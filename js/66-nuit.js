@@ -88,7 +88,7 @@
   // Mesi, ƟvƟ, Lóló et Mémé sont là ; la fenêtre suit le ciel (nuages, étoiles, vraie lune).
   const ENCRE = "#23214a";
   const MOMENTS = {
-    jour: { murG: "#5fb44f", murD: "#d5dc6a", sol: "#efe4d3", plinthe: "#c9b9a2", lampe: false },
+    jour: { murG: "#5fb44f", murD: "#d5dc6a", sol: "#efe4d3", plinthe: "#c9b9a2", lampe: true },
     soir: { murG: "#478f3d", murD: "#b9bf55", sol: "#dccdb8", plinthe: "#b3a28b", lampe: true },
     nuit: { murG: "#2f6136", murD: "#858a45", sol: "#b9aa95", plinthe: "#968670", lampe: true },
   };
@@ -133,6 +133,26 @@
     ctx.arc(334, 74, 38, Math.PI, 0);
     ctx.lineTo(372, 140);
     ctx.closePath();
+  }
+
+  // La lumière de la lampe, à la manière des pochettes : des aplats aux bords nets, plus clairs
+  // vers la lampe, un éventail au mur au-dessus de l'abat-jour et une flaque sur le sol. Elle est
+  // toujours allumée ; le soir et la nuit, elle se voit d'autant plus que la pièce est sombre.
+  function lumiereLampe(ctx, moment) {
+    const k = moment === "nuit" ? 1.5 : moment === "soir" ? 1.2 : 1;
+    const aplat = (pts, a, c) => {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.closePath();
+      ctx.fillStyle = "rgba(" + (c || "255,228,90") + "," + Math.min(0.7, a * k) + ")";
+      ctx.fill();
+    };
+    aplat([[247, 141], [271, 141], [306, 52], [212, 52]], 0.16, "255,240,150");
+    aplat([[240, 163], [278, 163], [470, 300], [50, 300]], 0.2);
+    aplat([[246, 163], [272, 163], [392, 300], [128, 300]], 0.16, "255,244,170");
+    ctx.beginPath(); ctx.ellipse(259, 300, 186, 15, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,236,130," + Math.min(0.6, 0.16 * k) + ")";
+    ctx.fill();
   }
 
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
@@ -251,16 +271,7 @@
       ctx.fillRect(0, 0, 640, 360);
       ctx.restore();
     }
-    if (M.lampe) {
-      const g = ctx.createRadialGradient(259, 160, 6, 259, 190, 210);
-      g.addColorStop(0, "rgba(255,226,90,0.55)");
-      g.addColorStop(0.55, "rgba(255,214,80,0.22)");
-      g.addColorStop(1, "rgba(255,214,80,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(240, 162); ctx.lineTo(278, 162); ctx.lineTo(460, 300); ctx.lineTo(60, 300); ctx.closePath();
-      ctx.fill();
-    }
+    if (M.lampe) lumiereLampe(ctx, moment);
     // le grain de risographie
     const grain = document.createElement("canvas");
     grain.width = grain.height = 128;
@@ -369,7 +380,7 @@
   // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin de 640 × 360)
   function zonesMaison(nuit) {
     return [
-      { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: () => { const b = H.$(".choix-compagnons"); if (b) b.scrollIntoView({ behavior: "smooth", block: "center" }); } },
+      { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: fenetreBalade },
       { id: "meme", x: 152, y: 192, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
       { id: "lolo", x: 116, y: 156, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
         const choix = [{ valeur: "drame", libelle: "Un drame !" }, { valeur: "blague", libelle: "Une blague !" }];
@@ -673,18 +684,13 @@
       cc.lineWidth = 1.6;
       tableGouter(cc);
       if (farce) dessinerFarce(cc, t);
+      cc.globalCompositeOperation = "source-atop";
       if (moment !== "jour") {
-        cc.globalCompositeOperation = "source-atop";
         cc.fillStyle = moment === "nuit" ? "rgba(20,18,64,0.42)" : "rgba(40,30,90,0.22)";
         cc.fillRect(0, 0, 640, 360);
-        const g = cc.createRadialGradient(259, 160, 6, 259, 190, 210);
-        g.addColorStop(0, "rgba(255,226,90,0.55)");
-        g.addColorStop(0.55, "rgba(255,214,80,0.22)");
-        g.addColorStop(1, "rgba(255,214,80,0)");
-        cc.fillStyle = g;
-        cc.beginPath(); cc.moveTo(240, 162); cc.lineTo(278, 162); cc.lineTo(460, 300); cc.lineTo(60, 300); cc.closePath(); cc.fill();
-        cc.globalCompositeOperation = "source-over";
       }
+      lumiereLampe(cc, moment);
+      cc.globalCompositeOperation = "source-over";
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(calque, 0, 0);
@@ -717,10 +723,10 @@
         ctx.globalAlpha = 1;
         ctx.textAlign = "start";
       }
-      if (moment !== "jour") {
-        const v = 0.04 + 0.03 * Math.sin(t / 170) * Math.sin(t / 430);
-        ctx.fillStyle = "rgba(255,220,90," + v + ")";
-        ctx.beginPath(); ctx.moveTo(240, 162); ctx.lineTo(278, 162); ctx.lineTo(460, 300); ctx.lineTo(60, 300); ctx.closePath(); ctx.fill();
+      {
+        const v = 0.03 + 0.025 * Math.sin(t / 170) * Math.sin(t / 430);
+        ctx.fillStyle = "rgba(255,226,90," + v + ")";
+        ctx.beginPath(); ctx.moveTo(240, 163); ctx.lineTo(278, 163); ctx.lineTo(470, 300); ctx.lineTo(50, 300); ctx.closePath(); ctx.fill();
       }
       // le nom de ce qu'on survole
       if (survol) {
@@ -738,35 +744,20 @@
   }
 
   // --- la maison ------------------------------------------------------------------------
+  // La maison, c'est la scène et rien d'autre : pas d'en-tête, pas de titre, pas de papier autour.
+  // Tout se fait en cliquant sur la pièce ; une petite porte en haut à gauche ramène à la ferme.
   let toileMaison = null;
+  function fenetreBalade() {
+    let fermer;
+    const corps = H.el("div", null, H.el("h2", null, "Faire une balade"), choixCompagnons());
+    fermer = H.fenetre(corps);
+    return fermer;
+  }
   H.vues.maison = {
     afficher(c) {
-      const nuit = H.ciel.nuitCalme();
-      const soir = new Date().getHours() >= 18;
       c.appendChild(H.el("div.page-maison", null,
-        H.el("h1", null, "Chez ƟvƟ et Mesi"),
-        H.el("p.discret", null, nuit
-          ? "Les lumières sont douces, la tisane est encore tiède. La ferme s’endort."
-          : soir
-            ? "Mesi t’attend avec une tisane de tilleul. On se retrouve ici chaque soir."
-            : "Le mazet est calme. Mesi arrose les géraniums de la fenêtre."),
         (toileMaison = H.el("canvas.scene-maison", { role: "img", "aria-label": "L’intérieur du mazet : le lit, le canapé sous la fenêtre, la table, Mesi, Lóló et Mémé" })),
-        H.el("p.discret.aide-maison", null, "Clique sur ƟvƟ, Mesi, Lóló, Mémé, le canapé, la table, la fenêtre ou le lit."),
-        H.el("h2", null, "Faire une balade"),
-        choixCompagnons(),
-        H.el("h2", null, "Écouter une histoire"),
-        H.el("div.pastilles", null,
-          bouton("Une douceur de Mesi", () => raconter("luigi")),
-          loloLa() ? bouton("Un drame de Lóló", () => raconter("lolo")) : null,
-          bouton("Un compliment de Mesi", complimentMesi)
-        ),
-        H.ressources.quantite("crepe") > 0
-          ? H.el("div", null,
-              H.el("h2", null, "Le goûter"),
-              H.el("div.pastilles", null, bouton("Manger une crêpe au chocolat fondu (" + H.ressources.quantite("crepe") + ")", () => crepeMesi(() => H.aller("maison")))))
-          : null,
-        nuit ? H.el("div", null, H.el("h2", null, "Bonne nuit"), H.el("div.pastilles", null, bouton("Aller dormir", () => H.aller("dodo/dormir")))) : null,
-        H.el("p", null, H.el("a.bouton.discret-bouton", { href: "#village" }, "Retour à la ferme"))
+        H.el("a.sortie-maison", { href: "#village", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme")
       ));
       sceneMaison(toileMaison);
     },
