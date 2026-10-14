@@ -45,17 +45,13 @@
     return timbres[de];
   }
 
+  let choisie = null;
   function ouvrir(l) {
+    choisie = l.id;
     if (l.pour === moi() && !l.lu) {
       l.lu = H.maintenant();
       enregistrer(l);
     }
-    H.fenetre(H.el("div.lettre.lettre-ecrite", null,
-      H.el("img.timbre", { src: timbre(l.de), alt: "" }),
-      H.el("p.lettre-date", null, date(arrivee(l))),
-      H.el("div.lettre-texte", { html: H.texteRiche(l.texte) }),
-      H.el("p.lettre-signature", null, NOMS[l.de] || l.de)
-    ));
     dessiner();
   }
 
@@ -96,54 +92,59 @@
   }
 
   let conteneur = null;
+  // La boîte aux lettres comme une messagerie : la liste à gauche (reçues, puis envoyées), la
+  // lettre choisie à droite, sur son papier, écrite à la main.
   function dessiner() {
     if (!conteneur) return;
     conteneur.innerHTML = "";
-    conteneur.appendChild(H.el("div.herbo-tete", null,
-      H.el("h1", null, "Boîte aux lettres"),
-      H.el("p.discret", null, moi() === "mesi" ? "Les lettres d’ƟvƟ arrivent ici. Les tiennes partent dans la boîte de la ferme d’ƟvƟ." : "Les lettres de Mesi arrivent ici. Tu peux lui répondre.")
-    ));
-    conteneur.appendChild(H.el("div.pastilles", null, H.el("button.bouton", { type: "button", onclick: ecrire }, "Écrire une lettre à " + NOMS[autre()])));
+    conteneur.appendChild(H.el("h1", null, "Boîte aux lettres"));
+    const r = recues(), e = envoyees();
+    const premier = moi() === "ovo" && H.base.message ? { id: "accueil", de: "mesi", texte: H.base.message, accueil: true } : null;
+    const toutes = r.concat(premier ? [premier] : [], e);
+    if (!toutes.some((l) => l.id === choisie)) choisie = (r.find((l) => !l.lu) || r[0] || premier || e[0] || {}).id || null;
+    const lue = toutes.find((l) => l.id === choisie);
 
-    const r = recues();
-    conteneur.appendChild(H.el("h2", null, "Lettres reçues"));
-    const liste = H.el("ul.liste-lettres");
-    for (const l of r) {
-      liste.appendChild(H.el("li", null, H.el("button.lettre-ligne" + (l.lu ? "" : ".non-lue"), { type: "button", onclick: () => ouvrir(l) },
+    const ligne = (l, titre, sousTitre, extra) => H.el("li", null,
+      H.el("button.ligne-mail" + (l.id === choisie ? ".actif" : "") + (l.pour === moi() && !l.lu && !l.accueil ? ".non-lue" : ""), { type: "button", onclick: () => ouvrir(l) },
         H.el("img", { src: timbre(l.de), alt: "" }),
-        H.el("span", null, H.el("strong", null, (l.lu ? "" : "Nouvelle lettre · ") + "De " + NOMS[l.de]), H.el("br"), H.el("span.discret", null, date(arrivee(l))))
-      )));
-    }
-    if (moi() === "ovo" && H.base.message) {
-      liste.appendChild(H.el("li", null, H.el("button.lettre-ligne", { type: "button", onclick: () => H.afficherMessageAccueil() },
-        H.el("img", { src: timbre("mesi"), alt: "" }),
-        H.el("span", null, H.el("strong", null, "Le tout premier message"), H.el("br"), H.el("span.discret", null, "pour l’ouverture de l’herbothèque"))
-      )));
-    }
-    conteneur.appendChild(liste.children.length ? liste : H.el("p.discret", null, "La boîte est vide pour l’instant."));
-
-    const e = envoyees();
+        H.el("span", null, H.el("b", null, titre), H.el("span.discret", null, sousTitre))),
+      extra || null);
+    const liste = H.el("ul.liste-mail");
+    liste.appendChild(H.el("li.rubrique-mail", null, "Reçues"));
+    r.forEach((l) => liste.appendChild(ligne(l, (l.lu ? "" : "Nouvelle · ") + "De " + NOMS[l.de], date(arrivee(l)))));
+    if (premier) liste.appendChild(ligne(premier, "Le tout premier message", "pour l’ouverture de l’herbothèque"));
+    if (!r.length && !premier) liste.appendChild(H.el("li.vide-mail.discret", null, "Rien pour l’instant."));
     if (e.length) {
-      conteneur.appendChild(H.el("h2", null, "Lettres envoyées"));
-      conteneur.appendChild(H.el("ul.liste-lettres", null, e.map((l) => {
+      liste.appendChild(H.el("li.rubrique-mail", null, "Envoyées"));
+      e.forEach((l) => {
         const attente = arrivee(l) > H.maintenant();
-        return H.el("li", null, H.el("div.lettre-ligne.envoyee", null,
-          H.el("img", { src: timbre(l.de), alt: "" }),
-          H.el("span", null,
-            H.el("button.lien-discret", { type: "button", onclick: () => ouvrir(l) }, "Pour " + NOMS[l.pour]),
-            H.el("br"),
-            H.el("span.discret", null, (attente ? "arrivera le " : "arrivée le ") + date(arrivee(l)) + (l.lu ? " · lue" : ""))),
-          attente ? H.el("button.bouton.petit.discret-bouton", {
+        liste.appendChild(ligne(l, "Pour " + NOMS[l.pour], (attente ? "arrivera le " : "arrivée le ") + date(arrivee(l)) + (l.lu ? " · lue" : ""),
+          attente ? H.el("button.lien-discret.annuler-mail", {
             type: "button",
             onclick() {
               if (!confirm("Annuler cette lettre programmée ?")) return;
               enregistrer(Object.assign({}, l, { supprime: true }));
               dessiner();
             },
-          }, "Annuler") : null
-        ));
-      })));
+          }, "Annuler") : null));
+      });
     }
+
+    const lecture = lue
+      ? H.el("div.lettre-papier", null,
+          H.el("img.timbre", { src: timbre(lue.de), alt: "" }),
+          lue.accueil ? null : H.el("p.lettre-date", null, date(arrivee(lue))),
+          H.el("div.lettre-texte", { html: H.texteRiche(lue.texte) }),
+          lue.accueil ? null : H.el("p.lettre-signature", null, NOMS[lue.de] || lue.de))
+      : H.el("p.discret.lettre-vide", null, "Choisis une lettre dans la liste.");
+
+    conteneur.append(
+      H.el("div.barre-mail", null,
+        H.el("button.bouton", { type: "button", onclick: ecrire }, "Écrire une lettre à " + NOMS[autre()]),
+        H.el("span.discret", null, moi() === "mesi" ? "Tes lettres partent dans la boîte de la ferme d’ƟvƟ." : "Les lettres de Mesi arrivent ici. Tu peux lui répondre.")),
+      H.el("div.messagerie", null, liste, H.el("div.lecture-mail", null, lecture)),
+      !H.local.jeton ? H.el("p.discret", null, "Pour que les lettres partent vers l’autre appareil, il faut la synchronisation (Réglages, « Mac et iPhone »).") : null
+    );
   }
 
   H.lettres = { aLire: () => aLire().length };

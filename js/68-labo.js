@@ -55,16 +55,16 @@
     ));
 
     // les récoltes en attente
-    conteneur.appendChild(H.el("h2", null, "Les récoltes"));
     const recoltes = Object.entries(l.recoltes).filter(([id, n]) => n > 0 && H.d.plante(id));
-    conteneur.appendChild(recoltes.length
-      ? H.el("div.pastilles", null, recoltes.map(([id, n]) => H.el("span.pastille-valeur", null, H.d.plante(id).nom + " × " + n)))
-      : H.el("p.discret", null, "Pas encore de récolte. Récolte une plante sur une île, ou va cueillir dans la nature."));
-    conteneur.appendChild(H.el("div.pastilles", null,
-      H.el("button.bouton.petit", { type: "button", onclick: cueillir }, "Aller cueillir dans la nature (" + H.quantiteTexte("energie", COUT_CUEILLETTE.energie) + ")")));
+    const ongletRecoltes = [
+      recoltes.length
+        ? H.el("div.pastilles", null, recoltes.map(([id, n]) => H.el("span.pastille-valeur", null, H.d.plante(id).nom + " × " + n)))
+        : H.el("p.discret", null, "Pas encore de récolte. Récolte une plante sur une île, ou va cueillir dans la nature."),
+      H.el("div.pastilles", null,
+        H.el("button.bouton.petit", { type: "button", onclick: cueillir }, "Aller cueillir dans la nature (" + H.quantiteTexte("energie", COUT_CUEILLETTE.energie) + ")")),
+    ];
 
     // les postes de préparation
-    conteneur.appendChild(H.el("h2", null, "Les préparations"));
     const grille = H.el("div.grille-pots.grille-labo");
     l.postes.forEach((poste, i) => {
       const p = poste && H.d.plante(poste.p);
@@ -89,11 +89,13 @@
           : H.el("span.reste", null, "encore " + duree(reste))
       ));
     });
-    conteneur.appendChild(grille);
-
-    // la tisane
-    conteneur.appendChild(H.el("h2", null, "Une tisane"));
-    conteneur.appendChild(sectionTisane(l));
+    // trois onglets : ce qui attend, ce qui se prépare, la tisane
+    const enCours = l.postes.filter(Boolean).length;
+    conteneur.appendChild(H.bureau.onglets([
+      { nom: "Les récoltes" + (recoltes.length ? " (" + recoltes.length + ")" : ""), el: ongletRecoltes },
+      { nom: "Les préparations" + (enCours ? " (" + enCours + ")" : ""), el: grille },
+      { nom: "Une tisane", el: sectionTisane(l) },
+    ], { cle: "labo" }));
   }
 
   function sectionTisane(l) {

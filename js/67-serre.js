@@ -146,7 +146,7 @@
       pastilles, resume, liste);
   }
 
-  let conteneur = null, zone = null;
+  let conteneur = null, zone = null, outilSerre = null;
   function dessiner() {
     if (!conteneur) return;
     if (!zone) {
@@ -157,7 +157,8 @@
       ));
       zone = H.el("div");
       conteneur.appendChild(zone);
-      conteneur.appendChild(construireOutil());
+      // l'outil de recherche est construit une fois (on garde ce qu'on y a tapé), puis rangé dans son onglet
+      outilSerre = construireOutil();
     } else if (outil.maj) outil.maj();
     const s = serre();
     const racine = conteneur;
@@ -192,13 +193,11 @@
         ) : H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { if (confirm("Vider ce pot ?")) { s.pots[i] = null; sauver(); dessiner(); } } }, "Vider")
       ));
     });
-    conteneur.appendChild(H.el("h2", null, "Les semis"));
-    conteneur.appendChild(grille);
+    const ongletSemis = grille;
 
     // la caisse des bébés plantes à repiquer
     const caisse = Object.entries(s.bebes).filter(([, n]) => n > 0);
-    conteneur.appendChild(H.el("h2", null, "La caisse à repiquer"));
-    conteneur.appendChild(caisse.length
+    const ongletCaisse = (caisse.length
       ? H.el("div.pastilles", null, caisse.map(([id, n]) => {
           const p = H.d.plante(id);
           return p ? H.el("span.pastille-valeur", null, p.nom + " × " + n) : null;
@@ -206,8 +205,7 @@
       : H.el("p.discret", null, "Vide pour l’instant. Les bébés plantes prêtes y attendent d’être repiquées avec l’outil « Planter » du terrain."));
 
     // les frileuses
-    conteneur.appendChild(H.el("h2", null, "Les frileuses"));
-    conteneur.appendChild(s.frileuses.length
+    const ongletFrileuses = (s.frileuses.length
       ? H.el("div.grille-pots", null, s.frileuses.map((f) => {
           const p = H.d.plante(f.p);
           if (!p) return null;
@@ -218,6 +216,13 @@
             H.el("span.etat-pot", null, age < 1 ? "arrivée aujourd’hui" : "depuis " + Math.floor(age) + " j"));
         }))
       : H.el("p.discret", null, "Le curcuma, le gingembre, le cannelier… peinent dehors à Marseille. Ici, ils se plaisent : quand une frileuse est prête, tu peux la garder dans la serre."));
+    const nb = Object.values(s.bebes).reduce((a, n) => a + (n > 0 ? n : 0), 0);
+    conteneur.appendChild(H.bureau.onglets([
+      { nom: "Les semis", el: ongletSemis },
+      { nom: "La caisse à repiquer" + (nb ? " (" + nb + ")" : ""), el: ongletCaisse },
+      { nom: "Les frileuses", el: ongletFrileuses },
+      { nom: "Chercher quoi semer", el: outilSerre },
+    ], { cle: "serre" }));
     conteneur = racine;
   }
 
