@@ -170,8 +170,15 @@
     navigator.serviceWorker.register("sw.js").catch((e) => console.warn(e));
   }
 
+  // Tant qu'on ne sait pas s'il faut demander le mot de passe, on ne montre rien (un fond uni) :
+  // avant, l'écran du mot de passe passait une seconde avant le jeu, à chaque rechargement.
   essaiAutomatique().then((ok) => {
+    document.documentElement.classList.remove("chargement");
     if (ok) demarrer();
-    else H.$("#mdp").focus();
+    else {
+      H.$("#verrou").hidden = false;
+      if (H.accueil) H.accueil.preparer();
+      H.$("#mdp").focus();
+    }
   });
 })();
