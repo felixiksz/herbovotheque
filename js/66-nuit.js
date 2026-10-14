@@ -219,26 +219,52 @@
   // partie « fond » : sur le mur et le sol, derrière les meubles ; partie « dessus » : un reflet
   // léger sur les meubles et les personnages, qui ne les délave pas
   function lumiereLampe(ctx, moment, partie) {
-    const k = moment === "nuit" ? 1.25 : moment === "soir" ? 1.1 : 1;
-    const aplat = (pts, a, c) => {
-      ctx.beginPath();
-      pts.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-      ctx.closePath();
-      ctx.fillStyle = "rgba(" + c + "," + Math.min(0.9, a * k) + ")";
-      ctx.fill();
+    const k = moment === "nuit" ? 1.3 : moment === "soir" ? 1.15 : 1;
+    const halo = (x, y, r, couleur, a, sx, sy) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(sx || 1, sy || 1);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      g.addColorStop(0, "rgba(" + couleur + "," + Math.min(0.9, a * k) + ")");
+      g.addColorStop(0.55, "rgba(" + couleur + "," + Math.min(0.9, a * k * 0.35) + ")");
+      g.addColorStop(1, "rgba(" + couleur + ",0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     };
     if (partie === "dessus") {
-      aplat([[240, 163], [278, 163], [430, 232], [88, 232]], 0.14, "255,226,90");
+      // un reflet chaud léger sur ce qui est tout près de la lampe
+      halo(259, 160, 120, "255,214,120", 0.16);
       return;
     }
-    // un éventail au mur au-dessus de l'abat-jour, le cône jaune franc jusqu'au sol
-    aplat([[247, 141], [271, 141], [306, 52], [212, 52]], 0.34, "255,226,70");
-    aplat([[240, 163], [278, 163], [430, 232], [88, 232]], 0.62, "255,221,60");
-    // et là où la lumière touche le sol magenta, une flaque corail
-    aplat([[150, 232], [370, 232], [440, 312], [80, 312]], 0.7, "255,91,79");
+    // le halo rond autour de l'abat-jour, sur le mur
+    halo(259, 152, 110, "255,220,120", 0.42);
+    // et la flaque de lumière sur le sol, aplatie par la perspective
+    halo(259, 262, 160, "255,150,90", 0.55, 1, 0.32);
   }
 
-
+  // Le soir et la nuit, la pièce s'assombrit, mais pas autour du plafonnier : la boule orange
+  // éclaire la table et les visages. (contexte avec composition déjà réglée par l'appelant)
+  function assombrir(ctx, moment) {
+    if (moment === "jour") return;
+    const c = moment === "nuit" ? "20,18,64" : "40,30,90", a = moment === "nuit" ? 0.42 : 0.22;
+    const g = ctx.createRadialGradient(BOULE.x, BOULE.y + 40, 30, BOULE.x, BOULE.y + 40, 190);
+    g.addColorStop(0, "rgba(" + c + ",0)");
+    g.addColorStop(0.35, "rgba(" + c + "," + a * 0.3 + ")");
+    g.addColorStop(1, "rgba(" + c + "," + a + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 640, 360);
+  }
+  // la lumière chaude de la boule sur la table et les visages autour
+  function lueurTable(ctx, moment) {
+    const fort = moment === "nuit" ? 1.3 : moment === "soir" ? 1.15 : 0.7;
+    const g = ctx.createRadialGradient(BOULE.x, BOULE.y + 50, 10, BOULE.x, BOULE.y + 50, 130);
+    g.addColorStop(0, "rgba(255,196,120," + 0.32 * fort + ")");
+    g.addColorStop(0.6, "rgba(255,170,90," + 0.12 * fort + ")");
+    g.addColorStop(1, "rgba(255,170,90,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 640, 360);
+  }
 
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
   function decorMaison(w, h, dpr, moment) {
@@ -358,10 +384,9 @@
 
     // le soir et la nuit, la pièce s'assombrit, sauf là où la lampe éclaire (le lit et le canapé)
     if (moment !== "jour") {
-      ctx.fillStyle = moment === "nuit" ? "rgba(20,18,64,0.42)" : "rgba(40,30,90,0.22)";
       ctx.save();
       ctx.beginPath(); ctx.rect(0, 0, 640, 360); cheminFenetre(ctx); ctx.clip("evenodd");
-      ctx.fillRect(0, 0, 640, 360);
+      assombrir(ctx, moment);
       ctx.restore();
     }
     if (M.lampe) lumiereLampe(ctx, moment, "dessus");
@@ -730,7 +755,8 @@
 
   // Les farces de Lóló, dans la maison. etape 0 : on ne se doute de rien ; 1 : il se montre.
   let farce = null;
-  function dessinerFarce(ctx, t) {
+  // tete : où est la tête de Mesi (à table, ou sur le canapé) pour la farce où Lóló s'y assoit
+  function dessinerFarce(ctx, t, tete) {
     const vu = farce.etape >= 1, robe = "#b9834f", choco = "#4b3427";
     ctx.lineWidth = 1.6;
     ctx.strokeStyle = ENCRE;
@@ -748,7 +774,7 @@
       }
       ctx.save();
       ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(441, 222); ctx.quadraticCurveTo(452 + Math.sin(t / 140) * 4, 226, 450, 238);
+      ctx.beginPath(); ctx.moveTo(429, 222); ctx.quadraticCurveTo(440 + Math.sin(t / 140) * 4, 226, 438, 238);
       ctx.lineWidth = 8; ctx.strokeStyle = ENCRE; ctx.stroke();
       ctx.lineWidth = 5; ctx.strokeStyle = choco; ctx.stroke();
       ctx.restore();
@@ -773,7 +799,9 @@
       ctx.fillStyle = "#c96a3a"; ctx.fill(); ctx.stroke();
       bloc(ctx, x - 31, y - 38, 62, 8, 3, "#d9824f");
     } else if (farce.id === "tete") {
-      // assis sur la tête de Mesi, les jambes qui pendent de chaque côté
+      // assis sur la tête de Mesi, les jambes qui pendent de chaque côté ; il suit Mesi où qu'elle soit
+      ctx.save();
+      ctx.translate(((tete && tete.x) || 604) - 604, ((tete && tete.y) || 156) - 156);
       const x = 604, y = 156, bonds = vu ? Math.abs(Math.sin(t / 180)) * 3 : 0;
       jambeLolo(ctx, 594, y + 6 - bonds, 584, y + 30 - bonds);
       jambeLolo(ctx, 616, y + 6 - bonds, 626, y + 30 - bonds);
@@ -786,6 +814,7 @@
       ctx.restore();
       jambeLolo(ctx, 592, y + 2 - bonds, 588, y + 24 - bonds);
       teteLolo(ctx, 588, y - 16 - bonds, { droite: false, ouvert: vu, parle: vu, t, angle: vu ? Math.sin(t / 200) * 0.2 : 0.15 });
+      ctx.restore();
     }
   }
 
@@ -877,13 +906,12 @@
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;
       tableGouter(cc);
-      if (farce) dessinerFarce(cc, t);
+      // la tête de Mesi : à table (dos 626) ou sur le canapé (dos 412, siège plus bas de 30)
+      if (farce) dessinerFarce(cc, t, surCanape ? { x: 390, y: 126 } : { x: 604, y: 156 });
       cc.globalCompositeOperation = "source-atop";
-      if (moment !== "jour") {
-        cc.fillStyle = moment === "nuit" ? "rgba(20,18,64,0.42)" : "rgba(40,30,90,0.22)";
-        cc.fillRect(0, 0, 640, 360);
-      }
+      assombrir(cc, moment);
       lumiereLampe(cc, moment, "dessus");
+      lueurTable(cc, moment);
       cc.globalCompositeOperation = "source-over";
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
