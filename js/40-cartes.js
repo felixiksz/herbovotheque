@@ -245,11 +245,13 @@
         onclick: () => (info.file.length ? revision(info.file, f) : H.toast("Rien à réviser pour l’instant avec ce choix")),
       }, info.file.length ? "Commencer (" + info.file.length + " cartes)" : "Rien à réviser maintenant")
     );
-    conteneur.appendChild(resume);
-    if (!p && !f.ile) conteneur.appendChild(choix(f));
-    conteneur.appendChild(statistiques());
-    conteneur.appendChild(cartesPerso());
-    conteneur.appendChild(recompenses());
+    // une fenêtre à onglets : réviser, puis ce qu'il y a autour
+    conteneur.appendChild(H.bureau.onglets([
+      { nom: "Réviser", el: [resume].concat(!p && !f.ile ? [choix(f)] : []) },
+      { nom: "Réussite", el: statistiques() },
+      { nom: "Mes cartes", el: cartesPerso() },
+      { nom: "Ce qu’elles rapportent", el: recompenses() },
+    ], { cle: "cartes" }));
   }
 
   function bandeauPause(s) {

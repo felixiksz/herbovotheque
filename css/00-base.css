@@ -322,3 +322,94 @@ label { font-size: 0.95rem; }
   background: rgba(35, 33, 74, 0.07);
 }
 .carte-ile { border-radius: 3px; }
+
+/* --- l'ordinateur de la ferme : barre de menus jaune, icônes en pixels, les outils en fenêtres --- */
+:root { --barre-jaune: #f6ee55; --bleu-choix: #3826f2; }
+:root[data-bureau] body {
+  background-image:
+    linear-gradient(rgba(56, 38, 242, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 38, 242, 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+:root[data-theme="nuit"][data-bureau] body {
+  background-image:
+    linear-gradient(rgba(243, 234, 216, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 234, 216, 0.06) 1px, transparent 1px);
+}
+:root[data-bureau] #ciel { display: none; }
+:root[data-bureau] #entete {
+  background: var(--barre-jaune); color: #23214a; border-bottom: 1.5px solid #23214a;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  padding: calc(3px + env(safe-area-inset-top)) var(--marge) 3px; gap: 2px 16px;
+}
+:root[data-bureau] #entete .titre-jeu { font: 400 1.05rem/1.6 "Suez One", serif; color: #23214a; }
+:root[data-bureau] #menu { gap: 2px 6px; }
+:root[data-bureau] #menu a { font: 1.3rem/1.15 var(--menu-police); color: #23214a; border-radius: 0; padding: 0 6px; }
+:root[data-bureau] #menu a:hover, :root[data-bureau] #menu a:focus-visible, :root[data-bureau] #menu a[aria-current="page"] { background: var(--bleu-choix); color: #fff; outline: none; }
+:root[data-bureau] #barre-ressources { color: #23214a; }
+:root[data-bureau] #barre-ressources * { color: inherit; }
+.heure-entete { display: none; }
+:root[data-bureau] .heure-entete { display: block; margin-left: auto; font: 1.3rem/1.15 var(--menu-police); color: #23214a; white-space: nowrap; }
+@media (max-width: 640px) { :root[data-bureau] .heure-entete { display: none; } }
+
+/* le bureau : les icônes à gauche, la fenêtre à droite */
+:root[data-bureau="fenetre"] #vue { max-width: 1120px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 18px; align-items: start; }
+.icones-bureau { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px; }
+.icone-bureau { display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; color: var(--encre); font: 1.1rem/1 var(--menu-police); text-align: center; padding: 2px; }
+.icone-pixel { width: 36px; height: 36px; image-rendering: pixelated; display: block; }
+.icone-bureau span { padding: 0 4px; }
+.icone-bureau:hover span, .icone-bureau:focus-visible span, .icone-bureau.ouverte span { background: var(--bleu-choix); color: #fff; }
+.icone-bureau:focus-visible { outline: none; }
+.fenetre-vue { background: var(--papier); border: 1.5px solid var(--encre); border-radius: 3px; box-shadow: 6px 6px 0 rgba(35, 33, 74, 0.85); min-width: 0; margin-bottom: 30px; }
+:root[data-theme="nuit"] .fenetre-vue { box-shadow: 6px 6px 0 rgba(0, 0, 10, 0.6); }
+.fenetre-vue > .titre-fenetre { height: 30px; font: 1.25rem/1 var(--menu-police); background: rgba(35, 33, 74, 0.07); position: sticky; top: 0; }
+.fenetre-vue > .titre-fenetre .fermer-fenetre { display: grid; place-items: center; text-decoration: none; font: 1.1rem/1 var(--menu-police); }
+.fenetre-vue > .titre-fenetre .fermer-fenetre:hover { background: var(--fluo); color: #23214a; }
+.contenu-vue { padding: 14px 18px 20px; min-width: 0; }
+/* le titre de la page est déjà dans la barre de la fenêtre */
+.contenu-vue h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.contenu-vue > .herbo-tete:first-child { margin-top: 0; }
+/* à l'intérieur d'une fenêtre, les cadres sont plus légers */
+.contenu-vue :is(.reglage, details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses, .cartes-resume, .bandeau-pause, .carte-ile) { box-shadow: 3px 3px 0 rgba(35, 33, 74, 0.5); }
+@media (max-width: 640px) {
+  :root[data-bureau="fenetre"] #vue { grid-template-columns: minmax(0, 1fr); gap: 10px; padding-inline: 10px; }
+  .icones-bureau { position: static; flex-direction: row; overflow-x: auto; gap: 4px; scrollbar-width: none; margin: 0 -10px; padding: 0 10px; }
+  .icones-bureau::-webkit-scrollbar { display: none; }
+  .icone-bureau { flex: 0 0 auto; min-width: 64px; }
+  .contenu-vue { padding: 12px 12px 18px; }
+}
+
+/* les onglets d'une fenêtre : une rangée en haut, ou une liste à gauche (les réglages) */
+.onglets-vue { margin: 0 -18px; }
+.rangee-onglets { display: flex; overflow-x: auto; border-bottom: 1.5px solid var(--encre); padding: 0 18px; gap: 0; scrollbar-width: none; }
+.rangee-onglets::-webkit-scrollbar { display: none; }
+.onglet-vue { flex: 0 0 auto; background: var(--papier-fonce); color: var(--encre); border: 1.5px solid var(--encre); border-left-width: 0; border-bottom: 0; border-radius: 0; padding: 2px 14px 1px; font: 1.25rem/1.1 var(--menu-police); cursor: pointer; margin-bottom: 0; }
+.onglet-vue:first-child { border-left-width: 1.5px; }
+.onglet-vue.actif { background: var(--papier); box-shadow: 0 1.5px 0 var(--papier); position: relative; z-index: 1; }
+.onglet-vue:not(.actif):hover { background: var(--barre-jaune); color: #23214a; }
+.panneau-onglet { padding: 16px 18px 4px; min-width: 0; }
+.panneau-onglet > details:only-child > summary { display: none; }
+.panneau-onglet > :only-child:is(.reglage, details) { border: 0; box-shadow: none; background: none; padding: 0; margin: 0; }
+.panneau-onglet > .reglage:only-child > h2:first-child { display: none; }
+.onglets-vue.lateral { display: grid; grid-template-columns: 170px minmax(0, 1fr); margin: -14px -18px 0; min-height: 340px; border-bottom: 1.5px solid var(--encre); }
+.onglets-vue.lateral + .version { margin: 12px 0 0; }
+.onglets-vue.lateral .rangee-onglets { flex-direction: column; border-bottom: 0; border-right: 1.5px solid var(--encre); padding: 8px 0; }
+.onglets-vue.lateral .onglet-vue { border: 0; background: none; text-align: left; padding: 3px 14px; box-shadow: none; }
+.onglets-vue.lateral .onglet-vue.actif { background: var(--encre); color: var(--papier); }
+.onglets-vue.lateral .onglet-vue:not(.actif):hover { background: var(--barre-jaune); color: #23214a; }
+.onglets-vue.lateral .panneau-onglet { padding: 14px 18px 20px; }
+@media (max-width: 640px) {
+  .onglets-vue { margin: 0 -12px; }
+  .rangee-onglets { padding: 0 12px; }
+  .panneau-onglet { padding: 14px 12px 4px; }
+  .onglets-vue.lateral { grid-template-columns: minmax(0, 1fr); margin: -12px -12px 0; min-height: 0; }
+  .onglets-vue.lateral .rangee-onglets { flex-direction: row; border-right: 0; border-bottom: 1.5px solid var(--encre); padding: 0; }
+  .onglets-vue.lateral .onglet-vue { padding: 4px 12px; }
+}
+
+/* l'herbothèque garde son bureau : sa barre devient celle de la fenêtre, la barre jaune est en haut */
+:root[data-bureau="ordi"] .bureau-herbo { background: none; border: 0; }
+:root[data-bureau="ordi"] .barre-bureau { background: var(--papier); border: 1.5px solid var(--encre); box-shadow: 4px 4px 0 rgba(35, 33, 74, 0.6); margin: 0 14px; font: 1.2rem/1.1 var(--menu-police); color: var(--encre); }
+:root[data-bureau="ordi"] .barre-bureau b { font-size: 1rem; }
+:root[data-bureau="ordi"] .heure-bureau { display: none; }
+:root[data-bureau="ordi"] .menu-bureau:hover, :root[data-bureau="ordi"] .menu-bureau:focus-visible { background: var(--bleu-choix); color: #fff; }

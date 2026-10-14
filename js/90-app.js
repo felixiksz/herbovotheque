@@ -87,7 +87,10 @@
     if (!vueActive || vueActive.nom !== vue || !H.vues[vue].mettreAJour) {
       conteneur.innerHTML = "";
       conteneur.className = "vue-" + vue;
-      H.vues[vue].afficher(conteneur, params);
+      // les outils s'ouvrent dans une fenêtre de l'ordinateur de la ferme
+      const bureau = H.bureau ? H.bureau.mode(vue, params) : null;
+      if (H.bureau) H.bureau.preparer(bureau);
+      H.vues[vue].afficher(bureau === "fenetre" ? H.bureau.cadre(vue, conteneur) : conteneur, params);
     } else {
       H.vues[vue].mettreAJour(params);
     }

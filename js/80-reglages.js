@@ -424,9 +424,9 @@
   H.vues.reglages = {
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
-      c.append(blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde());
-      const acces = blocAcces();
-      if (acces) c.appendChild(acces);
+      // comme les préférences d'un vieux Mac : la liste des sections à gauche
+      const blocs = [blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
+      c.appendChild(H.bureau.onglets(blocs.map((b) => ({ nom: b.querySelector("h2").textContent, el: b })), { cle: "reglages", lateral: true }));
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },
   };
