@@ -144,3 +144,7 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .page-herbier .onglet-vue { border-left-width: 1.5px; border-bottom: 1.5px solid var(--encre); margin: 0 -1.5px -1.5px 0; }
 .page-herbier .onglet-vue.actif { border-bottom-color: var(--papier); }
 .page-herbier .panneau-onglet { border-top: 1.5px solid var(--encre); }
+/* l'éditeur en pixel art : des cases nettes, une palette en petits carrés */
+.toile-dessin.pixel { image-rendering: pixelated; }
+.dessin-couleurs.pixel { gap: 4px; max-width: 360px; align-self: center; }
+.dessin-couleurs.pixel .pastille-couleur { width: 22px; height: 22px; border-radius: 0; }

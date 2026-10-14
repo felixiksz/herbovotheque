@@ -292,8 +292,9 @@
         return memo("main|" + p.id + "|" + p.dessinCarte.length + "|" + st + "|" + rayonCases, () => {
           const rayon = st < 3 ? 11 : Math.max(12, Math.min(rayonCases * T, 6 * T));
           const taille = Math.ceil(rayon * 2 + 8);
-          const c = H.aqua.toile(taille * 2, taille * 2);
-          c.getContext("2d").drawImage(img, 0, 0, taille * 2, taille * 2);
+          const c = H.aqua.toile(taille * 2, taille * 2), cc = c.getContext("2d");
+          cc.imageSmoothingEnabled = false; // le dessin en pixel art reste net
+          cc.drawImage(img, 0, 0, taille * 2, taille * 2);
           return c;
         });
       }
