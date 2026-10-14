@@ -51,12 +51,37 @@
     "Tu es la plus douce des juments.",
     "Tes yeux pétillent comme la mer aux calanques.",
   ];
+  // Les blagues de Lóló : la question, puis la chute. ƟvƟ et Mesi répondent d'une seule voix.
+  const BLAGUES = [
+    ["Quel est le comble pour un cheval ?", "D’être à cheval sur les principes ! Hiii !"],
+    ["Pourquoi le thym est-il toujours en retard ?", "Parce qu’il prend tout son thym ! Hiii hiii !"],
+    ["Quel est le légume préféré des chevaux ?", "Le céleri : on galope à toute célérité ! Hiii !"],
+    ["Pourquoi la camomille ne se dispute jamais ?", "Parce qu’elle reste toujours calme… o-mille ! Hiii !"],
+    ["Tu sais ce que fait un cheval qui a le hoquet ?", "Il hennit… hic ! Il hennit… hic ! Et Mémé n’a même pas ouvert un œil."],
+    ["Quelle est la plante préférée de Mémé ?", "L’herbe à chat, bien sûr. Mais elle dit que c’est pour moi. Hiii !"],
+    ["Tu connais l’histoire du cheval jardinier ?", "Il plantait des fers à cheval, pour faire pousser des poulains ! Hiii !"],
+    ["Pourquoi l’ortie n’a pas beaucoup d’amis ?", "Parce qu’elle pique au vif ! Mais en soupe, elle est adorable. Hiii !"],
+    ["Qu’est-ce qui est tout doux, couleur caramel, et qui fait « hiii » ?", "Moi ! Hiii !"],
+  ];
   const DUREE_PLUIE = 10 * 60e3;
   // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
   const T = (cle, defaut) => (H.textes ? H.textes.valeur(cle, defaut) : defaut);
   const astuces = () => T("astucesLolo", ASTUCES);
   const repliquesMeme = () => T("memeLolo", MEME);
   const compliments = () => T("complimentsLolo", COMPLIMENTS);
+  let blaguesDites = [];
+  async function blague() {
+    const toutes = BLAGUES;
+    if (blaguesDites.length >= toutes.length) blaguesDites = [];
+    const restantes = toutes.filter((b) => !blaguesDites.includes(b[0]));
+    const [question, chute] = restantes[Math.floor(Math.random() * restantes.length)];
+    blaguesDites.push(question);
+    await H.dialogue.dire([
+      { qui: "lolo", texte: question },
+      { qui: "lolo", texte: chute },
+      { qui: "duo", texte: "Sacré Lóló !" },
+    ]);
+  }
 
   // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins.
   H.pluieMagique = () => !!(H.jeu && H.jeu.pluieMagique && H.jeu.pluieMagique > H.maintenant());
@@ -161,9 +186,15 @@
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
         { valeur: "compliment", libelle: "Lui faire un compliment" },
+        { valeur: "blague", libelle: "Une blague !" },
         { valeur: null, libelle: "Merci Lóló !" },
       ]);
       if (!q) break;
+      if (q === "blague") {
+        await blague();
+        intro = "Autre chose ?";
+        continue;
+      }
       if (q === "compliment") {
         await complimenter();
         intro = "Autre chose ?";
@@ -191,7 +222,7 @@
   // Lóló et Mémé sont là dès le début ; seule leur île apparaît le 24 février.
   const disponible = () => true;
 
-  H.lolo = { parler, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
+  H.lolo = { parler, blague, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();
 
 // Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,

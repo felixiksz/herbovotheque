@@ -8,6 +8,7 @@
     ovo: { nom: "ƟvƟ", hauteur: 330 },
     luigi: { nom: "Mesi", hauteur: 220 },
     lolo: { nom: "Lóló", hauteur: 150 },
+    duo: { nom: "ƟvƟ et Mesi", hauteur: 270 },
     meme: { nom: "Mémé", hauteur: 360 },
     flamant: { nom: "Bouée flamant rose", hauteur: 470 },
   };

@@ -362,7 +362,8 @@
           H.el("img.apercu-carte", { src: p.dessinCarte || (H.terrain ? H.terrain.dessinAuto(p) : ""), alt: "" }),
           H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, recharger) }, p.dessinCarte ? "Modifier son dessin" : "Dessiner son aspect sur la carte")
         )
-      )
+      ),
+      H.photos ? H.photos.section(p, recharger, p.photo ? null : illus) : null
     );
   }
 

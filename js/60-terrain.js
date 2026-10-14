@@ -1070,7 +1070,8 @@
   // son nom et où elle en est. Sur téléphone, elle s'affiche au toucher et s'efface toute seule.
   const apercus = new Map();
   function apercuPlante(p) {
-    if (p.photo && p.photo.src) return p.photo.src;
+    const photo = H.photos && H.photos.vignette(p, 160);
+    if (photo) return photo;
     if (p.dessinCarte) return p.dessinCarte;
     if (!apercus.has(p.id)) apercus.set(p.id, dessinAuto(p));
     return apercus.get(p.id);

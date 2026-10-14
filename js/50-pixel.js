@@ -427,8 +427,11 @@
     memePas: [MEME_DEBOUT, MEME_PAS],
   };
   const cache = new Map();
+  // Lóló est une peluche : robe caramel, crinière, queue et sabots chocolat
+  const PAL_LOLO = Object.assign({}, PAL, { n: "#b9834f", N: "#5a3a26", M: "#4b3427" });
 
-  function toile(motif) {
+  function toile(motif, palette) {
+    const pal = palette || PAL;
     const h = motif.length, w = Math.max(...motif.map((l) => l.length));
     const c = document.createElement("canvas");
     c.width = w;
@@ -436,7 +439,7 @@
     const ctx = c.getContext("2d");
     motif.forEach((ligne, y) => {
       for (let x = 0; x < ligne.length; x++) {
-        const col = PAL[ligne[x]];
+        const col = pal[ligne[x]];
         if (col) {
           ctx.fillStyle = col;
           ctx.fillRect(x, y, 1, 1);
@@ -454,11 +457,14 @@
       const mois = new Date().getMonth();
       if (mois >= 4 && mois <= 8 && SPRITES[nom + "Ete"]) nom += "Ete";
       const cle = nom + (image || 0);
-      if (!cache.has(cle)) cache.set(cle, toile(SPRITES[nom][image || 0]));
+      if (!cache.has(cle)) cache.set(cle, toile(SPRITES[nom][image || 0], nom.startsWith("lolo") ? PAL_LOLO : PAL));
       return cache.get(cle);
     },
     // portrait (tête seule) agrandi, en image
     portrait(nom, echelle) {
+      // ƟvƟ et Mesi qui parlent d'une seule voix : les deux visages côte à côte
+      if (nom === "duo") return H.dessinPixel(SPRITES.ovo[0].slice(0, 12).map((l, i) => l + SPRITES.luigi[0][i]), PAL, (echelle || 5) * 0.75);
+      if (nom === "lolo") return H.dessinPixel(SPRITES.lolo[0].slice(0, 14).map((l) => l.slice(18)), PAL_LOLO, echelle || 5);
       const lignes = nom === "lolo" ? SPRITES.lolo[0].slice(0, 14).map((l) => l.slice(18)) : nom === "flamant" ? SPRITES.flamant[0].slice(0, 10).map((l) => l.slice(6, 18)) : SPRITES[nom][0].slice(0, 12);
       return H.dessinPixel(lignes, PAL, echelle || 5);
     },
