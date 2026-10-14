@@ -413,3 +413,28 @@ label { font-size: 0.95rem; }
 :root[data-bureau="ordi"] .barre-bureau b { font-size: 1rem; }
 :root[data-bureau="ordi"] .heure-bureau { display: none; }
 :root[data-bureau="ordi"] .menu-bureau:hover, :root[data-bureau="ordi"] .menu-bureau:focus-visible { background: var(--bleu-choix); color: #fff; }
+
+/* --- l'écran d'accueil : une scène en pixels dans les calanques, la nuit (la serre) ou le jour (les plantes) --- */
+.verrou { position: relative; overflow: hidden; justify-content: flex-start; padding-top: calc(10dvh + env(safe-area-inset-top)); gap: 0; }
+#scene-verrou { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; z-index: 0; }
+.verrou > :not(canvas) { position: relative; z-index: 1; }
+.verrou .titre-jeu { color: #f3f0dc; text-shadow: 3px 3px 0 #23214a; margin: 0 0 30dvh; }
+.verrou[data-moment="nuit"] .titre-jeu { font: 400 clamp(1.9rem, 7.5vw, 3.4rem)/1.1 "Suez One", serif; margin-bottom: 26dvh; }
+.verrou[data-moment] form { gap: 10px; width: min(360px, calc(100% - 24px)); align-items: stretch; text-align: left; }
+.verrou[data-moment] input { text-align: left; background: transparent; border: 0; border-bottom: 3px solid currentColor; border-radius: 0; padding: 2px 0; box-shadow: none; outline: none; }
+.verrou[data-moment] button[type=submit] { align-self: flex-end; background: none; border: 0; box-shadow: none; padding: 0; cursor: pointer; }
+/* la nuit : une boîte façon Zelda, comme les menus des scènes */
+.verrou[data-moment="nuit"] form { background: #1b1d4a; color: #f3f0dc; padding: 14px 18px 12px; font-family: "VT323", "Suez One", monospace;
+  box-shadow: 0 0 0 4px #ff5b4f, 0 0 0 8px #1b1d4a, 8px 8px 0 8px rgba(10, 10, 40, 0.6); }
+.verrou[data-moment="nuit"] label { color: #f6ee55; font: 1.5rem/1.1 "VT323", monospace; }
+.verrou[data-moment="nuit"] input { color: #f3f0dc; font: 1.6rem/1.1 "VT323", monospace; letter-spacing: 0.15em; }
+.verrou[data-moment="nuit"] button[type=submit] { color: #f6ee55; font: 1.5rem/1 "VT323", monospace; }
+.verrou[data-moment="nuit"] button[type=submit]::before { content: "▶ "; font-size: 0.8em; }
+.verrou[data-moment="nuit"] #verrou-message { color: #ffb3a8; font: 1.2rem "VT323", monospace; margin: 0; }
+/* le jour : une étiquette d'herbier en kraft */
+.verrou[data-moment="jour"] form { background: #c9a878; color: #4a3420; padding: 14px 18px 12px; box-shadow: inset 0 0 0 3px #4a3420, 6px 6px 0 rgba(20, 15, 10, 0.45);
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 0 100%, 0 22px); }
+.verrou[data-moment="jour"] label { font: 1.9rem/1 "Beth Ellen", cursive; color: #3e2210; }
+.verrou[data-moment="jour"] input { color: #3e2210; font: 1.6rem/1.1 "VT323", monospace; letter-spacing: 0.15em; }
+.verrou[data-moment="jour"] button[type=submit] { color: #7a2e1e; font: 1.5rem/1 "VT323", monospace; }
+.verrou[data-moment="jour"] #verrou-message { color: #7a2e1e; font: 1.2rem "VT323", monospace; margin: 0; }
