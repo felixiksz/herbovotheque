@@ -331,7 +331,8 @@
           .join(";")
       );
     }
-    const contenu = "﻿" + lignes.join("\n");
+    // en UTF-8 simple : Numbers, Excel sur Mac et les tableurs en ligne lisent bien les accents
+    const contenu = lignes.join("\n");
     H.telecharger(nomFichier + ".csv", contenu, "text/csv;charset=utf-8");
     H.toast("Liste exportée (" + plantes.length + " plantes)");
   };

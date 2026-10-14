@@ -393,8 +393,10 @@
           if (d) await H.lolo.bienDormi();
           return;
         }
-        const choix = [{ valeur: "drame", libelle: "Un drame !" }, { valeur: "blague", libelle: "Une blague !" }];
-        const q = await H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Un drame ou une blague ?", choix: choix.concat({ valeur: null, libelle: "Plus tard" }) }]);
+        // des fois, on dit « balague » au lieu de « blague »
+        const blague = Math.random() < 0.3 ? "balague" : "blague";
+        const choix = [{ valeur: "drame", libelle: "Un drame !" }, { valeur: "blague", libelle: "Une " + blague + " !" }];
+        const q = await H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Un drame ou une " + blague + " ?", choix: choix.concat({ valeur: null, libelle: "Plus tard" }) }]);
         if (q === "drame") raconter("lolo");
         else if (q === "blague") blagueLolo();
       } },

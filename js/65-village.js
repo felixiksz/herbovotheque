@@ -1063,6 +1063,19 @@
     );
   }
 
+  // Le matin, à la première visite de la journée, Mesi et ƟvƟ se disent bonjour comme d'habitude :
+  // « Jó reggelt ! » ou « BMBB ! » (bon matin BB), et « JSQTBD ? » (j'espère que t'as bien dormi)
+  function bonjourDuMatin() {
+    const h = new Date().getHours(), jour = new Date().toDateString();
+    if (h < 5 || h >= 12 || H.local.bonjourMesi === jour) return;
+    H.d.majLocal((l) => (l.bonjourMesi = jour));
+    const salut = () => (Math.random() < 0.5 ? "Jó reggelt !" : "BMBB !");
+    setTimeout(() => H.dialogue.dire([
+      { qui: "luigi", texte: salut() + " JSQTBD ?" },
+      { qui: "ovo", texte: salut() + " Oui, et toi ? JSQTBD aussi !" },
+    ]), 1200);
+  }
+
   H.vues.village = {
     afficher(c) {
       const boite = H.el("div.village");
@@ -1074,6 +1087,7 @@
         H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
       ));
       c.appendChild(boite);
+      bonjourDuMatin();
       const liens = H.el("nav.liens-village", { "aria-label": "Lieux de la ferme" },
         Object.entries(LIEUX).map(([id, l]) => H.el("button.bouton.petit", { type: "button", onclick: () => aller(id) }, l.nom)),
         H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: () => !H.$(".dialogue") && H.lolo.parler(null) }, "Parler à Lóló") : null,

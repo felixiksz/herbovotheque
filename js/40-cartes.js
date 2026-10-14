@@ -106,6 +106,12 @@
     f = f || filtre();
     const toutes = toutesLesCartes();
     if (f.plante) return toutes.filter((c) => c.plante === f.plante);
+    // les plantes de l'île : les rubriques habituelles d'abord (toutes, s'il n'y en a pas)
+    if (f.ile) {
+      const ids = new Set(f.ile), dIle = toutes.filter((c) => c.plante && ids.has(c.plante));
+      const habituelles = dIle.filter((c) => f.rubriques.includes(c.rubrique));
+      return habituelles.length ? habituelles : dIle;
+    }
     let cartes = toutes.filter((c) => f.rubriques.includes(c.rubrique));
     if (f.rangement && f.groupes.length) {
       const rg = H.herbier.rangements.find((r) => r.id === f.rangement);
@@ -215,6 +221,9 @@
     if (params[0] === "plante" && params[1]) {
       f = Object.assign({}, f, { plante: params[1], mode: "toutes" });
     }
+    // les plantes de l'île où l'on se trouve, en flashcartes
+    const ile = params[0] === "ile" && params[1] && (H.jeu.iles || {})[params[1]];
+    if (ile) f = Object.assign({}, f, { ile: [...new Set(Object.values(ile.plantes || {}).map((x) => x.p))], nomIle: ile.nom, mode: "toutes" });
     const info = fileDeRevision(f);
     const p = f.plante ? H.d.plante(f.plante) : null;
 
@@ -224,6 +233,7 @@
 
     const resume = H.el("div.cartes-resume", null,
       p ? H.el("p", null, "Révision de la plante ", H.el("strong", null, p.nom), " · ", H.el("a", { href: "#cartes" }, "revenir au choix habituel")) : null,
+      f.ile ? H.el("p", null, "Révision des plantes de « ", H.el("strong", null, f.nomIle), " » · ", H.el("a", { href: "#cartes" }, "revenir au choix habituel")) : null,
       H.el("p.chiffres", null,
         H.el("span", null, H.el("strong", null, String(info.dues)), " à revoir"),
         H.el("span", null, H.el("strong", null, String(info.nouvelles)), " nouvelles"),
@@ -236,7 +246,7 @@
       }, info.file.length ? "Commencer (" + info.file.length + " cartes)" : "Rien à réviser maintenant")
     );
     conteneur.appendChild(resume);
-    if (!p) conteneur.appendChild(choix(f));
+    if (!p && !f.ile) conteneur.appendChild(choix(f));
     conteneur.appendChild(statistiques());
     conteneur.appendChild(cartesPerso());
     conteneur.appendChild(recompenses());

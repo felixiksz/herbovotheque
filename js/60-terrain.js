@@ -657,6 +657,7 @@
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterImage(ile) }, "Exporter le croquis (image)"),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
+      Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser les plantes de l’île") : null,
       !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
       H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null,
@@ -1823,13 +1824,15 @@
   function exporterImage(ile) {
     const c = H.aqua.toile(vue.toile.width, vue.toile.height + 60 * vue.dpr);
     const ctx = c.getContext("2d");
-    ctx.fillStyle = "#f8f2e4";
+    ctx.fillStyle = "#f3f0dc";
     ctx.fillRect(0, 0, c.width, c.height);
     const tmp = H.aqua.toile(vue.toile.width, vue.toile.height);
     const sauvegardeChoix = vue.choisie;
     vue.choisie = null;
     dessiner(tmp.getContext("2d"), true);
     vue.choisie = sauvegardeChoix;
+    // le même style que dans le jeu : de gros pixels aux couleurs des pochettes
+    H.retro.appliquer(tmp, H.retro.taillePour(2.5));
     ctx.drawImage(tmp, 0, 0);
     // cartouche : nom, dimensions, barre d'échelle d'un mètre
     const k = T * vue.zoom * vue.dpr;
