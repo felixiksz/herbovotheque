@@ -114,9 +114,15 @@
     } else if (H.sons) H.sons.jouer("miaou", 0.4);
   };
 
-  let boite = null;
+  // Un seul dialogue à la fois : un nouveau dialogue attend que le précédent soit fini (avant,
+  // il l'effaçait sans le terminer, et ce qui attendait la fin restait bloqué : Lóló ne
+  // répondait plus). Fermer (en quittant une page) termine le dialogue en cours, et ce qui
+  // voudrait s'enchaîner juste après ne s'affiche pas.
+  let boite = null, arreter = null, file = Promise.resolve(), silence = 0;
 
   function fermer() {
+    silence = performance.now() + 400;
+    if (arreter) arreter(null);
     if (boite) boite.remove();
     boite = null;
   }
@@ -124,10 +130,16 @@
   // repliques : [{qui: "luigi", texte: "…", choix?: [{valeur, libelle}]}, …]
   // Renvoie une promesse résolue à la fin, avec la valeur choisie s'il y avait un choix.
   function dire(repliques) {
-    fermer();
+    if (performance.now() < silence) return Promise.resolve(null);
+    const tour = file.then(() => (performance.now() < silence ? null : montrer(repliques)));
+    file = tour.catch(() => {});
+    return tour;
+  }
+  function montrer(repliques) {
     return new Promise((fin) => {
       let i = 0;
       boite = H.el("div.dialogue", { role: "dialog", "aria-live": "polite" });
+      const cetteBoite = boite;
       const portrait = H.el("img.dialogue-portrait", { alt: "" });
       const nom = H.el("p.dialogue-nom");
       const texte = H.el("p.dialogue-texte");
@@ -187,9 +199,15 @@
       }
       function finir(valeur) {
         document.removeEventListener("keydown", clavier);
-        fermer();
+        clearInterval(minuteur);
+        arreter = null;
+        if (boite === cetteBoite) {
+          boite.remove();
+          boite = null;
+        }
         fin(valeur);
       }
+      arreter = finir;
       function avancer() {
         if (!complet) return terminer();
         if (repliques[i] && repliques[i].choix && repliques[i].choix.length) return; // il faut choisir

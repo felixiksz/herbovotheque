@@ -86,6 +86,7 @@
   const bornesSon = {};
 
   H.sons = {
+    criquets: criquetsDeNuit,
     // pour essayer : H.sons.goeland()
     goeland: () => goeland(),
     // durée d'un son (en secondes), lue une fois dans le fichier
@@ -451,6 +452,46 @@
   H.sur("meteo", majCigales);
   window.addEventListener("hashchange", () => setTimeout(majCigales, 50));
   document.addEventListener("pointerdown", majCigales);
+
+  // Les criquets, les nuits de balade : de petits trilles aigus, chacun à son rythme, un peu à
+  // gauche ou à droite, plus ou moins loin.
+  let criquets = null;
+  function trille(t, f, pan, vol) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    o.type = "sine";
+    o.frequency.value = f;
+    const n = 3 + Math.floor(Math.random() * 3);
+    g.gain.setValueAtTime(0.0001, t);
+    for (let i = 0; i < n; i++) {
+      const d = t + i * 0.055;
+      g.gain.setTargetAtTime(vol, d, 0.004);
+      g.gain.setTargetAtTime(0.0001, d + 0.025, 0.006);
+    }
+    if (p) {
+      p.pan.value = pan;
+      o.connect(g).connect(p).connect(H.audio.sortie());
+    } else o.connect(g).connect(H.audio.sortie());
+    o.start(t);
+    o.stop(t + n * 0.055 + 0.1);
+  }
+  function criquetsDeNuit(oui) {
+    if (!oui) {
+      if (criquets) criquets.forEach(clearTimeout);
+      criquets = null;
+      return;
+    }
+    if (criquets || !actif() || !contexte()) return;
+    criquets = [];
+    // trois criquets, chacun avec sa note, son côté et son rythme
+    [[4300, -0.6, 0.9], [4700, 0.4, 1.3], [3900, 0.1, 1.7]].forEach(([f, pan, rythme], k) => {
+      const chanter = () => {
+        if (!criquets) return;
+        if (actif()) trille(ctx.currentTime + 0.02, f * (0.98 + Math.random() * 0.04), pan, 0.018 * H.volume("bruitages"));
+        criquets[k] = setTimeout(chanter, (rythme + Math.random() * 0.8) * 1000);
+      };
+      criquets[k] = setTimeout(chanter, k * 400);
+    });
+  }
 
   // La pluie : quand il pleut vraiment (d'après la météo du lieu choisi)
   function pluie() {

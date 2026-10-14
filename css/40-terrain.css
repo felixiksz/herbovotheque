@@ -171,7 +171,6 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
   background: rgba(35, 33, 74, 0.72); border-radius: 999px; padding: 3px 12px 4px;
 }
 .sortie-maison:hover, .sortie-maison:focus-visible { background: #23214a; outline: 2px solid #ff5b4f; }
-.page-dodo { text-align: center; margin: 40px auto; }
 .page-dodo p { font-size: 1.1rem; }
 .cadre-balade { border: 1px solid var(--filet); border-radius: 8px; overflow: hidden; }
 .toile-balade { display: block; width: 100%; }
@@ -392,3 +391,18 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px;
 :root[data-vue="village"] .outils-ferme .pastilles { display: flex; flex-wrap: nowrap; gap: 0 2px; margin: 0; }
 :root[data-vue="village"] .outils-ferme .pastilles + .pastilles { border-left: 2px solid rgba(243, 240, 220, 0.3); padding-left: 6px; margin-left: 4px; }
 :root[data-vue="village"] .outils-ferme .bouton { white-space: nowrap; }
+
+/* la nuit : une seule boîte de choix, façon Zelda, sur l'encre */
+:root[data-vue="dodo"] #entete, :root[data-vue="dodo"] #ciel { display: none !important; }
+:root[data-vue="dodo"] body { background: #23214a; }
+:root[data-vue="dodo"] #vue { padding: 0; max-width: none; }
+.page-dodo { min-height: 100vh; display: grid; place-items: center; margin: 0 auto; padding: 16px; }
+.boite-nuit { max-width: 460px; display: grid; gap: 12px; padding: 14px 18px; background: var(--menu-fond); color: var(--menu-trait);
+  box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 6px 6px 0 6px rgba(15, 16, 53, 0.6); font-family: var(--menu-police); font-size: 1.3rem; line-height: 1.25; text-align: left; }
+.boite-nuit p { margin: 0; }
+.choix-nuit { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.choix-nuit .bouton { position: relative; background: none; border: 0; box-shadow: none; color: var(--menu-trait); font: inherit; padding: 0 4px 0 16px; }
+.choix-nuit .bouton::before { content: "▶"; position: absolute; left: 0; top: 50%; transform: translateY(-50%); font-size: 0.75rem; opacity: 0; }
+.choix-nuit .bouton:hover, .choix-nuit .bouton:focus-visible { color: var(--menu-choix); outline: none; }
+.choix-nuit .bouton:hover::before, .choix-nuit .bouton:focus-visible::before { opacity: 1; }
+:root[data-vue="dodo"] .page-maison { min-height: 100vh; }

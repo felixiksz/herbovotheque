@@ -381,6 +381,8 @@
 
   // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin de 640 × 360)
   function zonesMaison(nuit) {
+    // on peut aller faire dodo à partir de 21 h
+    const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     return [
       { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: fenetreBalade },
       { id: "meme", x: 152, y: 192, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
@@ -396,7 +398,7 @@
         if (q === "drame") raconter("lolo");
         else if (q === "blague") blagueLolo();
       } },
-      { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: nuit ? "Aller dormir" : "Le lit", agir: () => (nuit ? H.lolo.cacherLaLumiere().then(() => H.aller("dodo/dormir")) : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
+      { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
       { id: "canape", x: 278, y: 168, w: 164, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
       { id: "mesi", x: 572, y: 160, w: 66, h: 136, nom: "Un compliment de Mesi", agir: complimentMesi },
       { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: chanson },
@@ -787,7 +789,8 @@
     toile.height = Math.round(h * dpr);
     toile.style.height = h + "px";
     const nuit = H.ciel.etat().soleil.alt < -4;
-    const etoiles = Array.from({ length: 60 }, (_, i) => [(i * 137.5) % w, (i * 53.3) % (h * 0.45), (i % 3) * 0.3 + 0.4]);
+    const rEt = H.alea("etoiles-balade");
+    const etoiles = Array.from({ length: 70 }, () => [rEt() * w, rEt() * rEt() * h * 0.5, rEt() * 0.6 + 0.35]);
     const tirage = (graine, n) => {
       const r = H.alea(graine);
       return Array.from({ length: n }, () => r());
@@ -1027,6 +1030,8 @@
     ctx.fillRect(0, h * 0.58, w, h * 0.02);
     ctx.fillStyle = "rgba(255,255,255,0.75)";
     for (let i = 0; i < 12; i++) ctx.fillRect(boucler(i * 110 - avance * 0.4, w, 40), h * 0.62 + (i % 4) * 7, 22, 1.8);
+    // la baignade se passe dans la mer : derrière les rochers, le chemin et la garrigue
+    if (b.baignade) dessinerBaignade(ctx, b, t, w, h);
     // au pied des falaises : une grande paroi de calcaire qui monte juste derrière le chemin
     const f0 = falaises(avance);
     if (f0 > 0.01 && !nuit) {
@@ -1089,8 +1094,14 @@
     if (avec("lolo")) H.pixel.dessiner(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
     if (avec("meme") && !avec("lolo") && !b.baignade) H.pixel.dessiner(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 2.4, b.pause ? 0 : Math.floor(t / 200) % 2);
-    if (b.baignade) dessinerBaignade(ctx, b, t, w, h);
-    else {
+    // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
+    if (avec("meme") && !avec("lolo") && b.baignade) {
+      ctx.save();
+      ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1.6;
+      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - h * 0.16, t, 1.1);
+      ctx.restore();
+    }
+    if (!b.baignade) {
       if (avec("luigi")) H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
       H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
     }
@@ -1148,8 +1159,9 @@
     // ƟvƟ regarde vers la droite ; Mesi, en face, regarde vers ƟvƟ
     const nageurs = [["ovoProfil", w * 0.46, 0, false]];
     if (b.s.compagnons.includes("luigi")) nageurs.push(["luigiProfil", w * 0.56, 1.7, true]);
+    const sortie = b.sortieEau ? Math.min(1, (t - b.sortieEau) / 1400) : 0;
     for (const [nom, x, ph, miroir] of nageurs) {
-      const y = eau + 40 + Math.sin(t / 500 + ph) * 2;
+      const y = eau + 40 + Math.sin(t / 500 + ph) * 2 * (1 - sortie) - sortie * 44;
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 0, w, eau);
@@ -1158,6 +1170,7 @@
       ctx.restore();
       ronds(ctx, x, eau, t, ph);
     }
+    if (b.sortieEau) return;
     // la bouée flamant rose : elle dérive de droite à gauche, et dit bonjour en passant
     const f = b.flamant || (b.flamant = { prochain: t + 5000 + Math.random() * 9000 });
     if (f.x == null && t > f.prochain) Object.assign(f, { x: w + 40, parle: false });
@@ -1212,13 +1225,18 @@
 
   async function sortirDeLeau() {
     const b = balade;
-    if (!b) return;
+    if (!b || b.sortieEau) return;
     b.sortir.hidden = true;
-    b.baignade = null;
     b.flamant = null;
-    b.pause = false;
-    const nuit = H.ciel.etat().soleil.alt < -4;
-    await H.dialogue.dire([{ qui: "ovo", texte: nuit ? "Vite, la serviette ! On rentre tout doucement." : "Je sèche au soleil sur la terre rouge, ça sent le pin chaud." }]);
+    // on se hisse hors de l'eau…
+    b.sortieEau = performance.now();
+    await new Promise((r) => setTimeout(r, 1500));
+    if (balade !== b) return;
+    // … puis on rentre directement se réchauffer à la maison
+    const lignes = [{ qui: "ovo", texte: "Brrr ! Vite, une serviette, et on rentre se réchauffer à la maison !" }];
+    if (b.s.compagnons.includes("luigi")) lignes.push({ qui: "luigi", texte: "Je nous prépare un tilleul bien chaud. Allez, on rentre !" });
+    await H.dialogue.dire(lignes);
+    if (balade === b) H.aller("maison");
   }
 
   async function deroulerBalade(compagnons) {
@@ -1262,11 +1280,13 @@
         H.el("div.pastilles.actions-balade", null, bain, sortir, fin)
       ));
       balade = { toile, fin, bain, sortir, s: scene(toile, compagnons) };
+      if (H.ciel.etat().soleil.alt < -4) H.sons.criquets(true);
       dessinerBalade();
       setTimeout(() => balade && deroulerBalade(compagnons), 700);
     },
     quitter() {
       if (balade) cancelAnimationFrame(balade.anim);
+      H.sons.criquets(false);
       balade = null;
       H.dialogue.fermer();
     },
@@ -1409,22 +1429,178 @@
     },
   };
 
-  // --- la nuit : les flashcartes et le terrain dorment -----------------------------------
+  // --- la nuit -------------------------------------------------------------------------
+  // De 22 h à 6 h, on ne fait plus que dormir ou se balader (pour éviter les insomnies).
+  // « Aller faire dodo » : tout le monde dort dans le même lit. Par la fenêtre, les étoiles et
+  // la lune ; leur lumière entre par les vitres et se pose sur le parquet, où l'ombre des
+  // branches d'un arbre se balance. Mémé ronfle, des fois.
+  function ronflement() {
+    if (!H.local || !H.local.son) return;
+    const ctx = H.audio.contexte();
+    if (!ctx) return;
+    const t = ctx.currentTime, d = 1.4;
+    const n = Math.floor(ctx.sampleRate * d), buf = ctx.createBuffer(1, n, ctx.sampleRate), x = buf.getChannelData(0);
+    for (let k = 0; k < n; k++) x[k] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain(), trem = ctx.createOscillator(), tg = ctx.createGain();
+    src.buffer = buf;
+    lp.type = "lowpass";
+    lp.frequency.value = 420;
+    trem.frequency.value = 26;
+    tg.gain.value = 0.35;
+    trem.connect(tg).connect(g.gain);
+    const v = 0.05 * H.volume("bruitages");
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(v, t + 0.5);
+    g.gain.linearRampToValueAtTime(0.0001, t + d);
+    src.connect(lp).connect(g).connect(H.audio.sortie());
+    src.start(t);
+    trem.start(t);
+    src.stop(t + d);
+    trem.stop(t + d);
+  }
+
+  function sceneDodo(toile, sortie) {
+    const ctx = toile.getContext("2d");
+    const r = H.alea("dodo");
+    const etoiles = Array.from({ length: 40 }, () => [430 + r() * 140, 40 + r() * 120, r() * 6]);
+    let derniere = 0, prochainRonflement = performance.now() + 6000 + Math.random() * 8000, zzz = 0;
+    const fenetre = [430, 40, 140, 120]; // x, y, largeur, hauteur
+    const surLesYeux = { oui: false };
+    // un clic : « il y a trop de lumière… » et Lóló vient cacher la lumière avec son corps
+    toile.addEventListener("click", () => {
+      if (H.$(".dialogue") || surLesYeux.oui) return;
+      H.lolo.cacherLaLumiere({ couche: () => (surLesYeux.oui = true) });
+    });
+    function image(t) {
+      if (!document.body.contains(toile)) return;
+      requestAnimationFrame(image);
+      if (t - derniere < 66) return;
+      derniere = t;
+      const dpr = Math.min(2, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / 640);
+      if (toile.width !== Math.round(w * dpr)) { toile.width = Math.round(w * dpr); toile.height = Math.round(h * dpr); }
+      const S = w / 640;
+      ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+      ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
+      // la chambre dans le noir : mur indigo, parquet
+      ctx.fillStyle = "#232a63"; ctx.fillRect(0, 0, 640, 236);
+      ctx.fillStyle = "#3a2a22"; ctx.fillRect(0, 236, 640, 124);
+      ctx.strokeStyle = "#2a1d18";
+      for (let y = 250; y < 360; y += 16) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(640, y); ctx.stroke(); }
+      for (let k = 0; k < 18; k++) { const y = 236 + Math.floor(k / 3) * 16, x = ((k * 97) % 640); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 16); ctx.stroke(); }
+      ctx.strokeStyle = ENCRE;
+      // la fenêtre : le ciel de nuit, les étoiles qui scintillent, la vraie lune
+      const [fx, fy, fw, fh] = fenetre;
+      ctx.fillStyle = "#15124a"; ctx.fillRect(fx, fy, fw, fh);
+      for (const [x, y, n] of etoiles) {
+        ctx.fillStyle = "rgba(255,245,220," + (0.45 + 0.55 * Math.abs(Math.sin(t / 700 + n))) + ")";
+        ctx.fillRect(x, y, 1.8, 1.8);
+      }
+      lunePlate(ctx, fx + 104, fy + 34, 13, H.ciel.etat().lune.phase);
+      // les branches de l'arbre dehors, devant la fenêtre, qui bougent doucement
+      const vent = Math.sin(t / 1800) * 6;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(fx, fy, fw, fh); ctx.clip();
+      ctx.strokeStyle = "#0e1030"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(fx + fw + 10, fy + 20); ctx.quadraticCurveTo(fx + 90 + vent, fy + 50, fx + 40 + vent * 1.4, fy + 30); ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(fx + 100 + vent, fy + 44); ctx.quadraticCurveTo(fx + 70 + vent, fy + 80, fx + 30 + vent * 1.6, fy + 92); ctx.stroke();
+      ctx.fillStyle = "#0e1030";
+      for (const [dx, dy] of [[40, 30], [52, 24], [30, 92], [44, 86], [70, 70]]) { ctx.beginPath(); ctx.ellipse(fx + dx + vent * 1.4, fy + dy, 7, 4, 0.4, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
+      // l'encadrement et les croisillons
+      ctx.lineWidth = 6; ctx.strokeStyle = "#c9c9c4"; ctx.strokeRect(fx, fy, fw, fh);
+      ctx.beginPath(); ctx.moveTo(fx + fw / 2, fy); ctx.lineTo(fx + fw / 2, fy + fh); ctx.moveTo(fx, fy + fh / 2); ctx.lineTo(fx + fw, fy + fh / 2); ctx.lineWidth = 4; ctx.stroke();
+      ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE; ctx.strokeRect(fx - 3, fy - 3, fw + 6, fh + 6);
+      // la lumière de la nuit qui entre par les vitres et se pose sur le parquet, en biais
+      const proj = (x, y) => [x - (y - fy) * 0.9 - 120, 236 + (y - fy) * 0.85];
+      const vitre = (x0, y0, x1, y1) => { const a = proj(x0, y0), b = proj(x1, y0), c = proj(x1, y1), d = proj(x0, y1); return [a, b, c, d]; };
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 236, 640, 124); ctx.clip();
+      for (const [x0, y0, x1, y1] of [[fx + 3, fy + 3, fx + fw / 2 - 2, fy + fh / 2 - 2], [fx + fw / 2 + 2, fy + 3, fx + fw - 3, fy + fh / 2 - 2], [fx + 3, fy + fh / 2 + 2, fx + fw / 2 - 2, fy + fh - 3], [fx + fw / 2 + 2, fy + fh / 2 + 2, fx + fw - 3, fy + fh - 3]]) {
+        const q = vitre(x0, y0, x1, y1);
+        ctx.beginPath(); q.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+        ctx.fillStyle = "rgba(190,226,240,0.42)"; ctx.fill();
+      }
+      // l'ombre des branches qui balaie la lumière sur le parquet
+      ctx.fillStyle = "rgba(14,16,48,0.45)";
+      for (const [dx, dy] of [[40, 30], [52, 24], [30, 92], [44, 86], [70, 70], [90, 55]]) {
+        const [x, y] = proj(fx + dx + vent * 1.4, fy + dy);
+        ctx.beginPath(); ctx.ellipse(x, y, 12, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      // le grand lit, avec tout le monde dedans
+      bloc(ctx, 70, 150, 18, 120, 7, "#e9b44c");
+      bloc(ctx, 84, 222, 330, 46, 12, "#d6d2c0");
+      bloc(ctx, 92, 196, 60, 30, 13, "#f3f0dc");
+      bloc(ctx, 150, 198, 60, 28, 13, "#ffb3a8");
+      // les têtes de ƟvƟ et de Mesi sur les oreillers, les yeux fermés
+      const tete = (nom, x, y) => {
+        const sp = H.pixel.sprite(nom, 0), k = 2.4;
+        ctx.save(); ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(sp, 0, 0, 16, 12, x, y, 16 * k, 12 * k);
+        // les paupières closes
+        ctx.fillStyle = H.pixel.PAL.s;
+        for (const ex of [6, 9]) ctx.fillRect(x + ex * k, y + 6 * k, k, k);
+        ctx.fillStyle = ENCRE;
+        for (const ex of [6, 9]) ctx.fillRect(x + (ex - 0.3) * k, y + 6.6 * k, k * 1.6, k * 0.45);
+        ctx.restore();
+      };
+      tete("ovo", 104, 182);
+      tete("luigi", 160, 182);
+      // la couverture outremer jusqu'au menton, qui se soulève avec les respirations
+      const souffle = Math.sin(t / 1300) * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(92, 212 - souffle); ctx.quadraticCurveTo(200, 204 - souffle, 300, 214); ctx.quadraticCurveTo(380, 210, 414, 222);
+      ctx.lineTo(414, 262); ctx.lineTo(92, 262); ctx.closePath();
+      ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(92, 222 - souffle); ctx.quadraticCurveTo(200, 214 - souffle, 300, 224); ctx.strokeStyle = "#7f97f2"; ctx.stroke(); ctx.strokeStyle = ENCRE;
+      bloc(ctx, 94, 266, 10, 14, 3, "#e9b44c");
+      bloc(ctx, 398, 266, 10, 14, 3, "#e9b44c");
+      // Lóló en boule au pied du lit, Mémé blottie contre lui ; s'il y a trop de lumière,
+      // Lóló vient se coucher sur les yeux de tout le monde
+      if (surLesYeux.oui) loloCouche(ctx, 178, 206, t, false);
+      else loloCouche(ctx, 330, 214, t, false);
+      memeEnBoule(ctx, 252, 214, t, 0.8);
+      // de temps en temps, Mémé ronfle : un petit « rrr » s'envole
+      if (t > prochainRonflement) {
+        prochainRonflement = t + 12000 + Math.random() * 16000;
+        zzz = t;
+        ronflement();
+      }
+      if (t - zzz < 2600) {
+        const u = (t - zzz) / 2600;
+        ctx.globalAlpha = 1 - u;
+        ctx.font = "16px VT323, monospace";
+        ctx.fillStyle = "#f3f0dc";
+        ctx.fillText("rrr…", 244 + u * 10, 198 - u * 30);
+        ctx.globalAlpha = 1;
+      }
+      // tout passe en gros pixels, aux couleurs des pochettes
+      H.retro.appliquer(toile, H.retro.taillePour(3));
+    }
+    requestAnimationFrame(image);
+  }
+
   H.vues.dodo = {
     afficher(c, params) {
-      const dormir = params[0] === "dormir";
+      if (params[0] === "dormir") {
+        const toile = H.el("canvas.scene-maison", { role: "img", "aria-label": "Tout le monde dort dans le même lit. Par la fenêtre, les étoiles ; la lumière de la nuit se pose sur le parquet." });
+        c.appendChild(H.el("div.page-maison", null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller")));
+        H.musique.arreter();
+        sceneDodo(toile);
+        return;
+      }
+      // la nuit, le reste du jeu dort : on propose seulement de dormir ou de se balader
       c.appendChild(H.el("div.page-dodo", null,
-        H.el("h1", null, dormir ? "Bonne nuit, ƟvƟ" : "Chut… tout dort"),
-        H.el("p", null, dormir
-          ? "Mesi a soufflé la bougie. Mémé ronronne sur le cou de Lóló. Fais de beaux rêves pleins de fleurs."
-          : "Il est tard : les flashcartes et le terrain se reposent jusqu’à 6 h du matin, pour que ton cerveau se repose aussi."),
-        dormir ? null : H.el("div.pastilles", null,
-          bouton("Faire une balade", () => H.aller("maison")),
-          bouton("Aller lire dans la cabane", () => H.aller("lecture")),
-          H.el("a.bouton.discret-bouton", { href: "#village" }, "Retour à la ferme")
+        H.el("div.boite-nuit", null,
+          H.el("p", null, "Il est tard. Jusqu’à 6 h du matin, on ne fait plus que dormir ou se balader, pour que ton cerveau se repose aussi."),
+          H.el("div.choix-nuit", null,
+            H.el("button.bouton", { type: "button", onclick: () => H.aller("dodo/dormir") }, "Aller faire dodo"),
+            H.el("button.bouton", { type: "button", onclick: () => H.aller("maison") }, "Faire une balade")
+          )
         )
       ));
-      if (dormir) H.musique.arreter();
     },
   };
 })();

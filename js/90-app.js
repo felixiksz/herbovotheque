@@ -76,7 +76,8 @@
   function router() {
     const [nom, ...params] = (location.hash.replace(/^#/, "") || "village").split("/").map(decodeURIComponent);
     let vue = H.vues[nom] ? nom : "village";
-    if ((vue === "cartes" || vue === "terrain" || vue === "serre") && H.ciel.nuitCalme() && H.vues.dodo) vue = "dodo";
+    // de 22 h à 6 h : seulement dormir et se balader (la ferme et la maison restent ouvertes pour ça)
+    if (H.ciel.nuitCalme() && H.vues.dodo && !["village", "maison", "balade", "dodo", "reglages", "surprises"].includes(vue)) vue = "dodo";
     H.$$("#menu a").forEach((a) => {
       if (a.dataset.vue === vue || (vue === "fiche" && a.dataset.vue === "herbotheque")) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");

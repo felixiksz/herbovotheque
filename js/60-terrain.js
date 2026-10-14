@@ -1130,7 +1130,7 @@
     marcherVers(c.x, c.y, () => agir(c.x, c.y));
   }
 
-  // Le tour en hongrois avec Mesi : ƟvƟ marche jusqu'à une plante ou une bête, la montre du
+  // Le tour en hongrois avec Mesi : ƟvƟ marche jusqu'à une plante ou un animal, la montre du
   // doigt, et Mesi lui dit son nom en hongrois.
   function montrerDuDoigt(e, c) {
     const rect = vue.toile.getBoundingClientRect(), k = T * vue.zoom;
@@ -1139,7 +1139,7 @@
       { qui: "ovo", texte: H.histoires.auHasard(["Et ça ? (ƟvƟ montre du doigt.)", "Comment on dit, ça ?", "Et celui-là ?"]) },
       { qui: "luigi", texte: "« " + hongrois + " ». En français : " + francais + "." },
     ]);
-    // une bête près du doigt ?
+    // un animal près du doigt ?
     const bete = animaux(vue.ile, performance.now()).map((a) => Object.assign(a, { d: Math.hypot(a.x - fx, a.y - fy) })).sort((a, b) => a.d - b.d)[0];
     if (bete && bete.d < 0.9) {
       marcherVers(Math.round(bete.x), Math.round(bete.y), () => dire(NOMS_ANIMAUX[bete.type], HONGROIS_ANIMAUX[bete.type]));
@@ -1196,6 +1196,8 @@
   }
   function finirTourHongrois() {
     vue.hongrois = false;
+    // à la fin du tour, Mesi repart à pied par le bord de l'île
+    if (vue.mesiSuit) vue.luigi = { x: vue.mesiSuit.x, y: vue.mesiSuit.y, cible: { x: -2, y: Math.round(vue.mesiSuit.y), partir: true } };
     vue.mesiSuit = null;
     dessinerOutils && dessinerOutils();
     H.dialogue.dire([{ qui: "luigi", texte: "Köszönöm, ƟvƟ ! Merci pour la balade. Szia !" }]);
@@ -1464,8 +1466,13 @@
         const id = await L(intro, choix.concat([{ valeur: null, libelle: "Rien, merci Mesi" }]));
         if (!id) break;
         if (id === "_hu") {
-          await L("Viens, on fait un tour ensemble pour en parler ! Montre-moi du doigt une plante ou une bête, et je te dis son nom en hongrois.");
+          await L("Viens, on fait un tour ensemble pour en parler ! Montre-moi du doigt une plante ou un animal, et je te dis son nom en hongrois.");
           vue.hongrois = true;
+          // Mesi, qui était venue, fait le tour avec ƟvƟ (elle ne repart pas de son côté)
+          if (vue.luigi) {
+            vue.mesiSuit = { x: vue.luigi.x, y: vue.luigi.y };
+            vue.luigi = null;
+          }
           if (vue.boutonHongrois) vue.boutonHongrois.hidden = false;
           return;
         }
