@@ -419,22 +419,27 @@
     bloc(ctx, -30, -5, 28, 8, 4, robe);
     bloc(ctx, -36, -5, 8, 8, 3, fonce);
     // l'encolure qui descend vers le coussin (ou se dresse pour raconter), la crinière
+    // pour raconter, l'encolure se dresse et la tête se tourne vers ƟvƟ, à droite
+    const a = raconte ? 1.75 + Math.sin(t / 380) * 0.15 : 0;
     ctx.save();
-    if (raconte) {
-      ctx.translate(-24, -21);
-      ctx.rotate(1.05 + Math.sin(t / 380) * 0.2);
-      ctx.translate(24, 21);
-    }
+    ctx.translate(-24, -21);
+    ctx.rotate(a);
+    ctx.translate(24, 21);
     ctx.beginPath();
     ctx.moveTo(-26, -28); ctx.quadraticCurveTo(-46, -30, -52, -12); ctx.lineTo(-40, -6); ctx.quadraticCurveTo(-36, -18, -22, -14); ctx.closePath();
     ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-24, -29); ctx.quadraticCurveTo(-44, -33, -51, -16);
     ctx.lineWidth = 5; ctx.strokeStyle = fonce; ctx.stroke();
     ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
+    ctx.restore();
     // la tête posée, le bout du nez plus clair, l'étoile blanche, l'œil fermé, l'oreille
+    const hx = -24 + -34 * Math.cos(a) - 13 * Math.sin(a), hy = -21 + -34 * Math.sin(a) + 13 * Math.cos(a);
     ctx.save();
-    ctx.translate(-58, -8);
-    ctx.rotate(raconte ? -0.2 + Math.sin(t / 230) * 0.35 : 0.35);
+    ctx.translate(hx, hy);
+    if (raconte) {
+      ctx.scale(-1, 1);
+      ctx.rotate(-0.15 + Math.sin(t / 230) * 0.3);
+    } else ctx.rotate(0.35);
     ctx.scale(1.3, 1.3);
     ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(0, -15); ctx.lineTo(3, -7); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(0, 0, 9, 7.5, 0, 0, Math.PI * 2); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
@@ -449,7 +454,6 @@
       ctx.beginPath(); ctx.moveTo(-5, 1); ctx.quadraticCurveTo(-3, 2.6, -1, 1); ctx.stroke();
     }
     ctx.beginPath(); ctx.arc(-15, 3, 0.9, 0, Math.PI * 2); ctx.fillStyle = ENCRE; ctx.fill();
-    ctx.restore();
     ctx.restore();
     ctx.restore();
   }
