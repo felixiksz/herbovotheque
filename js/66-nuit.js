@@ -93,9 +93,10 @@
   // Mesi, ƟvƟ, Lóló et Mémé sont là ; la fenêtre suit le ciel (nuages, étoiles, vraie lune).
   const ENCRE = "#23214a";
   const MOMENTS = {
-    jour: { murG: "#3f9a45", murD: "#d2db58", sol: "#c93f6e", plinthe: "#7a2444", ombreMur: "rgba(30,61,37,0.55)", lampe: true },
-    soir: { murG: "#36853d", murD: "#b8c24c", sol: "#b2365f", plinthe: "#6a1f3d", ombreMur: "rgba(27,29,74,0.55)", lampe: true },
-    nuit: { murG: "#2a6a32", murD: "#8f9644", sol: "#9a2f55", plinthe: "#5a1a34", ombreMur: "rgba(15,13,58,0.6)", lampe: true },
+    // le mur du lit bleu foncé, le mur de la baie vert foncé
+    jour: { murG: "#26406a", murD: "#2f6b35", sol: "#c93f6e", plinthe: "#7a2444", ombreMur: "rgba(15,13,58,0.45)", lampe: true },
+    soir: { murG: "#232a63", murD: "#1e5a30", sol: "#b2365f", plinthe: "#6a1f3d", ombreMur: "rgba(15,13,58,0.5)", lampe: true },
+    nuit: { murG: "#1b1d4a", murD: "#1e3d25", sol: "#9a2f55", plinthe: "#5a1a34", ombreMur: "rgba(15,13,58,0.55)", lampe: true },
   };
   function momentMaison() {
     const alt = H.ciel.etat().soleil.alt;
@@ -296,6 +297,26 @@
       const x = BAIE.x + BAIE.w * u;
       ctx.fillStyle = "#f3f0dc"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
       ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
+    }
+
+    // au-dessus du lit, une photo d'ƟvƟ et Mesi au bord de la mer, dans un cadre en bois naturel
+    {
+      const fx = 66, fy = 58, fw = 96, fh = 72;
+      bloc(ctx, fx, fy, fw, fh, 2, "#c9a878");
+      ctx.fillStyle = "#9a6a3c"; ctx.fillRect(fx + 6, fy + 6, fw - 12, fh - 12);
+      const px = fx + 8, py = fy + 8, pw = fw - 16, ph = fh - 16;
+      ctx.fillStyle = "#6fb6ee"; ctx.fillRect(px, py, pw, ph * 0.5);
+      ctx.fillStyle = "#12aec4"; ctx.fillRect(px, py + ph * 0.5, pw, ph * 0.2);
+      ctx.fillStyle = "#efe8d4"; ctx.fillRect(px, py + ph * 0.7, pw, ph * 0.3);
+      ctx.fillStyle = "#f3f0dc"; ctx.beginPath(); ctx.moveTo(px, py + ph * 0.5); ctx.lineTo(px + pw * 0.35, py + ph * 0.28); ctx.lineTo(px + pw * 0.45, py + ph * 0.5); ctx.fill();
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      const so = H.pixel.sprite("ovo", 0), sm = H.pixel.sprite("luigi", 0), k = (ph - 4) / so.height;
+      ctx.drawImage(sm, px + pw / 2 - so.width * k - 1, py + ph - so.height * k, sm.width * k, sm.height * k);
+      ctx.drawImage(so, px + pw / 2 + 1, py + ph - so.height * k, so.width * k, so.height * k);
+      ctx.restore();
+      ctx.strokeRect(px, py, pw, ph);
+      arrondi(ctx, fx, fy, fw, fh, 2); ctx.stroke();
     }
 
     // le lit et ses coussins
