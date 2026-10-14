@@ -523,7 +523,9 @@
     actuelle = id;
     const page = H.el("article.page-herbier");
     page.appendChild(enTete(p));
-    const sommaire = H.el("nav.sommaire-fiche");
+    // les sections de la fiche en onglets, comme les fenêtres de l'ordinateur ; l'onglet ouvert
+    // reste le même d'une plante à l'autre (pratique pour comparer)
+    const onglets = [];
     const champsParSection = {};
     for (const c of H.d.champs()) (champsParSection[c.section] = champsParSection[c.section] || []).push(c);
     for (const s of H.d.sections()) {
@@ -544,10 +546,9 @@
         plus.appendChild(bouton);
         det.appendChild(plus);
       }
-      page.appendChild(det);
-      sommaire.appendChild(H.el("a", { href: "#", onclick: (e) => { e.preventDefault(); det.open = true; det.scrollIntoView({ behavior: "smooth", block: "start" }); } }, s.nom));
+      onglets.push({ nom: s.nom + (aVerif ? " •" : ""), el: det });
     }
-    page.insertBefore(sommaire, page.children[1]);
+    page.appendChild(H.bureau.onglets(onglets, { cle: "fiche" }));
     page.appendChild(etiquetteHerbier(p));
     conteneur.appendChild(H.el("div.navigateur-fiche", null, chromeNavigateur(id), page));
   }

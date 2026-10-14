@@ -134,3 +134,13 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .credit-photo { margin: 0; font-size: 0.75rem; line-height: 1.3; opacity: 0.8; overflow-wrap: anywhere; }
 .etat-photo { margin: 0; font-size: 0.8rem; }
 .etat-photo:empty { display: none; }
+
+/* les sections de la fiche en onglets */
+.page-herbier .onglets-vue { margin: 10px 0 18px; }
+.page-herbier .rangee-onglets { padding: 0; }
+.page-herbier .panneau-onglet { padding: 16px 4px 4px; }
+.page-herbier .panneau-onglet > details > summary { display: none; }
+.page-herbier .rangee-onglets { flex-wrap: wrap; overflow: visible; border-bottom: 0; }
+.page-herbier .onglet-vue { border-left-width: 1.5px; border-bottom: 1.5px solid var(--encre); margin: 0 -1.5px -1.5px 0; }
+.page-herbier .onglet-vue.actif { border-bottom-color: var(--papier); }
+.page-herbier .panneau-onglet { border-top: 1.5px solid var(--encre); }
