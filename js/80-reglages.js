@@ -281,7 +281,7 @@
     }, "Enregistrer un miaou");
 
     apercu.append(
-      H.el("button.bouton.petit", { type: "button", onclick: () => nouveau && new Audio(nouveau).play() }, "Écouter"),
+      H.el("button.bouton.petit", { type: "button", onclick: () => nouveau && H.sons.jouerUrl(nouveau, 0.6) }, "Écouter"),
       H.el("button.bouton.petit.actif", {
         type: "button",
         onclick() {

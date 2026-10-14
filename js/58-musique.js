@@ -50,7 +50,7 @@
     filtre.type = "lowpass";
     filtre.frequency.value = mode.clarte;
     reverb = ctx.createConvolver();
-    reverb.buffer = impulsion(3.2);
+    reverb.buffer = impulsion(window.matchMedia && matchMedia("(pointer: coarse)").matches ? 1.8 : 3.2);
     const sec = ctx.createGain();
     sec.gain.value = 0.35;
     const humide = ctx.createGain();
@@ -250,20 +250,22 @@
     // Le steelpan de Trinidad : un fût d'acier martelé, frappé avec une baguette gainée de
     // caoutchouc. Une fondamentale très chantante, l'octave forte, une douzième discrète, deux
     // fondamentales à peine désaccordées qui battent (le scintillement), et le petit choc de la baguette.
-    acier(f, t, vol, duree) {
+    acier(f, t, vol, duree, leger) {
       const g = ctx.createGain(), fin = t + (duree || 1.4);
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
       g.gain.exponentialRampToValueAtTime(vol * 0.35, t + 0.18);
       g.gain.exponentialRampToValueAtTime(0.0001, fin);
       g.connect(entree);
-      for (const [k, v, det] of [[1, 1, -3], [1, 0.6, 4], [2, 0.55, 0], [3, 0.12, 6], [4.02, 0.05, 0]]) {
+      // une note légère (les coups roulés, les accords) n'a que la fondamentale et l'octave
+      for (const [k, v, det] of leger ? [[1, 1, 0], [2, 0.5, 0]] : [[1, 1, -3], [1, 0.6, 4], [2, 0.55, 0], [3, 0.12, 6]]) {
         const gg = ctx.createGain();
         gg.gain.setValueAtTime(v, t);
         if (k > 1) gg.gain.exponentialRampToValueAtTime(v * 0.25, t + 0.3);
         gg.connect(g);
         oscillateur("sine", f * k, t, fin + 0.05, gg, det);
       }
+      if (leger) return;
       const choc = ctx.createGain(), lp = ctx.createBiquadFilter();
       lp.type = "lowpass"; lp.frequency.value = 900;
       enveloppe(choc, t, 0.001, vol * 0.5, 0.025);
@@ -273,7 +275,7 @@
     },
     // une note tenue au steelpan : on la « roule », baguettes qui alternent très vite
     roule(f, t, duree, vol) {
-      for (let x = 0, k = 0; x < duree; x += 0.07, k++) INSTRUMENTS.acier(f, t + x, vol * (k ? 0.55 : 1), 0.35);
+      for (let x = 0, k = 0; x < duree; x += 0.11, k++) INSTRUMENTS.acier(f, t + x, vol * (k ? 0.55 : 1), 0.3, k > 0);
     },
     // la kora : une corde pincée qui résonne dans la calebasse
     kora(f, t, vol) {
@@ -410,10 +412,10 @@
           else notes.forEach((f, k) => I.acier(f, t, k ? 0.05 : 0.08));
         }
         // les accords des pans d'accompagnement, sur les contretemps
-        if (s === 1 || s === 3 || s === 5 || s === 7) [racine, racine + 2, racine + 4].forEach((k) => I.acier(degre(k + 7, -1), t, 0.025, 0.5));
+        if (s === 1 || s === 3 || s === 5 || s === 7) [racine, racine + 2, racine + 4].forEach((k) => I.acier(degre(k + 7, -1), t, 0.025, 0.4, true));
         // la basse : fondamentale, quinte, fondamentale, et une note de passage vers l'accord suivant
         const basse = { 0: racine, 3: racine + 4, 4: racine + 7, 6: racine + 4 }[s];
-        if (basse != null) I.acier(degre(basse, -2), t, 0.11, 0.9);
+        if (basse != null) I.acier(degre(basse, -2), t, 0.11, 0.7, true);
         // l'iron : toutes les croches, plus fort à contretemps
         I.fer(t, s % 2 ? 0.05 : 0.025);
       },

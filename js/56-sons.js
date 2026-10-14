@@ -84,6 +84,35 @@
 
   const durees = {};
   const bornesSon = {};
+  // Les sons enregistrés passent par la même sortie que la musique. Avant, ils passaient par des
+  // lecteurs audio séparés, à 44,1 kHz quand la musique est à 48 kHz : sur iPhone, le téléphone
+  // changeait alors de fréquence en plein son, et tout se mettait à grésiller.
+  const tamponsSimples = {};
+  function tamponSimple(url) {
+    if (!tamponsSimples[url]) {
+      tamponsSimples[url] = fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((a) => new Promise((ok, ko) => ctx.decodeAudioData(a, ok, ko)))
+        .catch(() => null);
+    }
+    return tamponsSimples[url];
+  }
+  function jouerUrl(url, volume) {
+    if (!contexte()) return null;
+    const g = ctx.createGain();
+    g.gain.value = Math.min(1, volume);
+    g.connect(H.audio.sortie());
+    const son = { g, source: null };
+    tamponSimple(url).then((buf) => {
+      if (!buf) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(g);
+      src.start();
+      son.source = src;
+    });
+    return son;
+  }
 
   H.sons = {
     criquets: criquetsDeNuit,
@@ -148,37 +177,21 @@
     // un son joué une fois
     jouer(nom, volume) {
       if (!actif()) return null;
-      const a = new Audio(FICHIERS[nom]);
-      a.volume = Math.min(1, (volume == null ? 0.6 : volume) * H.volume("bruitages"));
-      a.play().catch(() => {});
-      return a;
+      return jouerUrl(FICHIERS[nom], (volume == null ? 0.6 : volume) * H.volume("bruitages"));
     },
-    // un son en boucle (pas, pluie) qu'on allume ou éteint
+    // un son d'une adresse (le miaou enregistré dans les réglages, par exemple)
+    jouerUrl: (url, volume) => jouerUrl(url, volume == null ? 0.6 : volume),
+    // un son en boucle (pas, pluie) qu'on allume ou éteint, sans couture, par la même sortie
     boucle(nom, allume, volume) {
       volume = (volume == null ? 0.5 : volume) * H.volume(nom === "pluie" ? "pluie" : "bruitages");
-      if (nom === "pluie") {
-        boucles.pluie = boucles.pluie || {};
-        boucles.pluie.voulu = allume;
-        return boucleContinue(nom, allume, volume);
-      }
-      let a = boucles[nom];
-      if (allume && actif()) {
-        if (!a) {
-          a = boucles[nom] = new Audio(FICHIERS[nom]);
-          a.loop = true;
-        }
-        a.volume = Math.min(1, volume);
-        if (a.paused) a.play().catch(() => {});
-      } else if (a && !a.paused) {
-        a.pause();
-      }
+      boucles[nom] = boucles[nom] || {};
+      boucles[nom].voulu = allume;
+      return boucleContinue(nom, allume, Math.min(1, volume));
     },
     toutCouper() {
       for (const [nom, b] of Object.entries(boucles)) {
-        if (nom === "pluie") {
-          b.voulu = false;
-          boucleContinue("pluie", false);
-        } else if (b.pause) b.pause();
+        b.voulu = false;
+        boucleContinue(nom, false);
       }
     },
   };

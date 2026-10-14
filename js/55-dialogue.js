@@ -107,11 +107,8 @@
   H.jouerCri = function () {
     if (!H.local || !H.local.son) return;
     const enregistre = (H.jeu && H.jeu.cri) || (H.base && H.base.cri);
-    if (enregistre) {
-      const a = new Audio(enregistre);
-      a.volume = Math.min(1, 0.45 * H.volume("bruitages"));
-      a.play().catch(() => {});
-    } else if (H.sons) H.sons.jouer("miaou", 0.4);
+    if (enregistre && H.sons) H.sons.jouerUrl(enregistre, 0.45 * H.volume("bruitages"));
+    else if (H.sons) H.sons.jouer("miaou", 0.4);
   };
 
   // Un seul dialogue à la fois : un nouveau dialogue attend que le précédent soit fini (avant,
