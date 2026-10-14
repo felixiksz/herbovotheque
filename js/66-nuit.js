@@ -11,7 +11,19 @@
   }
 
   // --- une histoire racontée dans les bulles ------------------------------------------
+  let loloRaconte = false;
   async function raconter(qui) {
+    if (qui === "lolo") {
+      loloRaconte = true;
+      try {
+        return await raconterHistoire(qui);
+      } finally {
+        loloRaconte = false;
+      }
+    }
+    return raconterHistoire(qui);
+  }
+  async function raconterHistoire(qui) {
     const h = histoires();
     const liste = qui === "lolo" ? h.LOLO : h.LUIGI;
     const vues = (H.local.histoiresLues || {})[qui] || [];
@@ -217,11 +229,6 @@
     bloc(ctx, 436, 246, 38, 8, 3, "#3d5ee8");
     bloc(ctx, 438, 254, 6, 40, 2, "#3d5ee8");
     bloc(ctx, 466, 254, 6, 40, 2, "#3d5ee8");
-    bloc(ctx, 468, 212, 134, 11, 4, "#e9b44c");
-    bloc(ctx, 478, 223, 9, 70, 3, "#e9b44c");
-    bloc(ctx, 584, 223, 9, 70, 3, "#e9b44c");
-    bloc(ctx, 526, 201, 13, 12, 3, "#ffffff");
-    ctx.beginPath(); ctx.arc(540, 207, 3.4, -Math.PI / 2, Math.PI / 2); ctx.stroke();
     for (const [x, y, l, a, c2] of [[618, 238, 46, -1.9, "#2f7a3e"], [618, 238, 54, -1.45, "#4f9a46"], [618, 238, 44, -1.1, "#2f7a3e"], [618, 238, 38, -2.4, "#4f9a46"], [618, 238, 36, -0.7, "#3f8a42"], [618, 200, 34, -1.7, "#3f8a42"], [622, 205, 30, -0.95, "#2f7a3e"], [614, 206, 30, -2.25, "#4f9a46"]]) feuille(ctx, x, y, l, a, c2);
     ctx.beginPath();
     ctx.moveTo(600, 236); ctx.lineTo(636, 236); ctx.lineTo(631, 290); ctx.quadraticCurveTo(630, 294, 626, 294);
@@ -265,26 +272,109 @@
     return c;
   }
 
+  // la table du goûter : deux tasses de tilleul et deux assiettes de crêpes au chocolat fondu
+  function tableGouter(ctx) {
+    bloc(ctx, 478, 223, 9, 70, 3, "#e9b44c");
+    bloc(ctx, 584, 223, 9, 70, 3, "#e9b44c");
+    bloc(ctx, 468, 212, 134, 11, 4, "#e9b44c");
+    for (const [x, sens] of [[503, -1], [558, 1]]) {
+      bloc(ctx, x, 201, 11, 12, 3, "#ffffff");
+      ctx.beginPath(); ctx.arc(sens < 0 ? x : x + 11, 207, 3.2, sens < 0 ? Math.PI / 2 : -Math.PI / 2, sens < 0 ? (3 * Math.PI) / 2 : Math.PI / 2); ctx.stroke();
+    }
+    for (const x of [526, 547]) {
+      ctx.beginPath(); ctx.ellipse(x, 211, 10.5, 3, 0, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.stroke();
+      // la crêpe pliée en quatre, le chocolat qui coule
+      ctx.beginPath(); ctx.moveTo(x - 7, 210); ctx.quadraticCurveTo(x - 6, 202, x + 1, 201); ctx.lineTo(x + 7, 210); ctx.closePath();
+      ctx.fillStyle = "#f2c26b"; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 3, 205); ctx.quadraticCurveTo(x, 203, x + 3, 205); ctx.lineTo(x + 3, 208); ctx.quadraticCurveTo(x + 1.5, 209.5, x, 208);
+      ctx.fillStyle = "#5a3020"; ctx.fill();
+    }
+  }
+
+  // Mesi et ƟvƟ assis·es de profil, le dos contre le dossier. Avec leurs proportions d'enfant
+  // (grosse tête, jambes courtes), c'est comme des enfants sur des chaises d'adulte : les
+  // cuisses posées sur l'assise, les jambes qui pendent sans toucher le sol et se balancent
+  // l'une après l'autre. dos : le bord du dossier ; sens 1 = tourné·e vers la droite.
+  function assis(ctx, nom, dos, sens, t, phase) {
+    const k = 4.4, siege = 246, genou = 30;
+    const mois = new Date().getMonth(), ete = nom === "ovo" && mois >= 4 && mois <= 8;
+    const s = H.pixel.sprite(nom + "Profil", 4);
+    const souffle = Math.sin(t / 900 + phase) > 0.6 ? 1 : 0;
+    const jambe = (angle, pantalon) => {
+      ctx.save();
+      ctx.translate(genou - 4, siege - 5);
+      ctx.rotate(angle);
+      bloc(ctx, -5, -2, 10, 19, 5, pantalon);
+      if (ete) {
+        bloc(ctx, -5, 14, 15, 4, 2, "#1f6fe0");
+        bloc(ctx, -6, 17, 17, 4, 2, "#f6c400");
+      } else bloc(ctx, -6, 14, 16, 7, 3.5, "#7a4520");
+      ctx.restore();
+    };
+    ctx.save();
+    ctx.translate(dos, 0);
+    ctx.scale(sens, 1);
+    // la jambe de derrière (plus sombre), la cuisse, puis la jambe de devant, en balançoire
+    const balance = Math.sin(t / 520 + phase);
+    jambe(-0.15 - balance * 0.32, "#2a439a");
+    bloc(ctx, 2 * k, siege - 12, genou - 2 * k + 2, 12, 6, "#3a5fd0");
+    jambe(-0.15 + balance * 0.32, "#3a5fd0");
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(s, 0, 0, 16, 18, -3 * k, siege + 2 - 18 * k - souffle, 16 * k, 18 * k);
+    ctx.restore();
+  }
+
+  // La chanson d'ƟvƟ et Mesi : Mesi commence, ƟvƟ répond « Na-na-nana ! » sur un petit air,
+  // et des notes s'envolent au-dessus de la table.
+  let chantJusqua = 0;
+  function airNanana() {
+    if (!H.local || !H.local.son) return;
+    const ctx = H.audio.contexte();
+    if (!ctx) return;
+    let t = ctx.currentTime + 0.05;
+    for (const [f, d] of [[659, 0.2], [784, 0.2], [659, 0.16], [523, 0.5]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "triangle";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.09 * H.volume("voix")), t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g).connect(H.audio.sortie());
+      o.start(t);
+      o.stop(t + d + 0.05);
+      t += d * 0.9;
+    }
+  }
+  async function chanson() {
+    chantJusqua = performance.now() + 6000;
+    await H.dialogue.dire([{ qui: "luigi", texte: "Tu te rends compte de la chance qu’on a…" }]);
+    chantJusqua = performance.now() + 3500;
+    airNanana();
+    await H.dialogue.dire([{ qui: "ovo", texte: "Na-na-nana !" }]);
+  }
+
   // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin de 640 × 360)
   function zonesMaison(nuit) {
     return [
       { id: "fenetre", x: 266, y: 36, w: 136, h: 108, nom: "Faire une balade", agir: () => { const b = H.$(".choix-compagnons"); if (b) b.scrollIntoView({ behavior: "smooth", block: "center" }); } },
-      { id: "meme", x: 188, y: 180, w: 44, h: 26, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
-      { id: "lit", x: 22, y: 150, w: 166, h: 96, nom: nuit ? "Aller dormir" : "Le lit", agir: () => (nuit ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
-      { id: "lolo", x: 284, y: 248, w: 104, h: 84, nom: "Un drame de Lóló", agir: () => raconter("lolo") },
+      { id: "meme", x: 142, y: 188, w: 36, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
+      { id: "lolo", x: 100, y: 152, w: 136, h: 52, nom: "Un drame de Lóló", agir: () => raconter("lolo") },
+      { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: nuit ? "Aller dormir" : "Le lit", agir: () => (nuit ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
       { id: "canape", x: 278, y: 168, w: 164, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
-      { id: "mesi", x: 502, y: 262, w: 40, h: 60, nom: "Un compliment de Mesi", agir: complimentMesi },
-      { id: "table", x: 466, y: 196, w: 138, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
+      { id: "mesi", x: 572, y: 160, w: 66, h: 136, nom: "Un compliment de Mesi", agir: complimentMesi },
+      { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: chanson },
+      { id: "table", x: 500, y: 196, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
     ];
   }
 
   // Mémé roulée en boule au pied du lit, qui respire doucement
-  function memeEnBoule(ctx, x, y, t) {
+  function memeEnBoule(ctx, x, y, t, echelle) {
     const souffle = 1 + Math.sin(t / 700) * 0.035;
     ctx.save();
     ctx.translate(x, y);
+    if (echelle) ctx.scale(echelle, echelle);
     ctx.scale(souffle, 1 / souffle);
     ctx.beginPath(); ctx.ellipse(0, 0, 19, 10, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
@@ -303,11 +393,72 @@
     ctx.restore();
   }
 
+  // Lóló couché en boule sur le lit, les jambes repliées sous lui, la tête posée près des
+  // coussins, les yeux fermés ; il respire lentement. Mémé est blottie contre son poitrail.
+  // Quand il raconte un drame, il tend le cou, ouvre grand les yeux et fait des gestes de la tête.
+  function loloCouche(ctx, x, y, t, raconte) {
+    const souffle = 1 + Math.sin(t / 1100) * 0.025;
+    const robe = "#7a4520", fonce = "#3e2210", fonceBouche = "#3a1a10";
+    ctx.save();
+    ctx.translate(x, y);
+    // la queue, qui s'enroule le long de la croupe
+    ctx.beginPath(); ctx.moveTo(40, -20); ctx.quadraticCurveTo(58, -8, 44, 2); ctx.quadraticCurveTo(34, 6, 22, 2);
+    ctx.lineWidth = 7; ctx.strokeStyle = ENCRE; ctx.stroke();
+    ctx.lineWidth = 4.4; ctx.strokeStyle = fonce; ctx.stroke();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
+    // le corps
+    ctx.save();
+    ctx.translate(4, -15);
+    ctx.scale(1, souffle);
+    ctx.beginPath(); ctx.ellipse(0, 0, 42, 18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // les jambes repliées, sabots sombres
+    bloc(ctx, 8, -6, 30, 9, 4.5, robe);
+    bloc(ctx, 33, -6, 8, 9, 3, fonce);
+    bloc(ctx, -30, -5, 28, 8, 4, robe);
+    bloc(ctx, -36, -5, 8, 8, 3, fonce);
+    // l'encolure qui descend vers le coussin (ou se dresse pour raconter), la crinière
+    ctx.save();
+    if (raconte) {
+      ctx.translate(-24, -21);
+      ctx.rotate(1.05 + Math.sin(t / 380) * 0.2);
+      ctx.translate(24, 21);
+    }
+    ctx.beginPath();
+    ctx.moveTo(-26, -28); ctx.quadraticCurveTo(-46, -30, -52, -12); ctx.lineTo(-40, -6); ctx.quadraticCurveTo(-36, -18, -22, -14); ctx.closePath();
+    ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-24, -29); ctx.quadraticCurveTo(-44, -33, -51, -16);
+    ctx.lineWidth = 5; ctx.strokeStyle = fonce; ctx.stroke();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
+    // la tête posée, le bout du nez plus clair, l'étoile blanche, l'œil fermé, l'oreille
+    ctx.save();
+    ctx.translate(-58, -8);
+    ctx.rotate(raconte ? -0.2 + Math.sin(t / 230) * 0.35 : 0.35);
+    ctx.scale(1.3, 1.3);
+    ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(0, -15); ctx.lineTo(3, -7); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, 9, 7.5, 0, 0, Math.PI * 2); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-11, 3, 8, 5.5, 0.2, 0, Math.PI * 2); ctx.fillStyle = "#9a5f36"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1, -5); ctx.lineTo(1.5, -3); ctx.lineTo(-1, -1); ctx.lineTo(-3.5, -3); ctx.closePath(); ctx.fillStyle = "#ffffff"; ctx.fill();
+    if (raconte) {
+      ctx.beginPath(); ctx.arc(-3, 1, 2, 0, Math.PI * 2); ctx.fillStyle = ENCRE; ctx.fill();
+      ctx.beginPath(); ctx.arc(-3.6, 0.4, 0.7, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+      // la bouche qui s'ouvre et se ferme
+      ctx.beginPath(); ctx.ellipse(-15, 6, 2.6, 0.6 + Math.abs(Math.sin(t / 120)) * 1.8, 0, 0, Math.PI * 2); ctx.fillStyle = fonceBouche; ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.moveTo(-5, 1); ctx.quadraticCurveTo(-3, 2.6, -1, 1); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(-15, 3, 0.9, 0, Math.PI * 2); ctx.fillStyle = ENCRE; ctx.fill();
+    ctx.restore();
+    ctx.restore();
+    ctx.restore();
+  }
+
   function sceneMaison(toile) {
     const ctx = toile.getContext("2d");
     const nuit = H.ciel.nuitCalme();
     const zones = zonesMaison(nuit);
-    let decor = null, cle = "", survol = null, derniere = 0;
+    let decor = null, calque = null, cle = "", survol = null, derniere = 0;
     const etoiles = Array.from({ length: 26 }, (_, i) => [296 + ((i * 37) % 76), 36 + ((i * 53) % 100), i % 4]);
     const zoneSous = (e) => {
       const r = toile.getBoundingClientRect(), k = 640 / r.width;
@@ -377,27 +528,75 @@
       // la vapeur du tilleul
       ctx.strokeStyle = "rgba(255,255,255,0.75)";
       ctx.lineWidth = 1.4;
-      for (let i = 0; i < 2; i++) {
-        const u = ((t / 1600) + i * 0.5) % 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.strokeStyle = ENCRE;
+      ctx.lineWidth = 1.6;
+      // Lóló et Mémé en boule sur le lit ; ƟvƟ et Mesi assis·es face à face pour le goûter.
+      // Tout ça se peint sur un calque, assombri le soir et relevé par la lampe, comme le décor.
+      if (!calque || calque.width !== toile.width || calque.height !== toile.height) {
+        calque = document.createElement("canvas");
+        calque.width = toile.width;
+        calque.height = toile.height;
+      }
+      const cc = calque.getContext("2d");
+      cc.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+      cc.clearRect(0, 0, 640, 360);
+      cc.lineJoin = "round";
+      cc.lineCap = "round";
+      cc.strokeStyle = ENCRE;
+      cc.lineWidth = 1.6;
+      loloCouche(cc, 172, 200, t, loloRaconte);
+      memeEnBoule(cc, 160, 199, t, 0.8);
+      assis(cc, "ovo", 445, 1, t, 2);
+      assis(cc, "luigi", 626, -1, t, 4);
+      cc.strokeStyle = ENCRE;
+      cc.lineWidth = 1.6;
+      tableGouter(cc);
+      if (moment !== "jour") {
+        cc.globalCompositeOperation = "source-atop";
+        cc.fillStyle = moment === "nuit" ? "rgba(20,18,64,0.42)" : "rgba(40,30,90,0.22)";
+        cc.fillRect(0, 0, 640, 360);
+        const g = cc.createRadialGradient(259, 160, 6, 259, 190, 210);
+        g.addColorStop(0, "rgba(255,226,90,0.55)");
+        g.addColorStop(0.55, "rgba(255,214,80,0.22)");
+        g.addColorStop(1, "rgba(255,214,80,0)");
+        cc.fillStyle = g;
+        cc.beginPath(); cc.moveTo(240, 162); cc.lineTo(278, 162); cc.lineTo(460, 300); cc.lineTo(60, 300); cc.closePath(); cc.fill();
+        cc.globalCompositeOperation = "source-over";
+      }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(calque, 0, 0);
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 1.4;
+      for (const cx of [508, 563]) for (let i = 0; i < 2; i++) {
+        const u = ((t / 1600) + i * 0.5 + cx / 100) % 1;
         ctx.globalAlpha = 1 - u;
         ctx.beginPath();
-        for (let k = 0; k <= 10; k++) {
-          const y = 199 - k * 2.2 - u * 10, x = 530 + i * 5 + Math.sin(k / 2 + t / 400 + i) * 2.2;
+        for (let k = 0; k <= 9; k++) {
+          const y = 199 - k * 2.2 - u * 10, x = cx - 2 + i * 4 + Math.sin(k / 2 + t / 400 + i) * 2;
           k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
         }
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
       ctx.strokeStyle = ENCRE;
       ctx.lineWidth = 1.6;
-      memeEnBoule(ctx, 210, 194, t);
-      // Lóló sur le tapis, Mesi près de la table, ƟvƟ à côté d'elle ; un petit souffle chacun·e
-      const bouge = (p) => (Math.sin(t / 900 + p) > 0.6 ? 1 : 0);
-      H.pixel.dessiner(ctx, "loloSeule", 336, 330 - bouge(0), 2.5, 1);
-      H.pixel.dessiner(ctx, "ovo", 466, 322 - bouge(2), 2.2, 0);
-      H.pixel.dessiner(ctx, "luigi", 522, 322 - bouge(4), 2.2, 0);
+      // les notes de la chanson, qui montent au-dessus de la table
+      if (chantJusqua > t) {
+        ctx.font = "16px serif";
+        ctx.textAlign = "center";
+        for (let i = 0; i < 6; i++) {
+          const u = ((t / 1400) + i / 6) % 1;
+          ctx.globalAlpha = Math.min(1, (chantJusqua - t) / 600) * (1 - u);
+          ctx.fillStyle = i % 2 ? "#ff5b4f" : ENCRE;
+          ctx.fillText(i % 3 ? "♪" : "♫", 470 + (i % 3) * 50 + Math.sin(u * 6 + i) * 6, 170 - u * 60);
+        }
+        ctx.globalAlpha = 1;
+        ctx.textAlign = "start";
+      }
       if (moment !== "jour") {
         const v = 0.04 + 0.03 * Math.sin(t / 170) * Math.sin(t / 430);
         ctx.fillStyle = "rgba(255,220,90," + v + ")";
@@ -432,7 +631,7 @@
             ? "Mesi t’attend avec une tisane de tilleul. On se retrouve ici chaque soir."
             : "Le mazet est calme. Mesi arrose les géraniums de la fenêtre."),
         (toileMaison = H.el("canvas.scene-maison", { role: "img", "aria-label": "L’intérieur du mazet : le lit, le canapé sous la fenêtre, la table, Mesi, Lóló et Mémé" })),
-        H.el("p.discret.aide-maison", null, "Clique sur Mesi, Lóló, Mémé, le canapé, la table, la fenêtre ou le lit."),
+        H.el("p.discret.aide-maison", null, "Clique sur ƟvƟ, Mesi, Lóló, Mémé, le canapé, la table, la fenêtre ou le lit."),
         H.el("h2", null, "Faire une balade"),
         choixCompagnons(),
         H.el("h2", null, "Écouter une histoire"),
