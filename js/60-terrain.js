@@ -1016,8 +1016,8 @@
     // les calanques à l'horizon, en pixels : un plan lointain bleuté, un plan calcaire plus clair
     const nuitCiel = s.soleil.alt < -4;
     for (const [graine, base, haut, couleur] of [
-      [11, 70, 20, nuitCiel ? "#3a3d62" : "#a9b6c9"],
-      [23, 72, 28, nuitCiel ? "#555470" : "#e4dccb"],
+      [11, 70, 20, nuitCiel ? "#3a3d62" : "#8fb2d8"],
+      [23, 72, 28, nuitCiel ? "#555470" : "#c9d7e6"],
     ]) {
       const rc = H.alea(graine);
       ctx.fillStyle = couleur;

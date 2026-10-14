@@ -817,6 +817,16 @@
     const d = dunes(X), f = falaises(X);
     return collines * (1 - d) * (1 - f * 0.7) + dune * d * 1.2;
   }
+  // la perspective aérienne : plus c'est loin, plus la couleur se noie dans le bleu de l'air
+  // (ou dans le rose du couchant). Accepte « #rrggbb » et « rgb(r,g,b) ».
+  function rvb(c) {
+    if (c[0] === "#") return [0, 1, 2].map((i) => parseInt(c.slice(1 + i * 2, 3 + i * 2), 16));
+    return c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
+  }
+  function brume(c, part, air) {
+    const a = rvb(c), b = rvb(air);
+    return "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * part)).join(",") + ")";
+  }
   function melange(a, b, t) {
     const c = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
     return "rgb(" + [0, 1, 2].map((i) => Math.round(c(a, i) + (c(b, i) - c(a, i)) * t)).join(",") + ")";
@@ -885,12 +895,14 @@
         nuagePlat(ctx, boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120), h * (0.08 + v * 0.22), 50 + v * 50, S.couvert.couleur);
       });
     }
-    // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit
+    // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit ;
+    // bleuies par l'air qui les sépare de nous
+    const air = nuit ? "#3a3aa8" : alt > 8 ? "#9fcdf0" : H.ciel.teinteCiel(alt, H.ciel.estMatin ? H.ciel.estMatin() : undefined).bas;
     if (nuit) {
-      collinesPlates(ctx, w, h * 0.58, h * 0.14, avance * 0.1, S.profils.collines, "#2a2c6a", 160);
+      collinesPlates(ctx, w, h * 0.58, h * 0.14, avance * 0.1, S.profils.collines, brume("#2a2c6a", 0.25, air), 160);
     } else {
-      falaisesPlates(ctx, w, h * 0.58, h * 0.26, avance * 0.1, S.profils.falaises, melange("#f4f1e8", "#d98a5c", ici), melange("#cfc8b8", "#b0583a", ici), 110);
-      for (let i = 0; i < 9; i++) buissonPlat(ctx, boucler(i * 140 - avance * 0.1, w, 60), h * 0.58, 16, "#4a9a4e");
+      falaisesPlates(ctx, w, h * 0.58, h * 0.26, avance * 0.1, S.profils.falaises, brume(melange("#f4f1e8", "#d98a5c", ici), 0.42, air), brume(melange("#cfc8b8", "#b0583a", ici), 0.48, air), 110);
+      for (let i = 0; i < 9; i++) buissonPlat(ctx, boucler(i * 140 - avance * 0.1, w, 60), h * 0.58, 16, brume("#4a9a4e", 0.5, air));
     }
     // la mer
     ctx.fillStyle = nuit ? "#26406a" : melange("#12aec4", "#19c1c7", ici);
@@ -904,12 +916,12 @@
     if (f0 > 0.01 && !nuit) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, f0 * 1.4);
-      falaisesPlates(ctx, w, h * 0.76, h * 0.62, avance * 0.7, S.profils.falaises, "#efeadf", "#c9c1ae", 140);
+      falaisesPlates(ctx, w, h * 0.76, h * 0.62, avance * 0.7, S.profils.falaises, brume("#efeadf", 0.1, air), brume("#c9c1ae", 0.12, air), 140);
       ctx.restore();
     }
     // les rochers du rivage : calcaire blanc, ou rouges dans la terre rouge
     if (nuit) collinesPlates(ctx, w, h * 0.73, h * 0.08, avance * 0.55, S.profils.collines2, "#22443c", 110);
-    else falaisesPlates(ctx, w, h * 0.73, h * 0.13, avance * 0.6, S.profils.rochers, melange("#ebe6da", "#c9643f", ici), melange("#bdb5a3", "#9a4527", ici), 70);
+    else falaisesPlates(ctx, w, h * 0.73, h * 0.13, avance * 0.6, S.profils.rochers, brume(melange("#ebe6da", "#c9643f", ici), 0.14, air), brume(melange("#bdb5a3", "#9a4527", ici), 0.16, air), 70);
     // le sol du chemin à l'abscisse x de l'écran : il monte et descend avec le relief
     const X = (x) => avance + x - w * 0.42;
     const sol = (x) => h * 0.92 - relief(X(x)) * h * 0.1;
