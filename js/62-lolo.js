@@ -51,18 +51,22 @@
     "Tu es la plus douce des juments.",
     "Tes yeux pétillent comme la mer aux calanques.",
   ];
-  // Les blagues de Lóló : l'humour d'un enfant de 7 ans. Chaque blague est une petite suite de
-  // répliques ; à la fin, ƟvƟ et Mesi disent d'une seule voix « Sacré Lóló ! ».
-  const BLAGUES = [
-    [["lolo", "Qu’est-ce qui est jaune et qui attend ?"], ["lolo", "Jonathan ! Hiii hiii !"]],
-    [["lolo", "Pourquoi les poissons ne jouent jamais au tennis ?"], ["lolo", "Parce qu’ils ont peur du filet ! Hiii !"]],
-    [["lolo", "Qu’est-ce qui fait « nioc nioc » ?"], ["lolo", "Un canard qui recule ! Hiii hiii !"]],
-    [["lolo", "Pourquoi les chevaux ne mettent jamais de chaussettes ?"], ["lolo", "Parce qu’ils ont déjà des sabots ! Hiii !"]],
-    [["lolo", "Qu’est-ce que dit une carotte à une autre carotte ?"], ["lolo", "Rien ! Les carottes, ça parle pas ! Hiii hiii hiii !"]],
-    [["lolo", "Toc toc !"], ["ovo", "Qui est là ?"], ["lolo", "Lóló."], ["ovo", "Lóló qui ?"], ["lolo", "Lóló… euh… j’ai oublié la suite ! Hiii !"]],
-    [["lolo", "Quel est l’animal le plus content ?"], ["lolo", "Le hibou, parce que sa femme est chouette ! Hiii !"]],
-    [["lolo", "Tu sais pourquoi Mémé dort tout le temps ?"], ["lolo", "Parce que sinon elle serait réveillée ! Hiii hiii !"]],
-    [["lolo", "Qu’est-ce qui est tout doux, couleur caramel, et qui fait « hiii » ?"], ["lolo", "C’est moi ! Hiii !"]],
+  // Les blagues de Lóló, ce sont des farces : il se cache, il fait semblant d'être une plante, il
+  // s'assoit sur la tête de quelqu'un. Chaque farce a deux temps : on ne se doute de rien, puis
+  // Lóló se montre. ƟvƟ et Mesi disent alors d'une seule voix « Sacré Lóló ! ».
+  const FARCES = [
+    { id: "cache", etapes: [
+      [["ovo", "Mais… où est passé Lóló ?"], ["luigi", "Il était là il y a une seconde !"], ["ovo", "Lóló ? Lólóóó ?"], ["lolo", "(Deux oreilles couleur caramel dépassent, et une queue chocolat qui frétille.)"]],
+      [["lolo", "Hiii ! Coucou ! J’étais caché !"]],
+    ] },
+    { id: "plante", etapes: [
+      [["luigi", "Tiens ? On a une nouvelle plante ?"], ["ovo", "Elle est bizarre… Elle a des sabots, cette plante."], ["lolo", "(La plante ne bouge pas d’un poil. Une feuille tremble un tout petit peu.)"]],
+      [["lolo", "Hiii ! C’était moi ! Je faisais l’arbre !"]],
+    ] },
+    { id: "tete", etapes: [
+      [["luigi", "C’est bizarre… j’ai la tête toute chaude, et toute lourde."], ["ovo", "Mesi… tu as un chapeau. Un chapeau couleur caramel."]],
+      [["lolo", "Hiii ! Je suis un chapeau !"]],
+    ] },
   ];
   const DUREE_PLUIE = 10 * 60e3;
   // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
@@ -70,14 +74,59 @@
   const astuces = () => T("astucesLolo", ASTUCES);
   const repliquesMeme = () => T("memeLolo", MEME);
   const compliments = () => T("complimentsLolo", COMPLIMENTS);
-  let blaguesDites = [];
-  async function blague() {
-    const toutes = BLAGUES;
-    if (blaguesDites.length >= toutes.length) blaguesDites = [];
-    const restantes = toutes.filter((x) => !blaguesDites.includes(x[0][1]));
-    const b = restantes[Math.floor(Math.random() * restantes.length)];
-    blaguesDites.push(b[0][1]);
-    await H.dialogue.dire(b.map(([qui, texte]) => ({ qui, texte })).concat({ qui: "duo", texte: "Sacré Lóló !" }));
+  // Et quelques vraies blagues, ses préférées
+  const BLAGUES = [
+    { id: "nioc", lignes: [["lolo", "Qu’est-ce qui fait « nioc nioc » ?"], ["lolo", "Un canard qui recule ! Hiii hiii !"]] },
+    { id: "toctoc", lignes: [["lolo", "Toc toc !"], ["ovo", "Qui est là ?"], ["lolo", "Lóló."], ["ovo", "Lóló qui ?"], ["lolo", "Lóló… euh… j’ai oublié la suite ! Hiii !"]] },
+    { id: "meme", lignes: [["lolo", "Tu sais pourquoi Mémé dort tout le temps ?"], ["lolo", "Parce que sinon, elle serait réveillée ! Hiii hiii !"]] },
+    { id: "moi", lignes: [["lolo", "Qu’est-ce qui est drôle, couleur caramel, et qui fait « hiii » ?"], ["lolo", "C’est moi ! Hiii !"]] },
+  ];
+  // opts.etape(id, i) : pour animer la farce dans la maison (0 : on ne voit rien, 1 : Lóló se montre) ;
+  // opts.raconte(oui) : pendant une blague racontée, Lóló regarde ƟvƟ et tout le monde le regarde
+  let dernieresFarces = [];
+  async function blague(opts) {
+    opts = opts || {};
+    const toutes = FARCES.concat(BLAGUES);
+    const restantes = toutes.filter((f) => !dernieresFarces.includes(f.id));
+    const f = restantes[Math.floor(Math.random() * restantes.length)];
+    dernieresFarces = dernieresFarces.concat(f.id).slice(-3);
+    if (f.lignes) {
+      if (opts.raconte) opts.raconte(true);
+      try {
+        await H.dialogue.dire(f.lignes.map(([qui, texte]) => ({ qui, texte })).concat({ qui: "duo", texte: "Sacré Lóló !" }));
+      } finally {
+        if (opts.raconte) opts.raconte(false);
+      }
+      return;
+    }
+    try {
+      for (let i = 0; i < f.etapes.length; i++) {
+        if (opts.etape) opts.etape(f.id, i);
+        await H.dialogue.dire(f.etapes[i].map(([qui, texte]) => ({ qui, texte })));
+      }
+      await H.dialogue.dire([{ qui: "duo", texte: "Sacré Lóló !" }]);
+    } finally {
+      if (opts.etape) opts.etape(null);
+    }
+  }
+  // Le matin, on demande à Lóló s'il a bien dormi.
+  const leMatin = () => new Date().getHours() >= 5 && new Date().getHours() < 12;
+  const bienDormi = () => H.dialogue.dire([
+    { qui: "duo", texte: "Lóló, tu as bien dormi ?" },
+    { qui: "lolo", texte: "Hiiiii !" },
+  ]);
+  // Le soir, quand il y a trop de lumière pour dormir, Lóló se couche sur nos yeux.
+  async function cacherLaLumiere(opts) {
+    opts = opts || {};
+    await H.dialogue.dire([
+      { qui: "ovo", texte: "Il y a trop de lumière… je n’arrive pas à dormir." },
+      { qui: "lolo", texte: "Hiii… ne bouge pas, je m’en occupe." },
+    ]);
+    if (opts.couche) opts.couche();
+    await H.dialogue.dire([
+      { qui: "lolo", texte: "(Lóló se couche tout doucement sur vos yeux, et cache la lumière avec son corps tout doux.)" },
+      { qui: "duo", texte: "Merci Lóló… C’est gentil." },
+    ]);
   }
 
   // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins.
@@ -184,9 +233,15 @@
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
         { valeur: "compliment", libelle: "Lui faire un compliment" },
         { valeur: "blague", libelle: "Une blague !" },
+      ].concat(leMatin() ? [{ valeur: "dormi", libelle: "Tu as bien dormi ?" }] : [], [
         { valeur: null, libelle: "Merci Lóló !" },
-      ]);
+      ]));
       if (!q) break;
+      if (q === "dormi") {
+        await bienDormi();
+        intro = "Autre chose ?";
+        continue;
+      }
       if (q === "blague") {
         await blague();
         intro = "Autre chose ?";
@@ -219,7 +274,7 @@
   // Lóló et Mémé sont là dès le début ; seule leur île apparaît le 24 février.
   const disponible = () => true;
 
-  H.lolo = { parler, blague, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
+  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();
 
 // Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,
