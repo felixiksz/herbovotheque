@@ -152,34 +152,87 @@
     },
   };
 
-  let fond = null, anim = null;
-  function preparer(force) {
-    const verrou = document.getElementById("verrou"), toile = document.getElementById("scene-verrou");
-    if (!verrou || !toile) return;
-    const nuit = force ? force === "nuit" : estNuit(), S = nuit ? NUIT : JOUR;
-    verrou.dataset.moment = nuit ? "nuit" : "jour";
-    const etiquette = verrou.querySelector("label[for=mdp]"), bouton = verrou.querySelector("button[type=submit]");
-    if (etiquette) etiquette.textContent = nuit ? "Chut… le mot de passe ?" : "Mot de passe";
-    if (bouton) bouton.textContent = nuit ? "Entrer" : "Ouvrir";
-    // la scène prend la forme de l'écran (plus étroite sur téléphone)
+  // Peint la scène (jour ou nuit) dans une toile à la forme de l'écran, et l'anime tant que
+  // continuer() le permet. Renvoie de quoi arrêter l'animation.
+  function lancerScene(toile, nuit, continuer) {
+    const S = nuit ? NUIT : JOUR;
     W = Math.max(70, Math.min(360, Math.round((HAUT * innerWidth) / Math.max(1, innerHeight))));
     toile.width = W; toile.height = HAUT;
-    fond = document.createElement("canvas");
+    const fond = document.createElement("canvas");
     fond.width = W; fond.height = HAUT;
     S.peindre(fond.getContext("2d"));
     const c = toile.getContext("2d");
     c.drawImage(fond, 0, 0);
-    cancelAnimationFrame(anim);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let avant = 0;
-    const tour = (t) => {
-      if (verrou.hidden) return; // une fois le jeu ouvert, on arrête
-      if (t - avant > 110) { avant = t; c.drawImage(fond, 0, 0); S.animer(c, t); }
+    let anim = null;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      let avant = 0;
+      const tour = (t) => {
+        if (!continuer()) return;
+        if (t - avant > 110) { avant = t; c.drawImage(fond, 0, 0); S.animer(c, t); }
+        anim = requestAnimationFrame(tour);
+      };
       anim = requestAnimationFrame(tour);
-    };
-    anim = requestAnimationFrame(tour);
+    }
+    return () => cancelAnimationFrame(anim);
   }
-  H.accueil = { preparer };
+
+  let arreter = null;
+  function preparer(force) {
+    const verrou = document.getElementById("verrou"), toile = document.getElementById("scene-verrou");
+    if (!verrou || !toile) return;
+    const nuit = force ? force === "nuit" : estNuit();
+    verrou.dataset.moment = nuit ? "nuit" : "jour";
+    const etiquette = verrou.querySelector("label[for=mdp]"), bouton = verrou.querySelector("button[type=submit]");
+    if (etiquette) etiquette.textContent = nuit ? "Chut… le mot de passe ?" : "Mot de passe";
+    if (bouton) bouton.textContent = nuit ? "Entrer" : "Ouvrir";
+    if (arreter) arreter();
+    arreter = lancerScene(toile, nuit, () => !verrou.hidden); // une fois le jeu ouvert, on arrête
+  }
+
+  // L'écran de veille : après quelques minutes sans toucher au jeu, la scène de l'accueil revient
+  // par-dessus, comme un économiseur d'écran. Un toucher (ou une touche) ramène là où on était,
+  // sans redemander le mot de passe.
+  const VEILLE = 3 * 60e3;
+  let veille = null, minuteurVeille = null;
+  function endormir() {
+    const verrou = document.getElementById("verrou");
+    if (veille || !verrou || !verrou.hidden || document.visibilityState === "hidden") return;
+    const nuit = estNuit();
+    const toile = document.createElement("canvas");
+    toile.setAttribute("aria-hidden", "true");
+    veille = document.createElement("div");
+    veille.className = "verrou veille";
+    veille.dataset.moment = nuit ? "nuit" : "jour";
+    veille.setAttribute("role", "button");
+    veille.setAttribute("aria-label", "Revenir au jeu");
+    const titre = document.createElement("h1");
+    titre.className = "titre-jeu";
+    titre.textContent = "L’herbothèque d’ƟvƟ";
+    const aide = document.createElement("p");
+    aide.className = "veille-aide";
+    aide.textContent = "Touche l’écran pour revenir";
+    veille.append(toile, titre, aide);
+    document.body.appendChild(veille);
+    const ici = veille;
+    const stop = lancerScene(toile, nuit, () => veille === ici);
+    const reveiller = (e) => { if (e) { e.preventDefault(); e.stopPropagation(); } stop(); ici.remove(); if (veille === ici) veille = null; guetter(); };
+    // au clic (pas au simple appui) : le clic ne passe pas au jeu en dessous
+    ici.addEventListener("click", reveiller);
+    ici.addEventListener("keydown", reveiller);
+  }
+  function guetter() {
+    clearTimeout(minuteurVeille);
+    if (veille) return;
+    minuteurVeille = setTimeout(endormir, VEILLE);
+  }
+  for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart", "scroll"]) window.addEventListener(ev, () => {
+    if (veille && ev === "keydown") { veille.click(); return; }
+    if (!veille) guetter();
+  }, { passive: true });
+  document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && guetter());
+  guetter();
+
+  H.accueil = { preparer, endormir };
   let attente = null;
   window.addEventListener("resize", () => { clearTimeout(attente); attente = setTimeout(() => !document.getElementById("verrou").hidden && preparer(), 200); });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => preparer());

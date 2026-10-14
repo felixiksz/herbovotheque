@@ -2,7 +2,8 @@
 // pas (ƟvƟ sur le pavé), roll (la pluie), galop (Lóló qui arrive).
 (function () {
   const H = window.H;
-  const FICHIERS = { miaou: "sons/miaou.mp3", attention: "sons/attention.mp3", pas: "sons/pas.mp3", pluie: "sons/roll.mp3", galop: "sons/galop.mp3" };
+  const FICHIERS = { miaou: "sons/miaou.mp3", attention: "sons/attention.mp3", pas: "sons/pas.mp3", pluie: "sons/roll.mp3", galop: "sons/galop.mp3",
+    criquets: "sons/criquets.wav", criquetsLoin: "sons/criquets-loin.wav", cigales: "sons/cigales.wav" };
   const boucles = {};
 
   const actif = () => H.local && H.local.son && document.visibilityState === "visible";
@@ -414,96 +415,30 @@
   }
   programmerGoeland();
 
-  // les cigales : un grésillement aigu qui pulse vite et enfle par vagues, l'été, en journée
-  let cigales = null;
+  // Les cigales, enregistrées en Ardèche : l'été, en journée, quand il fait chaud et qu'il ne pleut pas,
+  // dehors. Une boucle sans couture, qui monte et descend doucement avec le volume des bruitages.
   function majCigales() {
     const s = H.ciel && H.jeu ? H.ciel.etat() : null;
     const m = (H.ciel && H.ciel.meteo) || {};
     const chant = !!s && s.saison === "été" && s.soleil.alt > 12 && (m.temperature == null || m.temperature >= 22) &&
       m.type !== "pluie" && m.type !== "orage" && dehors() && actif();
-    if (chant && !cigales && contexte()) {
-      const n = ctx.sampleRate;
-      const buf = ctx.createBuffer(1, n, n);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      const bande = ctx.createBiquadFilter();
-      bande.type = "bandpass";
-      bande.frequency.value = 4600;
-      bande.Q.value = 6;
-      const pulse = ctx.createGain();
-      pulse.gain.value = 0.5;
-      const lfo = ctx.createOscillator(), lg = ctx.createGain();
-      lfo.type = "square";
-      lfo.frequency.value = 48;
-      lg.gain.value = 0.5;
-      lfo.connect(lg).connect(pulse.gain);
-      const vague = ctx.createGain();
-      vague.gain.value = 0.6;
-      const lent = ctx.createOscillator(), lentg = ctx.createGain();
-      lent.frequency.value = 0.08;
-      lentg.gain.value = 0.4;
-      lent.connect(lentg).connect(vague.gain);
-      const sortie = ctx.createGain();
-      sortie.gain.value = 0.0001;
-      sortie.gain.setTargetAtTime(0.05 * H.volume("bruitages"), ctx.currentTime, 2);
-      src.connect(bande).connect(pulse).connect(vague).connect(sortie).connect(H.audio.sortie());
-      [src, lfo, lent].forEach((x) => x.start());
-      cigales = { sortie, noeuds: [src, lfo, lent] };
-    } else if (!chant && cigales) {
-      const c = cigales;
-      cigales = null;
-      c.sortie.gain.setTargetAtTime(0.0001, ctx.currentTime, 1);
-      c.noeuds.forEach((x) => x.stop(ctx.currentTime + 4));
-    } else if (chant && cigales) {
-      cigales.sortie.gain.setTargetAtTime(0.05 * H.volume("bruitages"), ctx.currentTime, 0.5);
-    }
+    boucles.cigales = boucles.cigales || {};
+    boucles.cigales.voulu = chant;
+    boucleContinue("cigales", chant, 0.28 * H.volume("bruitages"));
   }
   H.sur("ciel", majCigales);
   H.sur("meteo", majCigales);
   window.addEventListener("hashchange", () => setTimeout(majCigales, 50));
   document.addEventListener("pointerdown", majCigales);
 
-  // Les criquets, les nuits de balade : de petits trilles aigus, chacun à son rythme, un peu à
-  // gauche ou à droite, plus ou moins loin.
-  let criquets = null;
-  function trille(t, f, pan, vol) {
-    const o = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-    o.type = "sine";
-    o.frequency.value = f;
-    const n = 3 + Math.floor(Math.random() * 3);
-    g.gain.setValueAtTime(0.0001, t);
-    for (let i = 0; i < n; i++) {
-      const d = t + i * 0.055;
-      g.gain.setTargetAtTime(vol, d, 0.004);
-      g.gain.setTargetAtTime(0.0001, d + 0.025, 0.006);
-    }
-    if (p) {
-      p.pan.value = pan;
-      o.connect(g).connect(p).connect(H.audio.sortie());
-    } else o.connect(g).connect(H.audio.sortie());
-    o.start(t);
-    o.stop(t + n * 0.055 + 0.1);
-  }
+  // Les criquets, la nuit dehors : deux enregistrements en boucle, des criquets tout près et
+  // d'autres au loin (avec un oiseau qui chante dans le lointain), plus discrets.
   function criquetsDeNuit(oui) {
-    if (!oui) {
-      if (criquets) criquets.forEach(clearTimeout);
-      criquets = null;
-      return;
+    for (const [nom, vol] of [["criquets", 0.3], ["criquetsLoin", 0.16]]) {
+      boucles[nom] = boucles[nom] || {};
+      boucles[nom].voulu = !!oui;
+      boucleContinue(nom, !!oui && actif(), vol * H.volume("bruitages"));
     }
-    if (criquets || !actif() || !contexte()) return;
-    criquets = [];
-    // trois criquets, chacun avec sa note, son côté et son rythme
-    [[4300, -0.6, 0.9], [4700, 0.4, 1.3], [3900, 0.1, 1.7]].forEach(([f, pan, rythme], k) => {
-      const chanter = () => {
-        if (!criquets) return;
-        if (actif()) trille(ctx.currentTime + 0.02, f * (0.98 + Math.random() * 0.04), pan, 0.018 * H.volume("bruitages"));
-        criquets[k] = setTimeout(chanter, (rythme + Math.random() * 0.8) * 1000);
-      };
-      criquets[k] = setTimeout(chanter, k * 400);
-    });
   }
 
   // Les poules : quelques « cot » courts et nasillards, et parfois un « codêêt » qui monte puis retombe.
