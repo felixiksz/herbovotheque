@@ -721,7 +721,8 @@
   // (une trame ordonnée 4 × 4, comme sur les vieilles consoles) au lieu de bandes franches.
   const TRAME = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const rvb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-  function cielTrame(couleurs, hauteur, total) {
+  function cielTrame(couleurs, hauteur, total, depuis) {
+    const y0 = depuis || 0;
     const largeur = fond.width, PAS = 4; // 4 teintes entre deux couleurs : 17 teintes en tout
     const teintes = [];
     for (let k = 0; k < couleurs.length - 1; k++) {
@@ -732,6 +733,7 @@
     const img = fc.createImageData(largeur, total);
     for (let y = 0; y < total; y++) {
       const v = Math.min(1, y / hauteur) * (teintes.length - 1);
+      // (y compte depuis le haut de la bande peinte)
       const bas = Math.floor(v), frac = v - bas;
       for (let x = 0; x < largeur; x++) {
         const t = teintes[frac * 16 > TRAME[(y & 3) * 4 + (x & 3)] + 0.5 ? Math.min(bas + 1, teintes.length - 1) : bas];
@@ -739,7 +741,7 @@
         img.data[o] = t[0]; img.data[o + 1] = t[1]; img.data[o + 2] = t[2]; img.data[o + 3] = 255;
       }
     }
-    fc.putImageData(img, 0, 0);
+    fc.putImageData(img, 0, y0);
   }
 
   // --- le fond : le ciel, deux rangées de montagnes bleuies, la forêt, la mer ---
@@ -821,9 +823,22 @@
       // l'écume au pied des falaises
       if (hash(x, 25) < 0.45) pixel(fc, x, MER - 1, nuit ? "#3a5a8a" : "#f3f0dc");
     }
-    fc.fillStyle = nuit ? "#26406a" : "#12aec4"; fc.fillRect(0, 90, W + 80, 400);
-    fc.fillStyle = nuit ? "#3a5a8a" : "#a8d8ec";
-    for (let k = 0; k < 60; k++) fc.fillRect(hash(k, 9) * (W + 80), 94 + hash(9, k) * 86, 4, 1);
+    // la mer : claire et lisse au loin, vers l'horizon (l'air la blanchit et on n'y voit plus les
+    // vagues), puis de plus en plus profonde et détaillée en s'approchant
+    const MERS = {
+      aube: ["#ffd2c0", "#d07ab8", "#6fb6ee", "#12aec4", "#0d9fbe", "#0d8fae"],
+      crepuscule: ["#ff9a5a", "#d07ab8", "#5b3c8f", "#26406a", "#1b3a6a", "#1b1d4a"],
+      nuit: ["#3a3aa8", "#323a8a", "#26406a", "#1e3358", "#1b1d4a"],
+    };
+    const couleursMer = MERS[periode] || ["#d6eef7", "#a8d8ec", "#6fb6ee", "#12aec4", "#0d9fbe", "#0d8fae"];
+    fc.fillStyle = couleursMer[couleursMer.length - 1]; fc.fillRect(0, 90, W + 80, 400);
+    cielTrame(couleursMer, 70, Math.min(110, fond.height - 90), 90);
+    for (let k = 0; k < 110; k++) {
+      const u = Math.pow(hash(9, k), 1.6), y = 92 + Math.round(u * 100), l = 1 + Math.round(u * 5);
+      if (u < 0.08) continue; // tout près de l'horizon, plus aucune vague : c'est flou
+      fc.fillStyle = nuit ? "rgba(168,216,236," + (0.25 + u * 0.5) + ")" : "rgba(243,240,220," + (0.35 + u * 0.6) + ")";
+      fc.fillRect(Math.round(hash(k, 9) * (W + 80)), y, l, 1);
+    }
   }
   let fondCle = null;
 

@@ -1250,12 +1250,16 @@
     const air = nuit ? "#3a3aa8" : alt > 8 ? "#9fcdf0" : H.ciel.teinteCiel(alt, H.ciel.estMatin ? H.ciel.estMatin() : undefined).bas;
     calanquesBalade(ctx, w, h * 0.58, h * 0.24, avance * 0.1, S.profils.falaises, air, nuit, ici);
     // la mer
-    ctx.fillStyle = nuit ? "#26406a" : melange("#12aec4", "#19c1c7", ici);
+    // claire et lisse vers l'horizon, plus profonde et plus détaillée en s'approchant
+    const gm = ctx.createLinearGradient(0, h * 0.58, 0, h * 0.72);
+    (nuit ? ["#3a3aa8", "#26406a", "#1e3358"] : [brume("#d6eef7", 0.2, air), "#6fb6ee", melange("#12aec4", "#19c1c7", ici), "#0d8fae"]).forEach((c2, k, l) => gm.addColorStop(k / (l.length - 1), c2));
+    ctx.fillStyle = gm;
     ctx.fillRect(0, h * 0.58, w, h * 0.14);
-    ctx.fillStyle = nuit ? "#1e3358" : "#0d8fae";
-    ctx.fillRect(0, h * 0.58, w, h * 0.02);
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    for (let i = 0; i < 12; i++) ctx.fillRect(boucler(i * 110 - avance * 0.4, w, 40), h * 0.62 + (i % 4) * 7, 22, 1.8);
+    for (let i = 0; i < 18; i++) {
+      const u = 0.15 + (i % 6) / 6 * 0.85, y = h * (0.585 + u * 0.13);
+      ctx.fillStyle = nuit ? "rgba(168,216,236," + (0.2 + u * 0.4) + ")" : "rgba(255,255,255," + (0.3 + u * 0.55) + ")";
+      ctx.fillRect(boucler(i * 97 - avance * (0.2 + u * 0.3), w, 40), y, 4 + u * 22, 1 + u);
+    }
     // la baignade se passe dans la mer : derrière les rochers, le chemin et la garrigue
     if (b.baignade) dessinerBaignade(ctx, b, t, w, h);
     // au pied des falaises : une grande paroi de calcaire qui monte juste derrière le chemin
