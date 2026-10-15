@@ -3,3 +3,6 @@ prive/
 *.pdf
 .DS_Store
 Thumbs.db
+
+# outil local de vérification des fiches
+Vérifier les fiches.bat

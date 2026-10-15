@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vérifier les fiches</title>
+<style>
+  :root { --fond: #f6f3ea; --papier: #fffdf6; --encre: #23214a; --doux: #6b6890; --filet: #d9d4c3; --alerte: #c2410c; --bon: #2f6b35; --choix: #ffd23a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--fond); color: var(--encre); font: 15px/1.5 Georgia, "Times New Roman", serif; display: flex; flex-direction: column; }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { background: none; border: 1px solid var(--encre); padding: 2px 10px; cursor: pointer; border-radius: 0; }
+  button:hover, button:focus-visible { background: var(--encre); color: var(--papier); outline: none; }
+  button.lien { border: 0; text-decoration: underline; text-underline-offset: 3px; padding: 0 4px; }
+  button.lien:hover { background: none; color: var(--alerte); }
+  button.principal { background: var(--encre); color: var(--papier); }
+  button.principal:hover { background: var(--alerte); border-color: var(--alerte); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 14px; border-bottom: 1px solid var(--filet); background: var(--papier); }
+  header h1 { font-size: 1.05rem; margin: 0 8px 0 0; font-weight: normal; letter-spacing: 0.02em; }
+  header select { max-width: 340px; padding: 2px 4px; border: 1px solid var(--filet); background: var(--fond); }
+  .compte { color: var(--doux); }
+  .espace { flex: 1; }
+  .filtres label { margin-right: 8px; white-space: nowrap; }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+  .pdf, .fiche { overflow: auto; min-height: 0; }
+  .pdf { border-right: 1px solid var(--filet); background: #e9e5d8; position: relative; }
+  .pdf .outils-pdf { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: rgba(233, 229, 216, 0.95); border-bottom: 1px solid var(--filet); }
+  .pdf img { display: block; margin: 10px auto; box-shadow: 0 1px 0 var(--filet); background: white; }
+  .pdf pre { white-space: pre-wrap; margin: 10px; padding: 12px; background: var(--papier); border: 1px solid var(--filet); font: 14px/1.5 Georgia, serif; }
+  .fiche { padding: 0 18px 120px; }
+  .tete-fiche { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 0 8px; border-bottom: 1px solid var(--filet); }
+  .tete-fiche label { display: grid; gap: 2px; color: var(--doux); font-size: 0.85rem; }
+  .tete-fiche input { font-size: 1.05rem; color: var(--encre); padding: 3px 6px; border: 1px solid var(--filet); background: var(--papier); }
+  .tete-fiche .ref { grid-column: 1 / -1; color: var(--doux); font-size: 0.9rem; }
+  h2 { font-size: 0.95rem; font-weight: normal; text-transform: uppercase; letter-spacing: 0.12em; color: var(--doux); margin: 26px 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--filet); }
+  .rubrique { padding: 10px 0 12px; border-bottom: 1px dotted var(--filet); }
+  .rubrique > .nom { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .rubrique > .nom b { font-weight: bold; }
+  .rubrique > .nom .modifie { color: var(--alerte); font-size: 0.85rem; }
+  textarea { width: 100%; min-height: 0; padding: 6px 8px; border: 1px solid var(--filet); background: var(--papier); line-height: 1.5; resize: vertical; overflow: hidden; }
+  textarea:focus, input:focus { outline: 2px solid var(--choix); outline-offset: 0; border-color: var(--encre); }
+  .apercu { margin-top: 6px; padding: 4px 10px; border-left: 2px solid var(--filet); color: #3a3860; font-size: 0.95rem; }
+  .apercu p, .apercu ul { margin: 0.3em 0; }
+  .apercu ul { padding-left: 1.2em; }
+  .apercu h5 { margin: 0.5em 0 0.2em; font-size: 0.95rem; }
+  .sans-apercu .apercu { display: none; }
+  .alertes { margin: 4px 0 0; padding: 0; list-style: none; color: var(--alerte); font-size: 0.9rem; }
+  .alertes li button { color: var(--alerte); text-align: left; }
+  .alertes.resume { grid-column: 1 / -1; border-left: 2px solid var(--alerte); padding-left: 10px; }
+  .choix { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+  .choix label { white-space: nowrap; }
+  footer { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 14px; border-top: 1px solid var(--filet); background: var(--papier); }
+  footer input[type=text] { flex: 1; min-width: 160px; padding: 2px 6px; border: 1px solid var(--filet); background: var(--fond); }
+  .etat { color: var(--doux); }
+  .etat.attention { color: var(--alerte); }
+  .etat.bon { color: var(--bon); }
+  dialog { border: 1px solid var(--encre); background: var(--papier); color: var(--encre); max-width: min(760px, 92vw); padding: 18px 20px; }
+  dialog::backdrop { background: rgba(35, 33, 74, 0.35); }
+  dialog h3 { margin: 0 0 10px; font-weight: normal; font-size: 1.1rem; }
+  dialog pre { white-space: pre-wrap; max-height: 50vh; overflow: auto; background: var(--fond); padding: 10px; border: 1px solid var(--filet); font-size: 0.85rem; }
+  .resultats { max-height: 60vh; overflow: auto; margin: 10px 0; padding: 0; list-style: none; }
+  .resultats li { padding: 6px 0; border-bottom: 1px dotted var(--filet); cursor: pointer; }
+  .resultats li:hover { background: var(--fond); }
+  .resultats mark, .surligne { background: var(--choix); }
+  .aide { color: var(--doux); font-size: 0.85rem; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } .pdf { max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--filet); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Vérifier les fiches</h1>
+  <button type="button" id="prec" title="Fiche précédente (Alt + ←)">‹</button>
+  <select id="liste" aria-label="Choisir une fiche"></select>
+  <button type="button" id="suiv" title="Fiche suivante (Alt + →)">›</button>
+  <span class="compte" id="compte"></span>
+  <span class="filtres">
+    <label><input type="radio" name="filtre" value="toutes" checked> toutes</label>
+    <label><input type="radio" name="filtre" value="restantes"> pas encore vérifiées</label>
+    <label><input type="radio" name="filtre" value="alertes"> à revoir</label>
+  </span>
+  <span class="espace"></span>
+  <button type="button" id="chercher">Chercher dans toutes les fiches</button>
+  <button type="button" id="publier" class="principal">Publier dans le jeu</button>
+</header>
+<main>
+  <section class="pdf" id="pdf">
+    <div class="outils-pdf">
+      <span id="pages" class="compte"></span>
+      <span class="espace"></span>
+      <button type="button" id="moins" title="Plus petit">−</button>
+      <button type="button" id="plus" title="Plus grand">+</button>
+      <button type="button" id="modeTexte">Texte du PDF</button>
+    </div>
+    <div id="contenuPdf"></div>
+  </section>
+  <section class="fiche" id="fiche"></section>
+</main>
+<footer>
+  <button type="button" id="enregistrer" class="principal" title="Ctrl + S">Enregistrer</button>
+  <span class="etat" id="etat"></span>
+  <span class="espace"></span>
+  <label><input type="checkbox" id="apercu" checked> aperçu</label>
+  <label><input type="checkbox" id="verifiee"> fiche vérifiée, identique au cours</label>
+  <input type="text" id="note" placeholder="note pour plus tard (facultatif)">
+</footer>
+
+<dialog id="dlgChercher">
+  <h3>Chercher dans toutes les fiches</h3>
+  <input type="text" id="recherche" placeholder="mot ou morceau de phrase" style="width:100%;padding:4px 6px">
+  <ul class="resultats" id="resultats"></ul>
+  <button type="button" onclick="this.closest('dialog').close()">Fermer</button>
+</dialog>
+<dialog id="dlgPublier">
+  <h3>Publier dans le jeu</h3>
+  <p class="aide" id="aidePublier">Les fiches enregistrées sont chiffrées puis envoyées sur GitHub. Ça prend une minute.</p>
+  <p id="champMdp" hidden><label>Mot de passe des fiches <input type="password" id="mdp"></label></p>
+  <pre id="journal" hidden></pre>
+  <button type="button" id="lancerPublier" class="principal">Publier</button>
+  <button type="button" onclick="this.closest('dialog').close()">Fermer</button>
+</dialog>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+let donnees = null, courante = null, original = null, zoom = Number(localStorage.getItem("zoomPdf") || 1), texteMode = false;
+const MOTS = new Set(["et", "de", "du", "en", "à", "la", "le", "un", "ou", "au", "se", "sa", "si", "il", "y", "a", "ne", "ni", "on", "ce", "où", "l", "d", "n"]);
+
+const echap = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// le même rendu que dans le jeu : **gras**, *italique*, puces, titres ###
+function texteRiche(t) {
+  if (!t) return "";
+  const inline = (s) => echap(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>");
+  let html = "", liste = false;
+  for (let l of String(t).split("\n")) {
+    l = l.trim();
+    if (!l) continue;
+    const puce = /^(•|-|–|→)\s*/.exec(l);
+    if (puce) { if (!liste) { html += "<ul>"; liste = true; } html += "<li>" + inline(l.slice(puce[0].length)) + "</li>"; continue; }
+    if (liste) { html += "</ul>"; liste = false; }
+    html += l.startsWith("###") ? "<h5>" + inline(l.replace(/^#+\s*/, "")) + "</h5>" : "<p>" + inline(l) + "</p>";
+  }
+  return html + (liste ? "</ul>" : "");
+}
+
+// les défauts qu'on retrouve souvent après l'extraction du PDF
+function alertes(texte) {
+  const r = [], t = String(texte || "");
+  const ajoute = (m, quoi) => r.push({ quoi, debut: m.index, fin: m.index + m[0].length, extrait: t.slice(Math.max(0, m.index - 18), m.index + m[0].length + 12) });
+  for (const m of t.matchAll(/(\p{L})\*\* (\p{Ll}{1,2})(?=[^\p{L}’'.]|$)/gu)) if (!MOTS.has(m[2])) ajoute(m, "mot coupé par le gras");
+  t.split("\n").forEach((l, i, ls) => {
+    if ((l.match(/\*\*/g) || []).length % 2) { const debut = ls.slice(0, i).join("\n").length + (i ? 1 : 0); r.push({ quoi: "gras pas refermé sur cette ligne", debut, fin: debut + l.length, extrait: l.slice(0, 50) }); }
+  });
+  for (const m of t.matchAll(/[̀-ͯ]/g)) ajoute(m, "accent détaché");
+  for (const m of t.matchAll(/(?<=\p{L}{2}) ([b-zçéè])(?=[\s,.;:)]|$)(?! \*\*[’'])/gu)) if (m[1] !== "y" && m[1] !== "x") ajoute(m, "lettre isolée");
+  for (const m of t.matchAll(/(?<!\p{L})(\p{L}{1,2}) [’'](?=\p{L})|\p{L} \*\*[’']/gu)) ajoute(m, "apostrophe détachée");
+  for (const m of t.matchAll(/[^\s\n]  +[^\s]/g)) ajoute(m, "espace en double");
+  for (const m of t.matchAll(/\S ,|\w \.(?!\.)/g)) ajoute(m, "espace avant la ponctuation");
+  for (const m of t.matchAll(/\p{Ll}- (?!et |ou )\p{Ll}/gu)) ajoute(m, "mot coupé par un tiret ?");
+  for (const m of t.matchAll(/Fiche plante|Imderplam -|Tous droits réservés|reproduction et\/ou diffusion/gi)) ajoute(m, "reste d’en-tête ou de pied de page du PDF");
+  return r;
+}
+const alertesFiche = (p) => Object.values(p.valeurs).reduce((n, v) => n + (typeof v === "string" ? alertes(v).length : 0), 0);
+
+async function api(chemin, corps) {
+  const r = await fetch(chemin, corps ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) } : undefined);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.erreur || r.statusText);
+  return j;
+}
+
+async function charger(id) {
+  donnees = await api("/api/fiches");
+  remplirListe();
+  ouvrir(id || localStorage.getItem("ficheVerif") || donnees.plantes[0].id);
+}
+
+function filtre() { return document.querySelector("input[name=filtre]:checked").value; }
+function visibles() {
+  const f = filtre();
+  return donnees.plantes.filter((p) => f === "toutes" || (f === "restantes" ? !donnees.verif[p.id] : alertesFiche(p) > 0) || (courante && p.id === courante.id));
+}
+function remplirListe() {
+  const sel = $("#liste");
+  sel.innerHTML = "";
+  for (const p of visibles()) {
+    const n = alertesFiche(p), v = donnees.verif[p.id];
+    const o = new Option("p. " + p.page + " · " + p.nom + (v ? " · vérifiée" : "") + (n ? " · " + n + " à revoir" : ""), p.id);
+    sel.add(o);
+  }
+  if (courante) sel.value = courante.id;
+  const nv = Object.keys(donnees.verif).filter((id) => donnees.plantes.some((p) => p.id === id)).length;
+  $("#compte").textContent = nv + " / " + donnees.plantes.length + " vérifiées";
+}
+
+function modifiee() {
+  if (!courante) return false;
+  return JSON.stringify(lireFormulaire()) !== JSON.stringify(original);
+}
+function lireFormulaire() {
+  const valeurs = {};
+  for (const champ of donnees.champs) {
+    if (champ.section === "notes" && !(champ.id in courante.valeurs)) continue;
+    if (champ.type === "choix") {
+      const cases = [...document.querySelectorAll('[data-choix="' + champ.id + '"]:checked')].map((c) => c.value);
+      if (cases.length) valeurs[champ.id] = champ.multiple ? cases : cases[0];
+    } else {
+      const ta = document.querySelector('[data-champ="' + champ.id + '"]');
+      if (ta && ta.value.trim()) valeurs[champ.id] = ta.value.replace(/\r\n/g, "\n").trim();
+    }
+  }
+  return { id: courante.id, nom: $("#nom").value.trim(), latin: $("#latin").value.trim(), valeurs };
+}
+
+function ouvrir(id) {
+  if (courante && courante.id !== id && modifiee() && !confirm("La fiche « " + courante.nom + " » a des changements pas enregistrés. Les abandonner ?")) { $("#liste").value = courante.id; return; }
+  const p = donnees.plantes.find((x) => x.id === id) || donnees.plantes[0];
+  courante = p;
+  localStorage.setItem("ficheVerif", p.id);
+  remplirListe();
+  afficherPdf();
+  afficherFiche();
+  original = lireFormulaire();
+  const v = donnees.verif[p.id];
+  $("#verifiee").checked = !!v;
+  $("#note").value = (v && v.note) || "";
+  majEtat();
+}
+
+function afficherPdf() {
+  const p = courante, boite = $("#contenuPdf");
+  $("#pages").textContent = "Cours, " + (p.fin > p.page ? "pages " + p.page + " à " + p.fin : "page " + p.page);
+  boite.innerHTML = "";
+  if (texteMode) {
+    const pre = document.createElement("pre");
+    pre.textContent = "…";
+    boite.appendChild(pre);
+    api("/api/texte?de=" + p.page + "&a=" + p.fin).then((j) => (pre.textContent = j.texte));
+  } else {
+    for (let n = p.page; n <= p.fin; n++) {
+      const img = new Image();
+      img.src = "/page/" + n + ".png";
+      img.alt = "Page " + n + " du cours";
+      img.style.width = Math.round(zoom * 100) + "%";
+      boite.appendChild(img);
+    }
+  }
+  $("#pdf").scrollTop = 0;
+}
+
+function grandir(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; }
+
+function afficherFiche() {
+  const p = courante, f = $("#fiche");
+  f.innerHTML = "";
+  const tete = document.createElement("div");
+  tete.className = "tete-fiche";
+  tete.innerHTML = '<label>Nom<input id="nom"></label><label>Nom latin<input id="latin"></label><div class="ref"></div>';
+  f.appendChild(tete);
+  $("#nom").value = p.nom;
+  $("#latin").value = p.latin;
+  tete.querySelector(".ref").textContent = "Fiches plantes Imderplam 2025, p. " + p.page;
+  // en haut, ce qui est à revoir dans la fiche (un clic y mène)
+  const aRevoir = [];
+  for (const champ of donnees.champs) { const v = p.valeurs[champ.id]; if (typeof v === "string") for (const al of alertes(v)) aRevoir.push([champ, al]); }
+  if (aRevoir.length) {
+    const ul = document.createElement("ul");
+    ul.className = "alertes resume";
+    for (const [champ, al] of aRevoir) {
+      const li = document.createElement("li"), b = document.createElement("button");
+      b.type = "button"; b.className = "lien";
+      b.textContent = champ.nom + " — " + al.quoi + " : « " + al.extrait.replace(/\n/g, " ") + " »";
+      b.addEventListener("click", () => { const ta = document.querySelector('[data-champ="' + champ.id + '"]'); ta.scrollIntoView({ block: "center" }); ta.focus(); ta.setSelectionRange(al.debut, al.fin); });
+      li.appendChild(b); ul.appendChild(li);
+    }
+    tete.appendChild(ul);
+  }
+  for (const s of donnees.sections) {
+    const champs = donnees.champs.filter((c) => c.section === s.id && (s.id !== "notes" || c.id in p.valeurs));
+    if (!champs.length) continue;
+    const h = document.createElement("h2");
+    h.textContent = s.nom;
+    f.appendChild(h);
+    for (const champ of champs) f.appendChild(rubrique(champ, p.valeurs[champ.id]));
+  }
+  f.scrollTop = 0;
+  f.querySelectorAll("textarea").forEach(grandir);
+}
+
+function rubrique(champ, v) {
+  const bloc = document.createElement("div");
+  bloc.className = "rubrique";
+  const nom = document.createElement("div");
+  nom.className = "nom";
+  nom.innerHTML = "<b></b><span class='modifie' hidden>modifiée</span>";
+  nom.querySelector("b").textContent = champ.nom;
+  bloc.appendChild(nom);
+  if (champ.type === "choix") {
+    const choix = document.createElement("div");
+    choix.className = "choix";
+    const sel = new Set(Array.isArray(v) ? v : v ? [v] : []);
+    for (const o of champ.options || []) {
+      const l = document.createElement("label");
+      l.innerHTML = '<input type="' + (champ.multiple ? "checkbox" : "radio") + '" name="c-' + champ.id + '"> ';
+      const c = l.querySelector("input");
+      c.value = o; c.checked = sel.has(o); c.dataset.choix = champ.id;
+      c.addEventListener("change", () => { nom.querySelector(".modifie").hidden = false; majEtat(); });
+      l.append(o);
+      choix.appendChild(l);
+    }
+    bloc.appendChild(choix);
+    return bloc;
+  }
+  const ta = document.createElement("textarea");
+  ta.dataset.champ = champ.id;
+  ta.rows = 1;
+  ta.value = v || "";
+  ta.spellcheck = true;
+  ta.lang = "fr";
+  const ap = document.createElement("div");
+  ap.className = "apercu";
+  if (champ.type !== "texte") ap.hidden = true;
+  const al = document.createElement("ul");
+  al.className = "alertes";
+  const maj = () => {
+    ap.innerHTML = texteRiche(ta.value) || "<p style='color:var(--doux)'>(vide)</p>";
+    al.innerHTML = "";
+    for (const a of alertes(ta.value)) {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "lien";
+      b.textContent = a.quoi + " : « " + a.extrait.replace(/\n/g, " ") + " »";
+      b.title = "Sélectionner l’endroit dans le texte";
+      b.addEventListener("click", () => { ta.focus(); ta.setSelectionRange(a.debut, a.fin); });
+      li.appendChild(b);
+      al.appendChild(li);
+    }
+  };
+  ta.addEventListener("input", () => { grandir(ta); maj(); nom.querySelector(".modifie").hidden = ta.value === (v || ""); majEtat(); });
+  // Ctrl + B : met la sélection en gras (ou l'enlève)
+  ta.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      const a = ta.selectionStart, b = ta.selectionEnd, s = ta.value.slice(a, b);
+      const avant = ta.value.slice(a - 2, a), apres = ta.value.slice(b, b + 2);
+      if (avant === "**" && apres === "**") { ta.setRangeText(s, a - 2, b + 2, "select"); }
+      else if (/^\*\*[\s\S]*\*\*$/.test(s)) ta.setRangeText(s.slice(2, -2), a, b, "select");
+      else ta.setRangeText("**" + s + "**", a, b, "select");
+      ta.dispatchEvent(new Event("input"));
+    }
+  });
+  maj();
+  bloc.append(ta, al, ap);
+  return bloc;
+}
+
+function majEtat(texte, classe) {
+  const e = $("#etat");
+  if (texte) { e.textContent = texte; e.className = "etat " + (classe || ""); return; }
+  const m = modifiee();
+  e.textContent = m ? "changements pas encore enregistrés" : "";
+  e.className = "etat" + (m ? " attention" : "");
+}
+
+async function enregistrer() {
+  if (!courante) return;
+  const f = lireFormulaire();
+  try {
+    await api("/api/enregistrer", f);
+    Object.assign(courante, { nom: f.nom || courante.nom, latin: f.latin || courante.latin, valeurs: f.valeurs });
+    original = lireFormulaire();
+    document.querySelectorAll(".modifie").forEach((x) => (x.hidden = true));
+    remplirListe();
+    majEtat("enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + ". Pour le voir dans le jeu : « Publier dans le jeu ».", "bon");
+  } catch (e) { majEtat("pas enregistré : " + e.message, "attention"); }
+}
+
+async function marquer() {
+  const ok = $("#verifiee").checked, note = $("#note").value.trim();
+  await api("/api/verifier", { id: courante.id, ok, note });
+  if (ok) donnees.verif[courante.id] = { date: new Date().toISOString(), note }; else delete donnees.verif[courante.id];
+  remplirListe();
+}
+
+function bouger(sens) {
+  const l = visibles(), i = l.findIndex((p) => p.id === courante.id);
+  const p = l[i + sens];
+  if (p) ouvrir(p.id);
+}
+
+// --- chercher partout ---
+function chercher() {
+  const q = $("#recherche").value.trim(), ul = $("#resultats");
+  ul.innerHTML = "";
+  if (q.length < 2) return;
+  const bas = q.toLowerCase();
+  let n = 0;
+  for (const p of donnees.plantes) for (const [cid, v] of Object.entries(p.valeurs)) {
+    if (typeof v !== "string") continue;
+    let i = v.toLowerCase().indexOf(bas);
+    while (i >= 0 && n < 300) {
+      const champ = donnees.champs.find((c) => c.id === cid);
+      const li = document.createElement("li");
+      li.innerHTML = "<b></b> · <span class='compte'></span><br><span class='ex'></span>";
+      li.querySelector("b").textContent = p.nom;
+      li.querySelector(".compte").textContent = champ ? champ.nom : cid;
+      const ex = li.querySelector(".ex");
+      ex.append(v.slice(Math.max(0, i - 40), i).replace(/\n/g, " "));
+      const m = document.createElement("mark"); m.textContent = v.slice(i, i + q.length); ex.append(m);
+      ex.append(v.slice(i + q.length, i + q.length + 40).replace(/\n/g, " "));
+      const debut = i;
+      li.addEventListener("click", () => {
+        $("#dlgChercher").close();
+        if (courante.id !== p.id) ouvrir(p.id);
+        const ta = document.querySelector('[data-champ="' + cid + '"]');
+        if (ta) { ta.scrollIntoView({ block: "center" }); ta.focus(); ta.setSelectionRange(debut, debut + q.length); }
+      });
+      ul.appendChild(li);
+      n++;
+      i = v.toLowerCase().indexOf(bas, i + 1);
+    }
+  }
+  if (!n) ul.innerHTML = "<li class='compte'>Rien trouvé.</li>";
+}
+
+// --- publier ---
+async function publier() {
+  const j = $("#journal"), b = $("#lancerPublier");
+  if (modifiee() && confirm("Enregistrer d’abord la fiche ouverte ?")) await enregistrer();
+  b.disabled = true;
+  j.hidden = false;
+  j.textContent = "Chiffrement et envoi en cours…";
+  try {
+    const r = await api("/api/publier", { mdp: $("#mdp").value });
+    j.textContent = r.journal;
+    if (r.ok) { $("#champMdp").hidden = true; donnees.mdp = true; }
+  } catch (e) { j.textContent = "Erreur : " + e.message; }
+  b.disabled = false;
+}
+
+$("#liste").addEventListener("change", (e) => ouvrir(e.target.value));
+$("#prec").addEventListener("click", () => bouger(-1));
+$("#suiv").addEventListener("click", () => bouger(1));
+document.querySelectorAll("input[name=filtre]").forEach((r) => r.addEventListener("change", remplirListe));
+$("#enregistrer").addEventListener("click", enregistrer);
+$("#verifiee").addEventListener("change", marquer);
+$("#note").addEventListener("change", () => $("#verifiee").checked && marquer());
+$("#apercu").addEventListener("change", (e) => $("#fiche").classList.toggle("sans-apercu", !e.target.checked));
+$("#plus").addEventListener("click", () => { zoom = Math.min(2.5, zoom + 0.15); localStorage.setItem("zoomPdf", zoom); document.querySelectorAll("#contenuPdf img").forEach((i) => (i.style.width = Math.round(zoom * 100) + "%")); });
+$("#moins").addEventListener("click", () => { zoom = Math.max(0.5, zoom - 0.15); localStorage.setItem("zoomPdf", zoom); document.querySelectorAll("#contenuPdf img").forEach((i) => (i.style.width = Math.round(zoom * 100) + "%")); });
+$("#modeTexte").addEventListener("click", () => { texteMode = !texteMode; $("#modeTexte").textContent = texteMode ? "Images du PDF" : "Texte du PDF"; afficherPdf(); });
+$("#chercher").addEventListener("click", () => { $("#dlgChercher").showModal(); $("#recherche").select(); });
+$("#recherche").addEventListener("input", chercher);
+$("#publier").addEventListener("click", () => { $("#champMdp").hidden = donnees.mdp; $("#journal").hidden = true; $("#dlgPublier").showModal(); });
+$("#lancerPublier").addEventListener("click", publier);
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); enregistrer(); }
+  if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); bouger(-1); }
+  if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); bouger(1); }
+});
+window.addEventListener("beforeunload", (e) => { if (modifiee()) { e.preventDefault(); e.returnValue = ""; } });
+charger().catch((e) => { document.body.innerHTML = "<p style='padding:20px'>Impossible de charger les fiches : " + echap(e.message) + "</p>"; });
+</script>
+</body>
+</html>
