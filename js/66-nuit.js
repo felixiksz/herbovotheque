@@ -87,6 +87,37 @@
       })));
   }
 
+  // --- le feu de cheminée ------------------------------------------------------------------
+  // Sous 16 °C, on peut faire du feu dans le poêle de la maison. Il faut du bois sec : il est rangé
+  // dehors, contre la maison, et ƟvƟ va en chercher une brassée (on en garde six bûches au plus).
+  // Une bûche fait un feu de quatre heures. Quand le feu brûle, la fumée sort de la cheminée, et
+  // il fait trop froid pour se baigner pendant les balades.
+  const FROID = 16, FEU_DUREE = 4 * 3600e3, BOIS_MAX = 6;
+  const cheminee = {
+    temperature: () => { const m = H.ciel.meteo || {}; return m.temperature; },
+    froid: () => { const tp = cheminee.temperature(); return tp != null && tp < FROID; },
+    bois: () => (H.jeu.cheminee || {}).bois || 0,
+    feuActif: () => { const f = (H.jeu.cheminee || {}).feu; return !!f && H.maintenant() - f < FEU_DUREE; },
+    majJeu(fn) { H.jeu.cheminee = Object.assign({ bois: 0, feu: 0 }, H.jeu.cheminee); fn(H.jeu.cheminee); H.d.changer("jeu"); },
+    // sur la ferme, à côté de la maison
+    async prendreBois() {
+      if (!cheminee.froid()) return H.dialogue.dire([{ qui: "luigi", texte: "Il fait " + (cheminee.temperature() != null ? cheminee.temperature() + " °C" : "doux") + " : pas besoin de bois pour l’instant." }]);
+      if (cheminee.bois() >= BOIS_MAX) return H.dialogue.dire([{ qui: "ovo", texte: "Il y a déjà assez de bois dans la maison pour ce soir." }]);
+      const n = Math.min(3, BOIS_MAX - cheminee.bois());
+      cheminee.majJeu((c) => (c.bois += n));
+      return H.dialogue.dire([{ qui: "ovo", texte: "Une brassée de bois sec, " + n + " bûches : on aura bien chaud." }]);
+    },
+    // dans la maison, en touchant le poêle
+    async allumer() {
+      if (cheminee.feuActif()) return H.dialogue.dire([{ qui: "luigi", texte: H.histoires.auHasard(["Écoute le bois qui crépite… on est bien.", "Rien de mieux qu’un feu quand il fait froid dehors."]) }]);
+      if (!cheminee.froid()) return H.dialogue.dire([{ qui: "luigi", texte: "Il fait " + (cheminee.temperature() != null ? cheminee.temperature() + " °C" : "doux") + " : pas besoin de faire du feu." }]);
+      if (!cheminee.bois()) return H.dialogue.dire([{ qui: "luigi", texte: "Il n’y a plus de bois sec. Va en chercher dehors : il est rangé contre la maison." }]);
+      cheminee.majJeu((c) => { c.bois -= 1; c.feu = H.maintenant(); });
+      return H.dialogue.dire([{ qui: "ovo", texte: "Une bûche dans le poêle, une allumette… le feu prend." }]);
+    },
+  };
+  H.cheminee = cheminee;
+
   // --- l'intérieur du mazet ---------------------------------------------------------------
   // Entre la pochette et l'aquarelle : des aplats aux formes arrondies cernés d'encre nuit, un
   // lavis léger sur les murs, un sol en terrazzo et le grain de risographie. Le lit et ses
@@ -309,6 +340,30 @@
     ctx.restore();
   }
 
+  // Les flammes derrière la vitre de la cheminée, qui dansent, et leur lueur qui se pose sur le sol et
+  // le mur autour (sans halo dans l'air), plus forte le soir.
+  function feuDuPoele(ctx, t, moment) {
+    const vac = 0.85 + Math.sin(t / 130) * 0.08 + Math.sin(t / 57) * 0.05;
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    const g = ctx.createRadialGradient(472, 150, 0, 472, 150, 160);
+    const a = (moment === "jour" ? 0.4 : 0.75) * vac;
+    g.addColorStop(0, "rgba(255,150,60," + a + ")"); g.addColorStop(1, "rgba(255,150,60,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(472, 160, 160, 120, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    // les flammes dans la vitre
+    ctx.save();
+    ctx.beginPath(); ctx.rect(462, 98, 20, 18); ctx.clip();
+    ctx.fillStyle = "#d23a2a"; ctx.fillRect(462, 110, 20, 6);
+    for (let k = 0; k < 5; k++) {
+      const x = 463 + k * 4, hh = 7 + Math.abs(Math.sin(t / (90 + k * 23) + k)) * 9;
+      ctx.fillStyle = "#ff8f2e"; ctx.fillRect(x, 116 - hh, 3, hh);
+      ctx.fillStyle = "#ffd23a"; ctx.fillRect(x + 1, 116 - hh * 0.6, 1.5, hh * 0.6);
+    }
+    ctx.restore();
+  }
+
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
   // eteint : pour dormir, les deux lampes éteintes (la pièce est sombre partout)
   function decorMaison(w, h, dpr, moment, eteint) {
@@ -408,6 +463,13 @@
     bloc(ctx, 292, 236, 8, 9, 3, ENCRE);
     bloc(ctx, 410, 236, 8, 9, 3, ENCRE);
 
+    // la cheminée suspendue, en fonte noire, accrochée à son conduit au-dessus de la table :
+    // une hotte ronde avec sa vitre, bien en vue au-dessus des têtes
+    bloc(ctx, 467, 0, 10, 72, 2, "#4a4560");
+    ctx.beginPath(); ctx.moveTo(452, 72); ctx.lineTo(492, 72); ctx.quadraticCurveTo(500, 104, 492, 136); ctx.lineTo(452, 136); ctx.quadraticCurveTo(444, 104, 452, 72); ctx.closePath();
+    ctx.fillStyle = "#3a3550"; ctx.fill(); ctx.stroke();
+    bloc(ctx, 448, 134, 48, 6, 3, "#4a4560");
+    bloc(ctx, 460, 96, 24, 22, 4, "#1b1d4a");
     // la table et ses deux chaises ; la plante dans son grand pot, derrière la chaise de droite
     bloc(ctx, 438, 196, 7, 54, 3, "#3d5ee8");
     bloc(ctx, 436, 246, 38, 8, 3, "#3d5ee8");
@@ -630,6 +692,7 @@
       { id: "canape", x: 278, y: 168, w: 152, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
       { id: "mesi", x: 572, y: 160, w: 66, h: 136, nom: "Un compliment de Mesi", agir: complimentMesi },
       { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: chanson },
+      { id: "poele", x: 444, y: 10, w: 56, h: 132, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "table", x: 500, y: 196, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
@@ -914,6 +977,7 @@
       ctx.drawImage(decor, 0, 0, 640, 360);
       // le jour, le soleil entre par la baie : l'ombre du cadre et des feuilles qui bougent
       if (moment !== "nuit") soleilParLaBaie(ctx, t, etat, moment);
+      if (cheminee.feuActif()) feuDuPoele(ctx, t, moment);
       // la vapeur du tilleul
       ctx.strokeStyle = "rgba(255,255,255,0.75)";
       ctx.lineWidth = 1.4;
@@ -1443,7 +1507,7 @@
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
     poses(S.devant, b, 1.3, (x, taille) => pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
     // on peut aller se baigner quand le chemin longe la crique aux rochers rouges
-    if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !H.$(".dialogue"));
+    if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !H.$(".dialogue") && !cheminee.froid());
     // la pluie, quand il pleut vraiment (ou que Lóló l'a fait tomber)
     const m = H.ciel.meteo || {};
     if ((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage") {

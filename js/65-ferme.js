@@ -57,7 +57,7 @@
   const OX = N * 8, OY = 6;
   const iso = (i, j) => [OX + (i - j) * 8, OY + (i + j) * 4];
   const MAISONS = [
-    { id: "maison", hash: "maison", nom: "Chez ƟvƟ et Mesi", i: 11, j: 11, w: 2, d: 4, h: 14, genre: "tiny", terrasse: true, solaire: true,
+    { id: "maison", hash: "maison", nom: "Chez ƟvƟ et Mesi", i: 11, j: 11, w: 2, d: 4, h: 14, genre: "tiny", terrasse: true, solaire: true, poele: true,
       t: { clair: "#e8714a", ombre: "#b2552e", planche: "#c95a3a", trait: "#7a2e1e", toitC: "#e8714a", toitO: "#b2552e", porte: "#7f97f2" } },
     { id: "herbo", hash: "herbotheque", nom: "Herbothèque", i: 5, j: 6, w: 2, d: 4, h: 13, genre: "tiny", roues: true,
       t: { clair: "#b9834f", ombre: "#8a5c34", planche: "#9a6a3c", trait: "#4b3427", toitC: "#e8714a", toitO: "#b2552e", porte: "#2f6b35" } },
@@ -68,11 +68,12 @@
     { id: "lettres", hash: "lettres", nom: "Boîte aux lettres", i: 9, j: 17, w: 1, d: 1, h: 0, genre: "boite" },
     { id: "ponton", hash: "terrain", nom: "Ponton vers les îles", i: 23, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
     { id: "poules", nom: "Poulailler", i: 16, j: 8, w: 2, d: 1, h: 7, genre: "poulailler" },
+    { id: "bois", nom: "Bois sec", i: 13, j: 14, w: 1, d: 1, h: 6, genre: "bois" },
   ];
   const parId = Object.fromEntries(MAISONS.map((m) => [m.id, m]));
   const porte = (m) => [m.i + m.w / 2, m.j + m.d + 0.7];
   const LIENS = [["maison", "herbo"], ["maison", "cartes"], ["maison", "labo"], ["maison", "serre"], ["maison", "lettres"], ["maison", "ponton"],
-    ["herbo", "cartes"], ["cartes", "serre"], ["herbo", "labo"], ["serre", "ponton"], ["labo", "lettres"], ["maison", "poules"]];
+    ["herbo", "cartes"], ["cartes", "serre"], ["herbo", "labo"], ["serre", "ponton"], ["labo", "lettres"], ["maison", "poules"], ["maison", "bois"]];
   // la grille des passages, en demi-cases : on ne traverse ni les maisons ni l'eau
   const RG = 2, G = N * RG;
   const occupe = (x, y, marge) => MAISONS.some((m) => m.genre !== "ponton" && x > m.i - marge && x < m.i + m.w + marge && y > m.j - marge && y < m.j + m.d + marge);
@@ -447,6 +448,18 @@
         remplir(c, [a, b, P], T.clair); contour(c, [a, b, P], T.trait);
         remplir(c, [b, cc, Q, P], "#e8714a"); contour(c, [b, cc, Q, P], "#7a2e1e");
         for (let k = 1; k < 3; k++) { const u = k / 3; ligne(c, b[0] + (P[0] - b[0]) * u, b[1] + (P[1] - b[1]) * u, cc[0] + (Q[0] - cc[0]) * u, cc[1] + (Q[1] - cc[1]) * u, "#b2552e"); }
+        return;
+      }
+      if (m.genre === "bois") {
+        // les bûches, vues par leurs bouts ronds clairs, empilées en trois rangs
+        for (let r = 0; r < 3; r++) for (let k = 0; k < 4 - r; k++) {
+          const x = 12 + k * 4 + r * 2, y = h - 9 - r * 3;
+          remplir(c, [[x - 1, y + 1], [x + 7, y + 5], [x + 7, y + 2], [x - 1, y - 2]], "#7a4520");
+          pixel(c, x - 1, y, "#e9c99a"); pixel(c, x, y, "#d9a07a"); pixel(c, x - 1, y - 1, "#d9a07a");
+        }
+        // l'auvent
+        remplir(c, [[8, h - 20], [28, h - 10], [30, h - 13], [10, h - 23]], "#9a6a3c"); contour(c, [[8, h - 20], [28, h - 10], [30, h - 13], [10, h - 23]], "#4b3427");
+        ligne(c, 10, h - 20, 10, h - 8, "#4b3427"); ligne(c, 28, h - 11, 28, h - 3, "#4b3427");
         return;
       }
       if (m.genre === "ponton") {
@@ -1374,6 +1387,7 @@
     H.d.majLocal((l) => (l.dernierLieu = id));
     if (m && m.hash) H.aller(m.hash);
     if (id === "poules") poulailler();
+    if (id === "bois" && H.cheminee) H.cheminee.prendreBois();
   }
 
   // seulementMaj : on fait avancer tout le monde sans redessiner (le dessin est le plus coûteux)
@@ -1519,6 +1533,12 @@
     if (laboActif() && labo.posSprite && labo.cheminee) {
       const lx = labo.posSprite[0] + labo.cheminee[0], ly = labo.posSprite[1] + labo.cheminee[1];
       for (let k = 0; k < 5; k++) { const u = ((t / 2400) + k / 5) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 5), ly - Math.round(u * 24), 1 + Math.round(u * 3), 1 + Math.round(u * 2), u < 0.5 ? "#f3f0dc" : "#c9c9c4"); }
+    }
+    // et de la cheminée de la maison quand le feu brûle dans le poêle
+    const maison = parId.maison;
+    if (H.cheminee && H.cheminee.feuActif() && maison.posSprite && maison.cheminee) {
+      const lx = maison.posSprite[0] + maison.cheminee[0], ly = maison.posSprite[1] + maison.cheminee[1];
+      for (let k = 0; k < 6; k++) { const u = ((t / 2600) + k / 6) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 6), ly - Math.round(u * 18), 1 + Math.round(u * 2), 1 + Math.round(u * 1.5), u < 0.5 ? "#e9e3cd" : "#c9c9c4"); }
     }
     // la pluie, quand il pleut vraiment (ou la pluie de joie de Lóló)
     const m = H.ciel.meteo || {};
