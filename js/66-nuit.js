@@ -957,24 +957,39 @@
   // tache floue dès que Lóló n'était plus couché autour d'elle). La tête à gauche, les yeux
   // fermés, la queue ramenée devant ; de temps en temps, son dos se soulève en respirant.
   const MEME_DORT = [
-    ".k.k........",
-    "kTkTkkkkkk..",
-    "kttttttTttk.",
-    "kTTtttTtttTk",
-    "kttttTtttttk",
-    "kuuutttttuuk",
-    ".kkkkkkkkkk.",
+    ".k..k.......",
+    "kTkkTkkkkk..",
+    "kttttktTtTk.",
+    "ktkktTttTttk",
+    "kupuuttTttTk",
+    ".kuuTTTTTtk.",
+    "..kkkkkkkk..",
+  ];
+  // en plus grand, pour la plage (où chaque case est plus petite) : la tête posée sur les pattes,
+  // les oreilles dressées, le museau crème et le nez rose, le dos tigré, la queue enroulée devant
+  const MEME_DORT_GRAND = [
+    "..k...k...........",
+    ".kTk.kTk...kkkkk..",
+    ".kttkttk.kkTttTtk.",
+    "kttttttkkttTttTttk",
+    "ktkttktttTttTttTtk",
+    "kttuputtttTttTtttk",
+    ".kuuuuttTttTttTttk",
+    ".kkuutttttttttttk.",
+    "..kTTTTttttttTTk..",
+    "...kkkkkkkkkkkk...",
   ];
   let pixK = 1; // (pixels de la toile par unité du dessin, pour s'aligner sur les gros pixels)
   // (cellFixe : la taille d'une case quand la scène n'a pas la grille de la maison, en balade)
   function memeEnBoule(ctx, x, y, t, cellFixe) {
     const m = ctx.getTransform(), cell = cellFixe || H.retro.taillePour(4) / pixK, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
-    const L = MEME_DORT[0].length, Hh = MEME_DORT.length, inspire = Math.sin(t / 700) > 0.55;
+    const grille = cellFixe ? MEME_DORT_GRAND : MEME_DORT, tete = cellFixe ? 8 : 5;
+    const L = grille[0].length, Hh = grille.length, inspire = Math.sin(t / 700) > 0.55;
     const X = Math.round((x + ox - (L * cell) / 2) / cell) * cell - ox, Y = Math.round((y + oy - Hh * cell * 0.6) / cell) * cell - oy;
-    MEME_DORT.forEach((ligne, j) => [...ligne].forEach((ch, i) => {
+    grille.forEach((ligne, j) => [...ligne].forEach((ch, i) => {
       if (ch === ".") return;
       // (le dos se soulève : les cases du haut du corps montent d'un cran)
-      const leve = inspire && j <= 2 && i >= 4 ? -cell : 0;
+      const leve = inspire && j <= 2 && i >= tete ? -cell : 0;
       ctx.fillStyle = H.pixel.PAL[ch];
       ctx.fillRect(X + i * cell, Y + j * cell + leve, cell + 0.05, cell + 0.05);
       if (leve && j === 2) { ctx.fillStyle = H.pixel.PAL.t; ctx.fillRect(X + i * cell, Y + j * cell, cell + 0.05, cell + 0.05); }
@@ -2126,7 +2141,7 @@
     if (avec("meme") && !avec("lolo") && b.baignade) {
       ctx.save();
       ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1.6;
-      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - 7, t, 2.4);
+      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - 10, t, 2.4);
       ctx.restore();
     }
     if (!b.baignade) {
