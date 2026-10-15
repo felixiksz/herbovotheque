@@ -931,6 +931,13 @@
     return bas.slice(0, -1).concat(haut.slice(0, -1));
   }
 
+  // La caméra ne descend jamais au point de cacher tout le ciel : sur un écran en hauteur (un
+  // téléphone), le haut de la ferme reste sous une bande de ciel, assez haute pour que le soleil
+  // et la lune passent sous les boutons.
+  function hautCamera(y) {
+    const cache = zoneBoutons(), bande = (cache ? cache.b : 0) + 26;
+    return Math.min(y, OY - 50 - bande);
+  }
   // la place des boutons du haut (Aménager, Les îles, Réglages), dans les coordonnées du dessin
   function zoneBoutons() {
     if (!scene || !scene.boutons) return null;
@@ -1417,7 +1424,7 @@
     [scene.ombres, scene.sh] = toileDe(W, Ht);
     fondCle = null;
     const [sx, sy] = iso(scene.ovo.x, scene.ovo.y);
-    scene.cam.x = sx - W / 2; scene.cam.y = sy - Ht / 2 - 10;
+    scene.cam.x = sx - W / 2; scene.cam.y = hautCamera(sy - Ht / 2 - 10);
   }
 
   // ƟvƟ marche de maison en maison par les chemins
@@ -1469,7 +1476,7 @@
     }
     const [sx, sy] = iso(perso.x, perso.y);
     scene.cam.x += (sx - W / 2 - scene.cam.x) * 0.06;
-    scene.cam.y += (sy - Ht / 2 - 10 - scene.cam.y) * 0.06;
+    scene.cam.y += (hautCamera(sy - Ht / 2 - 10) - scene.cam.y) * 0.06;
     if (perso.trajet) {
       perso.i = Math.min(perso.trajet.length - 1, perso.i + 0.5);
       [perso.x, perso.y] = perso.trajet[Math.floor(perso.i)];
@@ -1484,12 +1491,12 @@
     ctx.drawImage(fond, -40 - Math.round(cx * 0.05), Math.round(-cy * 0.08) - 10);
     // le soleil ou la lune, qui traverse le ciel de droite à gauche
     {
-      let ax = Math.round(W * (0.92 - 0.84 * mo.u));
-      const ay = Math.max(9, Math.round(58 - Math.sin(Math.PI * mo.u) * 44 - cy * 0.08 - 10));
-      // (sur téléphone, les boutons du haut peuvent cacher le soleil : il se range alors juste à
-      // leur gauche, à la même hauteur ; plus bas, la ferme le cacherait)
+      const ax = Math.round(W * (0.92 - 0.84 * mo.u));
+      let ay = Math.max(9, Math.round(58 - Math.sin(Math.PI * mo.u) * 44 - cy * 0.08 - 10));
+      // (sur téléphone, les boutons du haut peuvent cacher le soleil : il passe alors juste
+      // dessous, dans la bande de ciel que la caméra garde libre, voir hautCamera)
       const cache = zoneBoutons();
-      if (cache && ax > cache.g - 10 && ax < cache.d + 10 && ay < cache.b + 10) ax = Math.round(cache.g - 12);
+      if (cache && ax > cache.g - 10 && ax < cache.d + 10 && ay < cache.b + 10) ay = Math.round(cache.b + 11);
       if (mo.astre === "soleil") {
         const bas = mo.periode === "aube" || mo.periode === "crepuscule";
         ovale(ctx, ax, ay, 8, 8, bas ? "rgba(255,91,79,0.35)" : "rgba(246,238,85,0.3)");
@@ -1778,7 +1785,7 @@
       dimensionner();
       peindreSol(); peindreSol2();
       const [sx, sy] = iso(px, py);
-      scene.cam.x = sx - W / 2; scene.cam.y = sy - Ht / 2 - 10;
+      scene.cam.x = sx - W / 2; scene.cam.y = hautCamera(sy - Ht / 2 - 10);
       // Lóló : la première fois de la visite, il arrive au galop ; ensuite il est là, à côté d'ƟvƟ
       if (galopDejaVu) Object.assign(scene.lolo, { x: px - 1.6, y: py + 0.4 });
       else {
