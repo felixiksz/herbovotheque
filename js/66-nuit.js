@@ -295,10 +295,10 @@
       ctx.save();
       ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
       ctx.clip();
-      ctx.fillStyle = "rgba(" + chaud + "," + 0.38 * force + ")";
+      ctx.fillStyle = "rgba(" + chaud + "," + 0.62 * force + ")";
       ctx.fillRect(0, 160, 640, 200);
       // l'ombre tachetée des feuilles, aplatie par la perspective
-      ctx.fillStyle = "rgba(60,40,90," + 0.28 * force + ")";
+      ctx.fillStyle = "rgba(60,40,90," + 0.42 * force + ")";
       for (const [u, v, r, ph] of FEUILLES) {
         const [x, y] = sol(fx + u * fw + vent * (0.6 + v), fy + v * fh * 0.85);
         const rr = r * (0.8 + 0.2 * Math.sin(t / 900 + ph));
@@ -1853,18 +1853,42 @@
       // ƟvƟ et Mesi en cuillère : Mesi derrière, un peu plus haut ; ƟvƟ devant
       tete(ctx, "luigi", 34, 158);
       tete(ctx, "ovo", 56, 170);
-      // la couverture par-dessus, bombée sur les épaules et les hanches, qui se soulève doucement
-      const sf = Math.sin(t / 1300) * 1.2;
-      ctx.beginPath();
-      ctx.moveTo(84, 236);
-      ctx.lineTo(84, 200 - sf);
-      ctx.quadraticCurveTo(100, 186 - sf, 122, 192 - sf);
-      ctx.quadraticCurveTo(140, 200, 160, 190 - sf * 0.6);
-      ctx.quadraticCurveTo(186, 182, 206, 196);
-      ctx.quadraticCurveTo(222, 204, 234, 204);
-      ctx.lineTo(234, 236); ctx.closePath();
+      // La couverture en relief : on devine les deux corps dessous, couchés sur le côté. Derrière,
+      // Mesi (épaule, hanche, genoux pliés), un peu plus haut ; devant, ƟvƟ, blotti·e contre elle.
+      // Les bosses s'éclairent sur le dessus, les creux restent dans l'ombre, et le tout se soulève
+      // doucement avec les respirations.
+      const sf = Math.sin(t / 1300) * 1.2, sg = Math.sin(t / 1500 + 1) * 1.2;
+      const corps = (dy, souffle, bosses) => {
+        // bosses : [x, hauteur] le long du corps, de l'épaule aux pieds
+        ctx.beginPath();
+        ctx.moveTo(84, 238);
+        ctx.lineTo(84, 214 + dy);
+        let px = 84, py = 214 + dy;
+        for (const [x, hh] of bosses) {
+          const y = 214 + dy - hh - (x < 170 ? souffle : 0);
+          ctx.quadraticCurveTo((px + x) / 2, Math.min(py, y) - 4, x, y);
+          px = x; py = y;
+        }
+        ctx.quadraticCurveTo(232, py, 236, 214 + dy + 4);
+        ctx.lineTo(236, 238); ctx.closePath();
+      };
+      // Mesi, derrière
+      ctx.lineWidth = 2.4;
+      corps(-8, sf, [[104, 30], [130, 16], [168, 30], [194, 12], [218, 22]]);
+      ctx.fillStyle = "#3a3aa8"; ctx.fill(); ctx.stroke();
+      // ƟvƟ, devant, plus bas
+      corps(8, sg, [[100, 22], [124, 8], [160, 24], [186, 6], [210, 16]]);
       ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(84, 204 - sf); ctx.quadraticCurveTo(100, 192 - sf, 120, 197 - sf); ctx.strokeStyle = "#7f97f2"; ctx.stroke(); ctx.strokeStyle = ENCRE;
+      // les reflets sur le haut des bosses, et les plis dans les creux
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#7f97f2";
+      for (const [x0, x1, y] of [[92, 108, 202], [148, 170, 200], [200, 216, 208]]) { ctx.beginPath(); ctx.moveTo(x0, y + 1 - sg * 0.5); ctx.quadraticCurveTo((x0 + x1) / 2, y - 2 - sg * 0.5, x1, y + 1 - sg * 0.5); ctx.stroke(); }
+      ctx.strokeStyle = "#232a63";
+      for (const [x, y] of [[124, 214], [186, 218], [142, 226], [206, 228]]) { ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y + 4, x + 7, y + 1); ctx.stroke(); }
+      ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
+      // le revers clair de la couverture, sous les mentons
+      ctx.beginPath(); ctx.moveTo(84, 214 - sf); ctx.quadraticCurveTo(96, 200 - sf, 110, 204 - sf); ctx.lineTo(110, 210 - sf); ctx.quadraticCurveTo(96, 207 - sf, 84, 220 - sf); ctx.closePath();
+      ctx.fillStyle = "#f3f0dc"; ctx.fill(); ctx.stroke();
       // le bras de Mesi posé sur ƟvƟ, par-dessus la couverture
       ctx.lineWidth = 8.5; ctx.strokeStyle = ENCRE;
       ctx.beginPath(); ctx.moveTo(92, 194 - sf); ctx.quadraticCurveTo(108, 196 - sf, 124, 204); ctx.stroke();
@@ -1897,9 +1921,9 @@
         const x0 = fx + (fw * k) / 3 + 4, x1 = fx + (fw * (k + 1)) / 3 - 4, y0 = fy + 4, y1 = fy + fh - 4;
         const q = [proj(x0, y0), proj(x1, y0), proj(x1, y1), proj(x0, y1)];
         ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-        ctx.fillStyle = "rgba(190,226,240,0.32)"; ctx.fill();
+        ctx.fillStyle = "rgba(150,185,245,0.15)"; ctx.fill();
       }
-      ctx.fillStyle = "rgba(14,16,48,0.42)";
+      ctx.fillStyle = "rgba(14,16,48,0.18)";
       for (const [dx, dy] of [[30, 30], [46, 22], [24, 96], [40, 88], [70, 64], [96, 44], [110, 110]]) {
         const [x, y] = proj(fx + dx + vent * 1.4, fy + dy);
         ctx.beginPath(); ctx.ellipse(x, y, 11, 4.5, 0.3, 0, Math.PI * 2); ctx.fill();
