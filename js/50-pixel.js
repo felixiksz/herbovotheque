@@ -18,7 +18,8 @@
     a: "#a3acb7", q: "#ee9a7e",
     M: "#3e2210",                              // crinière (sans contour)
     z: "#1f6fe0", Z: "#16509f", Y: "#f6c400", X: "#c99a00", // sandales Adidas Lego d'ƟvƟ (l'été)
-    f: "#ff7fa6", F: "#d9577e",               // la bouée flamant rose               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
+    f: "#ff7fa6", F: "#d9577e",
+    i: "#5fb6ea", j: "#e9e3cd", // verres bleutés des lunettes de piscine ; rayure claire des serviettes               // la bouée flamant rose               // montures : argentée (ƟvƟ), pêche pastel (Mesi)
   };
 
   // 16 × 22, de face. Cils : petits points au coin des lunettes de vue (verres transparents).
@@ -232,9 +233,26 @@
   // images 0 à 3 : un pas, puis l'autre (pieds alternés, bras opposés) ; 4 : à l'arrêt
   const PAS = [[3, false, -3, false], [0, false, 0, true], [-3, false, 3, false], [0, true, 0, false], [0, false, 0, false]];
   const MAINS = [[3, 16], [8, 17], [13, 16], [8, 17], [7, 17]];
-  function profil(haut, manche, image, sandales) {
+  // tenue : "nage" (sans vêtements, lunettes de piscine bleutées à la place des lunettes, pieds nus)
+  // ou "serviette:<couleur>" (sortis de l'eau, une serviette enroulée de la poitrine aux genoux,
+  // une main qui frotte les cheveux)
+  const HABITS = "rRgGbByoOvV";
+  function enMaillot(haut, lunettes) {
+    return haut.map((l, y) => l.split("").map((c, x) => {
+      if (y >= 12 && HABITS.includes(c)) return "s";
+      // le tout petit relief de la poitrine, de profil
+      if (y === 13 && x === 13) return "S";
+      if (lunettes && y >= 5 && y <= 7 && (c === "a" || c === "q")) return x >= 10 ? "i" : "s";
+      // l'élastique des lunettes, qui fait le tour de la tête
+      if (lunettes && y === 6 && x >= 2 && x <= 9 && c !== "k") return "Z";
+      return c;
+    }).join(""));
+  }
+  function profil(haut, manche, image, sandales, tenue) {
     const g = Array.from({ length: 24 }, () => Array(16).fill("."));
     const b = image % 2 || image === 4 ? 0 : 1; // le corps descend d'un pixel quand les jambes s'écartent
+    const serviette = tenue && tenue.startsWith("serviette") ? tenue.split(":")[1] : null;
+    if (tenue) { haut = enMaillot(haut, tenue === "nage"); manche = "s"; sandales = false; }
     haut.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x, y + b, c)));
     const jambe = (dx, leve, pantalon, chaussure) => {
       const bas = leve ? 20 : 21;
@@ -251,9 +269,16 @@
       } else for (let i = 0; i < 3; i++) poser(g, 7 + dx + i, bas, chaussure);
     };
     const [dxD, leveD, dxA, leveA] = PAS[image];
-    jambe(dxA, leveA, "B", "N"); // la jambe de derrière, plus sombre
-    jambe(dxD, leveD, "b", "n");
-    const [mx, my] = MAINS[image];
+    jambe(dxA, leveA, tenue ? "S" : "B", tenue ? "S" : "N"); // la jambe de derrière, plus sombre
+    jambe(dxD, leveD, tenue ? "s" : "b", tenue ? "s" : "n");
+    if (serviette) {
+      // la serviette enroulée, avec deux rayures claires
+      for (let y = 13 + b; y <= 19; y++) for (let x = 3; x <= 13; x++) {
+        if (g[y][x] !== "." && g[y][x] !== "k") poser(g, x, y, y === 15 + b || y === 18 ? "j" : serviette);
+      }
+      for (let y = 18; y <= 19; y++) for (let x = 5; x <= 11; x++) if (g[y][x] === ".") poser(g, x, y, y === 18 ? "j" : serviette);
+    }
+    const [mx, my] = serviette ? [[11, 4], [12, 6]][Number(tenue.split(":")[2] || 0)] : MAINS[image];
     for (let i = 0; i <= 4; i++) {
       const x = Math.round(8 + ((mx - 8) * i) / 4), y = Math.round(13 + b + ((my + b - 13 - b) * i) / 4);
       poser(g, x, y, i < 2 ? manche : "s");
@@ -420,6 +445,11 @@
     ovoEte: [OVO_ETE, OVO_MARCHE_ETE],
     ovoProfilEte: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, true)),
     luigiProfil: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i)),
+    // pour se baigner, puis se sécher sur la plage
+    ovoNage: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, false, "nage")),
+    luigiNage: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i, false, "nage")),
+    ovoServiette: [0, 1].map((i) => profil(OVO_PROFIL, "r", 4, false, "serviette:y:" + i)),
+    luigiServiette: [0, 1].map((i) => profil(LUIGI_PROFIL, "g", 4, false, "serviette:p:" + i)),
     loloPas: [0, 1, 2, 3].map((i) => loloAuPas(i)),
     loloGalop: [0, 1, 2, 3].map((i) => loloAuPas(i, { galop: true })),
     loloBalade: [0, 1, 2, 3].map((i) => loloAuPas(i, { memeDebout: true })),

@@ -868,7 +868,8 @@
     ctx.restore();
   }
 
-  // La chanson d'ƟvƟ et Mesi : Mesi commence, ƟvƟ répond « Na-na-nana ! » sur un petit air,
+  // La chanson d'ƟvƟ et Mesi : Mesi commence, puis toutes les deux chantent « Na-na-nana ! » à
+  // l'unisson, sur do-do-la-sol,
   // et des notes s'envolent au-dessus de la table.
   let chantJusqua = 0, canapeJusqua = 0;
   // après le goûter, ƟvƟ et Mesi vont s'asseoir sur le canapé pour écouter de la musique
@@ -883,17 +884,22 @@
     const ctx = H.audio.contexte();
     if (!ctx) return;
     let t = ctx.currentTime + 0.05;
-    for (const [f, d] of [[659, 0.2], [784, 0.2], [659, 0.16], [523, 0.5]]) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = "triangle";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.09 * H.volume("voix")), t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g).connect(H.audio.sortie());
-      o.start(t);
-      o.stop(t + d + 0.05);
-      t += d * 0.9;
+    // do-do-la-sol : « na », « na », puis « na-na » plus vite, la dernière tenue
+    for (const [f, d] of [[523.25, 0.24], [523.25, 0.24], [440, 0.15], [392, 0.55]]) {
+      // deux voix à l'unisson, à peine décalées, comme deux personnes qui chantent ensemble
+      for (const desaccord of [-5, 6]) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "triangle";
+        o.frequency.value = f;
+        o.detune.value = desaccord;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.06 * H.volume("voix")), t + 0.025);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        o.connect(g).connect(H.audio.sortie());
+        o.start(t);
+        o.stop(t + d + 0.05);
+      }
+      t += d * 0.92;
     }
   }
   async function chanson() {
@@ -901,7 +907,7 @@
     await H.dialogue.dire([{ qui: "luigi", texte: "Tu te rends compte de la chance qu’on a…" }]);
     chantJusqua = performance.now() + 3500;
     airNanana();
-    await H.dialogue.dire([{ qui: "ovo", texte: "Na-na-nana !" }]);
+    await H.dialogue.dire([{ qui: "duo", texte: "Na-na-nana !" }]);
   }
 
   // Le soir, ƟvƟ peut raconter sa journée à Mesi (tout ce qu'iel a fait, dans l'ordre), ou
@@ -2138,6 +2144,12 @@
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
     if (avec("meme") && !avec("lolo") && !b.baignade) H.pixel.dessiner(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 2.4, b.pause ? 0 : Math.floor(t / 200) % 2);
     // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
+    // sortis de l'eau : sur la plage, enroulé·es dans une serviette, on se frotte les cheveux
+    if (b.baignade && b.sortieEau && t - b.sortieEau >= SORTIE_EAU) {
+      const frotte = Math.floor(t / 260) % 2;
+      H.pixel.dessiner(ctx, "ovoServiette", w * 0.36, sol(w * 0.36) - h * 0.055, 3, frotte, false);
+      if (avec("luigi")) H.pixel.dessiner(ctx, "luigiServiette", w * 0.43, sol(w * 0.43) - h * 0.055, 3, 1 - frotte, true);
+    }
     if (avec("meme") && !avec("lolo") && b.baignade) {
       ctx.save();
       ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1.6;
@@ -2206,16 +2218,21 @@
   function dessinerBaignade(ctx, b, t, w, h) {
     const eau = h * 0.66;
     // ƟvƟ regarde vers la droite ; Mesi, en face, regarde vers ƟvƟ
-    const nageurs = [["ovoProfil", w * 0.46, 0, false]];
-    if (b.s.compagnons.includes("luigi")) nageurs.push(["luigiProfil", w * 0.56, 1.7, true]);
-    const sortie = b.sortieEau ? Math.min(1, (t - b.sortieEau) / 1400) : 0;
-    for (const [nom, x, ph, miroir] of nageurs) {
-      const y = eau + 40 + Math.sin(t / 500 + ph) * 2 * (1 - sortie) - sortie * 44;
+    // (sans vêtements, avec les lunettes de piscine bleutées)
+    const nageurs = [["ovoNage", w * 0.46, 0, false]];
+    if (b.s.compagnons.includes("luigi")) nageurs.push(["luigiNage", w * 0.56, 1.7, true]);
+    // pour sortir, on marche dans l'eau vers la plage : on émerge peu à peu, l'eau jusqu'aux hanches,
+    // puis on est sur la plage (voir sechage)
+    const sortie = b.sortieEau ? Math.min(1, (t - b.sortieEau) / SORTIE_EAU) : 0;
+    if (sortie >= 1) return;
+    for (const [nom, x0, ph, miroir] of nageurs) {
+      const x = x0 - sortie * w * 0.14, y = eau + 40 + Math.sin(t / 500 + ph) * 2 * (1 - sortie) - sortie * 19;
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 0, w, eau);
       ctx.clip();
-      H.pixel.dessiner(ctx, nom, x, y, 3, 4, miroir);
+      // (on marche vers la gauche : tout le monde se tourne de ce côté)
+      H.pixel.dessiner(ctx, nom, x, y, 3, sortie ? Math.floor(t / 190) % 4 : 4, sortie ? true : miroir);
       ctx.restore();
       ronds(ctx, x, eau, t, ph);
     }
@@ -2273,14 +2290,15 @@
     if (balade === b) b.sortir.hidden = false;
   }
 
+  const SORTIE_EAU = 2800;
   async function sortirDeLeau() {
     const b = balade;
     if (!b || b.sortieEau) return;
     b.sortir.hidden = true;
     b.flamant = null;
-    // on se hisse hors de l'eau…
+    // on marche dans l'eau jusqu'à la plage, puis on s'essuie…
     b.sortieEau = performance.now();
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, SORTIE_EAU + 600));
     if (balade !== b) return;
     // … puis on rentre directement se réchauffer à la maison
     const lignes = [{ qui: "ovo", texte: "Brrr ! Vite, une serviette, et on rentre se réchauffer à la maison !" }];
