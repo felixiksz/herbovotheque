@@ -1183,17 +1183,17 @@
     });
     // le lit contre le mur bleu, la tête sous les photos
     ajouter(4, () => {
-      boiteIso(g, 0, 1.3, 4.4, 2.2, 6, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" });
-      boiteIso(g, 0, 1.3, 0.3, 2.2, 16, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#e9b44c" });
-      boiteIso(g, 0.3, 1.4, 4.0, 2.0, 3, { dessus: "#f2f0e8", gauche: "#d6d2c0", droite: "#d6d2c0" }, 6);
-      boiteIso(g, 0.4, 1.5, 0.9, 0.9, 3, { dessus: "#ffffff", gauche: "#e9e3cd", droite: "#e9e3cd" }, 9);
-      boiteIso(g, 0.4, 2.45, 0.9, 0.85, 3, { dessus: "#ffb3a8", gauche: "#e8908a", droite: "#e8908a" }, 9);
-      if (!o.dodo) boiteIso(g, 1.6, 1.4, 2.7, 2.0, 2, { dessus: "#3d5ee8", gauche: "#2f4bc8", droite: "#2f4bc8" }, 9);
+      boiteIso(g, 0, 1.3, 3.4, 2.6, 6, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" });
+      boiteIso(g, 0, 1.3, 0.3, 2.6, 16, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#e9b44c" });
+      boiteIso(g, 0.3, 1.4, 3.0, 2.4, 3, { dessus: "#f2f0e8", gauche: "#d6d2c0", droite: "#d6d2c0" }, 6);
+      boiteIso(g, 0.4, 1.5, 0.85, 1.1, 3, { dessus: "#ffffff", gauche: "#e9e3cd", droite: "#e9e3cd" }, 9);
+      boiteIso(g, 0.4, 2.7, 0.85, 1.05, 3, { dessus: "#ffb3a8", gauche: "#e8908a", droite: "#e8908a" }, 9);
+      if (!o.dodo) boiteIso(g, 1.45, 1.4, 1.85, 2.4, 2, { dessus: "#3d5ee8", gauche: "#2f4bc8", droite: "#2f4bc8" }, 9);
     });
     // la table de chevet et sa lampe
     ajouter(5.2, () => {
-      boiteIso(g, 0.1, 3.75, 0.9, 0.8, 10, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" });
-      const [x, y] = PI_(0.55, 4.15, 10);
+      boiteIso(g, 0.1, 4.05, 0.9, 0.8, 10, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" });
+      const [x, y] = PI_(0.55, 4.45, 10);
       g.fillStyle = ENCRE; g.fillRect(Math.round(x), Math.round(y) - 7, 1, 7);
       polyIso(g, [[x - 4, y - 7], [x + 4, y - 7], [x + 3, y - 12], [x - 3, y - 12]], o.lampes ? "#fff06a" : "#e9e3cd", ENCRE);
     });
@@ -1221,28 +1221,53 @@
       const [ax, ay] = PI_(6.2, 4.3, 12.5); g.fillStyle = "#f3f0dc"; g.fillRect(Math.round(ax) - 4, Math.round(ay) - 1, 8, 2); g.fillStyle = "#c96a3a"; g.fillRect(Math.round(ax) - 3, Math.round(ay) - 2, 6, 1); g.fillStyle = "#4b3427"; g.fillRect(Math.round(ax) - 1, Math.round(ay) - 2, 2, 1);
     });
     // les personnages
-    const perso = (prof, nom, i, j, image, miroir, z) => ajouter(prof, () => { const [x, y] = PI_(i, j, z || 0); H.pixel.dessiner(g, nom, x, y, 1, image, miroir); o.boites[nom] = [x - 9, y - 26, x + 9, y]; });
+    // (chaque personnage garde de quoi se redessiner : la nuit, on le découpe dans l'ombre pour que
+    // les visages restent en couleurs)
+    o.persos = [];
+    const garder = (f) => { f(g); o.persos.push(f); };
+    const perso = (prof, nom, i, j, image, miroir, z) => ajouter(prof, () => { const [x, y] = PI_(i, j, z || 0); garder((gg) => H.pixel.dessiner(gg, nom, x, y, 1, image, miroir)); o.boites[nom] = [x - 9, y - 26, x + 9, y]; });
     if (o.dodo) {
-      // ƟvƟ et Mesi en cuillère, les têtes sur les oreillers, sous la couverture bombée
+      // ƟvƟ et Mesi en cuillère, couché·es sur le côté : Mesi derrière (contre le mur), ƟvƟ devant.
+      // Les têtes sur les oreillers, les épaules qui dépassent de la couverture, et le bras de Mesi
+      // posé sur ƟvƟ. La couverture se bombe sur leurs deux corps et se soulève doucement.
       ajouter(4.5, () => {
-        for (const [nom, i, j, z] of [["luigi", 0.75, 2.05, 13], ["ovo", 0.95, 2.6, 12]]) {
-          const s = H.pixel.sprite(nom, 0), [x, y] = PI_(i, j, z);
-          g.imageSmoothingEnabled = false; g.drawImage(s, 0, 0, 16, 12, Math.round(x) - 8, Math.round(y) - 10, 16, 12);
-          g.fillStyle = H.pixel.PAL.s; g.fillRect(Math.round(x) - 2, Math.round(y) - 4, 2, 1); g.fillRect(Math.round(x) + 1, Math.round(y) - 4, 2, 1);
-        }
         const sf = Math.sin(t / 1300);
-        for (const [dj, col] of [[1.75, "#3a3aa8"], [2.5, "#3d5ee8"]]) {
+        const dormeur = (nom, i, j) => {
+          const s2 = H.pixel.sprite(nom, 0), [x, y] = PI_(i, j, 12), X = Math.round(x), Y = Math.round(y);
+          garder((gg) => {
+            gg.imageSmoothingEnabled = false;
+            // les épaules (le haut du corps), en biais vers le pied du lit, puis la tête par-dessus
+            gg.drawImage(s2, 0, 12, 16, 6, X - 3, Y, 16, 6);
+            gg.drawImage(s2, 0, 0, 16, 12, X - 8, Y - 10, 16, 12);
+            gg.fillStyle = H.pixel.PAL.s; gg.fillRect(X - 2, Y - 4, 2, 1); gg.fillRect(X + 1, Y - 4, 2, 1);
+          });
+        };
+        const couverture = (j0, j1, col, lever) => {
           const pts = [];
-          for (let u = 1.4; u <= 4.3; u += 0.15) { const bosse = Math.max(0, Math.sin((u - 1.4) * 2.2)) * 4 + Math.max(0, Math.sin((u - 1.4) * 1.1)) * 2 + (u < 2.4 ? sf * 0.6 : 0); pts.push(PI_(u, dj, 9 + bosse)); }
-          for (let u = 4.3; u >= 1.4; u -= 0.15) pts.push(PI_(u, dj + 0.8, 9));
+          for (let u = 1.2; u <= 3.3; u += 0.1) { const bosse = Math.max(0, Math.sin((u - 1.2) * 2.6)) * 4 + Math.max(0, Math.sin((u - 1.6) * 1.6)) * 3 + (u < 2.1 ? lever : 0); pts.push(PI_(u, j0, 9 + bosse)); }
+          for (let u = 3.3; u >= 1.2; u -= 0.1) pts.push(PI_(u, j1, 9));
           polyIso(g, pts, col, ENCRE);
-        }
+        };
+        dormeur("luigi", 0.85, 2.15);
+        couverture(1.5, 2.6, "#3a3aa8", sf * 0.5);
+        dormeur("ovo", 0.95, 3.0);
+        couverture(2.5, 3.75, "#3d5ee8", sf * 0.7);
+        // le revers clair de la couverture, sous les mentons
+        polyIso(g, [PI_(1.2, 1.5, 11), PI_(1.2, 3.75, 11), PI_(1.35, 3.75, 11), PI_(1.35, 1.5, 11)], "#f3f0dc");
+        // le bras de Mesi, par-dessus la couverture, autour d'ƟvƟ
+        const s2 = H.pixel.sprite("luigi", 0), manche = s2.getContext("2d").getImageData(3, 14, 1, 1).data;
+        const [ax, ay] = PI_(1.3, 2.35, 15), [bx, by] = PI_(1.55, 3.25, 15);
+        garder((gg) => {
+          gg.strokeStyle = "rgb(" + manche[0] + "," + manche[1] + "," + manche[2] + ")"; gg.lineWidth = 2;
+          gg.beginPath(); gg.moveTo(ax, ay); gg.quadraticCurveTo((ax + bx) / 2, Math.min(ay, by) - 3, bx, by); gg.stroke();
+          gg.fillStyle = H.pixel.PAL.s; gg.fillRect(Math.round(bx) - 1, Math.round(by) - 1, 3, 2);
+        });
       });
-      ajouter(4.6, () => { const [x, y] = PI_(3.6, 2.3, 9); g.save(); g.translate(x, y); g.scale(0.55, 0.55); H.pixel.dessiner(g, "lolo", 0, 0, 1, 0); g.restore(); });
-      ajouter(4.65, () => { const [x, y] = PI_(2.9, 3.0, 11); H.pixel.dessiner(g, "memePas", x, y, 0.7, 0); });
+      ajouter(4.6, () => { const [x, y] = PI_(2.95, 2.3, 9); g.save(); g.translate(x, y); g.scale(0.55, 0.55); H.pixel.dessiner(g, "lolo", 0, 0, 1, 0); g.restore(); });
+      ajouter(4.65, () => { const [x, y] = PI_(2.6, 3.2, 12); H.pixel.dessiner(g, "memePas", x, y, 0.7, 0); });
     } else {
-      ajouter(4.6, () => { const [x, y] = PI_(2.9, 2.2, 9); g.save(); g.translate(x, y); g.scale(0.6, 0.6); H.pixel.dessiner(g, "lolo", 0, 0, 1, Math.floor(t / 900) % 2); g.restore(); o.boites.lolo = [x - 12, y - 18, x + 12, y]; });
-      ajouter(4.7, () => { const [x, y] = PI_(2.2, 2.9, 9); H.pixel.dessiner(g, "memePas", x, y, 0.8, 0); o.boites.meme = [x - 6, y - 8, x + 6, y]; });
+      ajouter(4.6, () => { const [x, y] = PI_(2.4, 2.3, 9), im = Math.floor(t / 900) % 2; garder((gg) => { gg.save(); gg.translate(x, y); gg.scale(0.6, 0.6); H.pixel.dessiner(gg, "lolo", 0, 0, 1, im); gg.restore(); }); o.boites.lolo = [x - 12, y - 18, x + 12, y]; });
+      ajouter(4.7, () => { const [x, y] = PI_(1.9, 3.3, 9); garder((gg) => H.pixel.dessiner(gg, "memePas", x, y, 0.8, 0)); o.boites.meme = [x - 6, y - 8, x + 6, y]; });
       if (o.canape) { perso(6.5, "ovo", 5.3, 0.95, 0, false, 7); perso(7.5, "luigi", 6.6, 0.95, 0, true, 7); }
       else { perso(8.8, "ovo", 4.75, 4.3, 0); perso(11.6, "luigi", 7.75, 4.3, 0, true); }
     }
@@ -1297,8 +1322,13 @@
     s.fillRect(0, 0, MI.L, MI.H);
     s.globalCompositeOperation = "destination-out";
     const trou = (x, y, rx, ry, a) => { s.save(); s.translate(x, y); s.scale(1, ry / rx); const d = s.createRadialGradient(0, 0, 0, 0, 0, rx); d.addColorStop(0, "rgba(0,0,0," + a + ")"); d.addColorStop(1, "rgba(0,0,0,0)"); s.fillStyle = d; s.beginPath(); s.arc(0, 0, rx, 0, Math.PI * 2); s.fill(); s.restore(); };
-    if (o.lampes) { trou(...PI_(0.6, 4.1, 12), 44, 30, 1); trou(...PI_(6.2, 4.3, 18), 50, 32, 1); }
+    if (o.lampes) { trou(...PI_(0.6, 4.4, 12), 44, 30, 1); trou(...PI_(6.2, 4.3, 18), 50, 32, 1); }
     if (o.feu) trou(...PI_(0.9, 1.0, 6), 34 + Math.sin(t / 130) * 2, 22, 0.9);
+    // les personnages restent en couleurs : on les découpe presque entièrement dans l'ombre (il
+    // leur reste juste un léger voile de nuit)
+    s.globalAlpha = 0.8;
+    for (const f of o.persos || []) f(s);
+    s.globalAlpha = 1;
     g.drawImage(sombre, 0, 0);
     // la lune par la baie, sur le sol, très douce et bleutée
     if (o.dodo || moment === "nuit") for (let k = 0; k < 3; k++) { const i0 = 4.4 + k * 1.05; polyIso(g, [PI_(i0, 0.1), PI_(i0 + 0.95, 0.1), PI_(i0 + 0.45, 3), PI_(i0 - 0.5, 3)], "rgba(150,185,245,0.12)"); }
@@ -1322,7 +1352,7 @@
       rect("table", ...bbox([PI_(5.2, 5, 12), PI_(7.2, 3.6, 12), PI_(7.2, 5, 0)]));
       rect("fenetre", ...bbox(surMurD(4.3, 7.5, 16, 52)));
       rect("canape", ...bbox([PI_(4.4, 1.4, 0), PI_(7.4, 0.1, 15), PI_(7.4, 1.4, 0)]));
-      rect("lit", ...bbox([PI_(0, 3.5, 0), PI_(4.4, 1.3, 16), PI_(4.4, 3.5, 0)]));
+      rect("lit", ...bbox([PI_(0, 3.9, 0), PI_(3.4, 1.3, 16), PI_(3.4, 3.9, 0)]));
       return z;
     };
     const versPetit = (e) => { const r = toile.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * MI.L, ((e.clientY - r.top) / r.height) * MI.H]; };
