@@ -316,3 +316,37 @@ window.H = window.H || {};
     },
   };
 })();
+
+// Les arbres, arbustes et lianes à feuilles caduques, et la couleur de leur feuillage d'automne.
+// H.feuillage(id) dit où en est leur feuillage aujourd'hui, au rythme du Midi : null pour les
+// plantes qui gardent leurs feuilles ; sinon { densite (0 nu → 1 plein), automne (part des
+// feuilles colorées), jeune (feuilles tendres du printemps), couleur, cle (pour les dessins) }.
+// Les feuilles prennent leurs couleurs dans la première quinzaine d'octobre, tombent en novembre ;
+// les branches restent nues en décembre, janvier et février ; tout repousse en mars et avril.
+(function () {
+  const H = window.H;
+  const CADUCS = {
+    "prunus-amygdalus": "#ff8f2e", "crataegus-monogyna": "#d23a2a", "alnus-glutinosa": "#c99a3a", "betula-pubescens": "#ffd23a",
+    "ribes-nigrum": "#e9b44c", "castanea-sativa": "#e8714a", "cornus-sanguinea": "#d23a2a", "rosa-canina": "#ff5b4f",
+    "eleutherococcus-senticosus": "#e9b44c", "ficus-carica": "#f6ee55", "rubus-idaeus": "#e8714a", "fraxinus-excelsior": "#c6cf55",
+    "vitex-agnus": "#c99a3a", "ginkgo-biloba": "#f6ee55", "humulus-lupulus": "#e9b44c", "aesculus-hippocastanum": "#e8714a",
+    "morus-nigra": "#ffd23a", "vaccinium-myrtillus": "#d23a2a", "corylus-avellana": "#ffd23a", "juglans-regia": "#e9b44c",
+    "passiflora-incarnata": "#e9b44c", "salix-alba": "#f6ee55", "sambucus-nigra": "#c99a3a", "tilia-cordata": "#ffd23a",
+    "lippia-citriodora": "#e9b44c", "vitis-vinifera": "#d23a2a", "rubus-fruticosus": "#c93f6e",
+  };
+  H.feuillage = function (id, date) {
+    const couleur = CADUCS[id];
+    if (!couleur) return null;
+    const d = date || new Date();
+    const j = (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 1)) / 864e5;
+    // (1er mars ≈ jour 59, 1er mai ≈ 120, 1er octobre ≈ 273, 27 octobre ≈ 299, 1er décembre ≈ 334)
+    let densite = 1, automne = 0, jeune = 0;
+    if (j < 59 || j >= 334) densite = 0;
+    else if (j < 120) { densite = Math.min(1, (j - 59) / 50); jeune = Math.min(1, 1 - (j - 100) / 20); }
+    else if (j >= 273) { automne = Math.min(1, (j - 273) / 26); densite = j < 299 ? 1 : Math.max(0, 1 - (j - 299) / 35); }
+    const q = (v) => Math.round(v * 10) / 10;
+    const f = { couleur, densite: q(densite), automne: q(automne), jeune: q(Math.max(0, jeune)) };
+    f.cle = f.densite + "," + f.automne + "," + f.jeune;
+    return f;
+  };
+})();

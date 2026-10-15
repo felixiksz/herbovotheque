@@ -380,7 +380,8 @@
         });
       }
     }
-    const cleD = "plante|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + rayonCases;
+    const saison = H.feuillage ? H.feuillage(p.id) : null;
+    const cleD = "plante|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + rayonCases + "|" + (saison ? saison.cle : "");
     return memo(cleD, () => {
       const r = H.alea(p.id + st);
       const rayon = st < 3 ? [4, 8, 11][st] : Math.max(12, Math.min(rayonCases * T, 6 * T));
@@ -401,9 +402,22 @@
         H.aqua.tache(ctx, r, cx + 3, cy - 3, 3.5, 2, feuille, { alpha: 0.3, couches: 6 });
       } else {
         const arbre = v.cycle === "Arbre" || v.cycle === "Arbuste";
-        if (arbre && st === 3) {
+        if (arbre && st === 3 && saison && saison.densite < 1) {
+          // vu de dessus, un arbre qui se dégarnit : ses branches en étoile, et ce qui reste de feuilles
+          for (let k = 0; k < 7; k++) {
+            const a = (k / 7) * Math.PI * 2 + r() * 0.4;
+            H.aqua.trait(ctx, r, [[cx, cy], [cx + Math.cos(a) * rayon * 0.5, cy + Math.sin(a) * rayon * 0.5], [cx + Math.cos(a + 0.3) * rayon * 0.85, cy + Math.sin(a + 0.3) * rayon * 0.85]], { couleur: "#6b4a34", epaisseur: 1 });
+          }
+          const reste = saison.automne > 0.5 ? saison.couleur : saison.jeune ? "#9cc77a" : feuille;
+          if (saison.densite > 0) for (let k = 0; k < Math.round(12 * saison.densite); k++) {
+            const a = r() * Math.PI * 2, dd = Math.sqrt(r()) * rayon * 0.8;
+            H.aqua.tache(ctx, r, cx + Math.cos(a) * dd, cy + Math.sin(a) * dd, rayon * 0.25, rayon * 0.2, reste, { alpha: 0.18, couches: 5 });
+          }
+        } else if (arbre && st === 3) {
+          const teinte = saison && saison.automne ? saison.couleur : feuille;
           H.aqua.tache(ctx, r, cx + 3, cy + 4, rayon * 0.9, rayon * 0.75, "#23214a", { alpha: 0.03, couches: 8 });
           H.aqua.tache(ctx, r, cx, cy, rayon, rayon * 0.92, feuille, { alpha: 0.075, couches: 16, bord: 0.35 });
+          if (saison && saison.automne) for (let k = 0; k < Math.round(10 * saison.automne); k++) { const a = r() * Math.PI * 2, dd = Math.sqrt(r()) * rayon * 0.8; H.aqua.tache(ctx, r, cx + Math.cos(a) * dd, cy + Math.sin(a) * dd, rayon * 0.3, rayon * 0.25, teinte, { alpha: 0.2, couches: 5 }); }
           H.aqua.tache(ctx, r, cx - rayon * 0.3, cy - rayon * 0.3, rayon * 0.45, rayon * 0.4, "#c9e08a", { alpha: 0.06, couches: 8 });
         } else {
           const n = st === 2 ? 4 : 7;
@@ -1049,7 +1063,8 @@
     // (le modèle en volume n'est prêt qu'une fois ses images chargées : la clé le dit, pour redessiner)
     const volumePret = debout && st >= 2 ? !!modeleVolume(p) : false;
     const versions = ["dessinFace", "dessinCote", "dessinCarte"].map((c) => (p[c] ? p[c].length : 0)).join(",");
-    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + versions + "|" + (volumePret ? 1 : 0), () => {
+    const saison = H.feuillage ? H.feuillage(p.id) : null;
+    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + versions + "|" + (volumePret ? 1 : 0) + "|" + (saison ? saison.cle : ""), () => {
       const L = w + 6, Hh = h + 6, toile = (lw, lh) => { const c = document.createElement("canvas"); c.width = lw; c.height = lh; return c; };
       const pied = toile(L, Hh), g = pied.getContext("2d"), cx = Math.floor(L / 2), sol = Hh - 2;
       const R = (gg, x, y, ww, hh, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(ww)), Math.max(1, Math.round(hh))); };
@@ -1097,23 +1112,43 @@
         for (let y = 2; y < ht; y += 3) R(g, cx - tw / 2 + 1 + (y % 2), sol - y, 1, 1, "#4b3427");
         R(g, cx - tw / 2 - 1, sol, tw + 2, 1, "#4b3427");
         for (const sens of [-1, 1]) for (let q = 0; q < Math.max(3, w * 0.2); q++) R(g, cx + sens * (tw / 2 + q * 0.8), sol - ht - q, 1, 1, "#7a4520");
+        // en automne, des feuilles tombées dans l'herbe, au pied
+        if (saison && saison.automne > 0.4 && st >= 2) for (let k = 0; k < Math.max(4, w / 2); k++) R(g, cx + (r() - 0.5) * w * 1.1, sol - r() * 2, 1, 1, r() < 0.6 ? saison.couleur : "#c99a3a");
         if (st >= 2) {
-          const couronne = toile(L, Hh), gc = couronne.getContext("2d");
-          masse(gc, cx, sol - ht - (h - ht) * 0.45, Math.max(2, Math.floor(w / 2)), Math.max(2, Math.floor((h - ht) * 0.55)));
-          if (fleur) for (let k = 0; k < Math.max(3, w / 4); k++) R(gc, cx + (r() - 0.5) * w * 0.8, sol - ht - (h - ht) * (0.2 + r() * 0.6), 1, 1, fleurCol);
+          const couronne = toile(L, Hh), gc = couronne.getContext("2d"), rx = Math.max(2, Math.floor(w / 2)), ry = Math.max(2, Math.floor((h - ht) * 0.55));
+          // quand les feuilles se font rares, on voit les branches nues
+          if (saison && saison.densite < 0.95) branchesNues(gc, cx, sol - ht, rx, h - ht, r);
+          if (!saison || saison.densite > 0) {
+            const feuilles = toile(L, Hh), gf = feuilles.getContext("2d");
+            masse(gf, cx, sol - ht - (h - ht) * 0.45, rx, ry);
+            if (fleur && (!saison || saison.densite >= 1)) for (let k = 0; k < Math.max(3, w / 4); k++) R(gf, cx + (r() - 0.5) * w * 0.8, sol - ht - (h - ht) * (0.2 + r() * 0.6), 1, 1, fleurCol);
+            appliquerSaison(feuilles, saison, p.id);
+            gc.drawImage(feuilles, 0, 0);
+          }
           res.couronne = couronne;
         }
         return res;
       }
       if (cycle === "Arbuste") {
-        masse(g, cx, sol - h / 2, Math.max(2, Math.floor(w / 2)), Math.max(2, Math.floor(h / 2)));
-        if (fleur) for (let k = 0; k < Math.max(3, w / 3); k++) R(g, cx + (r() - 0.5) * w * 0.8, sol - h * (0.2 + r() * 0.75), 1, 1, fleurCol);
+        // (un arbuste à feuilles caduques montre ses rameaux quand il se dégarnit)
+        if (saison && saison.densite < 0.95) for (let k = 0; k < 7; k++) { const a = -Math.PI / 2 + (k - 3) * 0.32; for (let s = 0; s < h * 0.85; s += 1) R(g, cx + Math.cos(a) * s * 0.6, sol - Math.sin(-a) * s, 1, 1, s < h * 0.4 ? "#7a4520" : "#9a6a3c"); }
+        if (!saison || saison.densite > 0) {
+          const feuilles = toile(L, Hh), gf = feuilles.getContext("2d");
+          masse(gf, cx, sol - h / 2, Math.max(2, Math.floor(w / 2)), Math.max(2, Math.floor(h / 2)));
+          if (fleur && (!saison || saison.densite >= 1)) for (let k = 0; k < Math.max(3, w / 3); k++) R(gf, cx + (r() - 0.5) * w * 0.8, sol - h * (0.2 + r() * 0.75), 1, 1, fleurCol);
+          appliquerSaison(feuilles, saison, p.id);
+          g.drawImage(feuilles, 0, 0);
+        }
         return res;
       }
       if (cycle === "Liane") {
         R(g, cx, sol - h, 1, h, "#9a6a3c");
-        for (let y = 0; y < h; y += 2) R(g, cx + (y % 4 ? 1 : -2), sol - y, 2, 1, y % 6 ? feuille : sombre);
-        if (fleur) for (let y = 4; y < h; y += 7) R(g, cx + 2, sol - y, 1, 1, fleurCol);
+        for (let y = 0; y < h; y += 2) {
+          if (saison && r() > saison.densite) continue;
+          const automne = saison && r() < saison.automne;
+          R(g, cx + (y % 4 ? 1 : -2), sol - y, 2, 1, automne ? saison.couleur : y % 6 ? feuille : sombre);
+        }
+        if (fleur && (!saison || saison.densite >= 1)) for (let y = 4; y < h; y += 7) R(g, cx + 2, sol - y, 1, 1, fleurCol);
         return res;
       }
       // les herbes : une touffe de tiges, des feuilles le long, et les fleurs au sommet
@@ -1126,6 +1161,38 @@
       }
       return res;
     });
+  }
+
+  // des branches nues dans la couronne : elles partent du haut du tronc et se divisent en montant
+  function branchesNues(gc, x0, y0, rx, haut, r) {
+    const pose = (x, y, c) => { gc.fillStyle = c; gc.fillRect(Math.round(x), Math.round(y), 1, 1); };
+    const branche = (x, y, a, l, n) => {
+      for (let s = 0; s < l; s++) pose(x + Math.cos(a) * s, y + Math.sin(a) * s, n > 1 ? "#6b4a34" : "#8a6a52");
+      if (n <= 0) return;
+      const xb = x + Math.cos(a) * l, yb = y + Math.sin(a) * l;
+      branche(xb, yb, a - 0.45 - r() * 0.2, l * 0.68, n - 1);
+      branche(xb, yb, a + 0.45 + r() * 0.2, l * 0.68, n - 1);
+    };
+    const l = Math.max(3, Math.min(rx * 0.7, haut * 0.35));
+    for (const a of [-Math.PI / 2 - 0.55, -Math.PI / 2, -Math.PI / 2 + 0.55]) branche(x0, y0, a, l, 3);
+  }
+  // le feuillage selon la saison : des trous qui s'agrandissent quand les feuilles tombent (par
+  // petits paquets, pas pixel par pixel), les feuilles d'automne dans leur couleur, en gardant
+  // l'ombre et la lumière du dessin, et le vert tendre des jeunes feuilles au printemps
+  function appliquerSaison(c, f, graine) {
+    if (!f || (f.densite >= 1 && !f.automne && !f.jeune)) return;
+    const g = c.getContext("2d"), im = g.getImageData(0, 0, c.width, c.height), d = im.data;
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), [ar, ag, ab] = rgb(f.couleur), g0 = H.hash(graine) % 997;
+    const bruit = (x, y, k) => { const v = Math.sin((x + g0) * 12.9898 + (y + k) * 78.233) * 43758.5453; return v - Math.floor(v); };
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4;
+      if (d[i + 3] < 10) continue;
+      if (bruit(x >> 1, y >> 1, 1) > f.densite) { d[i + 3] = 0; continue; }
+      const lum = Math.max(0.72, Math.min(1.3, 0.55 + (d[i] + d[i + 1] + d[i + 2]) / 3 / 180));
+      if (bruit(x >> 1, y >> 1, 2) < f.automne) { d[i] = Math.min(255, ar * lum); d[i + 1] = Math.min(255, ag * lum); d[i + 2] = Math.min(255, ab * lum); }
+      else if (f.jeune && bruit(x, y, 3) < f.jeune) { d[i] = Math.min(255, d[i] * 0.5 + 90); d[i + 1] = Math.min(255, d[i + 1] * 0.5 + 115); d[i + 2] = Math.min(255, d[i + 2] * 0.5 + 60); }
+    }
+    g.putImageData(im, 0, 0);
   }
 
   function dimensionnerIso() {

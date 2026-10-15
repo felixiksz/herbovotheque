@@ -14,7 +14,7 @@
   const alea = () => ((graine = (graine * 9301 + 49297) % 233280) / 233280);
 
   // --- les outils du pixel : rien n'est flou, tout est rempli ligne par ligne ---
-  function pixel(c, x, y, col) { c.fillStyle = col; c.fillRect(x | 0, y | 0, 1, 1); }
+  function pixel(c, x, y, col) { if (!col) return; c.fillStyle = col; c.fillRect(x | 0, y | 0, 1, 1); }
   function remplir(c, pts, col) {
     const ys = pts.map((p) => p[1]), y0 = Math.ceil(Math.min(...ys)), y1 = Math.floor(Math.max(...ys));
     c.fillStyle = col;
@@ -329,10 +329,28 @@
         for (let u = 0; u < 5; u++) vert(16.5, 6 - u, u % 2 === 0);
         vert(15, 4, true); vert(14, 3, false); vert(18, 4, true); vert(19, 3, false);
       });
-      case "figuier": return sprite("fig" + p.v, 18, 18, (c) => {
-        for (const [x, y, rx, ry] of [[9, 13, 3, 4], [5, 8, 3, 3], [12, 7, 3, 3], [9, 3, 2, 3]]) { ovale(c, x, y, rx, ry, null, (dx, dy, l) => (Math.abs(dx) >= l ? "#2f6b35" : dx < 0 ? "#9cc77a" : "#6cbd5c")); }
-        pixel(c, 4, 5, "#e04bb0"); pixel(c, 13, 4, "#ffd23a"); pixel(c, 9, 0, "#e04bb0");
-      });
+      case "figuier": {
+        // le figuier perd ses feuilles : jaunes en octobre, de moins en moins en novembre, les
+        // branches grises et lisses tout l'hiver, les jeunes feuilles vert tendre au printemps
+        const f = H.feuillage ? H.feuillage("ficus-carica") : null, cle = f ? f.cle : "";
+        return sprite("fig" + p.v + "|" + cle, 18, 18, (c) => {
+          if (f && f.densite < 0.95) {
+            for (let y = 0; y < 8; y++) { pixel(c, 9, 17 - y, "#8a8a86"); pixel(c, 10, 17 - y, "#6b6b66"); }
+            for (const [x1, y1] of [[4, 5], [14, 4], [9, 1], [6, 9], [13, 9]]) ligne(c, 9, 10, x1, y1, "#8a8a86");
+          }
+          if (f && f.densite === 0) return;
+          for (const [x, y, rx, ry] of [[9, 13, 3, 4], [5, 8, 3, 3], [12, 7, 3, 3], [9, 3, 2, 3]]) {
+            ovale(c, x, y, rx, ry, null, (dx, dy, l) => {
+              if (f && hash(x * 13 + dx, y * 7 + dy) > f.densite) return null;
+              const jaune = f && hash(x * 5 + dx, y * 11 + dy) < f.automne, tendre = f && f.jeune > 0.5;
+              if (Math.abs(dx) >= l) return jaune ? "#c99a3a" : tendre ? "#6cbd5c" : "#2f6b35";
+              if (jaune) return dx < 0 ? "#f6ee55" : "#ffd23a";
+              return tendre ? (dx < 0 ? "#c6cf55" : "#9cc77a") : dx < 0 ? "#9cc77a" : "#6cbd5c";
+            });
+          }
+          if (!f || (f.densite >= 1 && !f.automne)) { pixel(c, 4, 5, "#e04bb0"); pixel(c, 13, 4, "#ffd23a"); pixel(c, 9, 0, "#e04bb0"); }
+        });
+      }
       case "yucca": return sprite("yuc" + p.v, 20, 24, (c) => {
         for (let y = 0; y < 9; y++) { pixel(c, 10, 23 - y, "#9a6a3c"); pixel(c, 11, 23 - y, "#7a4520"); }
         for (let k = 0; k < 11; k++) { const a = -Math.PI / 2 + (k - 5) * 0.3; ligne(c, 10, 14, 10 + Math.cos(a) * 8, 14 + Math.sin(a) * 8, k % 2 ? "#3f8a42" : "#6cbd5c"); }
