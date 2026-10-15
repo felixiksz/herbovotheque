@@ -325,9 +325,12 @@
 
   // Dessins faits à la main (H.dessinerPlante) : chargés une fois, puis redessinés à la bonne taille.
   const imagesDessin = new Map();
-  function imageDessin(p) {
-    const src = p.dessinCarte;
-    let e = imagesDessin.get(p.id);
+  function imageDessin(p, champ) {
+    champ = champ || "dessinCarte";
+    const src = p[champ];
+    if (!src) return null;
+    const cleI = p.id + "|" + champ;
+    let e = imagesDessin.get(cleI);
     if (!e || e.src !== src) {
       e = { src, pret: false, img: new Image() };
       e.img.onload = () => {
@@ -335,7 +338,7 @@
         if (vue) dessiner();
       };
       e.img.src = src;
-      imagesDessin.set(p.id, e);
+      imagesDessin.set(cleI, e);
     }
     return e.pret ? e.img : null;
   }
@@ -1019,17 +1022,18 @@
   // dessiner après tout le reste, en transparence). L'origine est le pied, en bas au milieu.
   function planteDebout(p, ile, st, fleur) {
     const h = Math.round(hauteurPx(p, ile, st)), w = Math.round(largeurPx(p, ile, st)), v = p.valeurs || {};
-    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + (p.dessinCarte ? p.dessinCarte.length : 0), () => {
+    const debout = p.dessinFace ? "dessinFace" : p.dessinCote ? "dessinCote" : null;
+    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + (debout ? p[debout].length : 0), () => {
       const L = w + 6, Hh = h + 6, toile = (lw, lh) => { const c = document.createElement("canvas"); c.width = lw; c.height = lh; return c; };
       const pied = toile(L, Hh), g = pied.getContext("2d"), cx = Math.floor(L / 2), sol = Hh - 2;
       const R = (gg, x, y, ww, hh, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(ww)), Math.max(1, Math.round(hh))); };
       const feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length], sombre = assombrir(feuille, 0.7), clair = assombrir(feuille, 1.18).replace(/#(..)(..)(..)/, (m0, a, b, c) => "#" + [a, b, c].map((x) => Math.min(255, parseInt(x, 16)).toString(16).padStart(2, "0")).join(""));
       const fleurCol = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], r = H.alea(p.id + "|iso|" + st);
       const res = { pied, couronne: null, l: L, h: Hh, haut: h };
-      // un dessin fait à la main : il se dresse tel quel
-      if (p.dessinCarte && st >= 2) {
-        const img = imageDessin(p);
-        if (img) { g.imageSmoothingEnabled = false; g.drawImage(img, cx - w / 2, sol - h, w, h); return res; }
+      // un modèle dessiné à la main (vue de face, ou de côté) : il se dresse tel quel, à sa hauteur
+      if (debout && st >= 2) {
+        const img = imageDessin(p, debout);
+        if (img) { g.imageSmoothingEnabled = false; g.drawImage(img, cx - Math.max(w, h * 0.6) / 2, sol - h, Math.max(w, h * 0.6), h); return res; }
       }
       if (st === 0) { R(g, cx - 3, sol - 1, 6, 2, "#6b4423"); R(g, cx, sol - 2, 1, 1, "#4f7a3a"); return res; }
       // Un feuillage en grappes : une masse sombre, puis des bouquets de feuilles posés dessus,
@@ -2090,7 +2094,7 @@
       act("Purin", { purin: 1 }, () => { pl.purinJusqua = H.maintenant() + 7 * 24 * HEURE; });
       act("Rayon de soleil", { soleil: 1 }, () => { pl.c = Math.min(100, pl.c + 25); });
     }
-    actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, () => { dessiner(); inspecter(x, y); }) }, p.dessinCarte ? "Modifier son dessin" : "Dessiner son aspect"));
+    actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, () => { dessiner(); inspecter(x, y); }) }, p.dessinCarte || p.dessinFace || p.dessinCote ? "Modifier son modèle" : "Dessiner son modèle"));
     actions.appendChild(H.el("a.bouton.petit", { href: "#fiche/" + encodeURIComponent(p.id) }, "Voir la fiche"));
     P.appendChild(actions);
     dessiner();

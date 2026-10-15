@@ -17,7 +17,7 @@
     "Quand il pleut vraiment à Marseille, la pluie arrose tes îles toute seule. Hiii, pratique !",
     "Une île « croquis » sert à dessiner un vrai jardin à l’échelle, sans ressources. Tu peux en exporter la liste des plantes et l’image.",
     "Pailler garde l’eau deux semaines, le purin fortifie la plante, et un rayon de soleil la fait pousser d’un coup.",
-    "Tu peux dessiner toi-même l’aspect d’une plante sur la carte : « Dessiner son aspect », dans sa fiche.",
+    "Tu peux dessiner toi-même le modèle d’une plante, de côté, de dessus et de face : « Dessiner son modèle », dans sa fiche.",
     "Le placard à tisanes garde tes mélanges. Le rôle de chaque plante peut même devenir une flashcarte.",
     "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton île.",
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",

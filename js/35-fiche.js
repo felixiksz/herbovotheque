@@ -360,7 +360,7 @@
         H.el("h3", null, "Sur la carte du terrain"),
         H.el("div.ligne-carte", null,
           H.el("img.apercu-carte", { src: p.dessinCarte || (H.terrain ? H.terrain.dessinAuto(p) : ""), alt: "" }),
-          H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, recharger) }, p.dessinCarte ? "Modifier son dessin" : "Dessiner son aspect sur la carte")
+          H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, recharger) }, p.dessinCarte || p.dessinFace || p.dessinCote ? "Modifier son modèle" : "Dessiner son modèle")
         )
       ),
       H.photos ? H.photos.section(p, recharger, p.photo ? null : illus) : null

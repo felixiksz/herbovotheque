@@ -1,6 +1,7 @@
-// Dessiner soi-même l'aspect d'une plante sur la carte du terrain, en pixel art : une grille de
-// cases, la palette du jeu, un crayon, un gros crayon, le pot de peinture, la pipette et la gomme.
-// Le dessin est gardé dans la fiche (herbier) et remplace le dessin automatique.
+// Dessiner soi-même le modèle d'une plante, en pixel art, sous trois angles côte à côte : de côté,
+// de dessus et de face. Une grille de cases, la palette du jeu, un crayon, un gros crayon, le pot de
+// peinture, la pipette et la gomme. La vue de dessus sert pour la vue d'oiseau des îles, la vue de
+// face (ou, à défaut, de côté) pour la vue en relief. Les dessins sont gardés dans la fiche.
 (function () {
   const H = window.H;
   const CASES = 32;        // la grille : 32 × 32 cases
@@ -25,31 +26,63 @@
   H.dessinerPlante = function (id, apres) {
     const p = H.d.plante(id);
     if (!p) return;
-    // la grille elle-même : une case = un pixel de cette petite toile
-    const grille = document.createElement("canvas");
-    grille.width = grille.height = CASES;
-    const g = grille.getContext("2d", { willReadFrequently: true });
+    // les trois vues, chacune avec sa grille (une case = un pixel de sa petite toile) et son historique
+    const VUES = [["cote", "De côté", "dessinCote"], ["dessus", "De dessus", "dessinCarte"], ["face", "De face", "dessinFace"]];
+    const vues = {};
+    for (const [id] of VUES) {
+      const c = document.createElement("canvas");
+      c.width = c.height = CASES;
+      vues[id] = { grille: c, g: c.getContext("2d", { willReadFrequently: true }), historique: [] };
+    }
+    let vueActive = "dessus", grille = vues.dessus.grille, g = vues.dessus.g, historique = vues.dessus.historique;
     // ce qu'on voit : la grille agrandie, avec de fins traits entre les cases
     const toile = document.createElement("canvas");
     toile.width = toile.height = CASES * ZOOM;
     toile.className = "toile-dessin pixel";
     const ctx = toile.getContext("2d");
-    let couleur = COULEURS[3], outil = "crayon";
-    const historique = [];
+    let couleur = COULEURS[3], outil = "crayon", cadre = null;
 
+    // les trois vues en vignettes, côte à côte : on touche une vignette pour la dessiner en grand
+    const vignettes = H.el("div.vues-modele");
+    function dessinerVignettes() {
+      vignettes.innerHTML = "";
+      for (const [id, nom] of VUES) {
+        const mini = document.createElement("canvas");
+        mini.width = mini.height = CASES * 3;
+        const m = mini.getContext("2d");
+        m.imageSmoothingEnabled = false;
+        m.drawImage(vues[id].grille, 0, 0, mini.width, mini.height);
+        vignettes.appendChild(H.el("button.vue-modele" + (id === vueActive ? ".actif" : ""), { type: "button", "aria-pressed": String(id === vueActive), onclick: () => choisirVue(id) }, mini, H.el("span", null, nom)));
+      }
+    }
+    function choisirVue(id) {
+      vueActive = id;
+      ({ grille, g, historique } = vues[id]);
+      // le rond de sa place au sol pour la vue de dessus ; un cadre droit, avec le sol, de côté et de face
+      if (cadre) cadre.classList.toggle("debout", id !== "dessus");
+      afficher();
+    }
     function afficher() {
       ctx.clearRect(0, 0, toile.width, toile.height);
       ctx.imageSmoothingEnabled = false;
+      // la silhouette des autres vues, très pâle, pour garder les mêmes proportions
+      ctx.globalAlpha = 0.12;
+      for (const [id] of VUES) if (id !== vueActive && (vueActive !== "dessus") === (id !== "dessus")) ctx.drawImage(vues[id].grille, 0, 0, toile.width, toile.height);
+      ctx.globalAlpha = 1;
       ctx.drawImage(grille, 0, 0, toile.width, toile.height);
       ctx.fillStyle = "rgba(35,33,74,0.14)";
       for (let k = 1; k < CASES; k++) { ctx.fillRect(k * ZOOM, 0, 1, toile.height); ctx.fillRect(0, k * ZOOM, toile.width, 1); }
+      // le sol, sous les vues de côté et de face
+      if (vueActive !== "dessus") { ctx.fillStyle = "rgba(122,69,32,0.5)"; ctx.fillRect(0, toile.height - 2, toile.width, 2); }
+      dessinerVignettes();
     }
     function memoriser() {
       historique.push(g.getImageData(0, 0, CASES, CASES));
       if (historique.length > 40) historique.shift();
     }
     // le dessin de départ (le sien, ou le dessin automatique) ramené à la grille et à la palette
-    function charger(src) {
+    function charger(src, id) {
+      const { g } = vues[id];
       return new Promise((ok) => {
         const img = new Image();
         img.onload = () => {
@@ -169,20 +202,23 @@
     afficher();
 
     const depart = p.dessinCarte || (H.terrain && H.terrain.dessinAuto ? H.terrain.dessinAuto(p) : null);
-    if (depart) charger(depart);
+    if (depart) charger(depart, "dessus");
+    if (p.dessinCote) charger(p.dessinCote, "cote");
+    if (p.dessinFace) charger(p.dessinFace, "face");
 
     let fermer;
     const corps = H.el("div.editeur-dessin", null,
-      H.el("h2", null, H.leNom(p, true) + " sur la carte"),
-      H.el("p.discret", null, "Dessine la plante vue de dessus, case par case, telle qu’elle apparaîtra sur tes îles. Le cercle montre sa place."),
-      H.el("div.cadre-dessin", null, toile),
+      H.el("h2", null, "Le modèle " + H.duNom(p)),
+      H.el("p.discret", null, "Dessine la plante case par case sous trois angles. La vue de dessus sert pour la vue d’oiseau de tes îles ; la vue de face (ou de côté) pour la vue en relief, debout, à sa vraie hauteur."),
+      vignettes,
+      (cadre = H.el("div.cadre-dessin", null, toile)),
       pastillesCouleurs,
       outils,
       H.el("div.boutons-bas", null,
-        p.dessinCarte ? H.el("button.bouton.discret-bouton", {
+        p.dessinCarte || p.dessinCote || p.dessinFace ? H.el("button.bouton.discret-bouton", {
           type: "button",
           onclick() {
-            H.d.majPlante(p.id, (x) => delete x.dessinCarte);
+            H.d.majPlante(p.id, (x) => { delete x.dessinCarte; delete x.dessinCote; delete x.dessinFace; });
             fermer();
             apres && apres();
           },
@@ -190,19 +226,26 @@
         H.el("button.bouton", {
           type: "button",
           onclick() {
-            // chaque case devient un carré net de 5 pixels
-            const sortie = document.createElement("canvas");
-            sortie.width = sortie.height = SORTIE;
-            const s = sortie.getContext("2d");
-            s.imageSmoothingEnabled = false;
-            s.drawImage(grille, 0, 0, SORTIE, SORTIE);
-            const url = sortie.toDataURL("image/png");
-            H.d.majPlante(p.id, (x) => (x.dessinCarte = url));
-            H.toast("Dessin enregistré");
+            // chaque case devient un carré net de 5 pixels ; une vue laissée vide n'est pas gardée
+            const urls = {};
+            for (const [id, , champ] of VUES) {
+              const d = vues[id].g.getImageData(0, 0, CASES, CASES).data;
+              let vide = true;
+              for (let i = 3; i < d.length; i += 4) if (d[i] > 10) { vide = false; break; }
+              if (vide) { urls[champ] = null; continue; }
+              const sortie = document.createElement("canvas");
+              sortie.width = sortie.height = SORTIE;
+              const s = sortie.getContext("2d");
+              s.imageSmoothingEnabled = false;
+              s.drawImage(vues[id].grille, 0, 0, SORTIE, SORTIE);
+              urls[champ] = sortie.toDataURL("image/png");
+            }
+            H.d.majPlante(p.id, (x) => { for (const [champ, url] of Object.entries(urls)) { if (url) x[champ] = url; else delete x[champ]; } });
+            H.toast("Modèle enregistré");
             fermer();
             apres && apres();
           },
-        }, "Enregistrer le dessin")
+        }, "Enregistrer le modèle")
       )
     );
     fermer = H.fenetre(corps);
