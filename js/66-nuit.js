@@ -155,6 +155,7 @@
     arrondi(ctx, x, y, w, h, r);
     ctx.fillStyle = couleur;
     ctx.fill();
+    if (ECL) { modele(ctx, x, y, w, h, r); arrondi(ctx, x, y, w, h, r); }
     if (!sansTrait) ctx.stroke();
   }
   function feuille(ctx, x, y, l, angle, couleur) {
@@ -250,61 +251,159 @@
     ctx.lineWidth = 2.2;
   }
 
-  // L'éclairage du soir et de la nuit. L'air de la pièce est clair (ni vapeur ni fumée) : les
-  // lampes ne font pas de halo, elles éclairent seulement ce qui est près d'elles. On assombrit
-  // donc toute la pièce, sauf autour des deux lampes, où les murs, le sol, les meubles et les
-  // visages gardent leurs couleurs, réchauffées. La lampe de chevet éclaire surtout vers le bas
-  // et vers le haut (par les ouvertures de l'abat-jour) ; la boule, la table et les visages dessous.
-  const LAMPES = [
-    { x: 259 + DX, y: 175, rx: 165, ry: 130, chaud: "255,190,110" },
-    { x: 535 + DX, y: 195, rx: 175, ry: 135, chaud: "255,160,80" },
-  ];
-  // le feu du poêle éclaire aussi le coin gauche, quand il brûle
-  const FEU = { x: 50, y: 200, rx: 120, ry: 100, chaud: "255,140,60" };
-  const lampes = () => (cheminee.feuActif() ? LAMPES.concat(FEU) : LAMPES);
-  const masques = {};
-  function masqueNuit(moment) {
-    const cleM = moment + (cheminee.feuActif() ? "f" : "");
-    if (masques[cleM]) return masques[cleM];
-    const K = 2, c = document.createElement("canvas");
-    c.width = LARGE * K; c.height = 360 * K;
-    const g = c.getContext("2d");
-    g.scale(K, K);
-    g.fillStyle = moment === "nuit" ? "rgba(35,30,110,0.46)" : "rgba(50,40,120,0.26)";
-    g.fillRect(0, 0, LARGE, 360);
-    // là où la lampe éclaire, l'ombre s'en va
-    g.globalCompositeOperation = "destination-out";
-    for (const l of lampes()) {
-      g.save(); g.translate(l.x, l.y); g.scale(1, l.ry / l.rx);
-      const d = g.createRadialGradient(0, 0, 0, 0, 0, l.rx);
-      d.addColorStop(0, "rgba(0,0,0,1)"); d.addColorStop(0.45, "rgba(0,0,0,0.75)"); d.addColorStop(1, "rgba(0,0,0,0)");
-      g.fillStyle = d; g.beginPath(); g.arc(0, 0, l.rx, 0, Math.PI * 2); g.fill();
-      g.restore();
+  // La lumière de la pièce. Une lumière ne se pose pas sur les choses comme un voile : elle change
+  // leur couleur. On peint donc d'abord la pièce dans ses vraies couleurs, puis chaque point est
+  // multiplié par la couleur de la lumière qu'il reçoit : la lumière de la pièce partout (claire
+  // et un peu froide le jour, violette au crépuscule, bleu nuit la nuit), le ciel qui entre par la
+  // baie, et le soir les deux lampes, chaudes. Près d'une lampe, une couleur se réchauffe et
+  // s'éclaircit ; loin, elle s'assombrit et bleuit, sans jamais devenir grise. Tout près des
+  // ampoules, les surfaces prennent en plus un reflet vif de la couleur de la lampe. Chaque
+  // meuble a son modelé : le côté tourné vers la lumière s'éclaire d'un liseré de sa couleur,
+  // l'autre côté passe dans l'ombre (teintée de la couleur de la pièce) ; devant la baie, le
+  // canapé est en contre-jour, le haut des formes s'allume. Le soleil et le feu, qui bougent,
+  // s'ajoutent à chaque image de la même façon (couleur de la chose × couleur de la lumière).
+  // eteint : pour dormir, les lampes éteintes ; seule la nuit entre par la baie
+  const rgba = (c, a) => "rgba(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + "," + (a == null ? 1 : a) + ")";
+  const SOLEIL = { jour: [255, 238, 196], soir: [255, 168, 104] };
+  const FEU_COUL = [255, 122, 40];
+  function lumieres(moment, eteint) {
+    const lampes = !eteint && moment !== "jour";
+    const ciel = { jour: [66, 62, 46], soir: [130, 72, 66], nuit: [26, 34, 70] }[moment];
+    const sources = [
+      { x: BAIE.x + BAIE.w / 2, y: 215, rx: 330, ry: 190, col: ciel, rim: moment === "jour" ? [255, 248, 222] : moment === "soir" ? [255, 172, 140] : [170, 190, 255], poids: lampes ? 0.3 : 1 },
+    ];
+    if (lampes) {
+      sources.push({ x: 259 + DX, y: 168, rx: 180, ry: 140, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 75 });
+      sources.push({ x: BOULE.x, y: 196, rx: 195, ry: 150, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 85 });
     }
-    return (masques[cleM] = c);
+    return {
+      ambiant: eteint ? [38, 42, 94] : { jour: [204, 198, 210], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
+      ombre: { jour: "50,46,120", soir: "70,26,96", nuit: "16,16,64" }[moment],
+      sources,
+    };
   }
-  // (la composition et le découpage sont réglés par l'appelant)
-  function assombrir(ctx, moment) {
-    if (moment === "jour") return;
-    ctx.drawImage(masqueNuit(moment), 0, 0, LARGE, 360);
+  // une tache de lumière douce (ronde, aplatie)
+  function tache(g, x, y, rx, ry, col, a) {
+    a = a == null ? 1 : a;
+    g.save(); g.translate(x, y); g.scale(1, ry / rx);
+    const d = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    // (une chute douce, sans bord : la lumière s'éteint peu à peu)
+    for (const [u, f] of [[0, 1], [0.2, 0.86], [0.4, 0.6], [0.6, 0.32], [0.8, 0.1], [1, 0]]) d.addColorStop(u, rgba(col, a * f));
+    g.fillStyle = d; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
+    g.restore();
   }
-  // La couleur chaude de l'ampoule sur les surfaces éclairées. surDecor : le décor, entièrement
-  // peint, où l'on mêle la couleur en « lumière douce » (les teintes et les reliefs restent) ;
-  // sinon les personnages, où l'on pose un voile chaud léger seulement sur leurs pixels.
-  function eclairer(ctx, moment, surDecor) {
-    if (moment === "jour") return;
-    const fort = moment === "nuit" ? 1 : 0.7;
+  // la carte de la lumière reçue en chaque point (k : échelle du dessin vers les pixels)
+  function carteLumiere(lw, lh, k, L) {
+    const c = document.createElement("canvas"), g = c.getContext("2d");
+    c.width = lw; c.height = lh;
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.fillStyle = rgba(L.ambiant); g.fillRect(0, 0, LARGE, 360);
+    g.globalCompositeOperation = "lighter";
+    for (const s of L.sources) tache(g, s.x, s.y, s.rx, s.ry, s.col);
+    return c;
+  }
+  // les reflets vifs tout près des ampoules (null s'il n'y en a pas)
+  function carteEclats(lw, lh, k, L) {
+    const avec = L.sources.filter((s) => s.eclat);
+    if (!avec.length) return null;
+    const c = document.createElement("canvas"), g = c.getContext("2d");
+    c.width = lw; c.height = lh;
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.fillStyle = "#000"; g.fillRect(0, 0, LARGE, 360);
+    g.globalCompositeOperation = "lighter";
+    for (const s of avec) tache(g, s.x, s.y + 30, s.re, s.re * 0.6, s.eclat);
+    return c;
+  }
+  const tampons = {};
+  function tampon(nom, w, h) {
+    let c = tampons[nom];
+    if (!c) c = tampons[nom] = document.createElement("canvas");
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    const g = c.getContext("2d");
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+    g.clearRect(0, 0, w, h);
+    return c;
+  }
+  // éclaire une couche peinte dans ses vraies couleurs (« couleurs ») : multipliée par la carte de
+  // lumière (force < 1 : à moitié seulement), puis les reflets ; sa transparence est gardée
+  function eclairerCouche(dest, couleurs, carte, eclats, force) {
+    const g = dest.getContext("2d");
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = "source-over"; g.drawImage(couleurs, 0, 0);
+    g.globalCompositeOperation = "multiply"; g.globalAlpha = force == null ? 1 : force; g.drawImage(carte, 0, 0);
+    g.globalAlpha = 1; g.globalCompositeOperation = "destination-in"; g.drawImage(couleurs, 0, 0);
+    g.restore();
+    if (eclats) ajouterLumiere(dest, couleurs, eclats, 1);
+  }
+  // ajoute une lumière (masque : sa couleur en chaque point, noir ailleurs) : couleur × lumière
+  function ajouterLumiere(dest, couleurs, masque, alpha) {
+    const t = tampon("ajout", dest.width, dest.height), tg = t.getContext("2d");
+    tg.drawImage(couleurs, 0, 0);
+    tg.globalCompositeOperation = "multiply"; tg.drawImage(masque, 0, 0);
+    tg.globalCompositeOperation = "destination-in"; tg.drawImage(couleurs, 0, 0);
+    const g = dest.getContext("2d");
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "lighter"; g.globalAlpha = alpha; g.drawImage(t, 0, 0); g.restore();
+  }
+  // le modelé d'une forme : liseré du côté de la lumière la plus présente, ombre de l'autre côté
+  let ECL = null; // { k, L } pendant qu'on peint la pièce
+  function modele(ctx, x, y, w, h, r) {
+    if (w * h < 90) return;
+    const m = ctx.getTransform(), k = ECL.k, X = x + w / 2, Y = y + h / 2;
+    const cx = (m.a * X + m.c * Y + m.e) / k, cy = (m.b * X + m.d * Y + m.f) / k;
+    let meilleure = null, v = 0;
+    for (const src of ECL.L.sources) {
+      const d = Math.hypot(src.x - cx, src.y - cy), f = src.poids / (1 + (d / 260) ** 2);
+      if (f > v) { v = f; meilleure = src; }
+    }
+    if (!meilleure) return;
+    // la direction de la lumière, ramenée dans le repère de la forme (miroirs et rotations compris)
+    const vx = meilleure.x - cx, vy = meilleure.y - cy, inv = m.inverse();
+    let lx = inv.a * vx + inv.c * vy, ly = inv.b * vx + inv.d * vy;
+    const n = Math.hypot(lx, ly) || 1;
+    lx /= n; ly /= n;
+    const f = Math.min(1, v * 1.5);
     ctx.save();
-    if (surDecor) ctx.globalCompositeOperation = "soft-light";
-    for (const l of lampes()) {
-      ctx.save(); ctx.translate(l.x, l.y); ctx.scale(1, l.ry / l.rx);
-      const d = ctx.createRadialGradient(0, 0, 0, 0, 0, l.rx * 0.8);
-      const a = (surDecor ? 0.6 : 0.2) * fort;
-      d.addColorStop(0, "rgba(" + l.chaud + "," + a + ")"); d.addColorStop(1, "rgba(" + l.chaud + ",0)");
-      ctx.fillStyle = d; ctx.beginPath(); ctx.arc(0, 0, l.rx * 0.8, 0, Math.PI * 2); ctx.fill();
+    arrondi(ctx, x, y, w, h, r); ctx.clip();
+    const gr = ctx.createLinearGradient(X + (lx * w) / 2, Y + (ly * h) / 2, X - (lx * w) / 2, Y - (ly * h) / 2);
+    gr.addColorStop(0, rgba(meilleure.rim, 0.2 * f)); gr.addColorStop(0.45, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(" + ECL.L.ombre + ",0.34)");
+    ctx.fillStyle = gr; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+    const ep = Math.max(1.4, Math.min(3, Math.min(w, h) * 0.12));
+    ctx.translate(-lx * ep, -ly * ep);
+    arrondi(ctx, x, y, w, h, r);
+    ctx.lineWidth = ep * 1.4; ctx.strokeStyle = rgba(meilleure.rim, 0.55 * f); ctx.stroke();
+    ctx.restore();
+  }
+  // les ombres de contact, au pied des meubles (dans les mesures élargies)
+  function ombresAuSol(ctx) {
+    for (const [x0, x1, y] of [[10, 92, 252], [114, 330, 248], [332, 378, 250], [370, 530, 247], [530, 572, 296], [560, 700, 296], [690, 732, 296], [744, 792, 296]]) {
+      const cx = (x0 + x1) / 2, rx = (x1 - x0) / 2 + 6;
+      ctx.save(); ctx.translate(cx, y); ctx.scale(1, 7 / rx);
+      const d = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      d.addColorStop(0, "rgba(28,18,60,0.5)"); d.addColorStop(0.7, "rgba(28,18,60,0.22)"); d.addColorStop(1, "rgba(28,18,60,0)");
+      ctx.fillStyle = d; ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
-    ctx.restore();
+  }
+  // Les teintes que la lumière fait naître (pour le passage en gros pixels) : chaque matière de la
+  // pièce sous chaque lumière, pour que les dégradés chauds et froids ne soient pas ramenés aux
+  // seules couleurs franches de la palette du jeu.
+  const MATIERES = ["#26406a", "#2f6b35", "#c93f6e", "#7a2444", "#e9b44c", "#ff5b4f", "#ff7a6b", "#ffd23a", "#3d5ee8", "#7f97f2", "#f2f0e8", "#ffffff", "#ffb3a8", "#2c2a3e", "#c9ccd6", "#3f8a42", "#4f9a46", "#c96a3a", "#f2c29b", "#b9834f", "#7a4520", "#e04bb0", "#f3f0dc", "#23214a"]
+    .map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
+  const palettes = {};
+  function paletteMaison(moment, eteint) {
+    const cle = moment + (eteint ? "e" : "");
+    if (palettes[cle]) return palettes[cle];
+    const L = lumieres(moment, eteint), plus = (a, b, f) => a.map((v, i) => v + b[i] * f);
+    const lumi = [L.ambiant];
+    for (const src of L.sources) { lumi.push(plus(L.ambiant, src.col, 0.5), plus(L.ambiant, src.col, 1)); if (src.eclat) lumi.push(plus(plus(L.ambiant, src.col, 1), src.eclat, 1)); }
+    if (SOLEIL[moment]) lumi.push(plus(plus(L.ambiant, L.sources[0].col, 1), SOLEIL[moment], 0.8));
+    lumi.push(plus(L.ambiant, FEU_COUL, 0.7));
+    const out = [];
+    for (const m of MATIERES) for (const l of lumi) {
+      const c = m.map((v, i) => Math.min(255, (v * Math.min(255, l[i])) / 255 + (v * Math.max(0, l[i] - 255)) / 255));
+      if (!out.some((o) => Math.abs(o[0] - c[0]) + Math.abs(o[1] - c[1]) + Math.abs(o[2] - c[2]) < 18)) out.push(c.map(Math.round));
+    }
+    return (palettes[cle] = out);
   }
 
   // Le soleil qui entre par la baie vitrée et se pose sur le sol et le canapé : trois rectangles de
@@ -315,7 +414,7 @@
     const a = Math.sin(i * 12.9898) * 43758.5453, b = Math.sin(i * 78.233) * 12345.678;
     return [a - Math.floor(a), b - Math.floor(b), 3 + ((i * 7) % 6), i * 0.7];
   });
-  function soleilParLaBaie(ctx, t, etat, moment) {
+  function soleilParLaBaie(ctx, t, etat, moment, decor) {
     const s = etat.soleil, m = H.ciel.meteo || {};
     if (s.alt < 2) return;
     const couvert = m.nuages != null ? m.nuages / 100 : 0;
@@ -328,20 +427,24 @@
     // sur le sol devant
     const sol = (x, y) => { const d = (y - fy) / fh; return [x + pente * 120 * d * long, 184 + d * 160 * long]; };
     const vent = Math.sin(t / 2100) * 5 + Math.sin(t / 830) * 2;
+    const masque = tampon("soleil", decor.width, decor.height);
+    ctx = masque.getContext("2d");
+    ctx.setTransform(decor.k, 0, 0, decor.k, 0, 0);
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, LARGE, 360);
     ctx.save();
     // (seulement sur le canapé et sur le sol, pas sur le mur)
     ctx.beginPath(); ctx.rect(278 + DX, 168, 152, 80); ctx.rect(0, 232, LARGE, 128); ctx.clip();
-    const chaud = moment === "soir" ? "255,190,120" : "255,236,180";
+    const chaud = SOLEIL[moment].map((v) => v * force).join(",");
     for (let k = 0; k < 3; k++) {
       const x0 = fx + (fw * k) / 3 + 5, x1 = fx + (fw * (k + 1)) / 3 - 5, y0 = fy + 5, y1 = fy + fh - 5;
       const q = [sol(x0, y0), sol(x1, y0), sol(x1, y1), sol(x0, y1)];
       ctx.save();
       ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
       ctx.clip();
-      ctx.fillStyle = "rgba(" + chaud + "," + 0.62 * force + ")";
+      ctx.fillStyle = "rgb(" + chaud + ")";
       ctx.fillRect(0, 160, LARGE, 200);
       // l'ombre tachetée des feuilles, aplatie par la perspective
-      ctx.fillStyle = "rgba(60,40,90," + 0.42 * force + ")";
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
       for (const [u, v, r, ph] of FEUILLES) {
         const [x, y] = sol(fx + u * fw + vent * (0.6 + v), fy + v * fh * 0.85);
         const rr = r * (0.8 + 0.2 * Math.sin(t / 900 + ph));
@@ -350,20 +453,26 @@
       ctx.restore();
     }
     ctx.restore();
+    ajouterLumiere(toileDe(decor), decor.couleurs, masque, 1);
   }
 
   // Les flammes derrière la vitre de la cheminée, qui dansent, et leur lueur qui se pose sur le sol et
   // le mur autour (sans halo dans l'air), plus forte le soir.
-  function feuDuPoele(ctx, t, moment) {
+  // la lumière du feu en chaque point (elle vacille)
+  function masqueFeu(t, decor) {
     const vac = 0.85 + Math.sin(t / 130) * 0.08 + Math.sin(t / 57) * 0.05;
-    ctx.save();
-    ctx.globalCompositeOperation = "soft-light";
-    const g = ctx.createRadialGradient(50, 205, 0, 50, 205, 150);
-    const a = (moment === "jour" ? 0.4 : 0.75) * vac;
-    g.addColorStop(0, "rgba(255,150,60," + a + ")"); g.addColorStop(1, "rgba(255,150,60,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(50, 215, 150, 110, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    const masque = tampon("feu", decor.width, decor.height), g = masque.getContext("2d");
+    g.setTransform(decor.k, 0, 0, decor.k, 0, 0);
+    g.fillStyle = "#000"; g.fillRect(0, 0, LARGE, 360);
+    g.globalCompositeOperation = "lighter";
+    tache(g, 52, 206, 200, 150, FEU_COUL, vac);
+    tache(g, 52, 230, 70, 30, FEU_COUL, vac * 0.6);
+    return masque;
+  }
+  let toileCourante = null;
+  const toileDe = () => toileCourante;
+  function feuDuPoele(ctx, t, moment, decor) {
+    ajouterLumiere(ctx.canvas, decor.couleurs, masqueFeu(t, decor), moment === "jour" ? 0.5 : 0.95);
     // les flammes derrière la vitre du poêle
     const { x: vx, y: vy, w: vw, h: vh } = POELE.vitre;
     ctx.save();
@@ -382,12 +491,14 @@
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
   // eteint : pour dormir, les deux lampes éteintes (la pièce est sombre partout)
   function decorMaison(w, h, dpr, moment, eteint) {
-    const M = MOMENTS[moment];
-    const c = document.createElement("canvas");
-    c.width = Math.round(w * dpr);
-    c.height = Math.round(h * dpr);
-    const ctx = c.getContext("2d"), S = w / LARGE, r = H.alea("mazet");
-    ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+    // (les vraies couleurs, celles du plein jour : c'est la lumière qui les change ensuite)
+    const M = MOMENTS.jour, L = lumieres(moment, eteint);
+    const a = document.createElement("canvas");
+    a.width = Math.round(w * dpr);
+    a.height = Math.round(h * dpr);
+    const ctx = a.getContext("2d"), S = w / LARGE, r = H.alea("mazet"), k = dpr * S;
+    ECL = { k, L };
+    ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.strokeStyle = ENCRE;
@@ -423,6 +534,7 @@
     ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(338 + DX, 322, 96, 15, 0, 0, Math.PI * 2);
     ctx.strokeStyle = "#7f97f2"; ctx.stroke(); ctx.strokeStyle = ENCRE;
+    ombresAuSol(ctx);
 
     // la baie vitrée : on la découpe (le dehors se peint derrière), puis le cadre et les montants
     ctx.save();
@@ -472,8 +584,7 @@
     ctx.moveTo(247, 141); ctx.lineTo(271, 141); ctx.quadraticCurveTo(275, 141, 277, 147);
     ctx.lineTo(280, 160); ctx.quadraticCurveTo(281, 164, 277, 164);
     ctx.lineTo(241, 164); ctx.quadraticCurveTo(237, 164, 238, 160);
-    ctx.lineTo(241, 147); ctx.quadraticCurveTo(243, 141, 247, 141);
-    ctx.fillStyle = eteint ? "#e9e3cd" : M.lampe ? "#fff06a" : "#ffd23a"; ctx.fill(); ctx.stroke();
+    abatJour(ctx, "#e9e3cd");
 
     // le canapé corail sous la fenêtre
     bloc(ctx, 292, 170, 126, 46, 17, "#ff5b4f");
@@ -495,31 +606,43 @@
     chaises(ctx);
     ctx.restore();
 
-    // le soir et la nuit, la pièce s'assombrit, sauf là où la lampe éclaire (le lit et le canapé)
-    const ombre = (g) => {
-      if (moment === "jour") return;
-      if (eteint) { g.fillStyle = "rgba(20,18,70,0.62)"; g.fillRect(0, 0, LARGE, 360); }
-      else { assombrir(g, moment); eclairer(g, moment, true); }
-    };
-    if (moment !== "jour") {
-      ctx.save();
-      // (toute la pièce sauf la vitre : cheminFenetre recommencerait le tracé)
-      ctx.beginPath(); ctx.rect(0, 0, LARGE, 360); ctx.rect(BAIE.x, BAIE.y, BAIE.w, BAIE.h); ctx.clip("evenodd");
-      ombre(ctx);
-      ctx.restore();
-    }
-    plafonnier(ctx, moment, eteint);
+    // la boule éteinte reçoit la lumière de la pièce comme le reste
+    const allumee = !eteint && moment !== "jour";
+    if (!allumee) plafonnier(ctx, moment, true);
     // les chaises à part : la lumière du soleil passe derrière elles (voir soleilParLaBaie)
     const ch = document.createElement("canvas");
-    ch.width = c.width; ch.height = c.height;
+    ch.width = a.width; ch.height = a.height;
     const cg = ch.getContext("2d");
-    cg.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+    cg.setTransform(k, 0, 0, k, 0, 0);
     cg.lineJoin = "round"; cg.lineCap = "round"; cg.strokeStyle = ENCRE; cg.lineWidth = 2.2;
     cg.save(); cg.translate(DX, 0); chaises(cg); cg.restore();
-    cg.globalCompositeOperation = "source-atop";
-    ombre(cg);
-    c.chaises = ch;
+    ECL = null;
+
+    // puis la lumière
+    const carte = carteLumiere(a.width, a.height, k, L), reflets = carteEclats(a.width, a.height, k, L);
+    const c = document.createElement("canvas");
+    c.width = a.width; c.height = a.height;
+    eclairerCouche(c, a, carte, reflets);
+    const chL = document.createElement("canvas");
+    chL.width = a.width; chL.height = a.height;
+    eclairerCouche(chL, ch, carte, reflets);
+    // ce qui brille par soi-même : l'abat-jour allumé et la boule
+    const g = c.getContext("2d");
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.lineJoin = "round"; g.lineCap = "round"; g.strokeStyle = ENCRE; g.lineWidth = 2.2;
+    if (allumee) { g.save(); g.translate(DX, 0); abatJour(g, "#fff06a"); g.restore(); plafonnier(g, moment, false); }
+    Object.assign(c, { couleurs: a, carte, eclats: reflets, chaises: chL, k, L });
     return c;
+  }
+
+  // l'abat-jour de la lampe de chevet
+  function abatJour(ctx, couleur) {
+    ctx.beginPath();
+    ctx.moveTo(247, 141); ctx.lineTo(271, 141); ctx.quadraticCurveTo(275, 141, 277, 147);
+    ctx.lineTo(280, 160); ctx.quadraticCurveTo(281, 164, 277, 164);
+    ctx.lineTo(241, 164); ctx.quadraticCurveTo(237, 164, 238, 160);
+    ctx.lineTo(241, 147); ctx.quadraticCurveTo(243, 141, 247, 141);
+    ctx.fillStyle = couleur; ctx.fill(); ctx.stroke();
   }
 
   // la plante (son milieu, dans les mesures d'avant le décalage)
@@ -1083,8 +1206,10 @@
       ctx.drawImage(decor, 0, 0, LARGE, 360);
       // le jour, le soleil entre par la baie : l'ombre du cadre et des feuilles qui bougent ; il
       // passe derrière les chaises
-      if (moment !== "nuit") { soleilParLaBaie(ctx, t, etat, moment); ctx.drawImage(decor.chaises, 0, 0, LARGE, 360); }
-      if (cheminee.feuActif()) feuDuPoele(ctx, t, moment);
+      toileCourante = toile;
+      if (moment !== "nuit") { soleilParLaBaie(ctx, t, etat, moment, decor); ctx.drawImage(decor.chaises, 0, 0, LARGE, 360); }
+      const feu = cheminee.feuActif();
+      if (feu) feuDuPoele(ctx, t, moment, decor);
       // la vapeur du tilleul
       ctx.strokeStyle = "rgba(255,255,255,0.75)";
       ctx.lineWidth = 1.4;
@@ -1108,6 +1233,7 @@
       cc.lineCap = "round";
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 2.2;
+      ECL = { k: decor.k, L: decor.L };
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
       memeEnBoule(cc, 168, 203, t, 0.75);
       const surCanape = canapeJusqua > t;
@@ -1125,10 +1251,14 @@
       // la tête de Mesi : à table (dos 626) ou sur le canapé (dos 412, siège plus bas de 30)
       if (farce) dessinerFarce(cc, t, surCanape ? { x: 390, y: 126 } : { x: 604, y: 156 });
       cc.restore();
-      cc.globalCompositeOperation = "source-atop";
-      assombrir(cc, moment);
-      eclairer(cc, moment, false);
-      cc.globalCompositeOperation = "source-over";
+      ECL = null;
+      // les personnages reçoivent la même lumière que la pièce (et celle du feu)
+      {
+        const vraies = tampon("persos", calque.width, calque.height);
+        vraies.getContext("2d").drawImage(calque, 0, 0);
+        eclairerCouche(calque, vraies, decor.carte, decor.eclats);
+        if (feu) ajouterLumiere(calque, vraies, masqueFeu(t, decor), moment === "jour" ? 0.4 : 0.8);
+      }
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(calque, 0, 0);
@@ -1166,7 +1296,7 @@
       }
       ctx.restore();
       // de gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
-      H.retro.appliquer(toile, H.retro.taillePour(4), 0.3);
+      H.retro.appliquer(toile, H.retro.taillePour(4), 0.6, null, paletteMaison(moment, false));
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       // le nom de ce qu'on survole
       if (survol) {
@@ -2440,29 +2570,36 @@
       }
       cc.restore();
 
-      // tout le monde est dans le noir, comme la pièce (seulement sur leurs pixels)
-      cc.globalCompositeOperation = "source-atop";
-      cc.fillStyle = "rgba(20,18,70,0.22)"; cc.fillRect(0, 0, LARGE, 360);
-      cc.globalCompositeOperation = "source-over";
+      // tout le monde reçoit la lumière de la nuit, à moitié seulement : les visages restent lisibles
+      {
+        const vraies = tampon("persos", calque.width, calque.height);
+        vraies.getContext("2d").drawImage(calque, 0, 0);
+        eclairerCouche(calque, vraies, decor.carte, null, 0.55);
+      }
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(calque, 0, 0); ctx.restore();
 
       // la lune entre par les trois vitres et se pose sur le sol, en biais, avec l'ombre des branches
       const vent = Math.sin(t / 1800) * 6, { x: fx, y: fy, w: fw, h: fh } = BAIE;
       const proj = (x, y) => [x - (y - fy) * 0.75 - 40, 232 + (y - fy) * 0.62];
-      ctx.save();
-      ctx.beginPath(); ctx.rect(0, 232, LARGE, 128); ctx.clip();
-      for (let k = 0; k < 3; k++) {
-        const x0 = fx + (fw * k) / 3 + 4, x1 = fx + (fw * (k + 1)) / 3 - 4, y0 = fy + 4, y1 = fy + fh - 4;
-        const q = [proj(x0, y0), proj(x1, y0), proj(x1, y1), proj(x0, y1)];
-        ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-        ctx.fillStyle = "rgba(150,185,245,0.15)"; ctx.fill();
+      {
+        // (la lune sur les choses : leur couleur × la couleur de la lune)
+        const masque = tampon("lune", decor.width, decor.height), mg = masque.getContext("2d");
+        mg.setTransform(decor.k, 0, 0, decor.k, 0, 0);
+        mg.fillStyle = "#000"; mg.fillRect(0, 0, LARGE, 360);
+        mg.beginPath(); mg.rect(0, 232, LARGE, 128); mg.clip();
+        for (let k = 0; k < 3; k++) {
+          const x0 = fx + (fw * k) / 3 + 4, x1 = fx + (fw * (k + 1)) / 3 - 4, y0 = fy + 4, y1 = fy + fh - 4;
+          const q = [proj(x0, y0), proj(x1, y0), proj(x1, y1), proj(x0, y1)];
+          mg.beginPath(); q.forEach(([x, y], n) => (n ? mg.lineTo(x, y) : mg.moveTo(x, y))); mg.closePath();
+          mg.fillStyle = "rgb(120,150,220)"; mg.fill();
+        }
+        mg.fillStyle = "rgba(0,0,0,0.6)";
+        for (const [dx, dy] of [[30, 30], [46, 22], [24, 96], [40, 88], [70, 64], [96, 44], [110, 110]]) {
+          const [x, y] = proj(fx + dx + vent * 1.4, fy + dy);
+          mg.beginPath(); mg.ellipse(x, y, 11, 4.5, 0.3, 0, Math.PI * 2); mg.fill();
+        }
+        ajouterLumiere(toile, decor.couleurs, masque, 1);
       }
-      ctx.fillStyle = "rgba(14,16,48,0.18)";
-      for (const [dx, dy] of [[30, 30], [46, 22], [24, 96], [40, 88], [70, 64], [96, 44], [110, 110]]) {
-        const [x, y] = proj(fx + dx + vent * 1.4, fy + dy);
-        ctx.beginPath(); ctx.ellipse(x, y, 11, 4.5, 0.3, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.restore();
 
       // de temps en temps, Mémé ronfle : un petit « rrr » s'envole
       if (t > prochainRonflement) {
@@ -2479,7 +2616,7 @@
         ctx.globalAlpha = 1;
       }
       // tout passe en gros pixels, aux couleurs des pochettes
-      H.retro.appliquer(toile, H.retro.taillePour(4), 0.3);
+      H.retro.appliquer(toile, H.retro.taillePour(4), 0.6, null, paletteMaison("nuit", true));
     }
     requestAnimationFrame(image);
   }

@@ -25,15 +25,24 @@
     // outremer
     "#3d5ee8", "#7f97f2",
   ].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
-  // la couleur de palette la plus proche, retenue pour chaque teinte déjà rencontrée
-  const table = new Int16Array(32768).fill(-1);
+  // la couleur de palette la plus proche, retenue pour chaque teinte déjà rencontrée ; une scène
+  // peut ajouter ses propres teintes (celles que fait naître sa lumière, par exemple)
+  const jeux = new Map(), base = { pal: PALETTE, table: new Int16Array(32768).fill(-1) };
+  function jeu(enPlus) {
+    if (!enPlus || !enPlus.length) return base;
+    let j = jeux.get(enPlus);
+    if (!j) jeux.set(enPlus, (j = { pal: PALETTE.concat(enPlus), table: new Int16Array(32768).fill(-1) }));
+    return j;
+  }
+  let actuel = base;
   function proche(r, g, b) {
+    const { pal, table } = actuel;
     const cle = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
     let i = table[cle];
     if (i >= 0) return i;
     let mieux = 1e9;
-    for (let k = 0; k < PALETTE.length; k++) {
-      const [pr, pg, pb] = PALETTE[k];
+    for (let k = 0; k < pal.length; k++) {
+      const [pr, pg, pb] = pal[k];
       const dr = r - pr, dg = g - pg, db = b - pb;
       const d = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
       if (d < mieux) { mieux = d; i = k; }
@@ -49,8 +58,9 @@
   // dégradés en paliers) à 1 (la trame habituelle)
   // defile : { x, depuis } fait glisser la trame avec le décor, sous la ligne « depuis » (de 0 à 1),
   // pour qu'un sol qui défile emporte ses petits points avec lui
-  function appliquer(toile, taille, trame, defile) {
+  function appliquer(toile, taille, trame, defile, enPlus) {
     const forceTrame = trame == null ? 1 : trame;
+    actuel = jeu(enPlus);
     const W = toile.width, Hh = toile.height;
     if (!W || !Hh) return;
     const sw = Math.max(1, Math.ceil(W / taille)), sh = Math.max(1, Math.ceil(Hh / taille));
@@ -77,7 +87,7 @@
         const m = (d[i] + d[i + 1] + d[i + 2]) / 3;
         const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
         const r = rs(d[i]), g = rs(d[i + 1]), b = rs(d[i + 2]);
-        const c = PALETTE[proche(r, g, b)];
+        const c = actuel.pal[proche(r, g, b)];
         d[i] = c[0];
         d[i + 1] = c[1];
         d[i + 2] = c[2];
