@@ -343,6 +343,29 @@
     return e.pret ? e.img : null;
   }
 
+  // le modèle en volume d'une plante (ses trois vues dessinées à la main), quand ses images sont
+  // chargées ; null sinon
+  const volumes = new Map();
+  function modeleVolume(p) {
+    const cleV = p.id + "|" + ["dessinFace", "dessinCote", "dessinCarte"].map((c) => (p[c] ? p[c].length : 0)).join("|");
+    if (volumes.has(cleV)) return volumes.get(cleV);
+    const images = {}, champs = { face: "dessinFace", cote: "dessinCote", dessus: "dessinCarte" };
+    for (const [vue2, champ] of Object.entries(champs)) {
+      if (!p[champ]) continue;
+      const img = imageDessin(p, champ);
+      if (!img) return null; // pas encore chargée : on redessinera
+      const c = document.createElement("canvas");
+      c.width = c.height = 32;
+      const cc = c.getContext("2d");
+      cc.imageSmoothingEnabled = false;
+      cc.drawImage(img, 0, 0, 32, 32);
+      images[vue2] = c;
+    }
+    const m = H.modele3d ? H.modele3d(images) : null;
+    volumes.set(cleV, m);
+    return m;
+  }
+
   function dessinPlante(p, st, fleur, rayonCases) {
     if (p.dessinCarte && st >= 2) {
       const img = imageDessin(p);
@@ -1023,17 +1046,25 @@
   function planteDebout(p, ile, st, fleur) {
     const h = Math.round(hauteurPx(p, ile, st)), w = Math.round(largeurPx(p, ile, st)), v = p.valeurs || {};
     const debout = p.dessinFace ? "dessinFace" : p.dessinCote ? "dessinCote" : null;
-    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + (debout ? p[debout].length : 0), () => {
+    // (le modèle en volume n'est prêt qu'une fois ses images chargées : la clé le dit, pour redessiner)
+    const volumePret = debout && st >= 2 ? !!modeleVolume(p) : false;
+    const versions = ["dessinFace", "dessinCote", "dessinCarte"].map((c) => (p[c] ? p[c].length : 0)).join(",");
+    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + versions + "|" + (volumePret ? 1 : 0), () => {
       const L = w + 6, Hh = h + 6, toile = (lw, lh) => { const c = document.createElement("canvas"); c.width = lw; c.height = lh; return c; };
       const pied = toile(L, Hh), g = pied.getContext("2d"), cx = Math.floor(L / 2), sol = Hh - 2;
       const R = (gg, x, y, ww, hh, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(ww)), Math.max(1, Math.round(hh))); };
       const feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length], sombre = assombrir(feuille, 0.7), clair = assombrir(feuille, 1.18).replace(/#(..)(..)(..)/, (m0, a, b, c) => "#" + [a, b, c].map((x) => Math.min(255, parseInt(x, 16)).toString(16).padStart(2, "0")).join(""));
       const fleurCol = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], r = H.alea(p.id + "|iso|" + st);
       const res = { pied, couronne: null, l: L, h: Hh, haut: h };
-      // un modèle dessiné à la main (vue de face, ou de côté) : il se dresse tel quel, à sa hauteur
+      // un modèle dessiné à la main : ses trois vues forment un volume, dressé à sa vraie hauteur
       if (debout && st >= 2) {
-        const img = imageDessin(p, debout);
-        if (img) { g.imageSmoothingEnabled = false; g.drawImage(img, cx - Math.max(w, h * 0.6) / 2, sol - h, Math.max(w, h * 0.6), h); return res; }
+        const m = modeleVolume(p);
+        if (m) {
+          const k = h / m.height, mw = Math.round(m.width * k), toile2 = toile(Math.max(L, mw + 4), Hh), g2 = toile2.getContext("2d");
+          g2.imageSmoothingEnabled = false;
+          g2.drawImage(m, Math.round(toile2.width / 2 - mw / 2), sol - h, mw, h);
+          return Object.assign(res, { pied: toile2, l: toile2.width });
+        }
       }
       if (st === 0) { R(g, cx - 3, sol - 1, 6, 2, "#6b4423"); R(g, cx, sol - 2, 1, 1, "#4f7a3a"); return res; }
       // Un feuillage en grappes : une masse sombre, puis des bouquets de feuilles posés dessus,
