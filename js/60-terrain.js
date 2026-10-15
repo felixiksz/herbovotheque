@@ -2126,7 +2126,7 @@
       act("Rayon de soleil", { soleil: 1 }, () => { pl.c = Math.min(100, pl.c + 25); });
     }
     actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, () => { dessiner(); inspecter(x, y); }) }, p.dessinCarte || p.dessinFace || p.dessinCote ? "Modifier son modèle" : "Dessiner son modèle"));
-    actions.appendChild(H.el("a.bouton.petit", { href: "#fiche/" + encodeURIComponent(p.id) }, "Voir la fiche"));
+    actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.fiche.carte(p.id) }, "Voir la fiche"));
     P.appendChild(actions);
     dessiner();
     if (!ile.croquis && Math.random() < 0.3) appelerMesi(false, p);

@@ -521,6 +521,12 @@
       return;
     }
     actuelle = id;
+    conteneur.appendChild(H.el("div.navigateur-fiche", null, chromeNavigateur(id), pageFiche(p)));
+  }
+
+  // la page d'une fiche (en-tête, sections en onglets, étiquette), pour l'herbothèque ou pour la
+  // carte qui s'ouvre par-dessus le jardin
+  function pageFiche(p) {
     const page = H.el("article.page-herbier");
     page.appendChild(enTete(p));
     // les sections de la fiche en onglets, comme les fenêtres de l'ordinateur ; l'onglet ouvert
@@ -550,8 +556,30 @@
     }
     page.appendChild(H.bureau.onglets(onglets, { cle: "fiche" }));
     page.appendChild(etiquetteHerbier(p));
-    conteneur.appendChild(H.el("div.navigateur-fiche", null, chromeNavigateur(id), page));
+    return page;
   }
+
+  // La fiche en carte, par-dessus le jardin : on la lit sans quitter l'île, on peut la réduire en
+  // bas de l'écran (un clic sur sa barre la rouvre) ou la fermer.
+  let carte = null;
+  function carteFiche(id) {
+    const p = H.d.plante(id);
+    if (!p) return;
+    if (carte) carte.remove();
+    const corps = H.el("div.corps-carte-fiche", null, pageFiche(p));
+    const reduire = H.el("button.bouton-carte-fiche", { type: "button", "aria-label": "Réduire la fiche", title: "Réduire" }, "_");
+    const barre = H.el("div.barre-carte-fiche", null,
+      H.el("span.titre-carte-fiche", null, p.nom),
+      reduire,
+      H.el("button.bouton-carte-fiche", { type: "button", "aria-label": "Fermer la fiche", title: "Fermer", onclick: (e) => { e.stopPropagation(); carte.remove(); carte = null; } }, "×"));
+    carte = H.el("section.carte-fiche", { role: "dialog", "aria-label": "Fiche : " + p.nom }, barre, corps);
+    const basculer = () => { carte.classList.toggle("reduite"); reduire.textContent = carte.classList.contains("reduite") ? "▢" : "_"; reduire.title = carte.classList.contains("reduite") ? "Rouvrir" : "Réduire"; };
+    reduire.addEventListener("click", (e) => { e.stopPropagation(); basculer(); });
+    barre.addEventListener("click", () => carte.classList.contains("reduite") && basculer());
+    document.body.appendChild(carte);
+  }
+  // la carte se ferme quand on quitte l'île
+  window.addEventListener("hashchange", () => { if (carte && !location.hash.startsWith("#terrain/")) { carte.remove(); carte = null; } });
 
   function recharger() {
     if (!conteneur || !actuelle) return;
@@ -576,5 +604,5 @@
     },
   };
 
-  H.fiche = { planche, calendrier, valeurLecture };
+  H.fiche = { planche, calendrier, valeurLecture, carte: carteFiche };
 })();

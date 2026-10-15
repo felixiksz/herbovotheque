@@ -157,3 +157,14 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .cadre-dessin.debout { border-radius: 0; background: linear-gradient(#d6eef7, #f3f0dc 96.8%, #b9834f 96.8%); }
 .vue-modele.vue-3d { cursor: default; background: #eaf5c8; }
 .vue-modele.vue-3d canvas { background: linear-gradient(#d6eef7, #f3f0dc); }
+
+/* la fiche en carte, par-dessus le jardin (réductible) */
+.carte-fiche { position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 60; width: min(560px, calc(100vw - 24px)); max-height: 72vh; display: flex; flex-direction: column; background: var(--papier); color: var(--encre); border: 2px solid #23214a; box-shadow: 5px 5px 0 #23214a; }
+.barre-carte-fiche { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; background: #f3ee6a; color: #23214a; border-bottom: 2px solid #23214a; cursor: default; }
+.titre-carte-fiche { flex: 1; font: 1.3rem/1.1 var(--menu-police); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bouton-carte-fiche { width: 28px; height: 26px; display: grid; place-items: center; font: 1.2rem/1 var(--menu-police); background: #fffdf4; color: #23214a; border: 2px solid #23214a; border-radius: 0; cursor: pointer; padding: 0; }
+.corps-carte-fiche { overflow-y: auto; padding: 10px 14px 14px; -webkit-overflow-scrolling: touch; }
+.carte-fiche.reduite { width: auto; max-width: min(320px, calc(100vw - 24px)); }
+.carte-fiche.reduite .corps-carte-fiche { display: none; }
+.carte-fiche.reduite .barre-carte-fiche { border-bottom: 0; cursor: pointer; }
+.carte-fiche .fiche-nav { display: none; }
