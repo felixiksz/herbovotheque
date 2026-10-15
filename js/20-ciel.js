@@ -32,6 +32,23 @@
     return { ra: ascDroite(l, b), dec: declinaison(l, b), dist: 385001 - 20905 * cos(M) };
   }
 
+  // La Lune dans le zodiaque (tropical) : sa longitude sur l'écliptique, avec les principaux
+  // termes correctifs (à quelques dixièmes de degré près), puis le signe et le degré dans le signe
+  const SIGNES = ["Bélier", "Taureau", "Gémeaux", "Cancer", "Lion", "Vierge", "Balance", "Scorpion", "Sagittaire", "Capricorne", "Verseau", "Poissons"];
+  function signeLune(date) {
+    const d = enJours(date || new Date());
+    const L = 218.316 + 13.176396 * d, Ml = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.22935 * d);
+    const D = rad * (297.850 + 12.190749 * d), Ms = rad * (357.529 + 0.98560028 * d);
+    let l = L + 6.289 * sin(Ml) - 1.274 * sin(2 * D - Ml) + 0.658 * sin(2 * D) - 0.214 * sin(2 * Ml) - 0.186 * sin(Ms) - 0.114 * sin(2 * F);
+    return dansLeSigne(l);
+  }
+  const dansLeSigne = (l) => { l = ((l % 360) + 360) % 360; return { longitude: l, signe: SIGNES[Math.floor(l / 30)], degre: Math.floor(l % 30) }; };
+  // et le Soleil (longitude écliptique, équation du centre)
+  function signeSoleil(date) {
+    const d = enJours(date || new Date()), M = rad * (357.5291 + 0.98560028 * d);
+    return dansLeSigne(M / rad + 1.9148 * sin(M) + 0.02 * sin(2 * M) + 0.0003 * sin(3 * M) + 282.9372);
+  }
+
   function positionSoleil(date, lat, lon) {
     const lw = rad * -lon, phi = rad * lat, d = enJours(date);
     const c = coordSoleil(d);
@@ -162,6 +179,8 @@
     eclairageLune,
     heuresSoleil,
     nomPhase,
+    signeLune,
+    signeSoleil,
     saison,
     teinteCiel,
     // le ciel couvert selon la météo (et la pluie de joie de Lóló) : null quand il fait beau
