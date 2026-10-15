@@ -302,11 +302,19 @@
     for (const s of L.sources) tache(g, s.x, s.y, s.rx, s.ry, s.col);
     // sous la table, le plateau fait de l'ombre : la boule (juste au-dessus) n'y arrive pas, la
     // lumière de la pièce un peu
+    // (entre les pieds, on voit le sol derrière la table, encore éclairé par la boule tout autour ;
+    // plus on descend vers le sol juste sous le plateau, plus il fait sombre)
     g.globalCompositeOperation = "source-over";
-    g.filter = "blur(" + Math.round(6 * k) + "px)";
-    g.fillStyle = rgba(L.ambiant, L.sources.some((s) => s.table) ? 0.85 : 0.35);
-    if (!L.sources.some((s) => s.table)) g.fillStyle = "rgba(0,0,0,0.12)";
-    g.fillRect(474 + DX, 228, 122, 66);
+    g.filter = "blur(" + Math.round(5 * k) + "px)";
+    const sousLaTable = g.createLinearGradient(0, 226, 0, 294);
+    if (L.sources.some((s) => s.table)) {
+      sousLaTable.addColorStop(0, rgba(L.ambiant, 0)); sousLaTable.addColorStop(0.35, rgba(L.ambiant, 0.3));
+      sousLaTable.addColorStop(0.8, rgba(L.ambiant, 0.75)); sousLaTable.addColorStop(1, rgba(L.ambiant, 0.85));
+    } else {
+      sousLaTable.addColorStop(0, "rgba(0,0,0,0)"); sousLaTable.addColorStop(1, "rgba(0,0,0,0.14)");
+    }
+    g.fillStyle = sousLaTable;
+    g.fillRect(476 + DX, 226, 118, 70);
     g.filter = "none";
     return c;
   }
@@ -944,27 +952,33 @@
   }
 
   // Mémé roulée en boule au pied du lit, qui respire doucement
-  function memeEnBoule(ctx, x, y, t, echelle) {
-    const souffle = 1 + Math.sin(t / 700) * 0.035;
-    ctx.save();
-    ctx.translate(x, y);
-    if (echelle) ctx.scale(echelle, echelle);
-    ctx.scale(souffle, 1 / souffle);
-    ctx.beginPath(); ctx.ellipse(0, 0, 19, 10, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = "#6b5442"; ctx.lineWidth = 2.2;
-    for (const dx of [-8, -1, 6]) { ctx.beginPath(); ctx.moveTo(dx, -9); ctx.quadraticCurveTo(dx + 3, -3, dx, 2); ctx.stroke(); }
-    ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
-    // la queue qui fait le tour, la tête posée dessus, les yeux fermés
-    ctx.beginPath(); ctx.moveTo(16, 4); ctx.quadraticCurveTo(10, 13, -10, 9); ctx.lineWidth = 4.2; ctx.strokeStyle = ENCRE; ctx.stroke();
-    ctx.lineWidth = 2.4; ctx.strokeStyle = "#c9ad8a"; ctx.stroke();
-    ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
-    ctx.beginPath(); ctx.ellipse(-13, 1, 8, 7, 0, 0, Math.PI * 2); ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
-    for (const s of [-1, 1]) {
-      ctx.beginPath(); ctx.moveTo(-13 + s * 2, -5); ctx.lineTo(-13 + s * 6, -10); ctx.lineTo(-13 + s * 7, -3); ctx.fillStyle = "#c9ad8a"; ctx.fill(); ctx.stroke();
-    }
-    ctx.beginPath(); ctx.moveTo(-17, 1); ctx.quadraticCurveTo(-15.5, 2.5, -14, 1); ctx.moveTo(-12, 1); ctx.quadraticCurveTo(-10.5, 2.5, -9, 1); ctx.stroke();
-    ctx.restore();
+  // Mémé roulée en boule au pied du lit, en vrais pixels : chaque case tombe pile sur un gros
+  // pixel de l'écran (un si petit dessin, peint en traits puis passé en gros pixels, devenait une
+  // tache floue dès que Lóló n'était plus couché autour d'elle). La tête à gauche, les yeux
+  // fermés, la queue ramenée devant ; de temps en temps, son dos se soulève en respirant.
+  const MEME_DORT = [
+    ".k.k........",
+    "kTkTkkkkkk..",
+    "kttttttTttk.",
+    "kTTtttTtttTk",
+    "kttttTtttttk",
+    "kuuutttttuuk",
+    ".kkkkkkkkkk.",
+  ];
+  let pixK = 1; // (pixels de la toile par unité du dessin, pour s'aligner sur les gros pixels)
+  // (cellFixe : la taille d'une case quand la scène n'a pas la grille de la maison, en balade)
+  function memeEnBoule(ctx, x, y, t, cellFixe) {
+    const m = ctx.getTransform(), cell = cellFixe || H.retro.taillePour(4) / pixK, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
+    const L = MEME_DORT[0].length, Hh = MEME_DORT.length, inspire = Math.sin(t / 700) > 0.55;
+    const X = Math.round((x + ox - (L * cell) / 2) / cell) * cell - ox, Y = Math.round((y + oy - Hh * cell * 0.6) / cell) * cell - oy;
+    MEME_DORT.forEach((ligne, j) => [...ligne].forEach((ch, i) => {
+      if (ch === ".") return;
+      // (le dos se soulève : les cases du haut du corps montent d'un cran)
+      const leve = inspire && j <= 2 && i >= 4 ? -cell : 0;
+      ctx.fillStyle = H.pixel.PAL[ch];
+      ctx.fillRect(X + i * cell, Y + j * cell + leve, cell + 0.05, cell + 0.05);
+      if (leve && j === 2) { ctx.fillStyle = H.pixel.PAL.t; ctx.fillRect(X + i * cell, Y + j * cell, cell + 0.05, cell + 0.05); }
+    }));
   }
 
   // Lóló, la peluche, couché sur le flanc sur le lit comme sur les photos : robe caramel, longues
@@ -1212,6 +1226,7 @@
         decor = decorMaison(w, h, dpr, moment);
       }
       const S = w / LARGE;
+      pixK = dpr * S;
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       ctx.clearRect(0, 0, LARGE, 360);
       // le dehors, derrière la baie vitrée
@@ -1252,7 +1267,7 @@
       cc.lineWidth = 2.2;
       ECL = { k: decor.k, L: decor.L };
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
-      memeEnBoule(cc, 168, 203, t, 0.75);
+      memeEnBoule(cc, 168, 203, t);
       const surCanape = canapeJusqua > t;
       if (surCanape) {
         // sur le canapé, face à face, les jambes qui se balancent au-dessus du tapis
@@ -2111,7 +2126,7 @@
     if (avec("meme") && !avec("lolo") && b.baignade) {
       ctx.save();
       ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1.6;
-      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - h * 0.16, t, 1.1);
+      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - 7, t, 2.4);
       ctx.restore();
     }
     if (!b.baignade) {
@@ -2516,6 +2531,7 @@
         decor = decorMaison(w, h, dpr, "nuit", true);
       }
       const S = w / LARGE;
+      pixK = dpr * S;
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       ctx.clearRect(0, 0, LARGE, 360);
       // la nuit derrière la baie
@@ -2586,7 +2602,7 @@
       else { ctx.translate(196, 196); ctx.scale(0.72, 0.72); }
       loloCouche(ctx, 0, 0, t, false);
       ctx.restore();
-      memeEnBoule(ctx, 160, 186, t, 0.62);
+      memeEnBoule(ctx, 160, 186, t);
       }
       cc.restore();
 
