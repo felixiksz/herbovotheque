@@ -159,15 +159,20 @@
   // de la photo ; puis seulement avec les mots de la partie. Quand la fiche cite plusieurs parties
   // (l'angélique : la racine et les fruits), on les montre toutes, la racine d'abord.
   const PARTIES = [
-    [/racine/i, ["radix"], ["root", "roots", "Wurzel", "racine"]],
-    [/rhizome/i, ["rhizoma"], ["rhizome", "rhizomes", "Rhizom"]],
+    [/racine|parties souterraines/i, ["radix"], ["root", "roots", "Wurzel", "racine"]],
+    [/rhizome|parties souterraines/i, ["rhizoma"], ["rhizome", "rhizomes", "Rhizom"]],
+    [/bulbe/i, ["bulbus"], ["bulb", "bulbs", "Zwiebel"]],
+    [/bois\b/i, ["lignum"], ["wood", "Holz", "bois"]],
     [/écorce|ecorce/i, ["cortex"], ["bark", "Rinde", "écorce"]],
     [/graine|semence/i, ["semen"], ["seeds", "seed", "Samen", "graines"]],
     [/fruit|baie/i, ["fructus"], ["fruits", "fruit", "berries", "Früchte"]],
-    [/bourgeon|jeunes pousses/i, ["gemmae"], ["buds", "Knospen", "bourgeons"]],
-    [/fleur|sommité|capitule|pétale/i, ["flos", "flores"], ["flowers", "flower", "Blüten", "fleurs"]],
+    [/cône|galbule|strobile/i, ["strobulus", "galbulus"], ["cones", "cone", "Zapfen"]],
+    [/bouton floral/i, ["flos"], ["buds", "clove", "flower buds"]],
+    [/bourgeon|jeunes pousses|jeunes rameaux/i, ["gemmae", "turiones"], ["buds", "Knospen", "bourgeons"]],
+    [/fleur|sommité|capitule|pétale|calice|inflorescence/i, ["flos", "flores"], ["flowers", "flower", "Blüten", "calyx"]],
     [/feuille/i, ["folium", "folia"], ["leaves", "leaf", "Blätter", "feuilles"]],
-    [/partie aérienne|plante entière|herbe/i, ["herba"], ["herb", "Kraut"]],
+    [/thalle/i, ["thallus"], ["thallus", "dried", "seaweed"]],
+    [/parties? aériennes?|plante entière|herbe|tige/i, ["herba"], ["herb", "Kraut", "stems"]],
   ];
   // le genre au génitif latin : Angelica → Angelicae, Hypericum → Hyperici, Salix → Salicis…
   function genitif(genre) {
@@ -180,7 +185,10 @@
     return genre;
   }
   function recherchesPartie(p, nom) {
-    const texte = String((p.valeurs || {}).partiesRecolte || "");
+    // (sans rubrique « Parties utilisées », on regarde ce que disent l'aromathérapie et la
+    // gemmothérapie : « les HE sont extraites du bois », les bourgeons…)
+    const v = p.valeurs || {};
+    const texte = String(v.partiesRecolte || [v.aromatherapie, v.gemmotherapie].filter(Boolean).join(" "));
     const parties = PARTIES.filter(([m]) => m.test(texte));
     const [g, espece] = nom.split(" "), genre = genitif(g), q = [];
     // (parfois la pharmacopée nomme la plante par son espèce : « Millefolii herba », « Absinthii herba »)
@@ -225,6 +233,7 @@
     const etat = H.el("p.discret.etat-photo");
     const garder = H.el("button.bouton.petit", { type: "button", hidden: true }, "Garder celle-ci");
     const autre = H.el("button.bouton.petit", { type: "button" }, "Autre photo");
+    const avant = H.el("button.bouton.petit", { type: "button", hidden: true }, "Photo précédente");
     let liste = null, i = -1, courante = null;
     function montrer(x) {
       courante = x;
@@ -266,9 +275,16 @@
         if (!liste.length) return montrer(null);
         i = (i + 1) % liste.length;
         montrer(liste[i]);
+        avant.hidden = i <= 0;
       } catch (e) {
         etat.textContent = "Photos indisponibles hors connexion.";
       }
+    };
+    avant.onclick = () => {
+      if (!liste || i <= 0) return;
+      i -= 1;
+      montrer(liste[i]);
+      avant.hidden = i <= 0;
     };
     garder.onclick = () => {
       if (!courante) return;
@@ -280,13 +296,15 @@
     (async () => {
       try {
         const f = choisie(p, quoi);
-        if (f) montrer(await infos(f));
+        // (la photo gardée reste la première de la liste : « Photo précédente » y ramène)
+        const x = f ? await infos(f) : null;
+        if (x) { liste = [x]; aFaire = [].concat(recherche); i = 0; montrer(x); }
         else await autre.onclick();
       } catch (e) {
         etat.textContent = "Photos indisponibles hors connexion.";
       }
     })();
-    return H.el("figure.cadre-photo", null, H.el("figcaption", null, titre), img, credit, etat, H.el("div.pastilles", null, autre, garder));
+    return H.el("figure.cadre-photo", null, H.el("figcaption", null, titre), img, credit, etat, H.el("div.pastilles", null, avant, autre, garder));
   }
 
   function section(p, recharger, illus) {
