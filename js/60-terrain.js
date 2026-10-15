@@ -46,10 +46,53 @@
     return m[2] === "cm" ? n / 100 : n;
   }
 
+  // La hauteur adulte d'une plante, en mètres : le plus grand nombre de la rubrique « Hauteur »
+  // (« 20–60 cm » → 0,6), sinon une hauteur typique de son cycle.
+  function hauteurM(p) {
+    const v = p.valeurs || {}, t = String(v.hauteur || "");
+    let max = 0;
+    for (const m of t.matchAll(/([\d,.]+)\s*(?:[–-]\s*([\d,.]+))?\s*(cm|m)\b/g)) {
+      const n = Math.max(parseFloat(m[1].replace(",", ".")) || 0, parseFloat((m[2] || "0").replace(",", ".")) || 0);
+      max = Math.max(max, m[3] === "cm" ? n / 100 : n);
+    }
+    if (max) return max;
+    return { Arbre: 8, Arbuste: 2, Liane: 3, Annuelle: 0.4, Bisannuelle: 0.6, Vivace: 0.5, Algue: 0.2 }[v.cycle] || 0.5;
+  }
+  // L'ombre des grands arbres et arbustes adultes (2,5 m et plus) : mi-ombre sous leur couronne,
+  // ombre tout près du tronc des très grands. Les plantes d'ombre s'y plaisent.
+  const RANG_EXPO = { "Plein soleil": 0, "Mi-ombre": 1, Ombre: 2 };
+  const ombresCache = new Map();
+  function ombreArbres(ile) {
+    const cleO = ile.id + "|" + (ile.modifieLe || 0) + "|" + Object.keys(ile.plantes || {}).length;
+    const deja = ombresCache.get(ile.id);
+    if (deja && deja.cle === cleO) return deja.carte;
+    const carte = {};
+    for (const [k, pl] of Object.entries(ile.plantes || {})) {
+      const q = H.d.plante(pl.p);
+      if (!q || stade(ile, pl) < 3) continue;
+      const h = hauteurM(q);
+      if (h < 2.5) continue;
+      const [x, y] = k.split(",").map(Number), r = Math.max(1, rayonPlante(q, ile));
+      for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
+        const d = Math.hypot(dx, dy);
+        if (d > r + 0.2) continue;
+        const e = h >= 5 && d <= r * 0.6 ? "Ombre" : "Mi-ombre", c2 = cle(x + dx, y + dy);
+        if (!carte[c2] || RANG_EXPO[e] > RANG_EXPO[carte[c2]]) carte[c2] = e;
+      }
+    }
+    ombresCache.set(ile.id, { cle: cleO, carte });
+    return carte;
+  }
+  // l'exposition vraie d'une case : celle qu'on a peinte, assombrie par les arbres
+  function expoIci(ile, x, y) {
+    const peinte = caseDe(ile, x, y).expo, ombre = ombreArbres(ile)[cle(x, y)];
+    return ombre && RANG_EXPO[ombre] > RANG_EXPO[peinte] ? ombre : peinte;
+  }
+
   // --- conditions : est-ce que la plante se plaît ici ? ----------------------------
   function evaluer(ile, x, y, p, pl) {
     const v = p.valeurs || {};
-    const c = caseDe(ile, x, y);
+    const c = Object.assign(caseDe(ile, x, y), { expo: expoIci(ile, x, y) });
     const raisons = [];
     let f = 1;
 
@@ -232,7 +275,7 @@
     if (!cacheDessins.has(cleD)) cacheDessins.set(cleD, fn());
     return cacheDessins.get(cleD);
   }
-  const TEINTES_SAISON = { printemps: "#9cc77a", "été": "#bcc46a", automne: "#b9a35a", hiver: "#93a68c" };
+  const TEINTES_SAISON = { printemps: "#9cc77a", "été": "#adc46a", automne: "#9fb862", hiver: "#93a68c" };
 
   function textureTuile(type, saison, variante) {
     return memo("tuile|" + type + "|" + saison + "|" + variante, () => {
@@ -583,9 +626,9 @@
     }
     return liste;
   }
-  function dessinerAnimaux(ctx, ile, t) {
+  function dessinerAnimaux(ctx, ile, t, projection) {
     for (const a of animaux(ile, t)) {
-      const px = a.x * T, py = a.y * T;
+      const [px, py] = projection ? projection(a.x, a.y) : [a.x * T, a.y * T];
       ctx.save();
       if (a.type === "canard") {
         const [corps, tete] = a.variante ? ["#8a6a4a", "#2f7a4a"] : ["#f2f0e8", "#ffd23a"];
@@ -683,6 +726,7 @@
       zoom: H.local.zoomTerrain || (window.innerWidth < 640 ? 0.75 : 1),
       ovo: { x: ile.secrete ? 3 : Math.floor(ile.cols / 2), y: Math.floor(ile.lignes / 2) + (ile.secrete ? 1 : 0), cible: null, file: [], pas: 0 },
       luigi: null, gouttes: [], derniere: performance.now(), anim: 0, choisie: null,
+      iso: !H.local.vueDessus,
     };
 
     const ciel = H.el("canvas.ciel-ile", { height: 70 });
@@ -702,6 +746,12 @@
     conteneur.appendChild(H.el("div.pied-ile", null,
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterImage(ile) }, "Exporter le croquis (image)"),
+      (vue.boutonVue = H.el("button.bouton.petit", { type: "button", onclick: () => {
+        vue.iso = !vue.iso;
+        H.d.majLocal((l) => (l.vueDessus = !vue.iso));
+        vue.boutonVue.textContent = vue.iso ? "Vue de dessus" : "Vue en relief";
+        dimensionner(); peindreFond(); dessiner();
+      } }, vue.iso ? "Vue de dessus" : "Vue en relief")),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
       Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser les plantes de l’île") : null,
       !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
@@ -858,6 +908,7 @@
   }
 
   function dimensionner() {
+    if (vue.iso) return dimensionnerIso();
     const ile = vue.ile;
     const w = (ile.cols + BORD * 2) * T * vue.zoom, h = (ile.lignes + BORD * 2) * T * vue.zoom;
     const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 2.5);
@@ -871,6 +922,7 @@
 
   // Le fond (mer, sable, tuiles) ne change que si l'on aménage.
   function peindreFond() {
+    if (vue.iso) return peindreFondIso();
     const ile = vue.ile, ctx = vue.fond.getContext("2d"), r = H.alea(ile.id + "fond");
     const k = T * vue.zoom * vue.dpr;
     const saison = document.documentElement.dataset.saison || "printemps";
@@ -921,6 +973,331 @@
     ctx.stroke();
   }
 
+  // --- la vue en relief (isométrique), comme la ferme -------------------------------
+  // Une case est un losange ; l'île est un bloc dont on voit les deux tranches (terre et roche,
+  // avec les racines des plantes du bord). Les plantes se dressent à leur vraie hauteur (les très
+  // grands arbres un peu tassés pour tenir dans l'écran), et les couronnes des arbres sont un peu
+  // transparentes : on voit ce qui pousse dessous.
+  const HW = T * 0.62, QH = HW / 2, PROF = T * 0.9, MARGE = T * 0.8;
+  const proj = (x, y) => [vue.ox + (x - y) * HW, vue.oy + (x + y) * QH];
+  const versCase = (lx, ly) => { const u = (lx - vue.ox) / HW, w = (ly - vue.oy) / QH; return [(u + w) / 2, (w - u) / 2]; };
+  function hauteurPx(p, ile, st) {
+    const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
+    const parMetre = ((2 * HW) / ile.caseM) * 0.55;
+    const h = Math.min(6 * T, Math.max(5, eff * parMetre));
+    return h * [0.12, 0.25, 0.6, 1][st];
+  }
+  // la largeur du feuillage : d'après l'espacement de plantation, mais jamais beaucoup plus large
+  // que la plante n'est haute (sinon les arbres deviennent des parasols géants)
+  function largeurPx(p, ile, st) {
+    const base = Math.max(5, rayonPlante(p, ile) * 2 * HW * 0.9);
+    return Math.min(base, Math.max(6, hauteurPx(p, ile, 3) * 0.9)) * [0.3, 0.35, 0.65, 1][st];
+  }
+  const FEUILLES_PIX = ["#4aa63e", "#6cbd5c", "#3f8a42", "#2f6b35", "#7aa64a"];
+  const FLEURS_ISO = ["#e9e4f5", "#f2c94c", "#b48ad8", "#f08a9b", "#ffffff", "#f5a742", "#7aa6e0"];
+  const assombrir = (hex, k) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, "0")).join("");
+  // Le dessin debout d'une plante : { pied, couronne? } (la couronne des arbres à part, pour la
+  // dessiner après tout le reste, en transparence). L'origine est le pied, en bas au milieu.
+  function planteDebout(p, ile, st, fleur) {
+    const h = Math.round(hauteurPx(p, ile, st)), w = Math.round(largeurPx(p, ile, st)), v = p.valeurs || {};
+    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + (p.dessinCarte ? p.dessinCarte.length : 0), () => {
+      const L = w + 6, Hh = h + 6, toile = (lw, lh) => { const c = document.createElement("canvas"); c.width = lw; c.height = lh; return c; };
+      const pied = toile(L, Hh), g = pied.getContext("2d"), cx = Math.floor(L / 2), sol = Hh - 2;
+      const R = (gg, x, y, ww, hh, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(ww)), Math.max(1, Math.round(hh))); };
+      const feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length], sombre = assombrir(feuille, 0.7), clair = assombrir(feuille, 1.18).replace(/#(..)(..)(..)/, (m0, a, b, c) => "#" + [a, b, c].map((x) => Math.min(255, parseInt(x, 16)).toString(16).padStart(2, "0")).join(""));
+      const fleurCol = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], r = H.alea(p.id + "|iso|" + st);
+      const res = { pied, couronne: null, l: L, h: Hh, haut: h };
+      // un dessin fait à la main : il se dresse tel quel
+      if (p.dessinCarte && st >= 2) {
+        const img = imageDessin(p);
+        if (img) { g.imageSmoothingEnabled = false; g.drawImage(img, cx - w / 2, sol - h, w, h); return res; }
+      }
+      if (st === 0) { R(g, cx - 3, sol - 1, 6, 2, "#6b4423"); R(g, cx, sol - 2, 1, 1, "#4f7a3a"); return res; }
+      // une masse de feuillage ronde, éclairée en haut à gauche
+      const masse = (gg, x0, y0, rx, ry) => {
+        for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+          const d = (x * x) / (rx * rx + 0.01) + (y * y) / (ry * ry + 0.01);
+          if (d > 1 - r() * 0.12) continue;
+          const lum = -x / rx - y / ry + (r() - 0.5) * 0.6;
+          R(gg, x0 + x, y0 + y, 1, 1, d > 0.82 ? sombre : lum > 0.5 ? clair : lum < -0.6 ? sombre : feuille);
+        }
+      };
+      const cycle = v.cycle, hm = hauteurM(p);
+      if (cycle === "Arbre" || (cycle === "Arbuste" && hm >= 2.5)) {
+        // le tronc, puis la couronne sur une toile à part
+        const tw = Math.max(2, Math.round(w * 0.09)), ht = Math.round(h * 0.42);
+        R(g, cx - tw / 2, sol - ht, tw, ht, "#7a4520"); R(g, cx - tw / 2, sol - ht, 1, ht, "#9a6a3c");
+        if (st >= 2) {
+          const couronne = toile(L, Hh), gc = couronne.getContext("2d");
+          masse(gc, cx, sol - ht - (h - ht) * 0.45, Math.max(2, Math.floor(w / 2)), Math.max(2, Math.floor((h - ht) * 0.55)));
+          if (fleur) for (let k = 0; k < Math.max(3, w / 4); k++) R(gc, cx + (r() - 0.5) * w * 0.8, sol - ht - (h - ht) * (0.2 + r() * 0.6), 1, 1, fleurCol);
+          res.couronne = couronne;
+        }
+        return res;
+      }
+      if (cycle === "Arbuste") {
+        masse(g, cx, sol - h / 2, Math.max(2, Math.floor(w / 2)), Math.max(2, Math.floor(h / 2)));
+        if (fleur) for (let k = 0; k < Math.max(3, w / 3); k++) R(g, cx + (r() - 0.5) * w * 0.8, sol - h * (0.2 + r() * 0.75), 1, 1, fleurCol);
+        return res;
+      }
+      if (cycle === "Liane") {
+        R(g, cx, sol - h, 1, h, "#9a6a3c");
+        for (let y = 0; y < h; y += 2) R(g, cx + (y % 4 ? 1 : -2), sol - y, 2, 1, y % 6 ? feuille : sombre);
+        if (fleur) for (let y = 4; y < h; y += 7) R(g, cx + 2, sol - y, 1, 1, fleurCol);
+        return res;
+      }
+      // les herbes : une touffe de tiges, des feuilles le long, et les fleurs au sommet
+      R(g, cx - w * 0.3, sol - 2, w * 0.6, 2, sombre);
+      const n = Math.max(3, Math.min(10, Math.round(w / 3)));
+      for (let k = 0; k < n; k++) {
+        const x = cx + Math.round((k / Math.max(1, n - 1) - 0.5) * w * 0.8), hh = Math.round(h * (0.6 + r() * 0.4));
+        for (let y = 0; y < hh; y++) { R(g, x, sol - y, 1, 1, y < hh * 0.3 ? sombre : feuille); if (y > 1 && y % 3 === 0) R(g, x + (y % 6 ? 1 : -1), sol - y, 1, 1, clair); }
+        if (fleur && st === 3) { R(g, x - 1, sol - hh - 1, 2, 2, fleurCol); R(g, x, sol - hh - 2, 1, 1, assombrir(fleurCol, 0.8)); }
+      }
+      return res;
+    });
+  }
+
+  function dimensionnerIso() {
+    const ile = vue.ile;
+    // la place au-dessus de l'île pour les plus grandes plantes
+    let haut = T * 1.5;
+    for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) haut = Math.max(haut, hauteurPx(q, ile, 3) + 10); }
+    vue.headroom = haut;
+    vue.ox = MARGE + ile.lignes * HW;
+    vue.oy = MARGE + haut;
+    const w = ((ile.cols + ile.lignes) * HW + 2 * MARGE) * vue.zoom, h = (vue.oy + (ile.cols + ile.lignes) * QH + PROF + MARGE) * vue.zoom;
+    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 2.5);
+    vue.dpr = dpr;
+    vue.toile.width = Math.round(w * dpr);
+    vue.toile.height = Math.round(h * dpr);
+    vue.toile.style.width = w + "px";
+    vue.toile.style.height = h + "px";
+    vue.fond = H.aqua.toile(vue.toile.width, vue.toile.height);
+  }
+  // la transformation qui couche le plan (en pixels de plan, T par case) en losanges
+  function aplat(ctx, z) { ctx.setTransform((z * HW) / T, (z * QH) / T, (-z * HW) / T, (z * QH) / T, z * vue.ox, z * vue.oy); }
+
+  function peindreFondIso() {
+    const ile = vue.ile, ctx = vue.fond.getContext("2d"), r = H.alea(ile.id + "fond"), z = vue.zoom * vue.dpr;
+    const saison = document.documentElement.dataset.saison || "printemps";
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, vue.fond.width, vue.fond.height);
+    ctx.fillStyle = "#8fc3dc";
+    ctx.fillRect(0, 0, vue.fond.width, vue.fond.height);
+    ctx.setTransform(z, 0, 0, z, 0, 0);
+    const W = vue.fond.width / z, Hh = vue.fond.height / z;
+    for (let i = 0; i < 18; i++) H.aqua.tache(ctx, r, r() * W, r() * Hh, 40 + r() * 80, 30 + r() * 60, i % 2 ? "#6aa9c9" : "#bfe0ec", { alpha: 0.05, couches: 8 });
+    // les deux tranches du bloc : un liseré d'herbe, la terre et ses cailloux, puis la roche
+    const C = ile.cols, Lg = ile.lignes;
+    const tranche = (a, b, clair) => {
+      const [x0, y0] = proj(a[0], a[1]), [x1, y1] = proj(b[0], b[1]), n = Math.round(Math.abs(x1 - x0));
+      for (let q = 0; q <= n; q++) {
+        const x = x0 + ((x1 - x0) * q) / n, y = y0 + ((y1 - y0) * q) / n;
+        for (let d = 0; d < PROF; d++) {
+          const v = H.hash(cle(Math.round(x), d)) % 100 / 100;
+          let col = d < 2 ? (clair ? "#6cbd5c" : "#3f8a42") : d < PROF * 0.55 ? (v < 0.08 ? "#9a9a9a" : v < 0.3 ? (clair ? "#9a6a3c" : "#7a4520") : clair ? "#b9834f" : "#9a6a3c") : v < 0.15 ? "#6b6578" : clair ? "#9a9a9a" : "#6b6578";
+          ctx.fillStyle = col;
+          ctx.fillRect(Math.round(x), Math.round(y + d), 1, 1);
+        }
+      }
+    };
+    tranche([0, Lg], [C, Lg], true);
+    tranche([C, Lg], [C, 0], false);
+    // le dessus : le même plan que la vue de dessus, couché en losanges
+    aplat(ctx, z);
+    const herbe = TEINTES_SAISON[saison] || "#9cc77a";
+    ctx.fillStyle = herbe;
+    ctx.fillRect(0, 0, C * T, Lg * T);
+    const n = Math.ceil((C * Lg) / 6);
+    for (let i = 0; i < n; i++) H.aqua.tache(ctx, r, r() * C * T, r() * Lg * T, T * (0.8 + r() * 1.6), T * (0.6 + r() * 1.2), i % 3 === 0 ? "#7fa85a" : i % 3 === 1 ? "#cfdc94" : herbe, { alpha: 0.022, couches: 6 });
+    for (let y = 0; y < Lg; y++) for (let x = 0; x < C; x++) {
+      const c = caseDe(ile, x, y);
+      if (c.t === "herbe") continue;
+      ctx.drawImage(textureTuile(c.t, saison, H.hash(cle(x, y)) % 3), x * T, y * T, T + 0.5, T + 0.5);
+    }
+    ctx.strokeStyle = "rgba(43,38,34,0.08)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= C; x++) { ctx.moveTo(x * T, 0); ctx.lineTo(x * T, Lg * T); }
+    for (let y = 0; y <= Lg; y++) { ctx.moveTo(0, y * T); ctx.lineTo(C * T, y * T); }
+    ctx.stroke();
+  }
+
+  // les racines des plantes du bord, dans les tranches : plus la plante est grande, plus elles
+  // descendent ; elles partent pile sous le pied
+  function racinesIso(ctx, ile) {
+    for (const [k, pl] of Object.entries(ile.plantes || {})) {
+      const p = H.d.plante(pl.p);
+      if (!p) continue;
+      const st = stade(ile, pl);
+      if (st < 2) continue;
+      const [x, y] = k.split(",").map(Number), [sx] = proj(x + 0.5, y + 0.5), hm = hauteurM(p);
+      const longueur = Math.min(PROF - 3, 4 + Math.sqrt(hm) * 9) * (st === 3 ? 1 : 0.6);
+      const g = H.hash(k);
+      // tranche de gauche (bord y = lignes) et de droite (bord x = cols)
+      for (const [dist, i, j] of [[ile.lignes - (y + 0.5), (sx - vue.ox) / HW + ile.lignes, ile.lignes], [ile.cols - (x + 0.5), ile.cols, ile.cols - (sx - vue.ox) / HW]]) {
+        if (dist > 1.6 || i < 0 || j < 0 || i > ile.cols || j > ile.lignes) continue;
+        const [bx, by] = proj(i, j), force = 1 - dist / 1.6, L = Math.round(longueur * (0.5 + force * 0.5));
+        let rx = bx;
+        for (let d = 2; d < L; d++) {
+          if (d > 3 && (g >> d) % 5 === 0) rx += (g >> (d + 2)) % 2 ? 1 : -1;
+          ctx.fillStyle = d < L * 0.6 ? "#4b3427" : "#5a3418";
+          ctx.fillRect(Math.round(rx), Math.round(by + d), 1, 1);
+          if (d > 2 && d < L - 2 && (g >> (d % 13)) % 4 === 0) { const sens = d % 2 ? 1 : -1; for (let q = 1; q < 4; q++) ctx.fillRect(Math.round(rx + sens * q), Math.round(by + d + q * 0.6), 1, 1); }
+        }
+      }
+    }
+  }
+
+  function dessinerIso(ctxDest, sansNuit) {
+    const ile = vue.ile, toile = vue.toile, ctx = ctxDest || toile.getContext("2d");
+    // une nouvelle grande plante : on fait de la place au-dessus de l'île
+    let besoin = T * 1.5;
+    for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) besoin = Math.max(besoin, hauteurPx(q, ile, 3) + 10); }
+    if (!ctxDest && Math.abs(besoin - vue.headroom) > 2) { dimensionnerIso(); peindreFondIso(); }
+    const z = vue.zoom * vue.dpr, t = performance.now();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(vue.fond, 0, 0);
+    ctx.setTransform(z, 0, 0, z, 0, 0);
+    racinesIso(ctx, ile);
+
+    // ce qui est à plat sur le sol : cases conseillées, ombres des plantes, bassin, sélection
+    ctx.save();
+    aplat(ctx, z);
+    if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
+      const p = H.d.plante(vue.plante);
+      if (p) {
+        if (!vue.casesBonnes || vue.casesBonnes.id !== p.id || vue.casesBonnes.le < t - 1500) vue.casesBonnes = { id: p.id, le: t, cases: new Set(casesQuiConviennent(ile, p)) };
+        ctx.fillStyle = "rgba(157,255,0,0.3)";
+        for (const k2 of vue.casesBonnes.cases) { const [x, y] = k2.split(",").map(Number); ctx.fillRect(x * T + 1, y * T + 1, T - 2, T - 2); }
+      }
+    }
+    for (const [k2, pl] of Object.entries(ile.plantes || {})) {
+      const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
+      if (!q) continue;
+      const st = stade(ile, pl);
+      ctx.fillStyle = "rgba(35,33,74,0.18)";
+      ctx.beginPath(); ctx.ellipse((x + 0.55) * T, (y + 0.55) * T, T * (st === 3 ? Math.min(1.4, rayonPlante(q, ile) * 0.7) : 0.25), T * (st === 3 ? Math.min(1.4, rayonPlante(q, ile) * 0.7) : 0.25), 0, 0, Math.PI * 2); ctx.fill();
+      if (aRecolter(q, ile, pl)) {
+        ctx.strokeStyle = "#ff2e9a"; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc((x + 0.5) * T, (y + 0.5) * T, T * 0.46, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    if (ile.secrete && ile.mare) dessinerMare(ctx, ile, t);
+    if (vue.choisie) { ctx.strokeStyle = "#ff7b00"; ctx.lineWidth = 2.5; ctx.strokeRect(vue.choisie.x * T + 1, vue.choisie.y * T + 1, T - 2, T - 2); }
+    ctx.restore();
+
+    // ce qui se dresse, du fond vers le devant
+    ctx.setTransform(z, 0, 0, z, 0, 0);
+    const debout = [], couronnes = [];
+    vue.boites = [];
+    for (const [k2, pl] of Object.entries(ile.plantes || {})) {
+      const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
+      if (!q) continue;
+      debout.push({ prof: x + y + 1, dessin: () => {
+        const st = stade(ile, pl), d = planteDebout(q, ile, st, fleurie(q, ile, pl)), [sx, sy] = proj(x + 0.5, y + 0.5);
+        const gx = Math.round(sx - d.l / 2), gy = Math.round(sy - d.h + 2);
+        ctx.drawImage(d.pied, gx, gy);
+        if (d.couronne) couronnes.push([d.couronne, gx, gy]);
+        vue.boites.push({ x, y, g: gx, h: gy + d.h - 2 - d.haut, d: gx + d.l, b: gy + d.h, grande: d.haut > T * 1.2, prof: x + y });
+        if (!ile.croquis && pl.eau < 20 && st > 0 && !aRecolter(q, ile, pl)) { ctx.fillStyle = "#3a8fd8"; ctx.fillRect(Math.round(sx + d.l / 2 - 2), Math.round(sy - Math.min(d.haut, T) - 3), 3, 4); }
+      } });
+    }
+    const enCalin = vue.calin && vue.luigi && !vue.luigi.cible;
+    const perso = (nom, o, echelle, image, sauf) => { const [sx, sy] = proj(o.x + 0.5, o.y + 0.5); H.pixel.dessiner(ctx, nom, sx, sy - (sauf || 0), echelle, image); };
+    if ((!ile.croquis || vue.ovo.cible) && !enCalin) {
+      const o = vue.ovo, marche = o.cible ? Math.floor(t / 160) % 2 : 0;
+      debout.push({ prof: o.x + o.y + 1.02, dessin: () => perso("ovo", o, 1.5, marche, marche ? 1 : 0) });
+      if (vue.hongrois) {
+        const mm = vue.mesiSuit || (vue.mesiSuit = { x: o.x - 1, y: o.y });
+        mm.x += (o.x - 0.9 - mm.x) * 0.08; mm.y += (o.y - mm.y) * 0.08;
+        debout.push({ prof: mm.x + mm.y + 1.02, dessin: () => perso("luigi", mm, 1.5, marche) });
+      }
+    }
+    if (vue.luigi && !enCalin) {
+      const l = vue.luigi, marche = l.cible ? Math.floor(t / 170) % 2 : 0;
+      debout.push({ prof: l.x + l.y + 1.02, dessin: () => perso("luigi", l, 1.5, marche, marche ? 1 : 0) });
+    }
+    if (enCalin) {
+      const o = vue.ovo;
+      debout.push({ prof: o.x + o.y + 1.02, dessin: () => {
+        const [sx, sy] = proj(o.x + 0.5, o.y + 0.5);
+        ctx.save(); ctx.translate(sx - (o.x + 0.5) * T, sy - (o.y + 0.9) * T); dessinerCalin(ctx, T); ctx.restore();
+      } });
+    }
+    if (ile.secrete) {
+      const pos = vue.lolo && vue.lolo.course ? H.sons.position(vue.lolo.course, t) : null;
+      const visible = !vue.lolo || (vue.lolo.course && pos), galope = !!(pos && pos.enCourse);
+      const place = ile.lolo || { x: ile.cols / 2, y: ile.lignes / 2 + 0.6 }, lx = pos ? pos.x : place.x;
+      const image = galope ? Math.floor(t / 90) % 4 : Math.floor(t / 700) % 2;
+      if (visible) debout.push({ prof: lx + place.y + 0.5, dessin: () => {
+        const [sx, sy] = proj(lx, place.y);
+        H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", sx, sy - (galope && image % 2 ? 2 : 0), 2, image);
+        if (!galope && Math.floor(t / 1400) % 2) { ctx.font = "10px 'Suez One', serif"; ctx.fillStyle = "#ff2e9a"; ctx.fillText("rrr", sx + 12, sy - 60); }
+      } });
+    }
+    if (vue.loloVisite && vue.loloVisite.course) {
+      const l = vue.loloVisite, pos = H.sons.position(l.course, t);
+      if (pos) {
+        const image = pos.enCourse ? Math.floor(t / 90) % 4 : Math.floor(t / 700) % 2;
+        debout.push({ prof: pos.x + l.y + 1, dessin: () => { const [sx, sy] = proj(pos.x + 0.5, l.y + 0.5); H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : "lolo", sx, sy - (pos.enCourse && image % 2 ? 2 : 0), 2, image); } });
+      }
+    }
+    if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
+    debout.sort((a, b) => a.prof - b.prof).forEach((e) => e.dessin());
+    // les couronnes des arbres par-dessus, un peu transparentes : on voit ce qui pousse dessous
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    for (const [c, gx, gy] of couronnes) ctx.drawImage(c, gx, gy);
+    ctx.restore();
+
+    // petits cœurs pendant un câlin
+    if (vue.coeurs && vue.coeurs > t && vue.luigi) {
+      const tc = (t % 1500) / 1500, [sx, sy] = proj(vue.ovo.x + 0.5, vue.ovo.y + 0.5);
+      for (let i = 0; i < 3; i++) { const u = (tc + i / 3) % 1; dessinerCoeur(ctx, sx - 10 + Math.sin(u * 6 + i) * 8, sy - 38 - u * 28, 1 - u); }
+    }
+    // météo
+    if (vue.gouttes.length) {
+      const neige = (H.ciel.meteo || {}).type === "neige";
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = neige ? "rgba(255,255,255,0.9)" : "rgba(60,110,170,0.55)";
+      for (const g of vue.gouttes) ctx.fillRect(g.x, g.y, neige ? 3 * vue.dpr : 1.5 * vue.dpr, neige ? 3 * vue.dpr : 7 * vue.dpr);
+    }
+    // nuit, aube et crépuscule
+    if (!sansNuit) {
+      const alt = H.ciel.etat().soleil.alt;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      for (const v of H.ciel.lumiere(alt)) { ctx.fillStyle = "rgba(" + v.couleur + "," + v.alpha + ")"; ctx.fillRect(0, 0, toile.width, toile.height); }
+    }
+    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5));
+    if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
+  }
+  // les zones de mi-ombre et d'ombre, en relief : hachures dans les losanges (l'ombre des arbres
+  // comprise), liseré jaune là où l'exposition change
+  function dessinerZonesIso(ctx, z) {
+    const ile = vue.ile;
+    ctx.save();
+    aplat(ctx, z);
+    for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
+      const expo = expoIci(ile, x, y);
+      if (expo !== "Plein soleil") {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x * T, y * T, T, T); ctx.clip();
+        ctx.strokeStyle = "#1b1d4a"; ctx.lineWidth = 2;
+        const pas = expo === "Ombre" ? 6 : 12;
+        ctx.beginPath();
+        for (let d = -T; d < T; d += pas) { ctx.moveTo(x * T + d, y * T); ctx.lineTo(x * T + d + T, y * T + T); }
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.fillStyle = "#ffe14d";
+      if (x + 1 < ile.cols && expoIci(ile, x + 1, y) !== expo) ctx.fillRect((x + 1) * T - 1.5, y * T, 3, T);
+      if (y + 1 < ile.lignes && expoIci(ile, x, y + 1) !== expo) ctx.fillRect(x * T, (y + 1) * T - 1.5, T, 3);
+    }
+    ctx.restore();
+  }
+
   function rayonPlante(p, ile) {
     const esp = nombre((p.valeurs || {}).espacement);
     if (!esp) return 0.5;
@@ -928,6 +1305,7 @@
   }
 
   function dessiner(ctxDest, sansNuit) {
+    if (vue.iso) return dessinerIso(ctxDest, sansNuit);
     const ile = vue.ile;
     const toile = vue.toile;
     const ctx = ctxDest || toile.getContext("2d");
@@ -1189,6 +1567,15 @@
   // --- interaction ---------------------------------------------------------------------
   function caseCliquee(e) {
     const rect = vue.toile.getBoundingClientRect();
+    if (vue.iso) {
+      const lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
+      // d'abord les grandes plantes (on touche leur feuillage), de la plus proche à la plus lointaine
+      const grande = (vue.boites || []).filter((b) => b.grande && lx >= b.g && lx <= b.d && ly >= b.h && ly <= b.b).sort((a, b) => b.prof - a.prof)[0];
+      if (grande) return { x: grande.x, y: grande.y };
+      const [fx, fy] = versCase(lx, ly), x = Math.floor(fx), y = Math.floor(fy);
+      if (x < 0 || y < 0 || x >= vue.ile.cols || y >= vue.ile.lignes) return null;
+      return { x, y };
+    }
     const k = T * vue.zoom;
     const x = Math.floor((e.clientX - rect.left) / k) - BORD;
     const y = Math.floor((e.clientY - rect.top) / k) - BORD;
@@ -1262,7 +1649,8 @@
   // doigt, et Mesi lui dit son nom en hongrois.
   function montrerDuDoigt(e, c) {
     const rect = vue.toile.getBoundingClientRect(), k = T * vue.zoom;
-    const fx = (e.clientX - rect.left) / k - BORD, fy = (e.clientY - rect.top) / k - BORD;
+    let fx = (e.clientX - rect.left) / k - BORD, fy = (e.clientY - rect.top) / k - BORD;
+    if (vue.iso) [fx, fy] = versCase((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
     const dire = (francais, hongrois) => H.dialogue.dire([
       { qui: "ovo", texte: H.histoires.auHasard(["Et ça ? (ƟvƟ montre du doigt.)", "Comment on dit, ça ?", "Et celui-là ?"]) },
       { qui: "luigi", texte: "« " + hongrois + " ». En français : " + francais + "." },
@@ -1544,7 +1932,7 @@
     vue.panneau.append(
       H.el("button.bouton.petit.discret-bouton.fermer-panneau", { type: "button", onclick: () => { vue.panneau.hidden = true; vue.choisie = null; dessiner(); } }, "Fermer"),
       H.el("h3", null, TUILES[c.t].nom),
-      H.el("p", null, c.expo + " · sol " + (c.sol.length ? c.sol.join(", ").toLowerCase() : "non précisé"))
+      H.el("p", null, expoIci(vue.ile, x, y) + (expoIci(vue.ile, x, y) !== c.expo ? " (à l’ombre d’un arbre)" : "") + " · sol " + (c.sol.length ? c.sol.join(", ").toLowerCase() : "non précisé"))
     );
     // ce qu'on pourrait repiquer ici, de ce qui attend dans la caisse
     const caisse = vue.ile.croquis ? [] : caisseIci(vue.ile, x, y);
@@ -1975,6 +2363,12 @@
   }
 
   function exporterImage(ile) {
+    // le croquis s'exporte en plan, vu de dessus, à l'échelle
+    if (vue.iso) {
+      vue.iso = false; dimensionner(); peindreFond();
+      try { exporterImage(ile); } finally { vue.iso = true; dimensionner(); peindreFond(); dessiner(); }
+      return;
+    }
     const c = H.aqua.toile(vue.toile.width, vue.toile.height + 60 * vue.dpr);
     const ctx = c.getContext("2d");
     ctx.fillStyle = "#f3f0dc";
