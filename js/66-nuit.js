@@ -1300,14 +1300,17 @@
       ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
       // le nom de ce qu'on survole
       if (survol) {
-        ctx.font = "13px 'Suez One', serif";
-        const l = ctx.measureText(survol.nom).width + 18;
-        const x = Math.max(4, Math.min(LARGE - 4 - l, survol.x + survol.w / 2 - l / 2)), y = Math.max(4, survol.y - 26);
-        ctx.lineWidth = 1.4;
-        bloc(ctx, x, y, l, 22, 11, "#f2f0e8");
-        ctx.fillStyle = ENCRE;
-        ctx.textBaseline = "middle";
-        ctx.fillText(survol.nom, x + 9, y + 12);
+        // (comme les menus des scènes : un bloc d'encre cerné de corail, la police pixel en crème)
+        ctx.font = "19px VT323, monospace";
+        const l = Math.round(ctx.measureText(survol.nom).width) + 28;
+        const x = Math.round(Math.max(8, Math.min(LARGE - 8 - l, survol.x + survol.w / 2 - l / 2))), y = Math.round(Math.max(8, survol.y - 30));
+        ctx.fillStyle = "rgba(15,16,53,0.6)"; ctx.fillRect(x + 4, y + 4, l + 6, 28);
+        ctx.fillStyle = "#1b1d4a"; ctx.fillRect(x - 3, y - 3, l + 6, 28);
+        ctx.strokeStyle = "#ff5b4f"; ctx.lineWidth = 2; ctx.strokeRect(x - 1, y - 1, l + 2, 24);
+        ctx.fillStyle = "#f6ee55"; ctx.font = "11px VT323, monospace"; ctx.textBaseline = "middle";
+        ctx.fillText("▶", x + 6, y + 11);
+        ctx.font = "19px VT323, monospace"; ctx.fillStyle = "#f3f0dc";
+        ctx.fillText(survol.nom, x + 18, y + 12);
       }
     }
     requestAnimationFrame(image);
@@ -1320,7 +1323,7 @@
   function fenetreBalade() {
     let fermer;
     const corps = H.el("div", null, H.el("h2", null, "Faire une balade"), choixCompagnons());
-    fermer = H.fenetre(corps);
+    fermer = H.fenetre(corps, { classe: "menu-scene" });
     return fermer;
   }
   // --- la maison en relief (isométrique) ----------------------------------------------------
