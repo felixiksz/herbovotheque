@@ -1095,13 +1095,295 @@
     fermer = H.fenetre(corps);
     return fermer;
   }
+  // --- la maison en relief (isométrique) ----------------------------------------------------
+  // La même pièce, vue en coin comme la ferme : le sol en terrazzo, le mur bleu du lit et le mur
+  // vert de la baie. Le lit sous les photos, la table de chevet et sa lampe, le canapé sous la
+  // baie, la table du goûter sous la boule orange, le poêle en fonte dans le coin (le feu à hauteur
+  // de genoux), la plante, le tapis. Tout est dessiné en petits pixels, puis agrandi sans flou.
+  const MI = { HW: 16, QH: 8, MUR: 60, N: 8, M: 7 };
+  MI.L = (MI.N + MI.M) * MI.HW + 24;
+  MI.OX = 12 + MI.M * MI.HW;
+  MI.OY = MI.MUR + 22;
+  MI.H = MI.OY + (MI.N + MI.M) * MI.QH + 10;
+  const PI_ = (i, j, z) => [MI.OX + (i - j) * MI.HW, MI.OY + (i + j) * MI.QH - (z || 0)];
+  function polyIso(g, pts, col, trait) {
+    g.beginPath();
+    pts.forEach(([x, y], k) => (k ? g.lineTo(Math.round(x), Math.round(y)) : g.moveTo(Math.round(x), Math.round(y))));
+    g.closePath();
+    g.fillStyle = col; g.fill();
+    if (trait) { g.strokeStyle = trait; g.lineWidth = 1; g.stroke(); }
+  }
+  // une boîte posée au sol : le dessus et les deux faces qu'on voit
+  function boiteIso(g, i, j, w, d, h, c, z0) {
+    const z = z0 || 0;
+    polyIso(g, [PI_(i, j + d, z), PI_(i + w, j + d, z), PI_(i + w, j + d, z + h), PI_(i, j + d, z + h)], c.gauche || c.dessus, ENCRE);
+    polyIso(g, [PI_(i + w, j, z), PI_(i + w, j + d, z), PI_(i + w, j + d, z + h), PI_(i + w, j, z + h)], c.droite || c.dessus, ENCRE);
+    polyIso(g, [PI_(i, j, z + h), PI_(i + w, j, z + h), PI_(i + w, j + d, z + h), PI_(i, j + d, z + h)], c.dessus, ENCRE);
+  }
+  // un rectangle sur le mur de gauche (i = 0) ou de droite (j = 0)
+  const surMurG = (j0, j1, z0, z1) => [PI_(0, j0, z0), PI_(0, j1, z0), PI_(0, j1, z1), PI_(0, j0, z1)];
+  const surMurD = (i0, i1, z0, z1) => [PI_(i0, 0, z0), PI_(i1, 0, z0), PI_(i1, 0, z1), PI_(i0, 0, z1)];
+
+  // le décor fixe en relief (selon le moment, et lampes éteintes pour dormir)
+  function decorIso(moment, eteint) {
+    const c = document.createElement("canvas");
+    c.width = MI.L; c.height = MI.H;
+    const g = c.getContext("2d"), M = MOMENTS[moment], r = H.alea("maison-iso");
+    // les murs
+    polyIso(g, [PI_(0, MI.M, 0), PI_(0, 0, 0), PI_(0, 0, MI.MUR), PI_(0, MI.M, MI.MUR)], M.murG, ENCRE);
+    polyIso(g, [PI_(0, 0, 0), PI_(MI.N, 0, 0), PI_(MI.N, 0, MI.MUR), PI_(0, 0, MI.MUR)], M.murD, ENCRE);
+    // la plinthe
+    polyIso(g, [PI_(0, MI.M, 0), PI_(0, 0, 0), PI_(0, 0, 3), PI_(0, MI.M, 3)], M.plinthe);
+    polyIso(g, [PI_(0, 0, 0), PI_(MI.N, 0, 0), PI_(MI.N, 0, 3), PI_(0, 0, 3)], M.plinthe);
+    // le sol en terrazzo, avec ses éclats
+    polyIso(g, [PI_(0, 0), PI_(MI.N, 0), PI_(MI.N, MI.M), PI_(0, MI.M)], M.sol, ENCRE);
+    const eclats = ["#e04bb0", "#a8325b", "#ff5b4f", "#ffd23a", "#3d5ee8", "#f3f0dc"];
+    for (let k = 0; k < 160; k++) { const [x, y] = PI_(r() * MI.N, r() * MI.M); g.fillStyle = eclats[k % eclats.length]; g.fillRect(Math.round(x), Math.round(y), 1, 1); }
+    // la baie vitrée sur le mur vert (le dehors y est peint à chaque image) : on la découpe
+    g.save(); g.globalCompositeOperation = "destination-out";
+    polyIso(g, surMurD(4.3, 7.5, 16, 52), "#000");
+    g.restore();
+    g.lineWidth = 1;
+    polyIso(g, surMurD(4.3, 7.5, 16, 52), "rgba(0,0,0,0)", "#f3f0dc");
+    for (const u of [5.37, 6.43]) { const [a, b] = [PI_(u, 0, 16), PI_(u, 0, 52)]; g.fillStyle = "#f3f0dc"; g.fillRect(Math.round(a[0]) - 1, Math.round(b[1]), 2, Math.round(a[1] - b[1])); }
+    polyIso(g, surMurD(4.2, 7.6, 14, 16), "#f3f0dc", ENCRE);
+    // les deux photos au-dessus du lit, dans leurs cadres en bois clair
+    for (const [j0, j1, z0, z1, img] of [[1.6, 2.7, 30, 42, PHOTO_DUO], [2.9, 3.7, 31, 41, PHOTO_LOLO]]) {
+      polyIso(g, surMurG(j0, j1, z0, z1), "#c9a06a", ENCRE);
+      const w = Math.round((j1 - j0) * MI.HW) - 2, h = z1 - z0 - 2, [x0, y0] = PI_(0, j0, z1 - 1);
+      // la photo, réduite et inclinée comme le mur
+      const lignes = img.length, cols = img[0].length;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const ch = img[Math.floor((y / h) * lignes)][Math.floor((x / w) * cols)];
+        g.fillStyle = PAL_PHOTO[ch] || "#a8d8ec";
+        g.fillRect(Math.round(x0 - x - 1), Math.round(y0 + y + x * (MI.QH / MI.HW) + 1), 1, 1);
+      }
+    }
+    // le tapis bleu, au milieu
+    g.save(); g.translate(...PI_(3.9, 5.1)); g.scale(1, 0.5);
+    g.beginPath(); g.arc(0, 0, 30, 0, Math.PI * 2); g.fillStyle = "#3d5ee8"; g.fill(); g.strokeStyle = ENCRE; g.stroke();
+    g.beginPath(); g.arc(0, 0, 23, 0, Math.PI * 2); g.strokeStyle = "#7f97f2"; g.stroke();
+    g.restore();
+    return c;
+  }
+
+  // les meubles et les personnages, du fond vers le devant
+  function meublesIso(g, t, o) {
+    const items = [];
+    const ajouter = (prof, f) => items.push([prof, f]);
+    // le poêle en fonte, dans le coin, sur ses pieds ; le feu derrière sa vitre, à hauteur de genoux
+    ajouter(1, () => {
+      const [px] = PI_(0.8, 0.65, 0);
+      g.fillStyle = "#4a4560"; g.fillRect(Math.round(px) - 2, Math.round(PI_(0.8, 0.65, MI.MUR)[1]), 4, Math.round(PI_(0.8, 0.65, 18)[1] - PI_(0.8, 0.65, MI.MUR)[1]));
+      for (const [i, j] of [[0.4, 0.95], [1.15, 0.95], [1.15, 0.35]]) { const [x, y] = PI_(i, j, 0); g.fillStyle = "#2a2540"; g.fillRect(Math.round(x), Math.round(y) - 3, 1, 3); }
+      boiteIso(g, 0.35, 0.3, 0.85, 0.7, 13, { dessus: "#4a4560", gauche: "#3a3550", droite: "#2a2540" }, 3);
+      const [vx, vy] = PI_(0.55, 1.0, 11);
+      g.fillStyle = o.feu ? "#d23a2a" : "#1b1d4a"; g.fillRect(Math.round(vx), Math.round(vy), 7, 5);
+      if (o.feu) for (let k = 0; k < 3; k++) { const hh = 2 + Math.round(Math.abs(Math.sin(t / (110 + k * 37) + k)) * 3); g.fillStyle = "#ff8f2e"; g.fillRect(Math.round(vx) + 1 + k * 2, Math.round(vy) + 5 - hh, 2, hh); g.fillStyle = "#ffd23a"; g.fillRect(Math.round(vx) + 1 + k * 2, Math.round(vy) + 4, 1, 1); }
+    });
+    // le lit contre le mur bleu, la tête sous les photos
+    ajouter(4, () => {
+      boiteIso(g, 0, 1.3, 4.4, 2.2, 6, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" });
+      boiteIso(g, 0, 1.3, 0.3, 2.2, 16, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#e9b44c" });
+      boiteIso(g, 0.3, 1.4, 4.0, 2.0, 3, { dessus: "#f2f0e8", gauche: "#d6d2c0", droite: "#d6d2c0" }, 6);
+      boiteIso(g, 0.4, 1.5, 0.9, 0.9, 3, { dessus: "#ffffff", gauche: "#e9e3cd", droite: "#e9e3cd" }, 9);
+      boiteIso(g, 0.4, 2.45, 0.9, 0.85, 3, { dessus: "#ffb3a8", gauche: "#e8908a", droite: "#e8908a" }, 9);
+      if (!o.dodo) boiteIso(g, 1.6, 1.4, 2.7, 2.0, 2, { dessus: "#3d5ee8", gauche: "#2f4bc8", droite: "#2f4bc8" }, 9);
+    });
+    // la table de chevet et sa lampe
+    ajouter(5.2, () => {
+      boiteIso(g, 0.1, 3.75, 0.9, 0.8, 10, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" });
+      const [x, y] = PI_(0.55, 4.15, 10);
+      g.fillStyle = ENCRE; g.fillRect(Math.round(x), Math.round(y) - 7, 1, 7);
+      polyIso(g, [[x - 4, y - 7], [x + 4, y - 7], [x + 3, y - 12], [x - 3, y - 12]], o.lampes ? "#fff06a" : "#e9e3cd", ENCRE);
+    });
+    // le canapé corail sous la baie
+    ajouter(5.6, () => {
+      boiteIso(g, 4.4, 0.1, 3.0, 1.3, 7, { dessus: "#ff7b6b", gauche: "#ff5b4f", droite: "#d23a2a" });
+      boiteIso(g, 4.4, 0.1, 3.0, 0.4, 15, { dessus: "#ff5b4f", gauche: "#e04a3f", droite: "#d23a2a" });
+      boiteIso(g, 4.4, 0.1, 0.35, 1.3, 11, { dessus: "#ff5b4f", gauche: "#e04a3f", droite: "#d23a2a" });
+      boiteIso(g, 7.05, 0.1, 0.35, 1.3, 11, { dessus: "#ff5b4f", gauche: "#e04a3f", droite: "#d23a2a" });
+      boiteIso(g, 4.9, 0.55, 0.8, 0.3, 6, { dessus: "#ffd23a", gauche: "#e9b44c", droite: "#c99a3a" }, 7);
+      boiteIso(g, 6.1, 0.55, 0.8, 0.3, 6, { dessus: "#f2f0e8", gauche: "#d6d2c0", droite: "#c9c4b0" }, 7);
+    });
+    // la plante dans son grand pot, dans le coin de la baie
+    ajouter(7.8, () => {
+      boiteIso(g, 7.45, 0.2, 0.45, 0.45, 8, { dessus: "#7a4520", gauche: "#c96a3a", droite: "#9a4a2a" });
+      const [x, y] = PI_(7.68, 0.42, 8);
+      for (const [dx, dy, l] of [[-6, -10, 9], [5, -12, 10], [0, -16, 12], [-3, -14, 8], [7, -6, 7]]) { g.strokeStyle = l > 9 ? "#2f7a3e" : "#4f9a46"; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + dx * 0.4, y + dy * 0.8, x + dx, y + dy); g.stroke(); }
+    });
+    // la table du goûter et ses deux chaises
+    ajouter(9.4, () => {
+      boiteIso(g, 5.2, 3.6, 2.0, 1.4, 1.5, { dessus: "#e9b44c", gauche: "#c99a3a", droite: "#b9834f" }, 11);
+      for (const [i, j] of [[5.3, 4.85], [7.05, 4.85], [7.05, 3.7]]) { const [x, y] = PI_(i, j, 0); g.fillStyle = "#b9834f"; g.fillRect(Math.round(x), Math.round(y) - 11, 2, 11); }
+      // deux tasses et une assiette de crêpes
+      for (const [i, j, col] of [[5.7, 4.0, "#f3f0dc"], [6.7, 4.6, "#f3f0dc"]]) { const [x, y] = PI_(i, j, 12.5); g.fillStyle = col; g.fillRect(Math.round(x) - 1, Math.round(y) - 3, 3, 3); g.fillStyle = ENCRE; g.fillRect(Math.round(x) - 1, Math.round(y) - 3, 3, 1); }
+      const [ax, ay] = PI_(6.2, 4.3, 12.5); g.fillStyle = "#f3f0dc"; g.fillRect(Math.round(ax) - 4, Math.round(ay) - 1, 8, 2); g.fillStyle = "#c96a3a"; g.fillRect(Math.round(ax) - 3, Math.round(ay) - 2, 6, 1); g.fillStyle = "#4b3427"; g.fillRect(Math.round(ax) - 1, Math.round(ay) - 2, 2, 1);
+    });
+    // les personnages
+    const perso = (prof, nom, i, j, image, miroir, z) => ajouter(prof, () => { const [x, y] = PI_(i, j, z || 0); H.pixel.dessiner(g, nom, x, y, 1, image, miroir); o.boites[nom] = [x - 9, y - 26, x + 9, y]; });
+    if (o.dodo) {
+      // ƟvƟ et Mesi en cuillère, les têtes sur les oreillers, sous la couverture bombée
+      ajouter(4.5, () => {
+        for (const [nom, i, j, z] of [["luigi", 0.75, 2.05, 13], ["ovo", 0.95, 2.6, 12]]) {
+          const s = H.pixel.sprite(nom, 0), [x, y] = PI_(i, j, z);
+          g.imageSmoothingEnabled = false; g.drawImage(s, 0, 0, 16, 12, Math.round(x) - 8, Math.round(y) - 10, 16, 12);
+          g.fillStyle = H.pixel.PAL.s; g.fillRect(Math.round(x) - 2, Math.round(y) - 4, 2, 1); g.fillRect(Math.round(x) + 1, Math.round(y) - 4, 2, 1);
+        }
+        const sf = Math.sin(t / 1300);
+        for (const [dj, col] of [[1.75, "#3a3aa8"], [2.5, "#3d5ee8"]]) {
+          const pts = [];
+          for (let u = 1.4; u <= 4.3; u += 0.15) { const bosse = Math.max(0, Math.sin((u - 1.4) * 2.2)) * 4 + Math.max(0, Math.sin((u - 1.4) * 1.1)) * 2 + (u < 2.4 ? sf * 0.6 : 0); pts.push(PI_(u, dj, 9 + bosse)); }
+          for (let u = 4.3; u >= 1.4; u -= 0.15) pts.push(PI_(u, dj + 0.8, 9));
+          polyIso(g, pts, col, ENCRE);
+        }
+      });
+      ajouter(4.6, () => { const [x, y] = PI_(3.6, 2.3, 9); g.save(); g.translate(x, y); g.scale(0.55, 0.55); H.pixel.dessiner(g, "lolo", 0, 0, 1, 0); g.restore(); });
+      ajouter(4.65, () => { const [x, y] = PI_(2.9, 3.0, 11); H.pixel.dessiner(g, "memePas", x, y, 0.7, 0); });
+    } else {
+      ajouter(4.6, () => { const [x, y] = PI_(2.9, 2.2, 9); g.save(); g.translate(x, y); g.scale(0.6, 0.6); H.pixel.dessiner(g, "lolo", 0, 0, 1, Math.floor(t / 900) % 2); g.restore(); o.boites.lolo = [x - 12, y - 18, x + 12, y]; });
+      ajouter(4.7, () => { const [x, y] = PI_(2.2, 2.9, 9); H.pixel.dessiner(g, "memePas", x, y, 0.8, 0); o.boites.meme = [x - 6, y - 8, x + 6, y]; });
+      if (o.canape) { perso(6.5, "ovo", 5.3, 0.95, 0, false, 7); perso(7.5, "luigi", 6.6, 0.95, 0, true, 7); }
+      else { perso(8.8, "ovo", 4.75, 4.3, 0); perso(11.6, "luigi", 7.75, 4.3, 0, true); }
+    }
+    items.sort((a, b) => a[0] - b[0]).forEach(([, f]) => f());
+    // la boule orange au bout de son fil de cuivre, au-dessus de la table
+    const [bx, by] = PI_(6.2, 4.3, 27);
+    g.fillStyle = "#c87533"; g.fillRect(Math.round(bx), 0, 1, Math.round(by) - 5);
+    g.beginPath(); g.arc(Math.round(bx), Math.round(by), 5, 0, Math.PI * 2); g.fillStyle = o.lampes ? "#ff8f2e" : "#9a4a20"; g.fill(); g.strokeStyle = ENCRE; g.stroke();
+    if (o.lampes) { g.fillStyle = "#ffc46b"; g.fillRect(Math.round(bx) - 2, Math.round(by) - 3, 2, 2); }
+  }
+
+  // le dehors, dans la baie : le ciel du moment, des arbres au loin et un pin tout près
+  function dehorsIso(g, t, moment) {
+    const ciel = { jour: ["#6fb6ee", "#a8d8ec"], soir: ["#5b3c8f", "#ff8f2e"], nuit: ["#15124a", "#232a63"] }[moment];
+    g.save();
+    polyIso(g, surMurD(4.3, 7.5, 16, 52), ciel[0]);
+    g.clip();
+    for (let z = 16; z < 34; z++) { const [a] = [PI_(4.3, 0, z)]; g.fillStyle = ciel[1]; g.globalAlpha = (34 - z) / 18; g.fillRect(a[0], a[1] - 60, 60, 1); }
+    g.globalAlpha = 1;
+    // des collines et des arbres sombres au loin, un pin parasol devant
+    for (let k = 0; k < 7; k++) { const [x, y] = PI_(4.3 + k * 0.5, 0, 20 + (k % 3) * 2); g.fillStyle = moment === "nuit" ? "#10241d" : "#2f6b35"; g.beginPath(); g.ellipse(x, y, 7, 4, 0, 0, Math.PI * 2); g.fill(); }
+    const vent = Math.sin(t / 1800) * 1.5, [px, py] = PI_(6.6, 0, 16);
+    g.fillStyle = moment === "nuit" ? "#0e1030" : "#4b3427"; g.fillRect(Math.round(px), Math.round(py) - 26, 2, 26);
+    g.fillStyle = moment === "nuit" ? "#0e1030" : "#3f8a42"; g.beginPath(); g.ellipse(px + vent, py - 28, 12, 4, 0, 0, Math.PI * 2); g.fill();
+    if (moment === "nuit") for (let k = 0; k < 6; k++) { const [x, y] = PI_(4.5 + k * 0.5, 0, 44 + (k * 7) % 6); if (Math.sin(t / 700 + k) > 0) { g.fillStyle = "#f3f0dc"; g.fillRect(Math.round(x), Math.round(y), 1, 1); } }
+    g.restore();
+  }
+
+  // la lumière : le soir et la nuit, la pièce s'assombrit sauf près des lampes et du feu ; le
+  // jour, le soleil entre par la baie et se pose sur le sol ; pour dormir, la lune, douce et bleue
+  function lumiereIso(g, t, moment, o) {
+    if (moment === "jour" && !o.dodo) {
+      const etat = H.ciel.etat(), m = H.ciel.meteo || {}, force = Math.max(0, 1 - (m.nuages || 0) / 110) * Math.min(1, etat.soleil.alt / 12);
+      if (force > 0.1) {
+        g.save();
+        for (let k = 0; k < 3; k++) {
+          const i0 = 4.4 + k * 1.05, i1 = i0 + 0.95;
+          polyIso(g, [PI_(i0, 1.45), PI_(i1, 1.45), PI_(i1 - 0.3, 2.9), PI_(i0 - 0.3, 2.9)], "rgba(255,236,180," + 0.5 * force + ")");
+        }
+        g.fillStyle = "rgba(60,40,90," + 0.35 * force + ")";
+        const vent = Math.sin(t / 2100) * 0.25;
+        for (let k = 0; k < 10; k++) { const [x, y] = PI_(4.6 + ((k * 0.37) % 3) + vent, 1.6 + ((k * 0.61) % 1.2)); g.beginPath(); g.ellipse(x, y, 3, 1.5, 0, 0, Math.PI * 2); g.fill(); }
+        g.restore();
+      }
+      return;
+    }
+    // l'ombre, avec des trous de lumière (lampes, feu)
+    const sombre = document.createElement("canvas");
+    sombre.width = MI.L; sombre.height = MI.H;
+    const s = sombre.getContext("2d");
+    s.fillStyle = o.dodo ? "rgba(20,18,70,0.6)" : moment === "nuit" ? "rgba(35,30,110,0.5)" : "rgba(50,40,120,0.3)";
+    s.fillRect(0, 0, MI.L, MI.H);
+    s.globalCompositeOperation = "destination-out";
+    const trou = (x, y, rx, ry, a) => { s.save(); s.translate(x, y); s.scale(1, ry / rx); const d = s.createRadialGradient(0, 0, 0, 0, 0, rx); d.addColorStop(0, "rgba(0,0,0," + a + ")"); d.addColorStop(1, "rgba(0,0,0,0)"); s.fillStyle = d; s.beginPath(); s.arc(0, 0, rx, 0, Math.PI * 2); s.fill(); s.restore(); };
+    if (o.lampes) { trou(...PI_(0.6, 4.1, 12), 44, 30, 1); trou(...PI_(6.2, 4.3, 18), 50, 32, 1); }
+    if (o.feu) trou(...PI_(0.9, 1.0, 6), 34 + Math.sin(t / 130) * 2, 22, 0.9);
+    g.drawImage(sombre, 0, 0);
+    // la lune par la baie, sur le sol, très douce et bleutée
+    if (o.dodo || moment === "nuit") for (let k = 0; k < 3; k++) { const i0 = 4.4 + k * 1.05; polyIso(g, [PI_(i0, 0.1), PI_(i0 + 0.95, 0.1), PI_(i0 + 0.45, 3), PI_(i0 - 0.5, 3)], "rgba(150,185,245,0.12)"); }
+  }
+
+  function sceneMaisonIso(toile, dodo) {
+    const ctx = toile.getContext("2d"), nuit = H.ciel.nuitCalme();
+    const base = dodo ? [] : zonesMaison(nuit), parId = Object.fromEntries(base.map((z) => [z.id, z]));
+    const petite = document.createElement("canvas");
+    petite.width = MI.L; petite.height = MI.H;
+    const g = petite.getContext("2d");
+    let decor = null, cle = "", survol = null, derniere = 0, pointeur = "mouse", prochainRonflement = performance.now() + 8000;
+    const o = { boites: {} };
+    // ce qu'on peut toucher, en petits pixels : le meuble ou le personnage sous le doigt
+    const zones = () => {
+      const z = [];
+      const rect = (id, x0, y0, x1, y1) => parId[id] && z.push(Object.assign({}, parId[id], { r: [x0, y0, x1, y1] }));
+      const bbox = (pts) => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+      for (const id of ["ovo", "luigi", "lolo", "meme"]) if (o.boites[id]) rect(id === "luigi" ? "mesi" : id, ...o.boites[id]);
+      rect("poele", ...bbox([PI_(0.35, 1, 0), PI_(1.2, 0.3, 0), PI_(0.8, 0.65, MI.MUR)]));
+      rect("table", ...bbox([PI_(5.2, 5, 12), PI_(7.2, 3.6, 12), PI_(7.2, 5, 0)]));
+      rect("fenetre", ...bbox(surMurD(4.3, 7.5, 16, 52)));
+      rect("canape", ...bbox([PI_(4.4, 1.4, 0), PI_(7.4, 0.1, 15), PI_(7.4, 1.4, 0)]));
+      rect("lit", ...bbox([PI_(0, 3.5, 0), PI_(4.4, 1.3, 16), PI_(4.4, 3.5, 0)]));
+      return z;
+    };
+    const versPetit = (e) => { const r = toile.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * MI.L, ((e.clientY - r.top) / r.height) * MI.H]; };
+    const zoneSous = (e) => { const [x, y] = versPetit(e); return zones().find((z) => x >= z.r[0] && x <= z.r[2] && y >= z.r[1] && y <= z.r[3]) || null; };
+    toile.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse") return; survol = zoneSous(e); toile.style.cursor = survol ? "pointer" : "default"; });
+    toile.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") survol = null; });
+    toile.addEventListener("pointerdown", (e) => (pointeur = e.pointerType));
+    toile.addEventListener("click", (e) => {
+      if (dodo) { if (!H.$(".dialogue")) H.lolo.cacherLaLumiere({ couche: () => {} }); return; }
+      const z = zoneSous(e);
+      if (!z || H.$(".dialogue")) return;
+      if (pointeur !== "mouse" && (!survol || survol.id !== z.id)) { survol = z; return; }
+      survol = null;
+      z.agir();
+    });
+    function image(t) {
+      if (!document.body.contains(toile)) return;
+      requestAnimationFrame(image);
+      if (t - derniere < 66) return;
+      derniere = t;
+      const moment = dodo ? "nuit" : momentMaison();
+      if (cle !== moment + (dodo ? "d" : "")) { cle = moment + (dodo ? "d" : ""); decor = decorIso(moment, dodo); }
+      Object.assign(o, { dodo, lampes: !dodo, feu: H.cheminee && H.cheminee.feuActif(), canape: !dodo && canapeJusqua > t });
+      g.clearRect(0, 0, MI.L, MI.H);
+      dehorsIso(g, t, moment);
+      g.drawImage(decor, 0, 0);
+      meublesIso(g, t, o);
+      lumiereIso(g, t, moment, o);
+      // à l'écran : agrandi sans flou, aux couleurs des pochettes
+      const w = toile.clientWidth || 600, dpr = Math.min(2, window.devicePixelRatio || 1), h = Math.round((w * MI.H) / MI.L);
+      if (toile.width !== Math.round(w * dpr)) { toile.width = Math.round(w * dpr); toile.height = Math.round(h * dpr); }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, toile.width, toile.height);
+      ctx.drawImage(petite, 0, 0, toile.width, toile.height);
+      H.retro.appliquer(toile, Math.max(2, Math.round(toile.width / MI.L)), 0.15);
+      // le nom de ce qu'on survole
+      if (survol) {
+        const k = toile.width / MI.L, [x0, y0, x1] = survol.r;
+        ctx.font = Math.round(13 * dpr) + "px 'Suez One', serif";
+        const tw = ctx.measureText(survol.nom).width, x = Math.max(4, Math.min(toile.width - tw - 12, ((x0 + x1) / 2) * k - tw / 2)), y = Math.max(18 * dpr, y0 * k - 6 * dpr);
+        ctx.fillStyle = "#23214a"; ctx.fillRect(x - 6, y - 15 * dpr, tw + 12, 20 * dpr);
+        ctx.fillStyle = "#f3f0dc"; ctx.fillText(survol.nom, x, y);
+      }
+      // pour dormir : Mémé ronfle de temps en temps
+      if (dodo && t > prochainRonflement) { prochainRonflement = t + 12000 + Math.random() * 16000; ronflement(); }
+    }
+    requestAnimationFrame(image);
+  }
+
   H.vues.maison = {
     afficher(c) {
-      c.appendChild(H.el("div.page-maison", null,
+      // la pièce en relief (par défaut), ou vue de face comme avant
+      const relief = !H.local.maisonFace;
+      c.appendChild(H.el("div.page-maison" + (relief ? ".relief" : ""), null,
         (toileMaison = H.el("canvas.scene-maison", { role: "img", "aria-label": "L’intérieur du mazet : le lit, le canapé sous la fenêtre, la table, Mesi, Lóló et Mémé" })),
-        H.el("a.sortie-maison", { href: "#village", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme")
+        H.el("a.sortie-maison", { href: "#village", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme"),
+        H.el("button.sortie-maison.bascule-maison", { type: "button", onclick: () => { H.d.majLocal((l) => (l.maisonFace = relief)); H.router(); } }, relief ? "Vue de face" : "Vue en relief")
       ));
-      sceneMaison(toileMaison);
+      if (relief) sceneMaisonIso(toileMaison, false);
+      else sceneMaison(toileMaison);
       // le jour de l'anniversaire d'ƟvƟ, une fois : une coupe de champagne
       if (H.champagne && H.champagne.anniversaire() && H.local.champagneOffert !== new Date().toDateString()) {
         setTimeout(async () => {
@@ -2046,9 +2328,10 @@
     afficher(c, params) {
       if (params[0] === "dormir") {
         const toile = H.el("canvas.scene-maison", { role: "img", "aria-label": "Tout le monde dort dans le même lit. Par la fenêtre, les étoiles ; la lumière de la nuit se pose sur le parquet." });
-        c.appendChild(H.el("div.page-maison", null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller")));
+        c.appendChild(H.el("div.page-maison" + (H.local.maisonFace ? "" : ".relief"), null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller")));
         H.musique.arreter();
-        sceneDodo(toile);
+        if (H.local.maisonFace) sceneDodo(toile);
+        else sceneMaisonIso(toile, true);
         return;
       }
       // la nuit, le reste du jeu dort : on propose seulement de dormir ou de se balader
