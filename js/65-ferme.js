@@ -1183,6 +1183,8 @@
   }
   function majBassin(t) {
     const bords = bordsBassin();
+    // les grenouilles chantent quand il y a un bassin (on vérifie toutes les deux secondes)
+    if (H.sons && H.sons.grenouilles && (!scene.grenouillesT || t - scene.grenouillesT > 2000)) { scene.grenouillesT = t; H.sons.grenouilles(bords.length > 0); }
     if (!bords.length) { scene.grenouilles = null; scene.herisson = null; return; }
     // deux grenouilles au plus, posées sur le bord
     if (!scene.grenouilles || scene.grenouilles.nbBords !== bords.length) {
@@ -1850,6 +1852,7 @@
       bonjourDuMatin();
     },
     quitter() {
+      if (H.sons && H.sons.grenouilles) H.sons.grenouilles(false);
       if (!scene) return;
       cancelAnimationFrame(scene.anim);
       clearInterval(scene.minuteur);

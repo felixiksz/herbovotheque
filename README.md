@@ -66,4 +66,6 @@ Goélands (Freesound) : « Seagull single call » de steaq (CC0), « 16_2_Gaviot
 
 Criquets et cigales : « cricket » de trouby (Freesound n° 362404), « epic cricket bird chirping in distance », « cigales (cicadas) in Ardèche ». Passés en mono 22 kHz, en boucles d’une vingtaine de secondes (`sons/criquets.wav`, `sons/criquets-loin.wav`, `sons/cigales.wav`). Licences à noter ici.
 
+Grenouilles du bassin (xeno-canto) : grenouille rieuse, XC896405 de Fabrice Schmitt, Les Mées (CC BY-NC-SA 4.0) ; alyte accoucheur, XC893214 de Tanguy Loïs, Laroque-de-Fa (CC BY-SA 4.0). Joués en boucle, la fin fondue dans le début (`sons/grenouille-rieuse.mp3`, `sons/alyte.mp3`).
+
 Pas des sangliers : « boar steps », passé en mono 22 kHz, les chocs trop forts adoucis (`sons/sanglier.wav`). Licence à noter ici.

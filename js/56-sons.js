@@ -4,7 +4,19 @@
   const H = window.H;
   const FICHIERS = { miaou: "sons/miaou.mp3", attention: "sons/attention.mp3", pas: "sons/pas.mp3", pluie: "sons/roll.mp3", galop: "sons/galop.mp3",
     criquets: "sons/criquets.wav", criquetsLoin: "sons/criquets-loin.wav", cigales: "sons/cigales.wav",
-    sanglier: "sons/sanglier.wav" };
+    sanglier: "sons/sanglier.wav", rieuse: "sons/grenouille-rieuse.mp3", alyte: "sons/alyte.mp3" };
+  // les longs enregistrements de nature joués en boucle : leur fin se fond dans leur début
+  const FONDUS = new Set(["rieuse", "alyte"]);
+  function enBoucle(buf) {
+    const f = Math.min(Math.floor(buf.sampleRate * 1.5), Math.floor(buf.length / 4)), n = buf.length - f;
+    const out = ctx.createBuffer(buf.numberOfChannels, n, buf.sampleRate);
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      const a = buf.getChannelData(ch), b = out.getChannelData(ch);
+      b.set(a.subarray(0, n));
+      for (let i = 0; i < f; i++) { const k = i / f; b[i] = a[i] * k + a[n + i] * (1 - k); }
+    }
+    return out;
+  }
   const boucles = {};
 
   const actif = () => H.local && H.local.son && document.visibilityState === "visible";
@@ -46,7 +58,7 @@
       tampons[nom] = fetch(FICHIERS[nom])
         .then((r) => r.arrayBuffer())
         .then((a) => new Promise((ok, ko) => ctx.decodeAudioData(a, ok, ko)))
-        .then(sansSilence);
+        .then((b) => (FONDUS.has(nom) ? enBoucle(b) : sansSilence(b)));
     }
     return tampons[nom];
   }
@@ -560,7 +572,23 @@
   }
   H.sons.majPluie = pluie;
   // le curseur « Bruitages » a bougé : les criquets, les cigales et la pluie suivent aussitôt
-  H.sons.majVolumes = () => { majNuit(); majCigales(); pluie(); };
+  // Les grenouilles du bassin de la ferme (enregistrées, voir les notes) : l'alyte la nuit, de
+  // mars à octobre ; la grenouille rieuse le soir et la nuit, d'avril à août. La ferme dit s'il y
+  // a un bassin et si l'on est dehors.
+  let grenouillesVoulues = false;
+  function grenouilles(oui) {
+    if (oui != null) grenouillesVoulues = !!oui;
+    const s = H.ciel && H.jeu ? H.ciel.etat() : null, mois = new Date().getMonth() + 1;
+    const nuit = !!s && s.soleil.alt < -4, soir = !!s && s.soleil.alt < 4;
+    const chant = { alyte: grenouillesVoulues && nuit && mois >= 3 && mois <= 10, rieuse: grenouillesVoulues && soir && mois >= 4 && mois <= 8 };
+    for (const [nom, vol] of [["alyte", 0.5], ["rieuse", 0.32]]) {
+      boucles[nom] = boucles[nom] || {};
+      boucles[nom].voulu = chant[nom];
+      boucleContinue(nom, chant[nom] && actif(), vol * H.volume("bruitages"));
+    }
+  }
+  H.sons.grenouilles = grenouilles;
+  H.sons.majVolumes = () => { majNuit(); majCigales(); pluie(); grenouilles(); };
   // dans les réglages : faire entendre la pluie quelques secondes, même s'il fait beau
   let finApercu = null;
   H.sons.apercuPluie = function () {
