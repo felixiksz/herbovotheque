@@ -2387,9 +2387,9 @@
     afficher(c, params) {
       if (params[0] === "dormir") {
         const toile = H.el("canvas.scene-maison", { role: "img", "aria-label": "Tout le monde dort dans le même lit. Par la fenêtre, les étoiles ; la lumière de la nuit se pose sur le parquet." });
-        c.appendChild(H.el("div.page-maison.relief", null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller")));
+        c.appendChild(H.el("div.page-maison", null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller")));
         H.musique.arreter();
-        sceneMaisonIso(toile, true);
+        sceneDodo(toile);
         return;
       }
       // la nuit, le reste du jeu dort : on propose seulement de dormir ou de se balader

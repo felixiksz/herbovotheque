@@ -1653,7 +1653,11 @@
     // le nom de la maison survolée (ou touchée une première fois), en VT323 net, par-dessus
     scene.survol = null;
     const pt = scene.pointeur;
-    if (pt && !scene.amenager) for (const mm of MAISONS) { const [x, y] = iso(mm.i + mm.w / 2, mm.j + mm.d / 2); if (Math.abs(pt.x - (x - cx)) < 6 + mm.w * 6 && pt.y > y - cy - 28 && pt.y < y - cy + 10) scene.survol = mm; }
+    // (le tas de bois sec, collé à la maison, ne se touche que sur ses bûches : la maison passe avant)
+    if (pt && !scene.amenager) for (const mm of MAISONS) {
+      const [x, y] = iso(mm.i + mm.w / 2, mm.j + mm.d / 2), dx = Math.abs(pt.x - (x - cx)), dy = pt.y - (y - cy);
+      if (mm.genre === "bois" ? dx < 5 && dy > -6 && dy < 8 && !scene.survol : dx < 6 + mm.w * 6 && dy > -28 && dy < 10) scene.survol = mm;
+    }
     const montre = scene.survol || scene.choisi;
     if (montre) {
       const [x0, y0] = iso(montre.i + montre.w / 2, montre.j + montre.d / 2);
