@@ -372,7 +372,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root[data-ile] .terrain-tete a.bouton { background: var(--menu-fond); border: 0; border-radius: 0; box-shadow: 0 0 0 3px var(--menu-cerne), 0 0 0 6px var(--menu-fond), 6px 6px 0 6px rgba(15, 16, 53, 0.6); padding: 0 10px 1px 16px; margin: 6px; }
 :root[data-vue="balade"] .actions-balade > * { padding: 6px 10px; }
 :root[data-vue="balade"] .actions-balade > [hidden] { display: none; }
-:root[data-vue="balade"] .actions-balade .fin-balade { display: flex; gap: 6px; }
+:root[data-vue="balade"] .actions-balade .fin-balade { display: flex; gap: 6px; margin: 0; }
 :root[data-vue="village"] #vue { min-height: 100vh; display: grid; align-content: center; }
 
 /* Aménager : une fine bande d'une ligne en bas de la ferme, qui défile de côté, pour ne rien cacher */
