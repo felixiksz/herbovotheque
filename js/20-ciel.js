@@ -238,6 +238,8 @@
         H.emettre("meteo", H.ciel.meteo);
       } catch (err) {
         console.warn("météo indisponible", err);
+        // pas de réseau : on garde la dernière météo connue pour ce lieu
+        if (!H.ciel.meteo && cache && cache.lat === lat && cache.lon === lon) { H.ciel.meteo = cache; H.emettre("meteo", cache); }
       }
       return H.ciel.meteo;
     },

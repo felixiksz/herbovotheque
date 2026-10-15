@@ -451,15 +451,24 @@
         return;
       }
       if (m.genre === "bois") {
-        // les bûches, vues par leurs bouts ronds clairs, empilées en trois rangs
-        for (let r = 0; r < 3; r++) for (let k = 0; k < 4 - r; k++) {
-          const x = 12 + k * 4 + r * 2, y = h - 9 - r * 3;
-          remplir(c, [[x - 1, y + 1], [x + 7, y + 5], [x + 7, y + 2], [x - 1, y - 2]], "#7a4520");
-          pixel(c, x - 1, y, "#e9c99a"); pixel(c, x, y, "#d9a07a"); pixel(c, x - 1, y - 1, "#d9a07a");
+        // le tas de bûches en pyramide (trois, deux, une), couchées vers le fond : l'écorce brune
+        // rayée sur le dessus, et devant les bouts coupés, clairs, avec leurs cernes
+        const R0 = 3.4, bout = [], dx = 10, dy = -5;
+        for (const [rang, n] of [[0, 3], [1, 2], [2, 1]]) for (let k = 0; k < n; k++) bout.push([11 + k * 7 + rang * 3.5, h - 8 - rang * 6]);
+        // les écorces d'abord (du haut et du fond vers le devant), puis les bouts par-dessus
+        for (const [x, y] of bout.slice().reverse()) {
+          const q = [[x, y - R0], [x + dx, y - R0 + dy], [x + dx, y + R0 + dy], [x, y + R0]];
+          remplir(c, q, "#7a4520");
+          ligne(c, x, y - R0, x + dx, y - R0 + dy, "#9a6a3c");
+          for (let u = 0.2; u < 1; u += 0.27) { const lx = x + dx * u, ly = y + dy * u; pixel(c, lx, ly - 1, "#4b3427"); pixel(c, lx + 1, ly + 1, "#4b3427"); pixel(c, lx - 1, ly + 2, "#9a6a3c"); }
+          contour(c, q, "#2a1d1b");
         }
-        // l'auvent
-        remplir(c, [[8, h - 20], [28, h - 10], [30, h - 13], [10, h - 23]], "#9a6a3c"); contour(c, [[8, h - 20], [28, h - 10], [30, h - 13], [10, h - 23]], "#4b3427");
-        ligne(c, 10, h - 20, 10, h - 8, "#4b3427"); ligne(c, 28, h - 11, 28, h - 3, "#4b3427");
+        for (const [x, y] of bout) {
+          ovale(c, x, y, R0, R0, "#2a1d1b");
+          ovale(c, x, y, R0 - 1, R0 - 1, "#e9c99a");
+          ovale(c, x, y, 1.5, 1.5, "#c9a06a");
+          pixel(c, x, y, "#9a6a3c"); pixel(c, x - 1, y - 2, "#f3e2c0");
+        }
         return;
       }
       if (m.genre === "ponton") {
