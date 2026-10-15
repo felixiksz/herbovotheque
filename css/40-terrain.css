@@ -6,36 +6,28 @@
 .echelle-ile { font-family: var(--terrain); font-size: 0.8rem; }
 .terrain-intro { max-width: 720px; }
 
-.archipel { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; margin-top: 10px; }
+/* l'archipel : des cartes en gros pixels, comme la ferme et le bureau */
+.archipel-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.bouton-pixel { font: 1.3rem/1 var(--menu-police); background: #f3ee6a; color: #23214a; border: 2px solid #23214a; border-radius: 0; padding: 5px 12px 6px; box-shadow: 3px 3px 0 #23214a; cursor: pointer; }
+.bouton-pixel:hover { background: #fff7a0; }
+.bouton-pixel:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #23214a; }
+.aide-pixel { margin: 0; flex: 1 1 260px; font: 1.15rem/1.2 var(--menu-police); color: #6b6578; }
+.archipel { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-top: 10px; }
 .carte-ile {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-decoration: none;
-  border: 0;
-  border-radius: 0;
-  padding: 0 0 6px;
-  background: none;
-  box-shadow: none;
-  color: inherit;
+  display: flex; flex-direction: column; text-decoration: none; color: #23214a;
+  border: 2px solid #23214a; border-radius: 0; padding: 0; background: #fffdf4; box-shadow: 3px 3px 0 #23214a;
 }
-.carte-ile img { width: 100%; height: auto; display: block; }
-.carte-ile .nom-ile { font-family: var(--titre); font-size: 1.35rem; line-height: 1.5; }
-.carte-ile .discret { font-family: var(--terrain); font-size: 0.72rem; }
-a.carte-ile:hover .nom-ile, a.carte-ile:focus-visible .nom-ile { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
-a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 4px; }
-.carte-ile.brume { opacity: 0.85; }
-:root[data-theme="nuit"] .carte-ile { box-shadow: none; }
-.brume-dessin {
-  display: block;
-  aspect-ratio: 22 / 13;
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse at 40% 50%, rgba(255, 255, 255, 0.9), transparent 55%),
-    radial-gradient(ellipse at 65% 45%, rgba(230, 236, 240, 0.9), transparent 50%),
-    radial-gradient(ellipse at 50% 60%, rgba(160, 200, 215, 0.5), transparent 70%);
-  filter: blur(2px);
-}
+.carte-ile .miniature-ile { width: 100%; height: auto; display: block; image-rendering: pixelated; border-bottom: 2px solid #23214a; }
+.infos-ile { display: grid; gap: 2px; padding: 6px 8px 8px; }
+.carte-ile .nom-ile { font: 1.35rem/1.05 var(--menu-police); }
+.mesures-ile { font: 1.05rem/1.1 var(--menu-police); color: #6b6578; }
+.sorte-ile { justify-self: start; margin-top: 3px; font: 0.95rem/1 var(--menu-police); padding: 2px 5px; border: 1.5px solid #23214a; background: #9cc77a; }
+.sorte-ile.croquis { background: #e9e3cd; }
+a.carte-ile:hover, a.carte-ile:focus-visible { background: #f3ee6a; }
+a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px; }
+.carte-ile.brume { opacity: 0.9; }
+:root[data-theme="nuit"] .carte-ile { box-shadow: 3px 3px 0 #0f0d3a; }
+.brume-dessin { display: block; aspect-ratio: 3 / 2; border-bottom: 2px solid #23214a; background: repeating-conic-gradient(#d6eef7 0 25%, #e9f4f8 0 50%) 0 0 / 6px 6px; }
 
 .bandeau-ciel { position: relative; margin: 8px 0 6px; border: 1px solid var(--filet); border-radius: 6px; overflow: hidden; }
 .ciel-ile { display: block; width: 100%; height: 70px; image-rendering: pixelated; }

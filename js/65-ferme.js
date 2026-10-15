@@ -1199,7 +1199,8 @@
     // Lune (la nuit) ou du Soleil (le jour), et le lieu
     // la nuit, la Lune dans son signe ; le jour, le Soleil dans le sien
     const e = H.ciel.etat(), jour = e.soleil.alt > 0, z = jour ? H.ciel.signeSoleil() : H.ciel.signeLune();
-    const lune = H.ciel.nomPhase(e.lune.phase) + " · " + (jour ? "Soleil" : "Lune") + " en " + z.signe + " " + z.degre + "°";
+    // (la phase de la lune seulement la nuit)
+    const lune = (jour ? "" : H.ciel.nomPhase(e.lune.phase) + " · ") + (jour ? "Soleil" : "Lune") + " en " + z.signe + " " + z.degre + "°";
     scene.heureMeteo.textContent = [heure, m && m.temperature != null ? m.temperature + " °C" : null, m && m.humidite != null ? m.humidite + " % d’humidité" : null,
       m && m.libelle ? m.libelle.toLowerCase() : null, lune, lieu].filter(Boolean).join(" · ");
   }

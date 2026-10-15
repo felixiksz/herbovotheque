@@ -349,31 +349,73 @@
     return H.local.apercuIleSecrete || new Date() >= OUVERTURE_SECRETE;
   }
 
+  // La miniature d'une île, dessinée comme la ferme : un petit bloc isométrique en gros pixels,
+  // le dessus avec ses vraies cases (herbe, terre bêchée, chemin, gravier, mare, serre), sa tranche
+  // de terre, et ses plantes, les arbres plus hauts que les herbes. Un croquis est sur papier.
+  const PIX_TUILES = {
+    herbe: ["#6cbd5c", "#4aa63e", "#9cc77a"], terre: ["#9a6a3c", "#7a4520", "#b9834f"], chemin: ["#d9b48a", "#c9a06a", "#e9c99a"],
+    gravier: ["#c9c9c4", "#9a9a9a", "#e9e3cd"], eau: ["#2f8fe0", "#6fb6ee", "#2f8fe0"], serre: ["#d6eef7", "#a8d8ec", "#f3f0dc"],
+  };
+  const PIX_CROQUIS = {
+    herbe: ["#efe8d4", "#e9e3cd", "#efe8d4"], terre: ["#d9c4a0", "#c9b090", "#d9c4a0"], chemin: ["#e9d9b8", "#ddd2ba", "#e9d9b8"],
+    gravier: ["#ddd8cc", "#c9c9c4", "#ddd8cc"], eau: ["#a8d8ec", "#d6eef7", "#a8d8ec"], serre: ["#f3f0dc", "#d6eef7", "#f3f0dc"],
+  };
+  const FLEURS_PIX = ["#8a58cc", "#ff5b4f", "#f6ee55", "#d07ab8", "#f3f0dc", "#ffd23a", "#e8714a"];
   function miniature(ile) {
-    const W = 220, Hh = 130, c = H.aqua.toile(W * 2, Hh * 2), ctx = c.getContext("2d"), r = H.alea(ile.id);
-    ctx.scale(2, 2);
-    // la mer reste à l'intérieur du dessin : pas de bord coupé net
-    H.aqua.tache(ctx, r, W / 2, Hh / 2, W * 0.4, Hh * 0.38, "#79b5d3", { alpha: 0.05, couches: 12 });
-    const k = Math.min((W - 84) / ile.cols, (Hh - 52) / ile.lignes);
-    const w = ile.cols * k, h = ile.lignes * k, x0 = (W - w) / 2, y0 = (Hh - h) / 2;
-    H.aqua.lavis(ctx, r, H.aqua.rectArrondi(x0 - 5, y0 - 5, w + 10, h + 10, 12), "#e7d3a2", { alpha: 0.12, couches: 10, bord: 0.2 });
-    H.aqua.lavis(ctx, r, H.aqua.rectArrondi(x0, y0, w, h, 8), TEINTES_SAISON[document.documentElement.dataset.saison] || "#9cc77a", { alpha: 0.13, couches: 10, bord: 0.2 });
-    for (const [k2, pl] of Object.entries(ile.plantes || {})) {
-      const [x, y] = k2.split(",").map(Number);
-      const p = H.d.plante(pl.p);
-      if (!p) continue;
-      H.aqua.tache(ctx, r, x0 + (x + 0.5) * k, y0 + (y + 0.5) * k, Math.max(2, k * 0.6), Math.max(2, k * 0.6), "#5f8a46", { alpha: 0.25, couches: 4 });
+    const W = 96, Hh = 64, c = document.createElement("canvas");
+    c.width = W; c.height = Hh;
+    const g = c.getContext("2d"), P = (x, y, col) => { g.fillStyle = col; g.fillRect(x | 0, y | 0, 1, 1); };
+    const hsh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    // la mer, avec quelques reflets
+    g.fillStyle = "#a8d8ec"; g.fillRect(0, 0, W, Hh);
+    const r = H.alea(ile.id);
+    for (let k = 0; k < 16; k++) { g.fillStyle = "#d6eef7"; g.fillRect((r() * (W - 3)) | 0, (r() * Hh) | 0, 3, 1); }
+    const cols = ile.cols, lignes = ile.lignes, tons = ile.croquis ? PIX_CROQUIS : PIX_TUILES;
+    const a = Math.min((W - 10) / (cols + lignes), (Hh - 22) / ((cols + lignes) / 2));
+    const ox = W / 2 + ((lignes - cols) * a) / 2, oy = 12 + Math.max(0, (Hh - 22 - ((cols + lignes) * a) / 2) / 2);
+    const iso = (i, j) => [ox + (i - j) * a, oy + ((i + j) * a) / 2];
+    // le dessus, pixel par pixel : à quelle case appartient chaque pixel
+    for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
+      const u = (x + 0.5 - ox) / a, v = ((y + 0.5 - oy) * 2) / a, i = (u + v) / 2, j = (v - u) / 2;
+      if (i < 0 || j < 0 || i >= cols || j >= lignes) continue;
+      const t = tons[caseDe(ile, Math.floor(i), Math.floor(j)).t] || tons.herbe, h = hsh(x, y);
+      P(x, y, h < 0.6 ? t[0] : h < 0.85 ? t[1] : t[2]);
+    }
+    // la tranche de terre (côté gauche au soleil, côté droit à l'ombre)
+    const [ax, ay] = iso(0, lignes), [bx, by] = iso(cols, lignes), [cx, cy] = iso(cols, 0);
+    const tranche = (x0, y0, x1, y1, clair) => {
+      const n = Math.max(1, Math.round(Math.abs(x1 - x0)));
+      for (let q = 0; q <= n; q++) {
+        const x = x0 + ((x1 - x0) * q) / n, y = y0 + ((y1 - y0) * q) / n;
+        for (let d = 0; d < 6; d++) P(x, y + d, d < 1 ? (ile.croquis ? "#c9c4b0" : clair ? "#6cbd5c" : "#3f8a42") : d < 4 ? (clair ? "#b9834f" : "#9a6a3c") : clair ? "#9a9a9a" : "#6b6578");
+      }
+    };
+    tranche(ax, ay, bx, by, true); tranche(bx, by, cx, cy, false);
+    // les plantes, du fond vers l'avant ; les arbres et les arbustes dépassent
+    const plantes = Object.entries(ile.plantes || {}).map(([k, pl]) => { const [x, y] = k.split(",").map(Number); return { x, y, p: H.d.plante(pl.p) }; })
+      .filter((o) => o.p).sort((m, n) => m.x + m.y - (n.x + n.y));
+    for (const { x, y, p } of plantes) {
+      const [px, py] = iso(x + 0.5, y + 0.5), cycle = (p.valeurs || {}).cycle, fleur = FLEURS_PIX[Math.floor(hsh(p.id.length, p.id.charCodeAt(0)) * FLEURS_PIX.length)];
+      if (ile.croquis) { P(px, py, "#23214a"); P(px + 1, py, "#23214a"); continue; }
+      if (cycle === "Arbre") {
+        for (let d = 0; d < 7; d++) P(px, py - d, "#4b3427");
+        for (let dy = -2; dy <= 1; dy++) for (let dx = -4; dx <= 4; dx++) if (Math.abs(dx) / 4.5 + Math.abs(dy) / 2.5 < 1) P(px + dx, py - 8 + dy, hsh(dx + x, dy + y) < 0.5 ? "#2f6b35" : "#3f8a42");
+      } else if (cycle === "Arbuste") {
+        for (let dy = -2; dy <= 0; dy++) for (let dx = -2; dx <= 2; dx++) if (Math.abs(dx) + Math.abs(dy) < 3) P(px + dx, py + dy - 1, hsh(dx, dy + x) < 0.6 ? "#3f8a42" : "#2f6b35");
+        P(px, py - 3, fleur);
+      } else {
+        P(px, py, "#2f6b35"); P(px + 1, py, "#3f8a42"); P(px, py - 1, "#3f8a42"); P(px + 1, py - 1, fleur);
+      }
     }
     return c.toDataURL("image/png");
   }
 
   function archipel(conteneur) {
-    conteneur.appendChild(H.el("div.terrain-tete", null,
-      H.el("h1", null, "Terrain"),
-      H.el("div.herbo-boutons", null, H.el("button.bouton", { type: "button", onclick: nouvelleIle }, "Nouvelle île"))
+    // (la fenêtre s'appelle déjà « Les îles » : pas de titre, un bouton et une ligne d'aide en pixels)
+    conteneur.appendChild(H.el("div.archipel-tete", null,
+      H.el("button.bouton-pixel", { type: "button", onclick: nouvelleIle }, "Nouvelle île"),
+      H.el("p.aide-pixel", null, "Chaque île est un jardin. Les îles de jeu poussent en temps réel ; les croquis servent d’esquisse pour un vrai projet, à l’échelle.")
     ));
-    conteneur.appendChild(H.el("p.discret.terrain-intro", null,
-      "Chaque île est un jardin. Les îles de jeu poussent en temps réel et demandent des ressources ; les îles croquis servent d’esquisse pour un vrai projet, à l’échelle."));
     const grille = H.el("div.archipel");
     const liste = iles().filter((i) => i.id !== ILE_SECRETE || ileSecreteOuverte());
     if (!liste.length) {
@@ -381,16 +423,19 @@
     }
     liste.forEach((ile) => {
       grille.appendChild(H.el("a.carte-ile", { href: "#terrain/" + encodeURIComponent(ile.id) },
-        H.el("img", { src: miniature(ile), alt: "" }),
-        H.el("span.nom-ile", null, ile.nom),
-        H.el("span.discret", null, (ile.croquis ? "Croquis · " : "") + ile.largeur + " × " + ile.longueur + " m · " + Object.keys(ile.plantes || {}).length + " plantes")
+        H.el("img.miniature-ile", { src: miniature(ile), alt: "" }),
+        H.el("span.infos-ile", null,
+          H.el("span.nom-ile", null, ile.nom),
+          H.el("span.mesures-ile", null, ile.largeur + " × " + ile.longueur + " m · " + Object.keys(ile.plantes || {}).length + " plantes"),
+          H.el("span.sorte-ile" + (ile.croquis ? ".croquis" : ""), null, ile.croquis ? "croquis" : "île de jeu"))
       ));
     });
     if (!ileSecreteOuverte()) {
       grille.appendChild(H.el("div.carte-ile.brume", { title: "Une île se cache dans la brume" },
         H.el("span.brume-dessin", { "aria-hidden": "true" }),
-        H.el("span.nom-ile", null, "Une île dans la brume"),
-        H.el("span.discret", null, "Reviens le 24 février…")
+        H.el("span.infos-ile", null,
+          H.el("span.nom-ile", null, "Une île dans la brume"),
+          H.el("span.mesures-ile", null, "Reviens le 24 février…"))
       ));
     } else if (!(H.jeu.iles || {})[ILE_SECRETE] || ((H.jeu.iles[ILE_SECRETE].version || 1) < VERSION_ILE_SECRETE && !H.jeu.iles[ILE_SECRETE].supprime)) {
       creerIleSecrete();
