@@ -80,3 +80,15 @@
   font: 1rem/1.15 var(--menu-police, monospace); text-align: center; opacity: 0.75; }
 .retourner .touche { margin: 0 0 0 8px; }
 @media (hover: none) { .touche { display: none; } }
+
+/* les flashcartes à choix multiples : des pastilles en pixels à cocher */
+.choix-carte { display: grid; gap: 8px; margin-top: 10px; }
+.aide-choix { margin: 0; font: 1.1rem/1.2 var(--menu-police); color: #6b6578; }
+.pastilles-choix { display: flex; flex-wrap: wrap; gap: 8px; }
+.pastille-choix { font: 1.2rem/1 var(--menu-police); color: #23214a; background: #fffdf4; border: 2px solid #23214a; border-radius: 0; padding: 5px 10px 6px; box-shadow: 2px 2px 0 #23214a; cursor: pointer; }
+.pastille-choix.choisi { background: #f3ee6a; }
+.pastille-choix.juste { background: #9cc77a; }
+.pastille-choix.oubli { background: #fffdf4; border-style: dashed; box-shadow: none; outline: 2px solid #9cc77a; outline-offset: 1px; }
+.pastille-choix.faux { background: #ffb3a8; text-decoration: line-through; }
+.pastille-choix.ecarte { opacity: 0.45; box-shadow: none; }
+.reponses .bouton.suggere { outline: 3px solid var(--fluo, #f3ee6a); outline-offset: 2px; }

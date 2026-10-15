@@ -25,6 +25,11 @@
       for (const c of champs) {
         const v = (p.valeurs || {})[c.id];
         if (vide(v)) continue;
+        // quand les réponses possibles sont en nombre limité (sphères, cycle, exposition, sol,
+        // mois…), la carte se joue en choix multiples
+        const mois = c.type === "mois";
+        const options = c.type === "choix" ? c.options || [] : mois ? H.MOIS : null;
+        const bonnes = (Array.isArray(v) ? v : [v]).map((x) => (mois && typeof x === "number" ? H.MOIS[x - 1] : x)).filter((x) => options && options.includes(x));
         cartes.push({
           id: p.id + "|" + c.id,
           plante: p.id,
@@ -32,6 +37,7 @@
           categorie: c.section,
           recto: () => texte(H.el("strong", null, p.nom), H.el("span.recto-rubrique", null, c.nom)),
           verso: () => H.fiche.valeurLecture(c, v),
+          choix: options && options.length > 1 && bonnes.length ? { options, bonnes, plusieurs: !!(c.multiple || mois || Array.isArray(v)) } : null,
         });
       }
     }
@@ -547,7 +553,22 @@
       const recto = H.el("div.recto", null, c.recto());
       carte.appendChild(recto);
       if (s && estFragile(s)) carte.appendChild(H.el("span.marque-fragile", null, "fragile"));
-      const verso = H.el("div.verso", { hidden: true }, c.verso());
+      // les choix multiples : on coche, puis « Valider »
+      const choisis = new Set();
+      let choixEl = null, valide = !c.choix;
+      if (c.choix) {
+        choixEl = H.el("div.choix-carte", null,
+          H.el("p.aide-choix", null, c.choix.plusieurs ? "Coche toutes les bonnes réponses." : "Une seule bonne réponse."),
+          H.el("div.pastilles-choix", null, c.choix.options.map((o) => H.el("button.pastille-choix", { type: "button", "data-choix": o, onclick(e) {
+            e.stopPropagation();
+            if (valide) return;
+            if (!c.choix.plusieurs) { choisis.clear(); choixEl.querySelectorAll(".choisi").forEach((b) => b.classList.remove("choisi")); }
+            if (choisis.has(o)) choisis.delete(o); else choisis.add(o);
+            this.classList.toggle("choisi", choisis.has(o));
+          } }, o))));
+        carte.appendChild(choixEl);
+      }
+      const verso = H.el("div.verso", { hidden: true }, c.choix ? null : c.verso());
       carte.appendChild(verso);
       const boutons = H.el("div.reponses", { hidden: true });
       const maintenant = H.maintenant();
@@ -557,12 +578,28 @@
         boutons.appendChild(H.el("button.bouton.note-" + n, { type: "button", onclick: () => repondre(n), title: "Touche " + (n + 1) },
           H.el("kbd.touche", null, String(n + 1)), H.el("span", null, nom), H.el("span.delai", null, duree(apres.due - maintenant))));
       });
-      const retourner = H.el("button.bouton.retourner", { type: "button", onclick: montrer, title: "Touche Espace ou Entrée" }, "Voir la réponse", H.el("kbd.touche", null, "espace"));
+      const retourner = H.el("button.bouton.retourner", { type: "button", onclick: montrer, title: "Touche Espace ou Entrée" }, c.choix ? "Valider" : "Voir la réponse", H.el("kbd.touche", null, "espace"));
       zone.append(progression, carte, retourner, boutons);
-      carte.addEventListener("click", () => verso.hidden && montrer());
+      carte.addEventListener("click", () => !c.choix && verso.hidden && montrer());
       carte.focus({ preventScroll: true });
 
       function montrer() {
+        if (c.choix && !valide) {
+          // chaque choix dit s'il était juste, oublié ou faux ; la note proposée en découle
+          valide = true;
+          let oublis = 0, fautes = 0;
+          choixEl.querySelectorAll(".pastille-choix").forEach((b) => {
+            const o = b.dataset.choix, bon = c.choix.bonnes.includes(o), pris = choisis.has(o);
+            if (bon && pris) b.classList.add("juste");
+            else if (bon) { b.classList.add("oubli"); oublis++; }
+            else if (pris) { b.classList.add("faux"); fautes++; }
+            else b.classList.add("ecarte");
+          });
+          const erreurs = oublis + fautes, n = erreurs === 0 ? 3 : erreurs === 1 && c.choix.plusieurs ? 1 : 0;
+          const bouton = boutons.querySelector(".note-" + n);
+          if (bouton) bouton.classList.add("suggere");
+          choixEl.querySelector(".aide-choix").textContent = erreurs === 0 ? "Tout juste !" : (oublis ? oublis + " oubliée" + (oublis > 1 ? "s" : "") : "") + (oublis && fautes ? ", " : "") + (fautes ? fautes + " en trop" : "") + ".";
+        }
         verso.hidden = false;
         boutons.hidden = false;
         retourner.remove();
