@@ -478,4 +478,15 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 
 /* la maison en relief : la pièce vue en coin, plus haute que large */
 .page-maison.relief .scene-maison { aspect-ratio: auto; max-width: min(100%, calc(100vh * 1.25)); height: auto; image-rendering: pixelated; }
-.bascule-maison { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 12px; left: auto; font-family: var(--menu-police); cursor: pointer; }
+
+/* la fiche d'une case ou d'une plante sur l'île : lisible, dans le style pixel du jeu */
+:root .panneau-case { background: #fffdf4; color: #23214a; border: 2px solid #23214a; border-radius: 0; box-shadow: 4px 4px 0 #23214a; opacity: 1; }
+:root .panneau-case * { color: inherit; opacity: 1; }
+:root .panneau-case .nom-plante-ile, :root .panneau-case h3 { font: 1.7rem/1.1 var(--menu-police) !important; color: #23214a; margin: 0 0 4px; }
+:root .panneau-case p, :root .panneau-case li { font: 1.2rem/1.25 var(--menu-police); color: #23214a; }
+:root .panneau-case .discret { color: #6b6578; }
+:root .panneau-case .jauges { font: 1.1rem/1 var(--menu-police); color: #23214a; }
+:root .panneau-case .jauge { border: 2px solid #23214a; border-radius: 0; height: 10px; background: #fffdf4; }
+:root .panneau-case .bouton { font: 1.15rem/1 var(--menu-police); background: #fffdf4; color: #23214a; border: 2px solid #23214a; border-radius: 0; box-shadow: 2px 2px 0 #23214a; padding: 4px 9px 5px; }
+:root .panneau-case .bouton.actif, :root .panneau-case .bouton:hover { background: #f3ee6a; }
+:root .panneau-case .fermer-panneau { box-shadow: none; border-color: transparent; background: transparent; text-decoration: underline; }
