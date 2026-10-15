@@ -186,6 +186,8 @@
     const grand = e === "pin" || e === "cedre" || e === "araucaria";
     // les grands arbres restent assez loin de la cour pour que leur feuillage ne cache pas les poules
     if (dansMaison(x, y) || dansJardin(x, y) || (grand && (dansJardin(x - 1.5, y - 1.5) || dansJardin(x - 3, y - 3))) || surChemin(x, y, 1.2)) continue;
+    // ni grand arbre ni buisson juste devant la boîte aux lettres et le ponton : leur feuillage les cacherait
+    if (["lettres", "ponton"].some((id) => { const m = MAISONS.find((q) => q.id === id), di = x - m.i, dj = y - m.j; return Math.abs(di - dj) < (grand ? 3.5 : 1.5) && di + dj > -1 && di + dj < (grand ? 9 : 3); })) continue;
     if (plantes.some((p) => Math.hypot(p.x - x, p.y - y) < (grand ? 2 : 0.9))) continue;
     if (e !== "agave") { plantes.push({ x, y, e, v: Math.floor(alea() * 3) }); continue; }
     // les agaves poussent en famille : une grande mère et ses rejets, serrés autour d'elle
@@ -387,9 +389,12 @@
     contour(c, g, t.trait); contour(c, dr, t.trait);
     return { A, B, C, D };
   }
-  function fenetre(c, x, y, face, allume) {
-    const col = allume ? "#f6ee55" : "#a8d8ec", pente = face === "g" ? 0.5 : -0.5;
-    for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 5; dy++) pixel(c, x + dx, y + dy + Math.round(dx * pente), dy === 0 || (dx === 1 && !allume) ? "#6fb6ee" : col);
+  // etat : "allume" (la nuit, chez ƟvƟ et Mesi), "noir" (la nuit, ailleurs : personne, lumière
+  // éteinte) ; sinon le jour, la vitre qui reflète le ciel
+  function fenetre(c, x, y, face, etat) {
+    const allume = etat === "allume", noir = etat === "noir", pente = face === "g" ? 0.5 : -0.5;
+    const col = allume ? "#f6ee55" : noir ? "#1b1d4a" : "#a8d8ec", haut = allume ? "#6fb6ee" : noir ? "#232a63" : "#6fb6ee";
+    for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 5; dy++) pixel(c, x + dx, y + dy + Math.round(dx * pente), dy === 0 || (dx === 1 && !allume) ? haut : col);
     for (let dy = -1; dy < 6; dy++) { pixel(c, x - 1, y + dy - Math.round(pente), "#4b3427"); }
   }
   // les couleurs du ciel à chaque moment, du zénith à l'horizon (le fond, et le toit de la serre qui le reflète)
@@ -428,7 +433,7 @@
         for (let k = 2; k < m.h; k += 2) ligne(c, B[0] + 1, B[1] - k, C[0] - 1, C[1] - k, cote < 0 ? "#e9e3cd" : "#b8ae94");
         // une lucarne grillagée sur le long côté
         const lx = B[0] + (C[0] - B[0]) * 0.55, ly = B[1] + (C[1] - B[1]) * 0.55 - m.h + 2;
-        for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 3; dy++) pixel(c, lx + dx, ly + dy - Math.round(dx * 0.5), (dx + dy) % 2 ? "#4b3427" : nuit ? "#f6ee55" : "#6b6578");
+        for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 3; dy++) pixel(c, lx + dx, ly + dy - Math.round(dx * 0.5), (dx + dy) % 2 ? "#4b3427" : "#6b6578");
         // la porte ronde et la rampe à barreaux qui descend jusqu'à l'herbe
         const px = Math.round(A[0] + (B[0] - A[0]) * 0.5), py = Math.round(A[1] + (B[1] - A[1]) * 0.5);
         ovale(c, px, py - 3, 2, 3, "#4b3427");
@@ -445,14 +450,26 @@
         return;
       }
       if (m.genre === "ponton") {
+        // la barque amarrée au bout, qui attend pour aller sur les îles
+        remplir(c, [[19, h - 17], [34, h - 17], [31, h - 12], [22, h - 12]], "#ff5b4f"); contour(c, [[19, h - 17], [34, h - 17], [31, h - 12], [22, h - 12]], "#7a2e1e");
+        ligne(c, 20, h - 17, 33, h - 17, "#f3f0dc"); ligne(c, 26, h - 16, 27, h - 16, "#9a6a3c");
+        ligne(c, 22, h - 11, 31, h - 11, "#2f8fe0");
         for (let k = 0; k < 5; k++) { const x = 4 + k * 3, y = h - 8 - k * 2; remplir(c, [[x, y], [x + 8, y - 4], [x + 12, y - 2], [x + 4, y + 2]], k % 2 ? "#b9834f" : "#9a6a3c"); }
+        // les pieux du ponton
+        for (const [x, y] of [[4, h - 7], [16, h - 15], [12, h - 5], [24, h - 13]]) ligne(c, x, y, x, y + 3, "#4b3427");
+        // le panneau en flèche, avec deux petites îles peintes dessus
+        ligne(c, 6, h - 9, 6, h - 27, "#7a4520");
+        const fl = [[0, h - 30], [12, h - 30], [16, h - 26], [12, h - 22], [0, h - 22]];
+        remplir(c, fl, "#e9b44c"); contour(c, fl, "#7a4520");
+        ligne(c, 2, h - 25, 11, h - 25, "#2f8fe0");
+        pixel(c, 4, h - 27, "#3f8a42"); pixel(c, 5, h - 27, "#3f8a42"); pixel(c, 4, h - 26, "#3f8a42"); pixel(c, 9, h - 27, "#3f8a42"); pixel(c, 9, h - 26, "#3f8a42"); pixel(c, 10, h - 26, "#3f8a42");
         return;
       }
       if (m.genre === "a") {
         const A = [ox - m.d * 8, oy - m.d * 4], B = [ox, oy], C = [ox + m.w * 8, oy - m.w * 4], D = [ox + (m.w - m.d) * 8, oy - (m.w + m.d) * 4];
         const S = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - 30], R = [(C[0] + D[0]) / 2, (C[1] + D[1]) / 2 - 30];
         remplir(c, [D, A, S, R], "#3f8a42"); contour(c, [D, A, S, R], "#1e3d25");
-        remplir(c, [A, B, S], "#a8d8ec"); remplir(c, [[A[0] + 5, A[1] - 2], [B[0] - 5, B[1] - 2], [S[0], S[1] + 9]], nuit ? "#f6ee55" : "#6fb6ee"); contour(c, [A, B, S], "#26406a");
+        remplir(c, [A, B, S], "#a8d8ec"); remplir(c, [[A[0] + 5, A[1] - 2], [B[0] - 5, B[1] - 2], [S[0], S[1] + 9]], nuit ? "#1b1d4a" : "#6fb6ee"); contour(c, [A, B, S], "#26406a");
         remplir(c, [B, C, R, S], "#2f6b35"); contour(c, [B, C, R, S], "#1e3d25");
         ligne(c, S[0], S[1] + 2, S[0], (A[1] + B[1]) / 2, "#26406a");
         return;
@@ -487,9 +504,11 @@
         for (let k = 1; k < 4; k++) { const u = k / 4; ligne(c, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u - H2, "#2f6b35"); ligne(c, B[0] + (C[0] - B[0]) * u, B[1] + (C[1] - B[1]) * u, B[0] + (C[0] - B[0]) * u, B[1] + (C[1] - B[1]) * u - H2, "#2f6b35"); }
         for (let k = 0; k < 7; k++) { const u = 0.1 + k * 0.12; feuillage(c, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u - 3, 2, 2, ["#2f6b35", "#4aa63e", "#9cc77a", "#1e3d25"]); }
       } else {
-        fenetre(c, A[0] + (B[0] - A[0]) * 0.3 - 2, A[1] + (B[1] - A[1]) * 0.3 - H2 + 4, "g", nuit);
-        if (m.d > 1) fenetre(c, A[0] + (B[0] - A[0]) * 0.72 - 2, A[1] + (B[1] - A[1]) * 0.72 - H2 + 4, "g", nuit);
-        fenetre(c, B[0] + (C[0] - B[0]) * 0.65 - 2, B[1] + (C[1] - B[1]) * 0.65 - H2 + 4, "d", nuit);
+        // la nuit, seule la maison d'ƟvƟ et Mesi est allumée ; le labo et les cabanes sont éteints
+        const vitre = !nuit ? "jour" : m.id === "maison" ? "allume" : "noir";
+        fenetre(c, A[0] + (B[0] - A[0]) * 0.3 - 2, A[1] + (B[1] - A[1]) * 0.3 - H2 + 4, "g", vitre);
+        if (m.d > 1) fenetre(c, A[0] + (B[0] - A[0]) * 0.72 - 2, A[1] + (B[1] - A[1]) * 0.72 - H2 + 4, "g", vitre);
+        fenetre(c, B[0] + (C[0] - B[0]) * 0.65 - 2, B[1] + (C[1] - B[1]) * 0.65 - H2 + 4, "d", vitre);
         // la porte, sur la façade au soleil
         const px = A[0] + (B[0] - A[0]) * 0.52, py = A[1] + (B[1] - A[1]) * 0.52;
         remplir(c, [[px - 2, py - 1], [px + 3, py + 1], [px + 3, py - 9], [px - 2, py - 11]], m.genre === "mazet" ? "#7f97f2" : "#2f6b35");
@@ -551,7 +570,7 @@
     // deux grandes fenêtres sur la longue façade, une petite sur le pignon
     const fen = (x, y, lw, lh, pente) => {
       const q = [[x, y], [x + lw, y + lw * pente], [x + lw, y + lw * pente - lh], [x, y - lh]];
-      remplir(c, q, nuit ? "#f6ee55" : "#a8d8ec"); contour(c, q, "#f3f0dc");
+      remplir(c, q, !nuit ? "#a8d8ec" : m.id === "maison" ? "#f6ee55" : "#1b1d4a"); contour(c, q, "#f3f0dc");
       if (!nuit) ligne(c, x + 1, y - lh + 2, x + 2, y - lh + 1 + pente, "#d6eef7");
     };
     fen(A[0] + 3, A[1] - 3 + 1.5, 6, 6, 0.5);
@@ -623,7 +642,7 @@
     // la longue face à l'ombre
     const dr = [[B[0], B[1] - h], [C[0], C[1] - h], C, B];
     remplir(c, dr, cote < 0 ? T.clair : T.ombre); contour(c, dr, T.trait);
-    for (const u of [0.3, 0.7]) { const x = B[0] + vx * u, y = B[1] + vy * u - h + 3; ovale(c, x, y + 1, 2, 2, null, (dx, dy) => (dx * dx + dy * dy > 2 ? "#9a6a3c" : nuit ? "#f6ee55" : "#a8d8ec")); }
+    for (const u of [0.3, 0.7]) { const x = B[0] + vx * u, y = B[1] + vy * u - h + 3; ovale(c, x, y + 1, 2, 2, null, (dx, dy) => (dx * dx + dy * dy > 2 ? "#9a6a3c" : nuit ? "#1b1d4a" : "#a8d8ec")); }
     // la façade arrondie au soleil, avec sa porte bleue et la guirlande de cartes
     const g = [A, B].concat(arc.slice().reverse());
     remplir(c, g, cote < 0 ? T.ombre : T.clair); contour(c, g, T.trait);
@@ -1539,6 +1558,7 @@
       const heureMeteo = H.el("div.heure-ferme", { "aria-live": "off" });
       boite.append(toile, etiquette, heureMeteo, H.el("div.pastilles-scene", null,
         H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
+        H.el("a.pastille-scene", { href: "#terrain" }, "Les îles"),
         H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
       ));
       c.appendChild(boite);
