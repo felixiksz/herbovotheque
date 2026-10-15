@@ -78,17 +78,21 @@
     const cleO = ile.id + "|" + (ile.modifieLe || 0) + "|" + Object.keys(ile.plantes || {}).length;
     const deja = ombresCache.get(ile.id);
     if (deja && deja.cle === cleO) return deja.carte;
-    const carte = {};
+    // Sous la couronne d'un arbre (ou d'un grand arbuste), c'est la mi-ombre ; là où les couronnes de
+    // deux grands arbres se chevauchent, l'ombre. La couronne est celle qu'on voit (au plus 6 cases
+    // de rayon), et un arbre ne se fait pas d'ombre à lui-même.
+    const carte = {}, sous = {};
     for (const [k, pl] of Object.entries(ile.plantes || {})) {
       const q = H.d.plante(pl.p);
       if (!q || stade(ile, pl) < 3) continue;
       const h = hauteurM(q);
       if (h < 2.5) continue;
-      const [x, y] = k.split(",").map(Number), r = Math.max(1, rayonPlante(q, ile));
+      const [x, y] = k.split(",").map(Number), r = Math.max(1, Math.min(6, rayonPlante(q, ile)));
       for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
-        const d = Math.hypot(dx, dy);
-        if (d > r + 0.2) continue;
-        const e = h >= 5 && d <= r * 0.6 ? "Ombre" : "Mi-ombre", c2 = cle(x + dx, y + dy);
+        if ((!dx && !dy) || Math.hypot(dx, dy) > r + 0.2) continue;
+        const c2 = cle(x + dx, y + dy);
+        if (h >= 5) sous[c2] = (sous[c2] || 0) + 1;
+        const e = sous[c2] >= 2 ? "Ombre" : "Mi-ombre";
         if (!carte[c2] || RANG_EXPO[e] > RANG_EXPO[carte[c2]]) carte[c2] = e;
       }
     }
@@ -973,7 +977,11 @@
   function dimensionner() {
     if (vue.iso) return dimensionnerIso();
     const ile = vue.ile;
-    const w = (ile.cols + BORD * 2) * T * vue.zoom, h = (ile.lignes + BORD * 2) * T * vue.zoom;
+    // (la toile remplit toute la largeur de la zone d'affichage : l'île au milieu, de la mer autour)
+    const zw = vue.zoneToile ? vue.zoneToile.clientWidth : 0;
+    const casesX = Math.max(ile.cols + BORD * 2, Math.ceil(zw / (T * vue.zoom))), casesY = ile.lignes + BORD * 2;
+    vue.bx = (casesX - ile.cols) / 2; vue.by = (casesY - ile.lignes) / 2;
+    const w = casesX * T * vue.zoom, h = casesY * T * vue.zoom;
     const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 2.5);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
@@ -995,17 +1003,17 @@
     ctx.fillRect(0, 0, vue.fond.width, vue.fond.height);
     ctx.save();
     ctx.scale(k / T, k / T);
-    const W = ile.cols + BORD * 2, Hh = ile.lignes + BORD * 2;
+    const BX = vue.bx, BY = vue.by, W = ile.cols + BX * 2, Hh = ile.lignes + BY * 2;
     for (let i = 0; i < 18; i++) H.aqua.tache(ctx, r, r() * W * T, r() * Hh * T, 40 + r() * 80, 30 + r() * 60, i % 2 ? "#6aa9c9" : "#bfe0ec", { alpha: 0.05, couches: 8 });
-    const sable = H.aqua.rectArrondi((BORD - 0.6) * T, (BORD - 0.6) * T, (ile.cols + 1.2) * T, (ile.lignes + 1.2) * T, T * 1.2, 8);
+    const sable = H.aqua.rectArrondi((BX - 0.6) * T, (BY - 0.6) * T, (ile.cols + 1.2) * T, (ile.lignes + 1.2) * T, T * 1.2, 8);
     H.aqua.lavis(ctx, r, sable, "#ead6a6", { alpha: 0.2, couches: 12, bord: 0.05 });
     // la terre nue de l'île : un seul grand lavis continu, sans damier
     const herbe = TEINTES_SAISON[saison] || "#9cc77a", terreNue = teintesSol(ile.sol).base;
     ctx.fillStyle = terreNue[0];
-    ctx.fillRect(BORD * T, BORD * T, ile.cols * T, ile.lignes * T);
+    ctx.fillRect(BX * T, BY * T, ile.cols * T, ile.lignes * T);
     const n = Math.ceil((ile.cols * ile.lignes) / 6);
     for (let i = 0; i < n; i++) {
-      const x = (BORD + r() * ile.cols) * T, y = (BORD + r() * ile.lignes) * T;
+      const x = (BX + r() * ile.cols) * T, y = (BY + r() * ile.lignes) * T;
       H.aqua.tache(ctx, r, x, y, T * (0.8 + r() * 1.6), T * (0.6 + r() * 1.2), terreNue[1 + (i % 3)], { alpha: 0.03, couches: 6 });
     }
     ctx.restore();
@@ -1014,7 +1022,7 @@
         const c = caseDe(ile, x, y);
         if (c.t === "sol") continue;
         const tex = textureTuile(c.t, saison, H.hash(cle(x, y)) % 3);
-        ctx.drawImage(tex, (x + BORD) * k, (y + BORD) * k, k + 0.5, k + 0.5);
+        ctx.drawImage(tex, (x + BX) * k, (y + BY) * k, k + 0.5, k + 0.5);
       }
     }
     // quadrillage très fin, pour l'échelle
@@ -1022,12 +1030,12 @@
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 0; x <= ile.cols; x++) {
-      ctx.moveTo((x + BORD) * k, BORD * k);
-      ctx.lineTo((x + BORD) * k, (ile.lignes + BORD) * k);
+      ctx.moveTo((x + BX) * k, BY * k);
+      ctx.lineTo((x + BX) * k, (ile.lignes + BY) * k);
     }
     for (let y = 0; y <= ile.lignes; y++) {
-      ctx.moveTo(BORD * k, (y + BORD) * k);
-      ctx.lineTo((ile.cols + BORD) * k, (y + BORD) * k);
+      ctx.moveTo(BX * k, (y + BY) * k);
+      ctx.lineTo((ile.cols + BX) * k, (y + BY) * k);
     }
     ctx.stroke();
   }
@@ -1203,7 +1211,10 @@
     vue.headroom = haut;
     vue.ox = MARGE + ile.lignes * HW;
     vue.oy = MARGE + haut;
-    const w = ((ile.cols + ile.lignes) * HW + 2 * MARGE) * vue.zoom, h = (vue.oy + (ile.cols + ile.lignes) * QH + PROF + MARGE) * vue.zoom;
+    let w = ((ile.cols + ile.lignes) * HW + 2 * MARGE) * vue.zoom, h = (vue.oy + (ile.cols + ile.lignes) * QH + PROF + MARGE) * vue.zoom;
+    // (la toile remplit toute la largeur de la zone d'affichage : du ciel de chaque côté de l'île)
+    const zw = vue.zoneToile ? vue.zoneToile.clientWidth : 0;
+    if (zw > w) { vue.ox += (zw - w) / 2 / vue.zoom; w = zw; }
     const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 2.5);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
@@ -1514,7 +1525,7 @@
     const k = T * vue.zoom * vue.dpr;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(vue.fond, 0, 0);
-    ctx.setTransform(k / T, 0, 0, k / T, BORD * k, BORD * k);
+    ctx.setTransform(k / T, 0, 0, k / T, vue.bx * k, vue.by * k);
 
     // en repiquant une plante de la caisse : les cases libres où elle se plairait
     if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
@@ -1647,10 +1658,11 @@
     const ile = vue.ile;
     const px = Math.max(1, Math.round(k / 12));
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, BORD * k, BORD * k);
+    ctx.setTransform(1, 0, 0, 1, vue.bx * k, vue.by * k);
     for (let y = 0; y < ile.lignes; y++) {
       for (let x = 0; x < ile.cols; x++) {
-        const expo = caseDe(ile, x, y).expo;
+        // (l'exposition vraie : celle qu'on a peinte, et l'ombre des arbres, comme en relief)
+        const expo = expoIci(ile, x, y);
         const x0 = Math.round(x * k), y0 = Math.round(y * k), w = Math.round((x + 1) * k) - x0, h = Math.round((y + 1) * k) - y0;
         if (expo !== "Plein soleil") {
           const pas = expo === "Ombre" ? 3 * px : 6 * px;
@@ -1664,7 +1676,7 @@
           ctx.restore();
         }
         ctx.fillStyle = "#ffe14d";
-        const autre = (xx, yy) => xx >= 0 && yy >= 0 && xx < ile.cols && yy < ile.lignes && caseDe(ile, xx, yy).expo !== expo;
+        const autre = (xx, yy) => xx >= 0 && yy >= 0 && xx < ile.cols && yy < ile.lignes && expoIci(ile, xx, yy) !== expo;
         if (autre(x + 1, y)) ctx.fillRect(x0 + w - px, y0, px, h);
         if (autre(x, y + 1)) ctx.fillRect(x0, y0 + h - px, w, px);
       }
@@ -1779,8 +1791,8 @@
       return { x, y };
     }
     const k = T * vue.zoom;
-    const x = Math.floor((e.clientX - rect.left) / k) - BORD;
-    const y = Math.floor((e.clientY - rect.top) / k) - BORD;
+    const x = Math.floor((e.clientX - rect.left) / k - vue.bx);
+    const y = Math.floor((e.clientY - rect.top) / k - vue.by);
     if (x < 0 || y < 0 || x >= vue.ile.cols || y >= vue.ile.lignes) return null;
     return { x, y };
   }
@@ -1851,7 +1863,7 @@
   // doigt, et Mesi lui dit son nom en hongrois.
   function montrerDuDoigt(e, c) {
     const rect = vue.toile.getBoundingClientRect(), k = T * vue.zoom;
-    let fx = (e.clientX - rect.left) / k - BORD, fy = (e.clientY - rect.top) / k - BORD;
+    let fx = (e.clientX - rect.left) / k - vue.bx, fy = (e.clientY - rect.top) / k - vue.by;
     if (vue.iso) [fx, fy] = versCase((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
     const dire = (francais, hongrois) => H.dialogue.dire([
       { qui: "ovo", texte: H.histoires.auHasard(["Et ça ? (ƟvƟ montre du doigt.)", "Comment on dit, ça ?", "Et celui-là ?"]) },
@@ -2173,7 +2185,7 @@
         " · " + caseDe(ile, x, y).expo.toLowerCase()),
       !ile.croquis ? H.el("div.jauges", null,
         H.el("span", null, "Eau "), H.el("span.jauge.jauge-eau", null, H.el("span.jauge-plein", { style: { width: Math.round(pl.eau) + "%" } })),
-        H.el("span", null, " Bien-être "), H.el("span.jauge", null, H.el("span.jauge-plein", { style: { width: pourcent + "%" } }))
+        H.el("span", null, " Bien-être "), H.el("span.jauge.jauge-bien", null, H.el("span.jauge-plein", { style: { width: pourcent + "%" } }))
       ) : null,
       H.el("p", null, humeur + " (" + pourcent + " %)."),
       ev.raisons.length ? H.el("ul.raisons", null, ev.raisons.map((t) => H.el("li", null, t))) : null,

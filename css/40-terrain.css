@@ -518,3 +518,6 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 /* Sur téléphone, ces scènes sont calculées à deux fois la taille de l'écran au plus, et le
    navigateur les agrandit un peu : sans lissage, les gros pixels restent nets, comme la ferme. */
 .scene-maison, .toile-balade, .grille-cabane, .toile-ile { image-rendering: pixelated; }
+
+/* le bien-être des plantes, en jaune fluo */
+.jauges .jauge-bien .jauge-plein { background: var(--fluo-jaune); }
