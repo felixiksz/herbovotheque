@@ -6,6 +6,11 @@
 // Elle démarre au premier geste (les navigateurs l'exigent) et se coupe dans les réglages.
 // D'autres styles, au choix dans les réglages : steeldrum, kora, synthwave, vaporwave
 // (même gamme selon la météo, mais en rythme, avec leurs instruments).
+// La musique n'est pas fabriquée en direct : elle est calculée à l'avance, par tranches de
+// quelques secondes (dans un contexte audio « hors ligne », qui n'a pas besoin de suivre le
+// temps réel), puis simplement lue. Sur téléphone, fabriquer des dizaines de notes en direct
+// pendant que l'écran dessine faisait saccader le son ; lire une tranche déjà prête ne coûte
+// presque rien. Seul le bourdon, quelques ondes tenues, reste en direct.
 (function () {
   const H = window.H;
 
@@ -23,64 +28,58 @@
   // ni septième qui frotte, pour une musique sans tension.
   const VOIX = [[0, 17.8], [4, 20.1], [2, 23.6], [7, 26.3], [5, 29.9], [9, 31.4], [11, 34.0], [12, 39.7]];
 
-  let ctx = null, sortie = null, entree = null, filtre = null, reverb = null;
+  // ctx, entree, sortie : le contexte qu'on remplit en ce moment (le vrai son, ou une tranche
+  // calculée à l'avance) ; reel et maitre : le vrai son et son volume
+  let ctx = null, sortie = null, entree = null, reel = null, maitre = null, entreeReelle = null, doux = null;
   let actif = false, minuteur = null, mode = MODES.clair, nuit = false;
   let prochaines = [], bourdon = null, grondement = null;
 
   const hz = (n) => 440 * Math.pow(2, (n - 69) / 12);
 
-  // réverbération : une réponse impulsionnelle de bruit qui s'éteint lentement
+  // réverbération : une réponse impulsionnelle de bruit qui s'éteint lentement (calculée une fois)
+  let reponse = null;
   function impulsion(secondes) {
+    if (reponse && reponse.sampleRate === ctx.sampleRate) return reponse;
     const n = Math.floor(ctx.sampleRate * secondes);
     const b = ctx.createBuffer(2, n, ctx.sampleRate);
     for (let c = 0; c < 2; c++) {
       const d = b.getChannelData(c);
       for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6);
     }
-    return b;
+    return (reponse = b);
+  }
+  const clarte = () => mode.clarte * (nuit ? 0.6 : 1) * (STYLES[styleChoisi()].clarte || 1);
+
+  // le vrai son : le volume de la musique, et une petite entrée adoucie pour le bourdon
+  function construire() {
+    reel = ctx = H.audio.contexte();
+    maitre = ctx.createGain();
+    maitre.gain.value = 0.0001;
+    maitre.connect(H.audio.sortie());
+    doux = ctx.createBiquadFilter();
+    doux.type = "lowpass";
+    doux.frequency.value = clarte();
+    entreeReelle = ctx.createGain();
+    entreeReelle.connect(doux).connect(maitre);
+    entree = entreeReelle;
+    sortie = maitre;
   }
 
-  function construire() {
-    ctx = H.audio.contexte();
-    caisseKora = null;
-    sortie = ctx.createGain();
-    sortie.gain.value = 0.0001;
-    sortie.connect(H.audio.sortie());
-    filtre = ctx.createBiquadFilter();
-    filtre.type = "lowpass";
-    filtre.frequency.value = mode.clarte;
-    // sur téléphone, une réverbération « à l'ancienne » (quatre échos qui se répètent en
-    // s'adoucissant) : bien moins gourmande qu'une convolution, et le son ne saccade plus
-    const telephone = window.matchMedia && matchMedia("(pointer: coarse)").matches;
-    let reverbEntree, reverbSortie;
-    if (telephone) {
-      reverbEntree = ctx.createGain();
-      reverbSortie = ctx.createGain();
-      reverbSortie.gain.value = 0.55;
-      for (const d of [0.0297, 0.0371, 0.0411, 0.0437]) {
-        const ligne = ctx.createDelay(0.1), retour = ctx.createGain(), doux = ctx.createBiquadFilter();
-        ligne.delayTime.value = d * 3.2;
-        retour.gain.value = 0.72;
-        doux.type = "lowpass"; doux.frequency.value = 2200;
-        reverbEntree.connect(ligne);
-        ligne.connect(doux).connect(retour).connect(ligne);
-        doux.connect(reverbSortie);
-      }
-      reverb = reverbEntree;
-    } else {
-      reverb = ctx.createConvolver();
-      reverb.buffer = impulsion(3.2);
-      reverbEntree = reverbSortie = reverb;
-    }
-    const sec = ctx.createGain();
+  // le graphe d'une tranche : les instruments → le filtre de la météo → le son sec et la
+  // réverbération (une vraie convolution : hors ligne, on peut se l'offrir)
+  function grapheTranche(c) {
+    const f = c.createBiquadFilter();
+    f.type = "lowpass";
+    f.frequency.value = clarte();
+    const sor = c.createGain(), ent = c.createGain(), sec = c.createGain(), humide = c.createGain(), rev = c.createConvolver();
+    sor.connect(c.destination);
+    ent.connect(f);
     sec.gain.value = 0.35;
-    const humide = ctx.createGain();
     humide.gain.value = 0.5;
-    entree = ctx.createGain();
-    entree.connect(filtre);
-    filtre.connect(sec).connect(sortie);
-    filtre.connect(reverbEntree);
-    reverbSortie.connect(humide).connect(sortie);
+    rev.buffer = impulsion(3.2);
+    f.connect(sec).connect(sor);
+    f.connect(rev).connect(humide).connect(sor);
+    return { ent, sor };
   }
 
   function choisirMode() {
@@ -118,23 +117,22 @@
     return mode.fond + 12 + (nuit ? -5 : 0) + octave * 12 + g[degre % g.length];
   }
 
-  function programmer() {
-    if (!actif) return;
-    const maintenant = ctx.currentTime;
+  // les notes de la musique ambiante dont le début tombe dans la tranche [debut, debut + duree)
+  // (les temps de la tranche partent de son début)
+  function remplirEno(debut, duree) {
     VOIX.forEach(([degre, periode], i) => {
       if (i >= Math.round(VOIX.length * Math.min(1, mode.densite))) return;
       const p = periode * mode.tempo * (nuit ? 1.35 : 1);
-      while (prochaines[i] < maintenant) prochaines[i] += p;
-      while (prochaines[i] < maintenant + 4) {
+      while (prochaines[i] < debut) prochaines[i] += p;
+      while (prochaines[i] < debut + duree) {
         // l'orage bouscule les voix : petites notes rapides, parfois une octave plus haut
         const saut = mode.orage && Math.random() < 0.3 ? mode.gamme.length : 0;
-        note(hz(hauteur(degre + saut)), prochaines[i], mode.orage ? 0.05 : 0.07);
+        note(hz(hauteur(degre + saut)), prochaines[i] - debut, mode.orage ? 0.05 : 0.07);
         prochaines[i] += p * (mode.orage ? 0.6 + Math.random() * 0.8 : 1);
       }
     });
     // pendant l'orage, quelques notes graves supplémentaires, comme des éclairs
-    if (mode.orage && Math.random() < 0.08) note(hz(mode.fond - 12 + mode.gamme[Math.floor(Math.random() * 3)]), maintenant + 0.2, 0.09);
-    minuteur = setTimeout(programmer, 700);
+    if (mode.orage) for (let x = 0; x < duree; x += 0.7) if (Math.random() < 0.08) note(hz(mode.fond - 12 + mode.gamme[Math.floor(Math.random() * 3)]), x, 0.09);
   }
 
   function lancerBourdon() {
@@ -498,22 +496,68 @@
   };
   const styleChoisi = () => (STYLES[H.local && H.local.styleMusique] ? H.local.styleMusique : "eno");
   let sequence = null;
-  function programmerStyle() {
-    if (!actif || !sequence) return;
+  function remplirStyle(debut, duree) {
     const S = sequence.S;
     const bpm = S.bpm * (nuit ? 0.85 : 1) * (mode.orage ? 1.08 : 1);
     const d = 60 / bpm / S.division;
-    while (sequence.t < ctx.currentTime + 0.02) {
+    while (sequence.t < debut) { sequence.n++; sequence.t += d; }
+    while (sequence.t < debut + duree) {
+      S.pas(sequence.n, sequence.t - debut, d, sequence);
       sequence.n++;
       sequence.t += d;
     }
-    // programmée 2,5 s à l'avance : si le téléphone a un hoquet, la musique ne s'arrête pas
-    while (sequence.t < ctx.currentTime + 2.5) {
-      S.pas(sequence.n, sequence.t, d, sequence);
-      sequence.n++;
-      sequence.t += d;
+  }
+
+  // Les tranches : la première courte (le son arrive vite), les suivantes de 8 s ; on en garde
+  // toujours deux d'avance. Chaque tranche garde la fin de ses notes et de sa réverbération
+  // (sa « queue »), qui se superpose au début de la suivante, comme si tout était joué d'un trait.
+  const TRANCHE = 8;
+  let lecture = null;
+  function rendreTranche(debut, duree) {
+    const queue = styleChoisi() === "eno" ? 16 : 4;
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const hors = new OAC(2, Math.ceil((duree + queue) * reel.sampleRate), reel.sampleRate);
+    const avant = { ctx, entree, sortie, caisseKora };
+    ctx = hors;
+    caisseKora = null;
+    try {
+      const g = grapheTranche(hors);
+      entree = g.ent;
+      sortie = g.sor;
+      if (styleChoisi() === "eno") remplirEno(debut, duree);
+      else remplirStyle(debut, duree);
+    } finally {
+      ({ ctx, entree, sortie, caisseKora } = avant);
     }
-    minuteur = setTimeout(programmerStyle, 500);
+    return hors.startRendering();
+  }
+  async function alimenter() {
+    const L = lecture;
+    if (!actif || !L || L.enCours) return;
+    while (actif && lecture === L && L.prochaine < reel.currentTime + TRANCHE * 1.6) {
+      const debut = L.prochaine, duree = L.premiere ? 3 : TRANCHE;
+      L.premiere = false;
+      L.prochaine += duree;
+      L.enCours = true;
+      let buf = null;
+      try { buf = await rendreTranche(debut, duree); } catch (e) { /* tant pis pour cette tranche */ }
+      L.enCours = false;
+      if (!actif || lecture !== L || !buf) return;
+      const src = reel.createBufferSource();
+      src.buffer = buf;
+      src.connect(maitre);
+      // (si la tranche arrive en retard, on la prend en route plutôt que de tout décaler)
+      const quand = Math.max(debut, reel.currentTime + 0.03);
+      src.start(quand, quand - debut);
+      L.sources.push(src);
+      src.onended = () => (L.sources = L.sources.filter((x) => x !== src));
+    }
+  }
+  function lancerLecture() {
+    lecture = { prochaine: reel.currentTime + 0.4, premiere: true, enCours: false, sources: [] };
+    alimenter();
+    clearInterval(minuteur);
+    minuteur = setInterval(alimenter, 1000);
   }
 
   // la météo ou la nuit changent : on glisse doucement vers la nouvelle couleur
@@ -522,7 +566,8 @@
     const avant = mode, avantNuit = nuit;
     choisirMode();
     if (avant === mode && avantNuit === nuit) return;
-    filtre.frequency.setTargetAtTime(mode.clarte * (nuit ? 0.6 : 1) * (STYLES[styleChoisi()].clarte || 1), ctx.currentTime, 4);
+    // (les tranches suivantes prennent la nouvelle couleur d'elles-mêmes)
+    doux.frequency.setTargetAtTime(clarte(), reel.currentTime, 4);
     if (styleChoisi() === "eno") lancerBourdon();
   }
 
@@ -537,7 +582,7 @@
     }
     if (!silence) {
       // à la même fréquence que le reste du son : sinon le téléphone rééchantillonne tout, et ça grésille
-      const sr = (ctx && ctx.sampleRate) || 48000, n = Math.round(sr / 2) * 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+      const sr = (reel && reel.sampleRate) || 48000, n = Math.round(sr / 2) * 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
       const ecrire = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
       ecrire(0, "RIFF"); v.setUint32(4, 36 + n, true); ecrire(8, "WAVE"); ecrire(12, "fmt ");
       v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
@@ -554,24 +599,22 @@
       if (actif || !H.local || !H.local.musique) return;
       if (!window.AudioContext && !window.webkitAudioContext) return;
       choisirMode();
-      if (!ctx || !sortie) construire();
+      if (!reel || !maitre) construire();
       sessionLecture();
-      if (ctx.state === "suspended") ctx.resume();
+      if (reel.state === "suspended") reel.resume();
       const style = styleChoisi();
-      filtre.frequency.value = mode.clarte * (nuit ? 0.6 : 1) * (STYLES[style].clarte || 1);
-      sortie.gain.cancelScheduledValues(ctx.currentTime);
-      sortie.gain.setTargetAtTime(Math.max(0.0001, 0.6 * H.volume("musique")), ctx.currentTime, 2.5);
+      doux.frequency.value = clarte();
+      maitre.gain.cancelScheduledValues(reel.currentTime);
+      maitre.gain.setTargetAtTime(Math.max(0.0001, 0.6 * H.volume("musique")), reel.currentTime, 2.5);
       actif = true;
-      if (style !== "eno") {
-        sequence = { S: STYLES[style], n: 0, t: ctx.currentTime + 0.3 };
-        programmerStyle();
-        return;
+      const t = reel.currentTime + 0.4;
+      if (style !== "eno") sequence = { S: STYLES[style], n: 0, t };
+      else {
+        // la première note arrive tout de suite, les autres s'installent peu à peu
+        prochaines = VOIX.map((v, i) => t + (i ? i * 2.3 + Math.random() * 3 : 0));
+        lancerBourdon();
       }
-      // la première note arrive tout de suite, les autres s'installent peu à peu
-      const t = ctx.currentTime + 0.2;
-      prochaines = VOIX.map((v, i) => t + (i ? i * 2.3 + Math.random() * 3 : 0));
-      lancerBourdon();
-      programmer();
+      lancerLecture();
     },
     STYLES: Object.fromEntries(Object.entries(STYLES).map(([id, st]) => [id, st.nom])),
     // changer de style : on coupe, et on relance dans le nouveau style
@@ -584,17 +627,20 @@
       if (!actif) return;
       actif = false;
       sequence = null;
-      clearTimeout(minuteur);
+      clearInterval(minuteur);
       if (silence) silence.pause();
-      const t = ctx.currentTime;
-      sortie.gain.cancelScheduledValues(t);
-      sortie.gain.setTargetAtTime(0.0001, t, 0.8);
+      const t = reel.currentTime;
+      maitre.gain.cancelScheduledValues(t);
+      maitre.gain.setTargetAtTime(0.0001, t, 0.8);
+      // les tranches déjà prêtes s'arrêtent une fois le son éteint
+      if (lecture) for (const src of lecture.sources) { try { src.stop(t + 3); } catch (e) { /* déjà finie */ } }
+      lecture = null;
       arreterBourdon();
       arreterGrondement();
     },
     // le curseur de volume a bougé
     majVolume() {
-      if (actif && sortie) sortie.gain.setTargetAtTime(Math.max(0.0001, 0.6 * H.volume("musique")), ctx.currentTime, 0.3);
+      if (actif && maitre) maitre.gain.setTargetAtTime(Math.max(0.0001, 0.6 * H.volume("musique")), reel.currentTime, 0.3);
     },
     // pour les réglages : l'ambiance du moment
     description() {
@@ -612,7 +658,7 @@
   const premierGeste = () => {
     if (!H.local || !H.local.musique || !H.jeu) return;
     if (actif) {
-      if (ctx && ctx.state !== "running") ctx.resume();
+      if (reel && reel.state !== "running") reel.resume();
       if (silence && silence.paused) silence.play().catch(() => {});
     } else H.musique.jouer();
   };

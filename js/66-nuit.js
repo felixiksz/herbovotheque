@@ -884,8 +884,8 @@
     const ctx = H.audio.contexte();
     if (!ctx) return;
     let t = ctx.currentTime + 0.05;
-    // do-do-la-sol : « na », « na », puis « na-na » plus vite, la dernière tenue
-    for (const [f, d] of [[523.25, 0.24], [523.25, 0.24], [440, 0.15], [392, 0.55]]) {
+    // do-do, puis ça monte : la-sol (« na », « na », puis « na-na » plus vite, la dernière tenue)
+    for (const [f, d] of [[523.25, 0.24], [523.25, 0.24], [880, 0.15], [784, 0.55]]) {
       // deux voix à l'unisson, à peine décalées, comme deux personnes qui chantent ensemble
       for (const desaccord of [-5, 6]) {
         const o = ctx.createOscillator(), g = ctx.createGain();
