@@ -1438,11 +1438,11 @@
 
   H.vues.maison = {
     afficher(c) {
-      c.appendChild(H.el("div.page-maison.relief", null,
+      c.appendChild(H.el("div.page-maison", null,
         (toileMaison = H.el("canvas.scene-maison", { role: "img", "aria-label": "L’intérieur du mazet : le lit, le canapé sous la fenêtre, la table, Mesi, Lóló et Mémé" })),
         H.el("a.sortie-maison", { href: "#village", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme")
       ));
-      sceneMaisonIso(toileMaison, false);
+      sceneMaison(toileMaison);
       // le jour de l'anniversaire d'ƟvƟ, une fois : une coupe de champagne
       if (H.champagne && H.champagne.anniversaire() && H.local.champagneOffert !== new Date().toDateString()) {
         setTimeout(async () => {
