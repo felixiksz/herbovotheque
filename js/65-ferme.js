@@ -1195,7 +1195,10 @@
     if (!scene) return;
     const m = H.ciel.meteo, lieu = (H.jeu.lieu && H.jeu.lieu.nom) || "Marseille";
     const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    scene.heureMeteo.textContent = [heure, m && m.temperature != null ? m.temperature + " °C" : null, m && m.libelle ? m.libelle.toLowerCase() : null, lieu].filter(Boolean).join(" · ");
+    // l'heure, la température, l'humidité, le ciel, la lune (sa phase) et le lieu
+    const lune = H.ciel.nomPhase(H.ciel.etat().lune.phase);
+    scene.heureMeteo.textContent = [heure, m && m.temperature != null ? m.temperature + " °C" : null, m && m.humidite != null ? m.humidite + " % d’humidité" : null,
+      m && m.libelle ? m.libelle.toLowerCase() : null, lune, lieu].filter(Boolean).join(" · ");
   }
   H.sur("meteo", majHeureMeteo);
 

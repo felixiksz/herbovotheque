@@ -200,20 +200,20 @@
     async chargerMeteo(forcer) {
       const { lat, lon } = H.jeu.lieu;
       const cache = H.local.meteo;
-      if (!forcer && cache && cache.lat === lat && cache.lon === lon && Date.now() - cache.le < 30 * 60e3) {
+      if (!forcer && cache && cache.lat === lat && cache.lon === lon && cache.humidite != null && Date.now() - cache.le < 30 * 60e3) {
         H.ciel.meteo = cache;
         return cache;
       }
       try {
         const url =
           "https://api.open-meteo.com/v1/forecast?latitude=" + lat.toFixed(2) + "&longitude=" + lon.toFixed(2) +
-          "&current=temperature_2m,weather_code,cloud_cover,precipitation,wind_speed_10m&timezone=auto";
+          "&current=temperature_2m,relative_humidity_2m,weather_code,cloud_cover,precipitation,wind_speed_10m&timezone=auto";
         const r = await fetch(url);
         const d = (await r.json()).current;
         const [libelle, type] = libelleMeteo(d.weather_code);
         H.ciel.meteo = {
           lat, lon, le: Date.now(), temperature: Math.round(d.temperature_2m), code: d.weather_code,
-          nuages: d.cloud_cover, pluie: d.precipitation, vent: Math.round(d.wind_speed_10m), libelle, type,
+          nuages: d.cloud_cover, pluie: d.precipitation, vent: Math.round(d.wind_speed_10m), humidite: d.relative_humidity_2m, libelle, type,
         };
         await H.d.majLocal((l) => (l.meteo = H.ciel.meteo));
         H.emettre("meteo", H.ciel.meteo);
