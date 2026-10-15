@@ -1067,13 +1067,16 @@
 
   // --- le bassin et ses habitants ---
   // Quand on a peint un bassin en aménageant : des têtards qui frétillent dans l'eau, des
-  // grenouilles assises sur le bord qui sautent de temps en temps, et le soir un hérisson qui
-  // vient boire (il arrive d'un bord de la ferme, boit un moment, puis repart).
+  // grenouilles assises sur le bord qui sautent de temps en temps, et la nuit un hérisson qui
+  // vient boire, parfois suivi de ses petits (il arrive d'un bord de la ferme, boit un moment,
+  // puis repart).
   const GRENOUILLE = [".e.e.", "ggggg", "gGgGg", "g...g"];
   const GRENOUILLE_SAUT = [".e.e.", "ggggg", "gGgGg", ".g.g."];
   const HERISSON = ["..KkKkK..", ".KkKkKkKs", "KkKkKkKse", ".b..b.b.."];
   const HERISSON_PAS = ["..KkKkK..", ".KkKkKkKs", "KkKkKkKse", "..b..b.b."];
   const HERISSON_BOIT = ["..KkKkK..", ".KkKkKkK.", "KkKkKkKss", ".b..b.bse"];
+  const PETIT_HERISSON = [".KkK.", "KkKks", ".b.be"];
+  const PETIT_HERISSON_PAS = [".KkK.", "KkKks", "b..be"];
   const PAL_BASSIN = { g: "#4aa63e", G: "#2f6b35", e: "#1b1d4a", K: "#4b3427", k: "#9a6a3c", s: "#d9a07a", b: "#2a1d1b" };
   function dessinGrille(c, x, y, g, gauche) {
     const L = g[0].length;
@@ -1125,14 +1128,14 @@
       }
       if (!g.saut) g.haut = 0;
     }
-    // le soir (le soleil couché depuis peu), un hérisson vient boire
-    const alt = H.ciel.etat().soleil.alt, soir = alt < 1 && alt > -16;
-    if (!soir) { scene.herisson = null; return; }
+    // la nuit, un hérisson vient boire
+    const alt = H.ciel.etat().soleil.alt, nuitNoire = alt < -6;
+    if (!nuitNoire) { scene.herisson = null; return; }
     if (!scene.herisson && (!scene.prochainHerisson || t > scene.prochainHerisson)) {
       scene.prochainHerisson = t + 90000 + Math.random() * 120000;
       const bord = bords[Math.floor(Math.random() * bords.length)], depart = Math.random() < 0.5 ? [0.6, 2 + Math.random() * (N - 4)] : [2 + Math.random() * (N - 4), N - 0.6];
       const aller = (a, b) => { const pts = passage(a, b), cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, long: cum[cum.length - 1] }; };
-      scene.herisson = { etape: "va", c: aller(depart, bord), u: 0, retour: () => aller(bord, [depart[1] > N / 2 ? N - 0.6 : 0.6, depart[0]]) };
+      scene.herisson = { etape: "va", c: aller(depart, bord), u: 0, petits: Math.random() < 0.4 ? 1 + Math.floor(Math.random() * 3) : 0, retour: () => aller(bord, [depart[1] > N / 2 ? N - 0.6 : 0.6, depart[0]]) };
     }
     const h = scene.herisson;
     if (!h) return;
@@ -1153,6 +1156,13 @@
       const q = Math.min(1, h.u), a = point(h.c, q), b = point(h.c, Math.min(1, q + 0.02));
       if (h.etape !== "boit") h.gauche = (b[0] - a[0]) - (b[1] - a[1]) < 0;
       objets.push({ prof: a[0] + a[1], herisson: h, x: a[0], y: a[1] });
+      // les petits suivent en file ; quand elle boit, ils se serrent contre elle
+      for (let k = 1; k <= (h.petits || 0); k++) {
+        const u = h.etape === "boit" ? 1 - (k * 0.35) / h.c.long : q - (k * 0.55) / h.c.long;
+        if (u <= 0) continue;
+        const pp = point(h.c, Math.min(1, u));
+        objets.push({ prof: pp[0] + pp[1] - 0.01, petitHerisson: h, x: pp[0], y: pp[1], k });
+      }
     }
   }
 
@@ -1517,6 +1527,7 @@
         const g = h.etape === "boit" ? (Math.floor(t / 420) % 2 ? HERISSON_BOIT : HERISSON) : temps % 2 ? HERISSON_PAS : HERISSON;
         dessinGrille(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, g, h.gauche);
       }
+      else if (o.petitHerisson) { const [x, y] = iso(o.x, o.y); dessinGrille(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.petitHerisson.etape !== "boit" && (temps + o.k) % 2 ? PETIT_HERISSON_PAS : PETIT_HERISSON, o.petitHerisson.gauche); }
       else if (o.bete) {
         const [x, y] = iso(o.x, o.y), arret = scene.visiteur && t < scene.visiteur.pause, f = !arret && temps % 2;
         // la laie qui fouille baisse et relève la hure
