@@ -1060,7 +1060,17 @@
   function calanquesBalade(ctx, w, base, haut, decal, valeurs, air, nuit, ici) {
     const C = nuit
       ? { loin: "#2e3270", clair: "#4a4a82", ombre: "#2a2c6a", pins: ["#1e3d35", "#173a26", "#10241d"], tronc: "#2a1d1b" }
-      : { loin: brume("#94a6d2", 0.35, air), clair: brume(melange("#efe8d4", "#d98a5c", ici), 0.3, air), ombre: brume(melange("#a7b0d0", "#b0583a", ici), 0.3, air), pins: [brume("#9cc77a", 0.5, air), brume("#6a9a7a", 0.5, air), brume("#4a7a6a", 0.5, air)], tronc: brume("#7a4520", 0.4, air) };
+      : { loin: brume("#94a6d2", 0.35, air), clair: brume(melange("#efe8d4", "#d98a5c", ici), 0.3, air), ombre: brume(melange("#a7b0d0", "#b0583a", ici), 0.3, air), pins: [brume("#6cbd5c", 0.22, air), brume("#3f8a42", 0.22, air), brume("#2f6b35", 0.22, air)], tronc: brume("#7a4520", 0.3, air) };
+    // Par endroits, on ne voit plus l'autre côté de la baie : le chemin longe le large, et la mer
+    // rejoint le ciel. Les falaises s'y abaissent en pente douce, comme la fin d'un cap.
+    const terre = (x) => Math.max(0, Math.min(1, (Math.sin((x + decal * 4) / 300) + Math.sin((x + decal * 4) / 760 + 1.7) * 0.6 + 0.3) * 1.6));
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, base + 3);
+    for (let x = 0; x <= w + 4; x += 4) ctx.lineTo(x, base + 3 - (haut * 1.6 + 20) * terre(x));
+    ctx.lineTo(w + 4, base + 3);
+    ctx.closePath();
+    ctx.clip();
     // le cap lointain, qui glisse très lentement
     const periode = w * 2.2, x0 = ((w * 0.5 - decal * 0.4) % periode + periode) % periode - w * 0.3, L = w * 0.55;
     ctx.fillStyle = C.loin;
@@ -1094,6 +1104,7 @@
         ctx.fillStyle = C.pins[0]; ctx.fillRect(x - 4, y - 13, 11, 2);
       }
     }
+    ctx.restore();
   }
   // des collines lisses (la nuit)
   function collinesPlates(ctx, w, base, haut, decal, valeurs, couleur, pas) {
