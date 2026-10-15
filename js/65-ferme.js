@@ -66,7 +66,7 @@
       t: { clair: "#6cbd5c", ombre: "#3f8a42", planche: "#4aa63e", trait: "#1e3d25", toitC: "#e8714a", toitO: "#b2552e", porte: "#e9b44c" } },
     { id: "serre", hash: "serre", nom: "Serre", i: 17, j: 13, w: 3, d: 4, h: 11, genre: "serre" },
     { id: "lettres", hash: "lettres", nom: "Boîte aux lettres", i: 9, j: 17, w: 1, d: 1, h: 0, genre: "boite" },
-    { id: "ponton", hash: "terrain", nom: "Ponton vers les îles", i: 23, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
+    { id: "ponton", hash: "terrain", nom: "Ponton vers les îles", i: 25, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
     { id: "poules", nom: "Poulailler", i: 16, j: 8, w: 2, d: 1, h: 7, genre: "poulailler" },
     { id: "bois", nom: "Bois sec", i: 13, j: 14, w: 1, d: 1, h: 6, genre: "bois" },
   ];
@@ -466,14 +466,8 @@
         return;
       }
       if (m.genre === "ponton") {
-        // la barque amarrée au bout, qui attend pour aller sur les îles
-        remplir(c, [[19, h - 17], [34, h - 17], [31, h - 12], [22, h - 12]], "#ff5b4f"); contour(c, [[19, h - 17], [34, h - 17], [31, h - 12], [22, h - 12]], "#7a2e1e");
-        ligne(c, 20, h - 17, 33, h - 17, "#f3f0dc"); ligne(c, 26, h - 16, 27, h - 16, "#9a6a3c");
-        ligne(c, 22, h - 11, 31, h - 11, "#2f8fe0");
-        for (let k = 0; k < 5; k++) { const x = 4 + k * 3, y = h - 8 - k * 2; remplir(c, [[x, y], [x + 8, y - 4], [x + 12, y - 2], [x + 4, y + 2]], k % 2 ? "#b9834f" : "#9a6a3c"); }
-        // les pieux du ponton
-        for (const [x, y] of [[4, h - 7], [16, h - 15], [12, h - 5], [24, h - 13]]) ligne(c, x, y, x, y + 3, "#4b3427");
-        // le panneau en flèche, avec deux petites îles peintes dessus
+        // le panneau en flèche, avec deux petites îles peintes dessus (le ponton lui-même et la
+        // barque sont dessinés au-dessus de la mer, voir pontonSurLaMer)
         ligne(c, 6, h - 9, 6, h - 27, "#7a4520");
         const fl = [[0, h - 30], [12, h - 30], [16, h - 26], [12, h - 22], [0, h - 22]];
         remplir(c, fl, "#e9b44c"); contour(c, fl, "#7a4520");
@@ -1068,6 +1062,42 @@
     for (const o of objets) if (o.bete && !o.prof) o.prof = o.x + o.y;
   }
 
+  // --- le ponton vers les îles ---
+  // Il part du bord de la ferme (côté droit) et s'avance au-dessus de la mer, sur ses pieux ; au
+  // bout, la barque flotte sur l'eau, au pied de l'échelle, et se balance doucement.
+  const PONTON_J = 18.5, PONTON_LONG = 2.6, EAU = 30;
+  function pontonSurLaMer(c, cx, cy, t) {
+    const P = (x, y, col) => pixel(c, Math.round(x) - cx, Math.round(y) - cy, col);
+    const pt = (u, dj) => iso(N + u, PONTON_J + dj);
+    // les pieux, de la plancher jusque dans l'eau
+    for (const u of [0.4, 1.4, 2.4]) for (const dj of [-0.45, 0.45]) {
+      const [x, y] = pt(u, dj);
+      for (let d = 2; d < EAU + 2; d++) { P(x, y + d, d < EAU - 2 ? "#4b3427" : "#26406a"); P(x + 1, y + d, d < EAU - 2 ? "#7a4520" : "#26406a"); }
+    }
+    // les planches, chacune en travers, avec un joint sombre
+    for (let u = 0; u < PONTON_LONG; u += 0.25) {
+      const [ax, ay] = pt(u, -0.55), [bx, by] = pt(u, 0.55);
+      const n = Math.max(1, Math.round(Math.abs(bx - ax)));
+      for (let q = 0; q <= n; q++) {
+        const x = ax + ((bx - ax) * q) / n, y = ay + ((by - ay) * q) / n;
+        P(x, y, Math.round(u * 4) % 2 ? "#b9834f" : "#9a6a3c"); P(x, y + 1, "#7a4520"); P(x + 1, y, Math.round(u * 4) % 2 ? "#b9834f" : "#9a6a3c");
+      }
+    }
+    // l'échelle au bout, et la barque qui flotte en contrebas, avec ses ronds dans l'eau
+    const [ex, ey] = pt(PONTON_LONG, 0.3);
+    for (let d = 1; d < EAU - 4; d++) { P(ex, ey + d, "#4b3427"); P(ex + 4, ey + d + 2, "#4b3427"); if (d % 4 === 0) { P(ex + 1, ey + d, "#7a4520"); P(ex + 2, ey + d + 1, "#7a4520"); P(ex + 3, ey + d + 1, "#7a4520"); } }
+    const roule = Math.round(Math.sin(t / 900));
+    const [bx0, by0] = pt(PONTON_LONG + 0.9, 0.9), bx = bx0, by = by0 + EAU - 6 + roule;
+    for (let k = 0; k < 3; k++) { const u = ((t / 2600) + k / 3) % 1, rr = 8 + u * 8; for (let a = -rr; a <= rr; a += 2) P(bx + a, by + 6 + Math.round(u * 2), u < 0.6 ? "#a8d8ec" : "#6fb6ee"); }
+    const coque = [[-8, 0], [8, 0], [6, 4], [-6, 4]];
+    for (let y = 0; y <= 4; y++) { const l = Math.round(8 - (y * 2) / 4); for (let x = -l; x <= l; x++) P(bx + x, by + y, y === 0 ? "#f3f0dc" : y < 3 ? "#ff5b4f" : "#d23a2a"); }
+    for (const [x, y] of coque) P(bx + x, by + y, "#7a2e1e");
+    P(bx - 2, by + 1, "#9a6a3c"); P(bx + 2, by + 1, "#9a6a3c");
+    // l'amarre, du bout du ponton à la barque
+    const [ax, ay] = pt(PONTON_LONG, -0.3);
+    for (let q = 0; q <= 10; q++) { const u = q / 10; P(ax + (bx - 6 - ax) * u, ay + (by - ay) * u + Math.sin(u * Math.PI) * 3, "#e9e3cd"); }
+  }
+
   // --- le bassin et ses habitants ---
   // Quand on a peint un bassin en aménageant : des joncs et des cannes sur le bord, des
   // grenouilles assises sur le bord qui sautent de temps en temps, et la nuit un hérisson qui
@@ -1102,9 +1132,9 @@
   // Les touffes du bord : des joncs fins, des massettes à tête brune, et quelques grandes cannes
   // avec leurs feuilles qui retombent. Elles se balancent un peu avec le vent.
   function joncs(c, x, y, graine, t) {
-    const n = 4 + Math.floor(hash(graine, 1) * 4), vent = Math.sin(t / 1400 + graine) * 0.8;
+    const n = 4 + Math.floor(hash(graine, 1) * 4), vent = Math.sin(t / 2600 + graine) * 0.35;
     for (let k = 0; k < n; k++) {
-      const dx = Math.round((hash(graine, k + 2) - 0.5) * 8), hh = 6 + Math.round(hash(k, graine) * 9), canne = hash(graine + k, 7) < 0.18;
+      const dx = Math.round((hash(graine, k + 2) - 0.5) * 8), hh = 6 + Math.round(hash(k, graine) * 9), canne = hash(graine + k, 7) < 0.05;
       const H2 = canne ? hh + 8 : hh, sommet = Math.round(vent * (H2 / 10));
       for (let d = 0; d < H2; d++) pixel(c, x + dx + Math.round((sommet * d) / H2), y - d, d < 2 ? "#2f6b35" : canne ? (d % 4 === 0 ? "#c6cf55" : "#9cc77a") : d > H2 - 3 ? "#9cc77a" : "#4aa63e");
       if (canne) {
@@ -1456,6 +1486,7 @@
     }
     ctx.drawImage(sol0, -cx, -cy);
     tracesFouilles(ctx, cx, cy);
+    pontonSurLaMer(ctx, cx, cy - 4, t);
     }
     // Lóló : la première fois, il arrive au galop depuis le bord ; ensuite il suit ƟvƟ
     const lo = scene.lolo;
