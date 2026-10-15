@@ -521,3 +521,31 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 
 /* le bien-être des plantes, en jaune fluo */
 .jauges .jauge-bien .jauge-plein { background: var(--fluo-jaune); }
+
+/* La fenêtre « Nouvelle île », en menu pixel : des champs d'encre cernés de crème, des choix à
+   cocher avec le curseur ▶ devant celui qui est pris. */
+.panneau.menu-scene.menu-large { width: min(560px, 100%); margin-top: 6vh; }
+.formulaire-pixel { display: grid; gap: 12px; }
+.formulaire-pixel h2 { margin-bottom: 2px; }
+.champ-pixel { display: grid; gap: 4px; font: 1.25rem/1.2 var(--menu-police); color: var(--menu-trait); }
+.champ-pixel > span:first-child { color: var(--menu-choix); }
+.champ-pixel input[type="text"], .champ-pixel input[type="number"], .champ-pixel textarea {
+  font: 1.3rem/1.2 var(--menu-police); color: var(--menu-trait); background: #15124a;
+  border: 2px solid var(--menu-trait); border-radius: 0; padding: 4px 8px; width: 100%; box-sizing: border-box;
+}
+.champ-pixel input:focus, .champ-pixel textarea:focus { outline: 2px solid var(--menu-choix); outline-offset: 1px; }
+.champ-pixel input::placeholder, .champ-pixel textarea::placeholder { color: rgba(243, 240, 220, 0.45); }
+.ligne-pixel { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; }
+.ligne-pixel .fois { font: 1.4rem/1 var(--menu-police); color: var(--menu-trait); padding-bottom: 8px; }
+.choix-pixel { display: flex; flex-wrap: wrap; gap: 2px 18px; }
+.puce-pixel { position: relative; padding-left: 16px; cursor: pointer; display: inline-flex; flex-direction: column; font: 1.3rem/1.2 var(--menu-police); color: var(--menu-trait); }
+.puce-pixel input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.puce-pixel small { font-size: 1rem; opacity: 0.7; }
+.puce-pixel:has(input:checked) { color: var(--menu-choix); }
+.puce-pixel:has(input:checked)::before { content: "▶"; position: absolute; left: 0; top: 0.35em; font-size: 0.7rem; }
+.puce-pixel:has(input:focus-visible) span { outline: 2px solid var(--menu-choix); outline-offset: 2px; }
+.aide-menu { margin: -4px 0 0; font: 1.05rem/1.25 var(--menu-police); color: var(--menu-trait); opacity: 0.75; }
+.aide-menu.erreur { color: var(--menu-cerne); opacity: 1; }
+.panneau.menu-scene .formulaire-pixel label.case { font-size: 1.15rem; }
+.panneau.menu-scene .formulaire-pixel .pastilles { gap: 4px 14px; }
+.formulaire-pixel > .bouton { justify-self: start; font-size: 1.45rem; }

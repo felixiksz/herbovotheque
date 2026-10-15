@@ -544,24 +544,41 @@
     conteneur.appendChild(grille);
   }
 
+  // La fenêtre « Nouvelle île », dans le style des menus du jeu : un bloc d'encre, la police
+  // pixel, des choix qu'on coche (le curseur ▶ devant celui qui est pris) plutôt que des listes.
   function nouvelleIle() {
     const nom = H.el("input", { type: "text", placeholder: "Le jardin des simples" });
     const largeur = H.el("input", { type: "number", min: 2, max: 80, step: "0.5", value: 10 });
     const longueur = H.el("input", { type: "number", min: 2, max: 80, step: "0.5", value: 8 });
-    const echelle = H.el("select", null, [["0.25", "25 cm"], ["0.5", "50 cm"], ["1", "1 m"], ["2", "2 m"]].map(([v, t]) => H.el("option", { value: v, selected: v === "0.5" }, t)));
-    const type = H.el("select", null, H.el("option", { value: "jeu" }, "Île de jeu (pousse en temps réel)"), H.el("option", { value: "croquis" }, "Croquis de projet (sans ressources)"));
-    const expo = H.el("select", null, EXPOS.map((e) => H.el("option", { value: e }, e)));
+    // une rangée de choix (un seul pris à la fois)
+    let groupe = 0;
+    const choix = (liste, defaut) => {
+      const nomGroupe = "choix-ile-" + ++groupe;
+      const boite = H.el("div.choix-pixel", null, liste.map(([v, t, aide]) => H.el("label.puce-pixel", null,
+        H.el("input", { type: "radio", name: nomGroupe, value: v, checked: v === defaut }), H.el("span", null, t), aide ? H.el("small", null, aide) : null)));
+      boite.valeur = () => (H.$("input:checked", boite) || {}).value;
+      return boite;
+    };
+    const echelle = choix([["0.25", "25 cm"], ["0.5", "50 cm"], ["1", "1 m"], ["2", "2 m"]], "0.5");
+    const type = choix([["jeu", "Île de jeu", "elle pousse en temps réel"], ["croquis", "Croquis de projet", "à l’échelle, sans ressources"]], "jeu");
+    const expo = choix(EXPOS.map((e) => [e, e]), EXPOS[0]);
     const options = (H.d.champ("sol") || {}).options || [];
     const defaut = ["Calcaire", "Caillouteux", "Sec", "Bien drainé"];
-    const sols = H.el("div.choix-options", null, options.map((o) => H.el("label.option", null, H.el("input", { type: "checkbox", value: o, checked: defaut.includes(o) }), " " + o)));
+    const sols = H.el("div.pastilles", null, options.map((o) => H.el("label.case", null, H.el("input", { type: "checkbox", value: o, checked: defaut.includes(o) }), " " + o)));
     const notes = H.el("textarea", { rows: 3, placeholder: "Adresse, personnes, envies, contraintes…" });
-    const msg = H.el("p.discret.erreur");
+    const cases = H.el("p.aide-menu");
+    const majCases = () => {
+      const L = parseFloat(largeur.value), l = parseFloat(longueur.value), k = parseFloat(echelle.valeur());
+      cases.textContent = L > 0 && l > 0 && k > 0 ? "Soit " + Math.round(L / k) + " × " + Math.round(l / k) + " cases." : "";
+    };
+    const msg = H.el("p.aide-menu.erreur");
     let fermer;
-    fermer = H.fenetre(H.el("form.formulaire", {
+    const formulaire = H.el("form.formulaire-pixel", {
+      oninput: majCases,
       onsubmit(e) {
         e.preventDefault();
         const n = nom.value.trim();
-        const L = parseFloat(largeur.value), l = parseFloat(longueur.value), k = parseFloat(echelle.value);
+        const L = parseFloat(largeur.value), l = parseFloat(longueur.value), k = parseFloat(echelle.valeur());
         if (!n) return (msg.textContent = "Donne un nom à l’île.");
         if (!(L > 0 && l > 0)) return (msg.textContent = "Indique des dimensions en mètres.");
         const cols = Math.round(L / k), lignes = Math.round(l / k);
@@ -569,7 +586,7 @@
         if (cols < 3 || lignes < 3) return (msg.textContent = "C’est trop petit pour cette échelle : choisis des cases plus petites.");
         const ile = {
           id: H.uid("ile"), nom: n, largeur: L, longueur: l, caseM: k, cols, lignes,
-          croquis: type.value === "croquis", expo: expo.value,
+          croquis: type.valeur() === "croquis", expo: expo.valeur(),
           sol: H.$$("input:checked", sols).map((i) => i.value),
           notes: notes.value.trim(), cases: {}, plantes: {}, creeLe: H.maintenant(),
         };
@@ -579,15 +596,21 @@
       },
     },
       H.el("h2", null, "Nouvelle île"),
-      H.el("label", null, "Nom", nom),
-      H.el("div.ligne-option", null, H.el("label", null, "Largeur (m)", largeur), H.el("label", null, "Longueur (m)", longueur), H.el("label", null, "Une case =", echelle)),
-      H.el("label", null, "Type", type),
-      H.el("label", null, "Exposition de départ", expo),
-      H.el("div", null, H.el("h3", null, "Sol de départ"), sols, H.el("p.discret.aide", null, "Par défaut, un sol de garrigue. Tu pourras ensuite peindre des zones différentes.")),
-      H.el("label", null, "Notes", notes),
+      H.el("label.champ-pixel", null, H.el("span", null, "Nom"), nom),
+      H.el("div.ligne-pixel", null,
+        H.el("label.champ-pixel", null, H.el("span", null, "Largeur (m)"), largeur),
+        H.el("span.fois", null, "×"),
+        H.el("label.champ-pixel", null, H.el("span", null, "Longueur (m)"), longueur)),
+      H.el("div.champ-pixel", null, H.el("span", null, "Une case ="), echelle), cases,
+      H.el("div.champ-pixel", null, H.el("span", null, "Type"), type),
+      H.el("div.champ-pixel", null, H.el("span", null, "Exposition de départ"), expo),
+      H.el("div.champ-pixel", null, H.el("span", null, "Sol de départ"), sols, H.el("p.aide-menu", null, "Par défaut, un sol de garrigue. Tu pourras ensuite peindre des zones différentes.")),
+      H.el("label.champ-pixel", null, H.el("span", null, "Notes"), notes),
       msg,
       H.el("button.bouton", { type: "submit" }, "Créer l’île")
-    ));
+    );
+    fermer = H.fenetre(formulaire, { classe: "menu-scene.menu-large" });
+    majCases();
     nom.focus();
   }
 
