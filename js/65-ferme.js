@@ -1618,7 +1618,8 @@
   };
 
   // Le matin, à la première visite de la journée, Mesi et ƟvƟ se disent bonjour comme d'habitude :
-  // « Jó reggelt ! » ou « BMBB ! » (bon matin BB), et « JSQTBD ? » (j'espère que t'as bien dormi)
+  // « Jó reggelt ! » ou « BMBB ! » (bon matin BB), et « JSQTBD ? » (j'espère que t'as bien dormi) ;
+  // ƟvƟ répond « BM BB! O! ET? TBD? » (bon matin BB ! oui ! et toi ? t'as bien dormi ?)
   function bonjourDuMatin() {
     const h = new Date().getHours(), jour = new Date().toDateString();
     if (h < 5 || h >= 12 || H.local.bonjourMesi === jour) return;
@@ -1626,7 +1627,7 @@
     const salut = () => (Math.random() < 0.5 ? "Jó reggelt !" : "BMBB !");
     setTimeout(() => H.dialogue.dire([
       { qui: "luigi", texte: salut() + " JSQTBD ?" },
-      { qui: "ovo", texte: salut() + " Oui, et toi ? JSQTBD aussi !" },
+      { qui: "ovo", texte: "BM BB! O! ET? TBD?" },
     ]), 1200);
   }
 })();

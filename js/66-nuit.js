@@ -213,57 +213,57 @@
     ctx.lineWidth = 2.2;
   }
 
-  // La lumière de la lampe, à la manière des pochettes : des aplats aux bords nets, plus clairs
-  // vers la lampe, un éventail au mur au-dessus de l'abat-jour et une flaque sur le sol. Elle est
-  // toujours allumée ; le soir et la nuit, elle se voit d'autant plus que la pièce est sombre.
-  // partie « fond » : sur le mur et le sol, derrière les meubles ; partie « dessus » : un reflet
-  // léger sur les meubles et les personnages, qui ne les délave pas
-  function lumiereLampe(ctx, moment, partie) {
-    const k = moment === "nuit" ? 1.3 : moment === "soir" ? 1.15 : 1;
-    const halo = (x, y, r, couleur, a, sx, sy) => {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(sx || 1, sy || 1);
-      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-      g.addColorStop(0, "rgba(" + couleur + "," + Math.min(0.9, a * k) + ")");
-      g.addColorStop(0.55, "rgba(" + couleur + "," + Math.min(0.9, a * k * 0.35) + ")");
-      g.addColorStop(1, "rgba(" + couleur + ",0)");
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    };
-    if (partie === "dessus") {
-      // un reflet chaud léger sur ce qui est tout près de la lampe
-      halo(259, 160, 120, "255,214,120", 0.16);
-      return;
+  // L'éclairage du soir et de la nuit. L'air de la pièce est clair (ni vapeur ni fumée) : les
+  // lampes ne font pas de halo, elles éclairent seulement ce qui est près d'elles. On assombrit
+  // donc toute la pièce, sauf autour des deux lampes, où les murs, le sol, les meubles et les
+  // visages gardent leurs couleurs, réchauffées. La lampe de chevet éclaire surtout vers le bas
+  // et vers le haut (par les ouvertures de l'abat-jour) ; la boule, la table et les visages dessous.
+  const LAMPES = [
+    { x: 259, y: 175, rx: 165, ry: 130, chaud: "255,190,110" },
+    { x: 535, y: 195, rx: 175, ry: 135, chaud: "255,160,80" },
+  ];
+  const masques = {};
+  function masqueNuit(moment) {
+    if (masques[moment]) return masques[moment];
+    const K = 2, c = document.createElement("canvas");
+    c.width = 640 * K; c.height = 360 * K;
+    const g = c.getContext("2d");
+    g.scale(K, K);
+    g.fillStyle = moment === "nuit" ? "rgba(35,30,110,0.46)" : "rgba(50,40,120,0.26)";
+    g.fillRect(0, 0, 640, 360);
+    // là où la lampe éclaire, l'ombre s'en va
+    g.globalCompositeOperation = "destination-out";
+    for (const l of LAMPES) {
+      g.save(); g.translate(l.x, l.y); g.scale(1, l.ry / l.rx);
+      const d = g.createRadialGradient(0, 0, 0, 0, 0, l.rx);
+      d.addColorStop(0, "rgba(0,0,0,1)"); d.addColorStop(0.45, "rgba(0,0,0,0.75)"); d.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = d; g.beginPath(); g.arc(0, 0, l.rx, 0, Math.PI * 2); g.fill();
+      g.restore();
     }
-    // le halo rond autour de l'abat-jour, sur le mur
-    halo(259, 152, 110, "255,220,120", 0.42);
-    // et la flaque de lumière sur le sol, aplatie par la perspective
-    halo(259, 262, 160, "255,150,90", 0.55, 1, 0.32);
+    return (masques[moment] = c);
   }
-
-  // Le soir et la nuit, la pièce s'assombrit, mais pas autour du plafonnier : la boule orange
-  // éclaire la table et les visages. (contexte avec composition déjà réglée par l'appelant)
+  // (la composition et le découpage sont réglés par l'appelant)
   function assombrir(ctx, moment) {
     if (moment === "jour") return;
-    const c = moment === "nuit" ? "20,18,64" : "40,30,90", a = moment === "nuit" ? 0.42 : 0.22;
-    const g = ctx.createRadialGradient(BOULE.x, BOULE.y + 40, 30, BOULE.x, BOULE.y + 40, 190);
-    g.addColorStop(0, "rgba(" + c + ",0)");
-    g.addColorStop(0.35, "rgba(" + c + "," + a * 0.3 + ")");
-    g.addColorStop(1, "rgba(" + c + "," + a + ")");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 640, 360);
+    ctx.drawImage(masqueNuit(moment), 0, 0, 640, 360);
   }
-  // la lumière chaude de la boule sur la table et les visages autour
-  function lueurTable(ctx, moment) {
-    const fort = moment === "nuit" ? 1.3 : moment === "soir" ? 1.15 : 0.7;
-    const g = ctx.createRadialGradient(BOULE.x, BOULE.y + 50, 10, BOULE.x, BOULE.y + 50, 130);
-    g.addColorStop(0, "rgba(255,196,120," + 0.32 * fort + ")");
-    g.addColorStop(0.6, "rgba(255,170,90," + 0.12 * fort + ")");
-    g.addColorStop(1, "rgba(255,170,90,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 640, 360);
+  // La couleur chaude de l'ampoule sur les surfaces éclairées. surDecor : le décor, entièrement
+  // peint, où l'on mêle la couleur en « lumière douce » (les teintes et les reliefs restent) ;
+  // sinon les personnages, où l'on pose un voile chaud léger seulement sur leurs pixels.
+  function eclairer(ctx, moment, surDecor) {
+    if (moment === "jour") return;
+    const fort = moment === "nuit" ? 1 : 0.7;
+    ctx.save();
+    if (surDecor) ctx.globalCompositeOperation = "soft-light";
+    for (const l of LAMPES) {
+      ctx.save(); ctx.translate(l.x, l.y); ctx.scale(1, l.ry / l.rx);
+      const d = ctx.createRadialGradient(0, 0, 0, 0, 0, l.rx * 0.8);
+      const a = (surDecor ? 0.6 : 0.2) * fort;
+      d.addColorStop(0, "rgba(" + l.chaud + "," + a + ")"); d.addColorStop(1, "rgba(" + l.chaud + ",0)");
+      ctx.fillStyle = d; ctx.beginPath(); ctx.arc(0, 0, l.rx * 0.8, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
@@ -309,8 +309,6 @@
     ctx.beginPath(); ctx.ellipse(338, 322, 96, 15, 0, 0, Math.PI * 2);
     ctx.strokeStyle = "#7f97f2"; ctx.stroke(); ctx.strokeStyle = ENCRE;
 
-    // la lumière de la lampe sur le mur et le sol, derrière les meubles
-    if (M.lampe) lumiereLampe(ctx, moment, "fond");
     // la baie vitrée : on la découpe (le dehors se peint derrière), puis le cadre et les montants
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
@@ -385,11 +383,12 @@
     // le soir et la nuit, la pièce s'assombrit, sauf là où la lampe éclaire (le lit et le canapé)
     if (moment !== "jour") {
       ctx.save();
-      ctx.beginPath(); ctx.rect(0, 0, 640, 360); cheminFenetre(ctx); ctx.clip("evenodd");
+      // (toute la pièce sauf la vitre : cheminFenetre recommencerait le tracé)
+      ctx.beginPath(); ctx.rect(0, 0, 640, 360); ctx.rect(BAIE.x, BAIE.y, BAIE.w, BAIE.h); ctx.clip("evenodd");
       assombrir(ctx, moment);
+      eclairer(ctx, moment, true);
       ctx.restore();
     }
-    if (M.lampe) lumiereLampe(ctx, moment, "dessus");
     plafonnier(ctx, moment);
     return c;
   }
@@ -443,19 +442,10 @@
   }
 
   // Le plafonnier : une boule orange qui pend du plafond au bout d'un fil couleur cuivre,
-  // au-dessus de la table du goûter, avec son halo chaud au mur et sur la table.
+  // au-dessus de la table du goûter (sa lumière sur la table et les visages : voir eclairer).
   const BOULE = { x: 535, y: 116, r: 15 };
   function plafonnier(ctx, moment) {
-    const { x, y, r } = BOULE, fort = moment === "nuit" ? 1.3 : moment === "soir" ? 1.15 : 1;
-    const halo = ctx.createRadialGradient(x, y, r, x, y, r * 4.5);
-    halo.addColorStop(0, "rgba(255,170,70," + 0.34 * fort + ")");
-    halo.addColorStop(0.45, "rgba(255,143,46," + 0.1 * fort + ")");
-    halo.addColorStop(1, "rgba(255,143,46,0)");
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(x, y, r * 4.5, 0, Math.PI * 2); ctx.fill();
-    // le cône de lumière sur la table
-    ctx.fillStyle = "rgba(255,196,107," + 0.2 * fort + ")";
-    ctx.beginPath(); ctx.moveTo(x - 10, y + r - 2); ctx.lineTo(x + 10, y + r - 2); ctx.lineTo(x + 70, 214); ctx.lineTo(x - 70, 214); ctx.closePath(); ctx.fill();
+    const { x, y, r } = BOULE;
     // le fil de cuivre, et la petite cloche qui le tient au plafond
     ctx.strokeStyle = "#c87533"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, y - r - 3); ctx.stroke();
@@ -838,7 +828,9 @@
       survol = zoneSous(e);
       toile.style.cursor = survol ? "pointer" : "default";
     });
-    toile.addEventListener("pointerleave", () => (survol = null));
+    // (au doigt, le navigateur envoie « pointerleave » à chaque fois qu'on lève le doigt : on ne
+    // l'écoute que pour la souris, sinon le second toucher ne retrouvait jamais le premier)
+    toile.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") survol = null; });
     let pointeur = "mouse";
     toile.addEventListener("pointerdown", (e) => (pointeur = e.pointerType));
     // sur téléphone : un premier toucher montre ce que c'est, le second le fait
@@ -914,8 +906,7 @@
       if (farce) dessinerFarce(cc, t, surCanape ? { x: 390, y: 126 } : { x: 604, y: 156 });
       cc.globalCompositeOperation = "source-atop";
       assombrir(cc, moment);
-      lumiereLampe(cc, moment, "dessus");
-      lueurTable(cc, moment);
+      eclairer(cc, moment, false);
       cc.globalCompositeOperation = "source-over";
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1888,7 +1879,7 @@
           H.el("p", null, "Il est tard. Jusqu’à 6 h du matin, on ne fait plus que dormir ou se balader, pour que ton cerveau se repose aussi."),
           H.el("div.choix-nuit", null,
             H.el("button.bouton", { type: "button", onclick: () => H.aller("dodo/dormir") }, "Aller faire dodo"),
-            H.el("button.bouton", { type: "button", onclick: () => H.aller("maison") }, "Faire une balade")
+            H.el("button.bouton", { type: "button", onclick: fenetreBalade }, "Faire une balade")
           )
         )
       ));
