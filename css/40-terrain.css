@@ -463,3 +463,15 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root[data-vue="balade"] .actions-balade { gap: 18px; flex-wrap: wrap; }
 
 :root[data-vue="balade"] .actions-balade { align-items: center; }
+
+/* la serre en pixels : pots, cases et noms dans le style de la ferme */
+.pot { border: 2px solid #23214a; border-radius: 0; background: #fffdf4; box-shadow: 3px 3px 0 #23214a; }
+.pot img { width: 72px; image-rendering: pixelated; }
+.pot-vide { border-style: dashed; box-shadow: none; background: transparent; }
+.pot-vide:hover, .pot-vide:focus-visible { background: #f3ee6a; border-style: solid; outline: none; }
+.pot.pret { border-color: #23214a; background: #eaf5c8; box-shadow: 3px 3px 0 #23214a, 0 0 0 3px #9cc77a inset; }
+.nom-pot { font: 1.25rem/1.05 var(--menu-police); }
+.etat-pot, .pot .reste { font: 1.05rem/1.1 var(--menu-police); color: #6b6578; }
+.outil-serre .recherche input[type="search"] { font: 1.2rem/1.2 var(--menu-police); border: 2px solid #23214a; border-radius: 0; background: #fffdf4; }
+.intro-serre { margin: 0 0 14px; }
+.bouton-pixel.repiquer { display: inline-block; margin-top: 14px; text-decoration: none; }

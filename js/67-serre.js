@@ -30,34 +30,37 @@
   }
   const frileuse = (p) => (p.valeurs || {}).climatMed === "En pot ou en serre";
 
-  // --- petit pot de terre cuite, dessiné à l'aquarelle selon l'avancement ---------------
+  // --- petit pot de terre cuite, en gros pixels, selon l'avancement ---------------------
   const cache = new Map();
+  // le pot de terre cuite en gros pixels : le bord, la terre, et la plante qui grandit
   function dessinPot(p, etape) {
-    const cle = (p ? p.id : "vide") + "|" + etape;
+    const cle = "px|" + (p ? p.id : "vide") + "|" + etape;
     if (cache.has(cle)) return cache.get(cle);
-    const c = H.aqua.toile(140, 160), ctx = c.getContext("2d"), r = H.alea(cle);
-    ctx.scale(2, 2);
-    const pot = [[14, 44], [56, 44], [50, 76], [20, 76]];
+    const c0 = document.createElement("canvas");
+    c0.width = 24; c0.height = 28;
+    const g = c0.getContext("2d"), R0 = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    const E = "#23214a";
     if (p && etape > 0) {
-      const feuille = ["#5f8a46", "#7a9a4a", "#6b8f5a"][H.hash(p.id) % 3];
-      const haut = [0, 10, 20, 30][etape];
-      H.aqua.trait(ctx, r, [[35, 44], [35, 44 - haut]], { couleur: "#4f7a3a", epaisseur: 1.3 });
-      const n = etape === 1 ? 2 : etape === 2 ? 4 : 6;
+      const feuille = ["#4aa63e", "#6cbd5c", "#3f8a42"][H.hash(p.id) % 3], haut = [0, 4, 8, 12][etape];
+      R0(11, 15 - haut, 2, haut, "#2f6b35");
+      const n = etape === 1 ? 1 : etape === 2 ? 2 : 3;
       for (let i = 0; i < n; i++) {
-        const y = 44 - haut * (0.4 + (i / n) * 0.6), cote = i % 2 ? 1 : -1;
-        H.aqua.tache(ctx, r, 35 + cote * (5 + etape * 2), y, 5 + etape * 1.5, 2.6 + etape * 0.6, feuille, { alpha: 0.3, couches: 6 });
+        const y = 14 - Math.round(haut * (0.35 + (i / Math.max(1, n)) * 0.55));
+        R0(7 - i, y, 4 + i, 2, feuille); R0(13, y - 1, 4 + i, 2, feuille);
+        R0(7 - i, y, 1, 1, E); R0(16 + i, y - 1, 1, 1, E);
       }
-      if (etape === 3) H.aqua.tache(ctx, r, 35, 44 - haut - 2, 3, 3, ["#f2c94c", "#f08a9b", "#b48ad8", "#ffffff"][H.hash(p.id) % 4], { alpha: 0.6, couches: 4 });
+      if (etape === 3) { const f = ["#f6ee55", "#ff5b4f", "#8a58cc", "#ffffff"][H.hash(p.id) % 4]; R0(10, 15 - haut - 3, 4, 3, E); R0(11, 15 - haut - 2, 2, 1, f); }
     }
-    H.aqua.lavis(ctx, r, [[16, 44], [54, 44], [53, 49], [17, 49]], "#6b4423", { alpha: 0.35, couches: 5 });
-    H.aqua.lavis(ctx, r, pot, "#c96a3a", { alpha: 0.3, couches: 10, bord: 0.03 });
-    H.aqua.trait(ctx, r, pot.concat([pot[0]]), { epaisseur: 1.3 });
-    const bord = [[11, 40], [59, 40], [59, 47], [11, 47]];
-    H.aqua.lavis(ctx, r, bord, "#d9824f", { alpha: 0.35, couches: 6 });
-    H.aqua.trait(ctx, r, bord.concat([bord[0]]), { epaisseur: 1.2 });
-    const url = c.toDataURL("image/png");
-    cache.set(cle, url);
-    return url;
+    // le pot : bord, corps qui s'affine, terre
+    R0(2, 14, 20, 5, E); R0(3, 15, 18, 3, "#d9824f"); R0(3, 15, 18, 1, "#e8a070");
+    R0(4, 15, 16, 1, "#4b3427");
+    R0(4, 19, 16, 8, E);
+    for (let y = 19; y < 27; y++) { const m = Math.round((y - 19) / 3); R0(5 + m, y, 14 - 2 * m, y === 26 ? 0 : 1, "#c96a3a"); }
+    R0(6, 20, 1, 5, "#e8a070");
+    R0(5, 27, 14, 1, E);
+    const url0 = c0.toDataURL("image/png");
+    cache.set(cle, url0);
+    return url0;
   }
 
   // --- l'outil de recherche : par indication, par sphère d'action, et ce qui se sème ce mois-ci ---
@@ -153,7 +156,7 @@
       conteneur.innerHTML = "";
       conteneur.appendChild(H.el("div.herbo-tete", null,
         H.el("h1", null, "Serre"),
-        H.el("p.discret", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite sur tes îles, moins cher et déjà jeunes.")
+        H.el("p.aide-pixel.intro-serre", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite sur tes îles, moins cher et déjà jeunes.")
       ));
       zone = H.el("div");
       conteneur.appendChild(zone);
@@ -198,11 +201,13 @@
     // la caisse des bébés plantes à repiquer
     const caisse = Object.entries(s.bebes).filter(([, n]) => n > 0);
     const ongletCaisse = (caisse.length
-      ? H.el("div.pastilles", null, caisse.map(([id, n]) => {
-          const p = H.d.plante(id);
-          return p ? H.el("span.pastille-valeur", null, p.nom + " × " + n) : null;
-        }), H.el("a.bouton.petit", { href: "#terrain" }, "Aller repiquer sur une île"))
-      : H.el("p.discret", null, "Vide pour l’instant. Les bébés plantes prêtes y attendent d’être repiquées avec l’outil « Planter » du terrain."));
+      ? H.el("div", null,
+          H.el("div.grille-pots", null, caisse.map(([id, n]) => {
+            const p = H.d.plante(id);
+            return p ? H.el("div.pot", null, H.el("img", { src: dessinPot(p, 3), alt: "" }), H.el("span.nom-pot", null, p.nom), H.el("span.etat-pot", null, n > 1 ? n + " bébés plantes" : "1 bébé plante")) : null;
+          })),
+          H.el("a.bouton-pixel.repiquer", { href: "#terrain" }, "Aller repiquer sur une île"))
+      : H.el("p.aide-pixel", null, "Vide pour l’instant. Les bébés plantes prêtes y attendent d’être repiquées avec l’outil « Planter » du terrain."));
 
     // les frileuses
     const ongletFrileuses = (s.frileuses.length

@@ -151,24 +151,19 @@
   }
 
   // --- planche d'étagère -----------------------------------------------------
+  // la planche d'étagère en pixels : bois clair sur le dessus, chant plus sombre, veines
   function planche() {
-    if (cache.has("planche")) return cache.get("planche");
-    const w = 600, h = 36, c = toile(w, h), ctx = c.getContext("2d"), r = H.alea(3);
-    lavis(ctx, r, [[0, 6], [w, 4], [w, h - 4], [0, h - 2]], "#a8743f", { alpha: 0.18, couches: 10, bord: 0.04 });
-    lavis(ctx, r, [[0, 4], [w, 5], [w, 12], [0, 11]], "#d9a564", { alpha: 0.2, couches: 6, bord: 0.04 });
-    for (let i = 0; i < 9; i++) {
-      const y = 12 + r() * (h - 18);
-      const pts = [];
-      for (let x = 0; x <= w; x += 30) pts.push([x, y + Math.sin(x / 40 + i) * 1.5]);
-      trait(ctx, r, pts, { couleur: "#6b4423", epaisseur: 0.8, alpha: 0.25 });
-    }
-    trait(ctx, r, [[0, 5], [w, 4]], { epaisseur: 1.2, alpha: 0.6 });
-    trait(ctx, r, [[0, h - 3], [w, h - 4]], { epaisseur: 1.4, alpha: 0.7 });
+    if (cache.has("planchepx")) return cache.get("planchepx");
+    const c = document.createElement("canvas");
+    c.width = 200; c.height = 5;
+    const g = c.getContext("2d");
+    const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    R(0, 0, 200, 1, "#23214a"); R(0, 1, 200, 1, "#e9b44c"); R(0, 2, 200, 2, "#b9834f"); R(0, 4, 200, 1, "#23214a");
+    for (let x = 0; x < 200; x += 7) R(x + ((x * 13) % 5), 2 + ((x / 7) % 2), 3, 1, "#9a6a3c");
     const url = c.toDataURL("image/png");
-    cache.set("planche", url);
+    cache.set("planchepx", url);
     return url;
   }
-
   // --- bocaux ------------------------------------------------------------------
   // Chaque forme : contour du verre, zone du contenu, bouchon.
   const FORMES = {
@@ -183,111 +178,58 @@
   // Niveau du stock : plein, à moitié, presque vide, vide (fraction du contenu dessiné).
   const NIVEAUX = { plein: 1, moitie: 0.55, "presque-vide": 0.18, vide: 0 };
 
-  // contenu qui remplit le bas d'une zone (x, y, w, h) selon la fraction
-  function contenu(x, y, w, h, fraction, rayon) {
-    const hc = h * fraction;
-    return rectArrondi(x, y + h - hc, w, hc, Math.min(rayon, hc / 2));
-  }
-
-  function dessinerBocal(forme, teinte, graine, fraction) {
-    if (fraction == null) fraction = 1;
-    const S = 2;
-    const f = FORMES[forme] || FORMES.bocal;
-    const W = (f.w + 12) * S, Hh = (f.h + 8) * S;
-    const c = toile(W, Hh), ctx = c.getContext("2d"), r = H.alea(graine);
-    ctx.scale(S, S);
-    const x0 = 6, bas = f.h + 4;
-    const verre = "#bfe3e8", ambre = "#b5651d";
-
-    if (forme === "bocal") {
-      const corps = rectArrondi(x0, 22, f.w, f.h - 18, 12);
-      if (fraction > 0) lavis(ctx, r, contenu(x0 + 4, 40, f.w - 8, f.h - 40, fraction, 9), teinte, { alpha: 0.16, couches: 14, bord: 0.18 });
-      tache(ctx, r, x0 + f.w * 0.35, 58, 10, 6, "#ffffff", { alpha: 0.05, couches: 6 });
-      lavis(ctx, r, corps, verre, { alpha: 0.05, couches: 8 });
-      trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
-      const couvercle = rectArrondi(x0 + 4, 8, f.w - 8, 16, 4);
-      lavis(ctx, r, couvercle, "#ff5b4f", { alpha: 0.6, couches: 10 });
-      trait(ctx, r, couvercle.concat([couvercle[0]]), { epaisseur: 1.4 });
-      trait(ctx, r, [[x0 + 10, 30], [x0 + 10, 64]], { couleur: "#ffffff", epaisseur: 3, alpha: 0.6 });
-    } else if (forme === "flacon" || forme === "compte-gouttes") {
-      const large = forme === "flacon";
-      const col = large ? 14 : 10;
-      const cx = x0 + f.w / 2;
-      const epaule = large ? 34 : 40;
-      const corps = [
-        [cx - col / 2, epaule - 10], [cx - col / 2, epaule - 2], [x0 + 2, epaule + 10], [x0, epaule + 18],
-        [x0, bas - 6], [x0 + 4, bas], [x0 + f.w - 4, bas], [x0 + f.w, bas - 6], [x0 + f.w, epaule + 18],
-        [x0 + f.w - 2, epaule + 10], [cx + col / 2, epaule - 2], [cx + col / 2, epaule - 10],
-      ];
-      lavis(ctx, r, corps, ambre, { alpha: 0.13, couches: 14, bord: 0.1 });
-      if (fraction > 0) lavis(ctx, r, contenu(x0 + 3, epaule + 22, f.w - 6, bas - epaule - 26, fraction, 4), "#6b3410", { alpha: 0.12, couches: 10 });
-      trait(ctx, r, corps, { epaisseur: 1.5 });
-      if (large) {
-        const bouchon = rectArrondi(cx - col / 2 - 4, epaule - 26, col + 8, 18, 3);
-        lavis(ctx, r, bouchon, "#3826f2", { alpha: 0.6, couches: 8 });
-        trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.3 });
-      } else {
-        const bague = rectArrondi(cx - col / 2 - 3, epaule - 18, col + 6, 9, 2);
-        lavis(ctx, r, bague, "#23214a", { alpha: 0.35, couches: 8 });
-        trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1.2 });
-        const poire = polygone(r, cx, epaule - 30, 6, 12, 14);
-        lavis(ctx, r, poire, "#ff5b4f", { alpha: 0.6, couches: 8, bord: 0.05 });
-        trait(ctx, r, poire.concat([poire[0]]), { epaisseur: 1.2 });
-      }
-      trait(ctx, r, [[x0 + 6, epaule + 24], [x0 + 6, bas - 14]], { couleur: "#fff3dc", epaisseur: 2.4, alpha: 0.55 });
-    } else if (forme === "huile-essentielle") {
-      // petit flacon ambré de 10 ml : bouchon noir strié, bague d'inviolabilité, étiquette
-      const corps = rectArrondi(x0, 34, f.w, f.h - 30, 7);
-      lavis(ctx, r, corps, ambre, { alpha: 0.16, couches: 14, bord: 0.06 });
-      if (fraction > 0) lavis(ctx, r, contenu(x0 + 3, 40, f.w - 6, f.h - 40, fraction, 4), "#6b3410", { alpha: 0.14, couches: 10 });
-      const etiquette = [[x0 + 2, 52], [x0 + f.w - 2, 52], [x0 + f.w - 2, 72], [x0 + 2, 72]];
-      lavis(ctx, r, etiquette, "#efe2c4", { alpha: 0.5, couches: 6, bord: 0.02 });
-      for (const y of [58, 63, 67]) trait(ctx, r, [[x0 + 7, y], [x0 + f.w - (y === 58 ? 7 : 11), y]], { couleur: "#6b4423", epaisseur: 0.9, alpha: 0.55 });
-      trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
-      const col = [[x0 + 9, 34], [x0 + 9, 28], [x0 + f.w - 9, 28], [x0 + f.w - 9, 34]];
-      lavis(ctx, r, col, ambre, { alpha: 0.2, couches: 6 });
-      trait(ctx, r, col, { epaisseur: 1.2 });
-      const bague = rectArrondi(x0 + 5, 23, f.w - 10, 6, 1.5);
-      lavis(ctx, r, bague, "#f4efe4", { alpha: 0.7, couches: 6 });
-      trait(ctx, r, bague.concat([bague[0]]), { epaisseur: 1 });
-      const bouchon = rectArrondi(x0 + 5, 6, f.w - 10, 18, 2.5);
-      lavis(ctx, r, bouchon, "#2f6b45", { alpha: 0.7, couches: 8 });
-      trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.2 });
-      for (let x = x0 + 8; x < x0 + f.w - 6; x += 3) trait(ctx, r, [[x, 8], [x, 22]], { couleur: "#5a5048", epaisseur: 0.7, alpha: 0.5, tremble: 0.2 });
-      trait(ctx, r, [[x0 + 5, 40], [x0 + 5, bas - 8]], { couleur: "#fff3dc", epaisseur: 2, alpha: 0.5 });
-    } else if (forme === "pot") {
-      const corps = rectArrondi(x0, 18, f.w, f.h - 14, 10);
-      if (fraction > 0) {
-        lavis(ctx, r, contenu(x0 + 4, 30, f.w - 8, f.h - 30, fraction, 8), "#e2b33c", { alpha: 0.13, couches: 12 });
-        lavis(ctx, r, contenu(x0 + 8, 38, f.w - 16, f.h - 44, fraction, 6), teinte, { alpha: 0.12, couches: 10, bord: 0.2 });
-      }
-      lavis(ctx, r, corps, verre, { alpha: 0.05, couches: 8 });
-      trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.5 });
-      const couvercle = rectArrondi(x0 - 2, 6, f.w + 4, 14, 4);
-      lavis(ctx, r, couvercle, "#eeff41", { alpha: 0.7, couches: 10 });
-      trait(ctx, r, couvercle.concat([couvercle[0]]), { epaisseur: 1.4 });
-    } else if (forme === "tube") {
-      const corps = rectArrondi(x0, 22, f.w, f.h - 18, 6);
-      if (fraction > 0) lavis(ctx, r, contenu(x0 + 3, 40, f.w - 6, f.h - 40, fraction, 5), "#ffffff", { alpha: 0.4, couches: 6 });
-      const hg = (f.h - 50) * fraction;
-      for (let i = 0; i < Math.round(26 * fraction); i++) {
-        tache(ctx, r, x0 + 5 + r() * (f.w - 10), 44 + (f.h - 50 - hg) + r() * hg, 2.2, 2.2, "#d9d3c7", { alpha: 0.25, couches: 3 });
-      }
-      lavis(ctx, r, corps, verre, { alpha: 0.06, couches: 6 });
-      trait(ctx, r, corps.concat([corps[0]]), { epaisseur: 1.3 });
-      const bouchon = rectArrondi(x0 - 2, 6, f.w + 4, 18, 3);
-      lavis(ctx, r, bouchon, teinte, { alpha: 0.3, couches: 10 });
-      trait(ctx, r, bouchon.concat([bouchon[0]]), { epaisseur: 1.3 });
-    }
-    return c.toDataURL("image/png");
-  }
-
   function bocal(forme, teinte, niveau) {
     const fraction = NIVEAUX[niveau] == null ? 1 : NIVEAUX[niveau];
-    const cle = "bocal|" + forme + "|" + teinte + "|" + fraction;
-    // même graine quel que soit le niveau : le bocal reste le même, seul le contenu baisse
-    if (!cache.has(cle)) cache.set(cle, dessinerBocal(forme, teinte, "bocal|" + forme + "|" + teinte, fraction));
+    const cle = "bocalpx|" + forme + "|" + teinte + "|" + fraction;
+    if (!cache.has(cle)) cache.set(cle, bocalPixel(forme, teinte, fraction));
     return cache.get(cle);
+  }
+
+  // Les bocaux en gros pixels, comme la ferme : verre clair ou ambré cerné d'encre, le contenu
+  // qui baisse avec le stock, le couvercle ou le bouchon de chaque forme. (Un pixel du dessin
+  // fait environ trois pixels à l'écran.)
+  function bocalPixel(forme, teinte, fraction) {
+    const f = FORMES[forme] || FORMES.bocal;
+    const W = Math.round((f.w + 12) / 3), Hh = Math.round((f.h + 8) / 3);
+    const c = document.createElement("canvas");
+    c.width = W; c.height = Hh;
+    const g = c.getContext("2d");
+    const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    const E = "#23214a", VERRE = "#d6eef7", REFLET = "#ffffff", AMBRE = "#b5651d", AMBRE_F = "#7a4520";
+    const sombre = (hex, k) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, "0")).join("");
+    const t = /^#[0-9a-f]{6}$/i.test(teinte) ? teinte : "#6f8a3c";
+    // un corps : cadre d'encre, verre, contenu jusqu'à la fraction, reflet
+    const corps = (x, y, w, h, verre, contenuCol, reflet) => {
+      R(x, y, w, h, E); R(x + 1, y + 1, w - 2, h - 2, verre);
+      const hc = Math.round((h - 3) * fraction);
+      if (hc > 0) { R(x + 1, y + h - 1 - hc, w - 2, hc, contenuCol); R(x + 1, y + h - 1 - hc, w - 2, 1, sombre(contenuCol, 0.8)); for (let k = 0; k < (w * hc) / 6; k++) R(x + 2 + ((k * 7) % Math.max(1, w - 4)), y + h - 2 - ((k * 5) % Math.max(1, hc)), 1, 1, sombre(contenuCol, 0.75)); }
+      if (reflet) R(x + 2, y + 2, 1, Math.max(2, Math.round(h * 0.45)), REFLET);
+    };
+    if (forme === "bocal") {
+      corps(1, 6, W - 2, Hh - 7, VERRE, t, true);
+      R(2, 1, W - 4, 6, E); R(3, 2, W - 6, 4, "#ff5b4f"); R(3, 2, W - 6, 1, "#ff8f7a"); R(3, 5, W - 6, 1, "#d23a2a");
+    } else if (forme === "pot") {
+      corps(1, 5, W - 2, Hh - 6, VERRE, "#e9b44c", true);
+      if (fraction > 0) R(4, Hh - 2 - Math.round((Hh - 9) * fraction * 0.7), W - 8, Math.max(1, Math.round((Hh - 9) * fraction * 0.7)), t);
+      R(0, 1, W, 5, E); R(1, 2, W - 2, 3, "#f3ee6a"); R(1, 2, W - 2, 1, "#fffbb0");
+    } else if (forme === "tube") {
+      corps(1, 6, W - 2, Hh - 7, VERRE, "#f3f0dc", false);
+      R(0, 1, W, 6, E); R(1, 2, W - 2, 4, t);
+    } else if (forme === "huile-essentielle") {
+      corps(1, 10, W - 2, Hh - 11, AMBRE, AMBRE_F, true);
+      R(1, Math.round(Hh * 0.55), W - 2, 4, E); R(2, Math.round(Hh * 0.55) + 1, W - 4, 2, "#efe2c4");
+      R(2, 5, W - 4, 6, E); R(3, 6, W - 6, 4, "#2a2540");
+      for (let x = 3; x < W - 3; x += 2) R(x, 6, 1, 4, "#4a4560");
+      R(3, 1, W - 6, 5, E); R(4, 2, W - 8, 3, "#2a2540");
+    } else {
+      // flacon ou compte-gouttes : épaules, goulot, et le bouchon bleu ou la poire rouge
+      const large = forme === "flacon", cx = Math.floor(W / 2), col = large ? 3 : 2;
+      corps(1, 13, W - 2, Hh - 14, AMBRE, AMBRE_F, true);
+      R(cx - col - 1, 9, col * 2 + 2, 5, E); R(cx - col, 10, col * 2, 4, AMBRE);
+      if (large) { R(cx - col - 2, 3, col * 2 + 4, 7, E); R(cx - col - 1, 4, col * 2 + 2, 5, "#3d5ee8"); R(cx - col - 1, 4, col * 2 + 2, 1, "#7f97f2"); }
+      else { R(cx - col - 1, 7, col * 2 + 2, 3, E); R(cx - 2, 1, 4, 7, E); R(cx - 1, 2, 2, 5, "#ff5b4f"); }
+    }
+    return c.toDataURL("image/png");
   }
 
   // Couleur de la plante dans le bocal : verte, brune, dorée ou fleurie.
