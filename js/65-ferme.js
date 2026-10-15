@@ -451,23 +451,17 @@
         return;
       }
       if (m.genre === "bois") {
-        // le tas de bûches en pyramide (trois, deux, une), couchées vers le fond : l'écorce brune
-        // rayée sur le dessus, et devant les bouts coupés, clairs, avec leurs cernes
-        const R0 = 3.4, bout = [], dx = 10, dy = -5;
-        for (const [rang, n] of [[0, 3], [1, 2], [2, 1]]) for (let k = 0; k < n; k++) bout.push([11 + k * 7 + rang * 3.5, h - 8 - rang * 6]);
-        // les écorces d'abord (du haut et du fond vers le devant), puis les bouts par-dessus
+        // un petit tas de bûches en pyramide (trois, deux, une) : l'écorce brune vers le fond, et
+        // devant les bouts coupés, clairs
+        const bout = [];
+        for (const [rang, n] of [[0, 3], [1, 2], [2, 1]]) for (let k = 0; k < n; k++) bout.push([Math.round(17 + k * 3 + rang * 1.5), Math.round(h - 6 - rang * 2.5)]);
         for (const [x, y] of bout.slice().reverse()) {
-          const q = [[x, y - R0], [x + dx, y - R0 + dy], [x + dx, y + R0 + dy], [x, y + R0]];
-          remplir(c, q, "#7a4520");
-          ligne(c, x, y - R0, x + dx, y - R0 + dy, "#9a6a3c");
-          for (let u = 0.2; u < 1; u += 0.27) { const lx = x + dx * u, ly = y + dy * u; pixel(c, lx, ly - 1, "#4b3427"); pixel(c, lx + 1, ly + 1, "#4b3427"); pixel(c, lx - 1, ly + 2, "#9a6a3c"); }
-          contour(c, q, "#2a1d1b");
+          const q = [[x, y - 1], [x + 3, y - 2], [x + 3, y], [x, y + 1]];
+          remplir(c, q, "#7a4520"); contour(c, q, "#2a1d1b");
         }
         for (const [x, y] of bout) {
-          ovale(c, x, y, R0, R0, "#2a1d1b");
-          ovale(c, x, y, R0 - 1, R0 - 1, "#e9c99a");
-          ovale(c, x, y, 1.5, 1.5, "#c9a06a");
-          pixel(c, x, y, "#9a6a3c"); pixel(c, x - 1, y - 2, "#f3e2c0");
+          for (const [ex, ey] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) pixel(c, x + ex, y + ey, "#2a1d1b");
+          pixel(c, x, y, "#e9c99a");
         }
         return;
       }
@@ -1075,7 +1069,7 @@
   }
 
   // --- le bassin et ses habitants ---
-  // Quand on a peint un bassin en aménageant : des têtards qui frétillent dans l'eau, des
+  // Quand on a peint un bassin en aménageant : des joncs et des cannes sur le bord, des
   // grenouilles assises sur le bord qui sautent de temps en temps, et la nuit un hérisson qui
   // vient boire, parfois suivi de ses petits (il arrive d'un bord de la ferme, boit un moment,
   // puis repart).
@@ -1105,17 +1099,23 @@
     }
     return bords;
   }
-  function tetards(c, cx, cy, t) {
-    const eau = casesBassin();
-    eau.forEach((e, n) => {
-      for (let k = 0; k < 3; k++) {
-        const g = n * 3 + k, x = e.i + 0.5 + Math.sin(t / 1300 + g * 2.1) * 0.28, y = e.j + 0.5 + Math.cos(t / 1700 + g * 1.3) * 0.22;
-        const [px, py] = iso(x, y), X = Math.round(px) - cx, Y = Math.round(py) + 4 - cy;
-        pixel(c, X, Y, "#1b1d4a"); pixel(c, X + 1, Y, "#1b1d4a");
-        // la queue qui frétille
-        pixel(c, X - 1, Y + (Math.floor(t / 160 + g) % 2), "#26406a");
+  // Les touffes du bord : des joncs fins, des massettes à tête brune, et quelques grandes cannes
+  // avec leurs feuilles qui retombent. Elles se balancent un peu avec le vent.
+  function joncs(c, x, y, graine, t) {
+    const n = 4 + Math.floor(hash(graine, 1) * 4), vent = Math.sin(t / 1400 + graine) * 0.8;
+    for (let k = 0; k < n; k++) {
+      const dx = Math.round((hash(graine, k + 2) - 0.5) * 8), hh = 6 + Math.round(hash(k, graine) * 9), canne = hash(graine + k, 7) < 0.18;
+      const H2 = canne ? hh + 8 : hh, sommet = Math.round(vent * (H2 / 10));
+      for (let d = 0; d < H2; d++) pixel(c, x + dx + Math.round((sommet * d) / H2), y - d, d < 2 ? "#2f6b35" : canne ? (d % 4 === 0 ? "#c6cf55" : "#9cc77a") : d > H2 - 3 ? "#9cc77a" : "#4aa63e");
+      if (canne) {
+        // les feuilles de la canne, en biais de part et d'autre
+        for (const [hy, sens] of [[0.45, -1], [0.65, 1], [0.85, -1]]) { const yy = y - Math.round(H2 * hy), xx = x + dx + Math.round(sommet * hy); for (let q = 1; q <= 4; q++) pixel(c, xx + sens * q, yy + Math.round(q * 0.5), "#6cbd5c"); }
+      } else if (hash(k, graine + 3) < 0.3) {
+        // la massette, son épi brun au sommet
+        const xx = x + dx + sommet;
+        pixel(c, xx, y - H2, "#7a4520"); pixel(c, xx, y - H2 - 1, "#7a4520"); pixel(c, xx, y - H2 - 2, "#4b3427"); pixel(c, xx, y - H2 - 3, "#9cc77a");
       }
-    });
+    }
   }
   function majBassin(t) {
     const bords = bordsBassin();
@@ -1159,6 +1159,8 @@
     }
   }
   function objetsBassin(objets) {
+    // les joncs sur tout le bord (une touffe sur deux), chacun à sa place
+    bordsBassin().forEach(([x, y], k) => { if (hash(Math.round(x * 10), Math.round(y * 10)) < 0.6) objets.push({ prof: x + y - 0.02, jonc: [x, y, k] }); });
     for (const g of scene.grenouilles || []) objets.push({ prof: g.x + g.y, grenouille: g });
     const h = scene.herisson;
     if (h) {
@@ -1454,7 +1456,6 @@
     }
     ctx.drawImage(sol0, -cx, -cy);
     tracesFouilles(ctx, cx, cy);
-    tetards(ctx, cx, cy, t);
     }
     // Lóló : la première fois, il arrive au galop depuis le bord ; ensuite il suit ƟvƟ
     const lo = scene.lolo;
@@ -1535,6 +1536,7 @@
       else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet ? temps : 0); }
       else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.broute && !lo.marche ? "broute" : lo.marche ? Math.floor(t / (lo.course || lo.rejoindre ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
       else if (o.poule) { const [x, y] = iso(o.poule.x, o.poule.y); dessinPoule(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.poule, Math.floor(t / (o.poule.picore ? 260 : 170) + o.poule.robe) % 2); }
+      else if (o.jonc) { const [x, y] = iso(o.jonc[0], o.jonc[1]); joncs(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, Math.round(o.jonc[0] * 7 + o.jonc[1] * 13), t); }
       else if (o.grenouille) { const g = o.grenouille, [x, y] = iso(g.x, g.y); dessinGrille(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy - Math.round(g.haut || 0), g.saut ? GRENOUILLE_SAUT : GRENOUILLE, g.gauche); }
       else if (o.herisson) {
         const h = o.herisson, [x, y] = iso(o.x, o.y);
