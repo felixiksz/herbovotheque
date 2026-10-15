@@ -520,6 +520,7 @@
       // la séance est finie : le clavier ne répond plus à aucune carte
       clavier = null;
       zone.innerHTML = "";
+      if (H.journal && faites) H.journal.noter("cartes:" + Date.now(), "j’ai révisé " + faites + " flashcartes, et j’en ai réussi " + reussies);
       zone.appendChild(H.el("div.carte.carte-fin", null,
         H.el("h2", null, "Séance terminée"),
         H.el("p", null, faites + " réponses, dont " + reussies + " réussies."),

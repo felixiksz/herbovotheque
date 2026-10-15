@@ -1297,6 +1297,7 @@
       { qui: "ovo", texte: H.histoires.auHasard(["Avec double chocolat ?", "Je mets la table !", "Merci les poules !"]) },
     ]).then(() => {
       H.ressources.ajouter("crepe", crepes);
+      if (H.journal) H.journal.noter("oeufs", "Mesi a ramassé les œufs des poules pour faire des crêpes");
       H.jeu.poules = Object.assign({}, H.jeu.poules, { ramasse: H.maintenant() - (n % OEUFS_CREPE) * PONTE });
       H.d.changer("jeu");
       H.toast(crepes > 1 ? "+" + crepes + " crêpes au chocolat fondu" : "+1 crêpe au chocolat fondu");
@@ -1395,6 +1396,10 @@
     const m = parId[id];
     scene.ovo.lieu = id;
     H.d.majLocal((l) => (l.dernierLieu = id));
+    // pour le récit de la journée
+    const JOURNAL = { herbo: "je suis allé·e à l’herbothèque", cartes: "je suis passé·e à la cabane à flashcartes", labo: "je suis allé·e au labo",
+      serre: "je suis allé·e à la serre", lettres: "j’ai regardé le courrier", ponton: "je suis parti·e sur les îles", poules: "je suis allé·e voir les poules" };
+    if (JOURNAL[id] && H.journal) H.journal.noter("lieu:" + id, JOURNAL[id]);
     if (m && m.hash) H.aller(m.hash);
     if (id === "poules") poulailler();
     if (id === "bois" && H.cheminee) H.cheminee.prendreBois();

@@ -183,6 +183,7 @@
               l.recoltes[p.id]--;
               l.postes[i] = { p: p.id, prep: id, le: H.maintenant() };
               sauver();
+              if (H.journal) H.journal.noter("labo:" + id, "au labo, j’ai mis en route : " + FACONS[id].geste.toLowerCase() + " ", H.leNom(p).toLowerCase());
               H.bruit("plante");
               H.toast(FACONS[id].geste + " : " + H.leNom(p) + " (prêt dans " + FACONS[id].heures + " h)");
               fermer();

@@ -1384,6 +1384,7 @@
         sauver(ile);
         H.bruit("plante");
         const p = H.d.plante(vue.plante);
+        if (H.journal && p) H.journal.noter("planter:" + ile.id, "j’ai planté ", H.leNom ? H.leNom(p).toLowerCase() : p.nom.toLowerCase(), " sur « " + ile.nom + " »");
         const ev = evaluer(ile, x, y, p, ile.plantes[k]);
         if (!ile.croquis && ev.facteur < 0.6) {
           H.dialogue.dire([{ qui: "ovo", texte: "Hmm… " + (ev.raisons[0] || "Elle n’a pas l’air très à l’aise ici.") }]);
@@ -1402,6 +1403,7 @@
         }
         sauver(ile);
         H.bruit("eau");
+        if (H.journal) H.journal.noter("arroser:" + ile.id, "j’ai arrosé les plantes de « " + ile.nom + " »");
         dessiner();
         break;
       }
@@ -1410,6 +1412,7 @@
         const p = H.d.plante(pl.p);
         if (!p || !aRecolter(p, ile, pl)) return libre("Pas encore prête à récolter.");
         recolter(x, y);
+        if (H.journal) H.journal.noter("recolter:" + ile.id, "j’ai récolté ", p.nom.toLowerCase(), " sur « " + ile.nom + " »");
         break;
       }
       case "amenager": {

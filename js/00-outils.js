@@ -252,3 +252,46 @@ window.H = window.H || {};
     t._t = setTimeout(() => t.classList.remove("visible"), ms || 2600);
   };
 })();
+
+// Le journal de la journée d'ƟvƟ : ce qu'iel fait sur la ferme et dans les jardins, avec l'heure,
+// pour le raconter à Mesi le soir. Une même chose refaite dans la journée s'ajoute à la première
+// (« j'ai planté menthe, thym et sauge sur … »). On repart à zéro chaque jour.
+(function () {
+  const H = window.H;
+  const aujourdhui = () => new Date().toDateString();
+  function noter(cle, avant, detail, apres) {
+    if (!H.d || !H.d.majLocal) return;
+    H.d.majLocal((l) => {
+      if (!l.journal || l.journal.jour !== aujourdhui()) l.journal = { jour: aujourdhui(), items: [] };
+      let it = l.journal.items.find((x) => x.cle === cle);
+      if (!it) { it = { cle, h: Date.now(), avant, apres: apres || "", details: [], n: 0 }; l.journal.items.push(it); }
+      it.n++;
+      if (detail && !it.details.includes(detail)) it.details.push(detail);
+      if (l.journal.items.length > 40) l.journal.items.shift();
+    });
+  }
+  const liste = (a) => (a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " et " + a[a.length - 1]);
+  function heure(ms) {
+    const d = new Date(ms), h = d.getHours(), m = d.getMinutes();
+    return h + " h" + (m ? " " + String(m).padStart(2, "0") : "");
+  }
+  function moment(ms) {
+    const h = new Date(ms).getHours();
+    return h < 12 ? "ce matin" : h < 14 ? "à midi" : h < 18 ? "cet après-midi" : "ce soir";
+  }
+  // le récit, dans l'ordre : quelques répliques d'ƟvƟ
+  function recit() {
+    const j = (H.local || {}).journal;
+    const items = j && j.jour === aujourdhui() ? j.items.slice().sort((a, b) => a.h - b.h) : [];
+    if (!items.length) return [];
+    const phrases = items.map((it, k) => {
+      const quoi = it.avant + (it.details.length ? liste(it.details) : "") + it.apres;
+      const quand = k === 0 ? moment(it.h).replace(/^c/, "C").replace(/^à/, "À") + ", à " + heure(it.h) + ", " : k === items.length - 1 ? "Et pour finir, à " + heure(it.h) + ", " : ["Ensuite, à ", "Puis, à ", "Vers ", "À "][k % 4] + heure(it.h) + ", ";
+      return quand + quoi + ".";
+    });
+    const lignes = [];
+    for (let k = 0; k < phrases.length; k += 2) lignes.push(phrases.slice(k, k + 2).join(" "));
+    return lignes;
+  }
+  H.journal = { noter, recit };
+})();

@@ -62,6 +62,7 @@
   async function crepeMesi(apres) {
     if (!H.ressources.mangerCrepe()) return;
     H.bruit("recolte");
+    if (H.journal) H.journal.noter("crepe", "j’ai mangé une crêpe au chocolat fondu");
     await H.dialogue.dire([
       { qui: "luigi", texte: H.histoires.auHasard(["Je t’ai fait une crêpe au chocolat fondu. Attention, c’est chaud !", "Une crêpe, le chocolat qui coule sur les côtés… comme tu aimes.", "Assieds-toi, la crêpe arrive ! J’ai mis double chocolat."]) },
       { qui: "ovo", texte: H.histoires.auHasard(["Mmmh… Tu es le·la meilleur·e.", "J’ai du chocolat jusqu’aux lunettes.", "Merci Mesi ! Je repars plein·e d’énergie."]) },
@@ -105,6 +106,7 @@
       if (cheminee.bois() >= BOIS_MAX) return H.dialogue.dire([{ qui: "ovo", texte: "Il y a déjà assez de bois dans la maison pour ce soir." }]);
       const n = Math.min(3, BOIS_MAX - cheminee.bois());
       cheminee.majJeu((c) => (c.bois += n));
+      if (H.journal) H.journal.noter("bois", "je suis allé·e chercher du bois sec");
       return H.dialogue.dire([{ qui: "ovo", texte: "Une brassée de bois sec, " + n + " bûches : on aura bien chaud." }]);
     },
     // dans la maison, en touchant le poêle
@@ -113,6 +115,7 @@
       if (!cheminee.froid()) return H.dialogue.dire([{ qui: "luigi", texte: "Il fait " + (cheminee.temperature() != null ? cheminee.temperature() + " °C" : "doux") + " : pas besoin de faire du feu." }]);
       if (!cheminee.bois()) return H.dialogue.dire([{ qui: "luigi", texte: "Il n’y a plus de bois sec. Va en chercher dehors : il est rangé contre la maison." }]);
       cheminee.majJeu((c) => { c.bois -= 1; c.feu = H.maintenant(); });
+      if (H.journal) H.journal.noter("feu", "j’ai allumé un feu dans la cheminée");
       return H.dialogue.dire([{ qui: "ovo", texte: "Une bûche dans le poêle, une allumette… le feu prend." }]);
     },
   };
@@ -667,6 +670,18 @@
     await H.dialogue.dire([{ qui: "ovo", texte: "Na-na-nana !" }]);
   }
 
+  // Le soir, ƟvƟ peut raconter sa journée à Mesi (tout ce qu'iel a fait, dans l'ordre), ou
+  // chanter leur chanson.
+  async function soireeOvo() {
+    const q = await H.dialogue.dire([{ qui: "luigi", texte: "Alors, c’était comment, ta journée ?", choix: [{ valeur: "raconter", libelle: "Raconter ma journée" }, { valeur: "chanter", libelle: "Chanter notre chanson" }, { valeur: null, libelle: "Plus tard" }] }]);
+    if (q === "chanter") return chanson();
+    if (q !== "raconter") return;
+    const lignes = H.journal ? H.journal.recit() : [];
+    if (!lignes.length) return H.dialogue.dire([{ qui: "ovo", texte: "Aujourd’hui, je n’ai pas fait grand-chose… je me suis surtout reposé·e." }, { qui: "luigi", texte: "Ça fait du bien aussi, des journées comme ça." }]);
+    await H.dialogue.dire(lignes.map((texte) => ({ qui: "ovo", texte })));
+    await H.dialogue.dire([{ qui: "luigi", texte: H.histoires.auHasard(["Quelle journée ! Je suis fière de toi.", "Tu as bien travaillé, mon cœur. Viens te reposer.", "Eh bien ! Tu mérites une crêpe, toi."]) }]);
+  }
+
   // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin de 640 × 360)
   function zonesMaison(nuit) {
     // on peut aller faire dodo à partir de 21 h
@@ -691,7 +706,7 @@
       { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
       { id: "canape", x: 278, y: 168, w: 152, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
       { id: "mesi", x: 572, y: 160, w: 66, h: 136, nom: "Un compliment de Mesi", agir: complimentMesi },
-      { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: chanson },
+      { id: "ovo", x: 428, y: 160, w: 72, h: 136, get nom() { return new Date().getHours() >= 17 ? "Raconter ma journée" : "Chanter notre chanson"; }, agir: () => (new Date().getHours() >= 17 ? soireeOvo() : chanson()) },
       { id: "poele", x: 444, y: 10, w: 56, h: 132, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "table", x: 500, y: 196, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
@@ -1606,6 +1621,7 @@
     const b = balade;
     if (!b || b.baignade || H.$(".dialogue")) return;
     b.baignade = { debut: performance.now() };
+    if (H.journal) H.journal.noter("baignade", "je me suis baigné·e dans la mer");
     b.pause = true;
     b.bain.hidden = true;
     const s = H.ciel.etat();
@@ -1668,6 +1684,7 @@
       let compagnons = String(params[0] || "luigi").split("+").filter((q) => ["luigi", "lolo", "meme"].includes(q));
       if (params[0] === "lolo") compagnons = ["lolo", "meme"];
       if (!loloLa()) compagnons = compagnons.filter((q) => q === "luigi");
+      if (H.journal) H.journal.noter("balade", "on est allé·es se balader dans les calanques");
       const NOMS = { luigi: "Mesi", lolo: "Lóló", meme: "Mémé" };
       const noms = compagnons.map((q) => NOMS[q]);
       const titre = noms.length ? "Balade avec " + (noms.length > 1 ? noms.slice(0, -1).join(", ") + " et " + noms[noms.length - 1] : noms[0]) : "Balade en solo";
