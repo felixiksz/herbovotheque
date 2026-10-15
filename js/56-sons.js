@@ -334,7 +334,6 @@
   const ENREGISTRES = [
     { f: "sons/goelands/goeland-cri.ogg", poids: 3 },
     { f: "sons/goelands/goeland-rpg.ogg", poids: 2 },
-    { f: "sons/goelands/goelands-echo.wav", poids: 2, extrait: 4.5 },
     { f: "sons/goelands/goelands-dispute.wav", poids: 1, volume: 0.7 },
   ];
   const tamponsGoelands = new Map();
