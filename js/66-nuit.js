@@ -274,7 +274,7 @@
     ];
     if (lampes) {
       sources.push({ x: 259 + DX, y: 168, rx: 180, ry: 140, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 75 });
-      sources.push({ x: BOULE.x, y: 196, rx: 195, ry: 150, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 85 });
+      sources.push({ x: BOULE.x, y: 196, rx: 195, ry: 150, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 75, ey: 206, table: true });
     }
     return {
       ambiant: eteint ? [38, 42, 94] : { jour: [204, 198, 210], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
@@ -300,6 +300,14 @@
     g.fillStyle = rgba(L.ambiant); g.fillRect(0, 0, LARGE, 360);
     g.globalCompositeOperation = "lighter";
     for (const s of L.sources) tache(g, s.x, s.y, s.rx, s.ry, s.col);
+    // sous la table, le plateau fait de l'ombre : la boule (juste au-dessus) n'y arrive pas, la
+    // lumière de la pièce un peu
+    g.globalCompositeOperation = "source-over";
+    g.filter = "blur(" + Math.round(6 * k) + "px)";
+    g.fillStyle = rgba(L.ambiant, L.sources.some((s) => s.table) ? 0.85 : 0.35);
+    if (!L.sources.some((s) => s.table)) g.fillStyle = "rgba(0,0,0,0.12)";
+    g.fillRect(474 + DX, 228, 122, 66);
+    g.filter = "none";
     return c;
   }
   // les reflets vifs tout près des ampoules (null s'il n'y en a pas)
@@ -311,7 +319,7 @@
     g.setTransform(k, 0, 0, k, 0, 0);
     g.fillStyle = "#000"; g.fillRect(0, 0, LARGE, 360);
     g.globalCompositeOperation = "lighter";
-    for (const s of avec) tache(g, s.x, s.y + 30, s.re, s.re * 0.6, s.eclat);
+    for (const s of avec) tache(g, s.x, s.ey || s.y + 30, s.re, s.re * 0.6, s.eclat);
     return c;
   }
   const tampons = {};
@@ -460,13 +468,22 @@
   // le mur autour (sans halo dans l'air), plus forte le soir.
   // la lumière du feu en chaque point (elle vacille)
   function masqueFeu(t, decor) {
-    const vac = 0.85 + Math.sin(t / 130) * 0.08 + Math.sin(t / 57) * 0.05;
+    // (plusieurs battements mêlés, et de temps en temps une flambée : un feu ne bat jamais régulier)
+    const flambee = Math.max(0, Math.sin(t / 1700) * Math.sin(t / 730)) * 0.25;
+    const vac = 0.72 + Math.sin(t / 130) * 0.12 + Math.sin(t / 57 + 1) * 0.07 + Math.sin(t / 23 + 2) * 0.05 + flambee;
+    const bx = Math.sin(t / 210) * 3 + Math.sin(t / 77) * 1.5, by = Math.sin(t / 160 + 1) * 2;
     const masque = tampon("feu", decor.width, decor.height), g = masque.getContext("2d");
     g.setTransform(decor.k, 0, 0, decor.k, 0, 0);
     g.fillStyle = "#000"; g.fillRect(0, 0, LARGE, 360);
+    // la lumière sort seulement par la vitre, vers l'avant : elle se pose sur le sol devant le
+    // poêle, en s'élargissant ; ni sur le mur derrière, ni sous le poêle
+    const pied = POELE.y + POELE.h + 12;
+    g.save();
+    g.beginPath(); g.rect(0, pied, LARGE, 360 - pied); g.clip();
     g.globalCompositeOperation = "lighter";
-    tache(g, 52, 206, 200, 150, FEU_COUL, vac);
-    tache(g, 52, 230, 70, 30, FEU_COUL, vac * 0.6);
+    tache(g, 52 + bx, pied + 46 + by, 210, 80, FEU_COUL, vac);
+    tache(g, 52 + bx * 0.6, pied + 12, 70, 18, FEU_COUL, vac * 0.8);
+    g.restore();
     return masque;
   }
   let toileCourante = null;
