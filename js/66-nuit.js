@@ -266,6 +266,49 @@
     ctx.restore();
   }
 
+  // Le soleil qui entre par la baie vitrée et se pose sur le sol et le canapé : trois rectangles de
+  // lumière déformés par la perspective, coupés par les montants de la fenêtre, et tachetés par
+  // l'ombre des feuilles des arbres dehors, qui bougent doucement avec le vent. Le matin la lumière
+  // part vers la droite, l'après-midi vers la gauche ; par temps couvert, elle s'efface.
+  const FEUILLES = Array.from({ length: 46 }, (_, i) => {
+    const a = Math.sin(i * 12.9898) * 43758.5453, b = Math.sin(i * 78.233) * 12345.678;
+    return [a - Math.floor(a), b - Math.floor(b), 3 + ((i * 7) % 6), i * 0.7];
+  });
+  function soleilParLaBaie(ctx, t, etat, moment) {
+    const s = etat.soleil, m = H.ciel.meteo || {};
+    if (s.alt < 2) return;
+    const couvert = m.nuages != null ? m.nuages / 100 : 0;
+    const force = Math.max(0, 1 - couvert * 0.9) * Math.min(1, s.alt / 12) * (moment === "soir" ? 0.7 : 1);
+    if (force < 0.08) return;
+    // le soleil haut fait une tache courte, bas une tache longue ; il tourne avec l'azimut
+    const pente = Math.max(-1.2, Math.min(1.2, (180 - s.az) / 55)), long = Math.max(0.35, Math.min(1.1, 18 / Math.max(6, s.alt)));
+    const { x: fx, y: fy, w: fw, h: fh } = BAIE;
+    // un point de la vitre (x, y) → où sa lumière tombe sur le sol
+    const sol = (x, y) => { const d = (y - fy) / fh; return [x + pente * 120 * d * long, 232 + d * 118 * long]; };
+    const vent = Math.sin(t / 2100) * 5 + Math.sin(t / 830) * 2;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 160, 640, 200); ctx.clip();
+    const chaud = moment === "soir" ? "255,190,120" : "255,236,180";
+    for (let k = 0; k < 3; k++) {
+      const x0 = fx + (fw * k) / 3 + 5, x1 = fx + (fw * (k + 1)) / 3 - 5, y0 = fy + 5, y1 = fy + fh - 5;
+      const q = [sol(x0, y0), sol(x1, y0), sol(x1, y1), sol(x0, y1)];
+      ctx.save();
+      ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+      ctx.clip();
+      ctx.fillStyle = "rgba(" + chaud + "," + 0.38 * force + ")";
+      ctx.fillRect(0, 160, 640, 200);
+      // l'ombre tachetée des feuilles, aplatie par la perspective
+      ctx.fillStyle = "rgba(60,40,90," + 0.28 * force + ")";
+      for (const [u, v, r, ph] of FEUILLES) {
+        const [x, y] = sol(fx + u * fw + vent * (0.6 + v), fy + v * fh * 0.85);
+        const rr = r * (0.8 + 0.2 * Math.sin(t / 900 + ph));
+        ctx.beginPath(); ctx.ellipse(x, y, rr * 1.6, rr * 0.6 * long + 1, 0.2, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
   // le décor fixe, peint une fois pour toutes (la vitre reste transparente pour le ciel)
   // eteint : pour dormir, les deux lampes éteintes (la pièce est sombre partout)
   function decorMaison(w, h, dpr, moment, eteint) {
@@ -869,6 +912,8 @@
       dehorsBaie(ctx, t, moment, etat);
       ctx.restore();
       ctx.drawImage(decor, 0, 0, 640, 360);
+      // le jour, le soleil entre par la baie : l'ombre du cadre et des feuilles qui bougent
+      if (moment !== "nuit") soleilParLaBaie(ctx, t, etat, moment);
       // la vapeur du tilleul
       ctx.strokeStyle = "rgba(255,255,255,0.75)";
       ctx.lineWidth = 1.4;
