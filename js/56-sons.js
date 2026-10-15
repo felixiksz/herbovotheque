@@ -572,15 +572,16 @@
   }
   H.sons.majPluie = pluie;
   // le curseur « Bruitages » a bougé : les criquets, les cigales et la pluie suivent aussitôt
-  // Les grenouilles du bassin de la ferme (enregistrées, voir les notes) : l'alyte la nuit, de
-  // mars à octobre ; la grenouille rieuse le soir et la nuit, d'avril à août. La ferme dit s'il y
-  // a un bassin et si l'on est dehors.
+  // Les grenouilles du bassin de la ferme (enregistrées, voir les notes), entre le coucher du
+  // soleil et minuit : l'alyte de mars à octobre, la grenouille rieuse d'avril à septembre. La
+  // ferme dit s'il y a un bassin et si l'on est dehors.
   let grenouillesVoulues = false;
   function grenouilles(oui) {
     if (oui != null) grenouillesVoulues = !!oui;
     const s = H.ciel && H.jeu ? H.ciel.etat() : null, mois = new Date().getMonth() + 1;
-    const nuit = !!s && s.soleil.alt < -4, soir = !!s && s.soleil.alt < 4;
-    const chant = { alyte: grenouillesVoulues && nuit && mois >= 3 && mois <= 10, rieuse: grenouillesVoulues && soir && mois >= 4 && mois <= 8 };
+    // seulement la nuit, entre le coucher du soleil et minuit
+    const soiree = !!s && s.soleil.alt < 0 && new Date().getHours() >= 12;
+    const chant = { alyte: grenouillesVoulues && soiree && mois >= 3 && mois <= 10, rieuse: grenouillesVoulues && soiree && mois >= 4 && mois <= 9 };
     for (const [nom, vol] of [["alyte", 0.5], ["rieuse", 0.32]]) {
       boucles[nom] = boucles[nom] || {};
       boucles[nom].voulu = chant[nom];

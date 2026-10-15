@@ -9,6 +9,7 @@
   const HEURE = 3600e3;
 
   const TUILES = {
+    sol: { nom: "Sol nu", cout: {} },
     herbe: { nom: "Herbe", cout: {} },
     terre: { nom: "Terre bêchée", cout: { outils: 1 } },
     chemin: { nom: "Chemin", cout: { outils: 1, terre: 1 } },
@@ -35,7 +36,18 @@
 
   function caseDe(ile, x, y) {
     const c = (ile.cases || {})[cle(x, y)] || {};
-    return { t: c.t || "herbe", expo: c.expo || ile.expo || "Plein soleil", sol: c.sol || ile.sol || [] };
+    return { t: c.t || "sol", expo: c.expo || ile.expo || "Plein soleil", sol: c.sol || ile.sol || [] };
+  }
+  // Les couleurs de la terre nue, d'après le sol de l'île (ou de la case) : le sable, la terre
+  // rouge argileuse, le calcaire clair, l'humus sombre, le limon ; et des cailloux s'il est caillouteux.
+  function teintesSol(sols) {
+    const a = new Set(sols || []);
+    const base = a.has("Sableux") ? ["#d9b48a", "#e9c99a", "#c9a06a", "#f3e2c0"]
+      : a.has("Calcaire") ? ["#d9d0b8", "#e9e3cd", "#c9c4b0", "#f3f0dc"]
+      : a.has("Argileux") ? ["#b2552e", "#c96a3a", "#9a4a2a", "#d9824f"]
+      : a.has("Humifère") || a.has("Riche") ? ["#4b3427", "#5a3e2a", "#3a2a20", "#7a4520"]
+      : ["#9a6a3c", "#8a5c34", "#7a4520", "#b9834f"];
+    return { base, cailloux: a.has("Caillouteux") ? 0.1 : a.has("Calcaire") ? 0.05 : 0.015 };
   }
 
   function nombre(texte) {
@@ -139,7 +151,7 @@
         raisons.push("Au soleil du Sud, elle apprécierait un peu d’ombre et d’eau.");
       }
     }
-    if (c.t === "herbe") f *= 0.95;
+    if (c.t === "herbe") f *= 0.95; // l'herbe fait de la concurrence
     if (c.t === "terre") f *= 1.05;
     // voisines
     let bonus = 0;
@@ -421,7 +433,8 @@
     for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
       const u = (x + 0.5 - ox) / a, v = ((y + 0.5 - oy) * 2) / a, i = (u + v) / 2, j = (v - u) / 2;
       if (i < 0 || j < 0 || i >= cols || j >= lignes) continue;
-      const t = tons[caseDe(ile, Math.floor(i), Math.floor(j)).t] || tons.herbe, h = hsh(x, y);
+      const tt = caseDe(ile, Math.floor(i), Math.floor(j)).t;
+      const t = tt === "sol" ? (ile.croquis ? tons.herbe : teintesSol(ile.sol).base) : tons[tt] || tons.herbe, h = hsh(x, y);
       P(x, y, h < 0.6 ? t[0] : h < 0.85 ? t[1] : t[2]);
     }
     // la tranche de terre (côté gauche au soleil, côté droit à l'ombre)
@@ -746,12 +759,7 @@
     conteneur.appendChild(H.el("div.pied-ile", null,
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterImage(ile) }, "Exporter le croquis (image)"),
-      (vue.boutonVue = H.el("button.bouton.petit", { type: "button", onclick: () => {
-        vue.iso = !vue.iso;
-        H.d.majLocal((l) => (l.vueDessus = !vue.iso));
-        vue.boutonVue.textContent = vue.iso ? "Vue de dessus" : "Vue en relief";
-        dimensionner(); peindreFond(); dessiner();
-      } }, vue.iso ? "Vue de dessus" : "Vue en relief")),
+      (vue.boutonVue = H.el("button.bouton.petit", { type: "button", onclick: () => basculerVue() }, vue.iso ? "Vue d’oiseau" : "Vue en relief")),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
       Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser les plantes de l’île") : null,
       !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
@@ -796,6 +804,20 @@
     }
   }
 
+  // passer de la vue en relief à la vue d'oiseau (de dessus), et retour
+  function basculerVue() {
+    vue.iso = !vue.iso;
+    H.d.majLocal((l) => (l.vueDessus = !vue.iso));
+    if (vue.boutonVue) vue.boutonVue.textContent = vue.iso ? "Vue d’oiseau" : "Vue en relief";
+    dessinerOutils();
+    dimensionner(); peindreFond(); dessiner();
+  }
+  document.addEventListener("keydown", (e) => {
+    if (!vue || !document.body.contains(vue.toile) || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest && e.target.closest("input, textarea, select")) return;
+    if (e.key === "v" || e.key === "V") basculerVue();
+  });
+
   function dessinerOutils() {
     const ile = vue.ile;
     const liste = ile.croquis
@@ -805,6 +827,7 @@
     liste.forEach(([id, nom]) =>
       vue.outils.appendChild(H.el("button.bouton.petit.outil" + (vue.outil === id ? ".actif" : ""), { type: "button", "aria-pressed": String(vue.outil === id), onclick: () => { vue.outil = id; dessinerOutils(); } }, nom))
     );
+    vue.outils.appendChild(H.el("button.bouton.petit.outil.bascule-vue", { type: "button", title: "Touche V", onclick: basculerVue }, vue.iso ? "Vue d’oiseau" : "Vue en relief"));
     // options de l'outil
     const o = vue.options;
     o.innerHTML = "";
@@ -936,24 +959,20 @@
     for (let i = 0; i < 18; i++) H.aqua.tache(ctx, r, r() * W * T, r() * Hh * T, 40 + r() * 80, 30 + r() * 60, i % 2 ? "#6aa9c9" : "#bfe0ec", { alpha: 0.05, couches: 8 });
     const sable = H.aqua.rectArrondi((BORD - 0.6) * T, (BORD - 0.6) * T, (ile.cols + 1.2) * T, (ile.lignes + 1.2) * T, T * 1.2, 8);
     H.aqua.lavis(ctx, r, sable, "#ead6a6", { alpha: 0.2, couches: 12, bord: 0.05 });
-    // l'herbe : un seul grand lavis continu, sans damier
-    const herbe = TEINTES_SAISON[saison] || "#9cc77a";
-    ctx.fillStyle = herbe;
+    // la terre nue de l'île : un seul grand lavis continu, sans damier
+    const herbe = TEINTES_SAISON[saison] || "#9cc77a", terreNue = teintesSol(ile.sol).base;
+    ctx.fillStyle = terreNue[0];
     ctx.fillRect(BORD * T, BORD * T, ile.cols * T, ile.lignes * T);
     const n = Math.ceil((ile.cols * ile.lignes) / 6);
     for (let i = 0; i < n; i++) {
       const x = (BORD + r() * ile.cols) * T, y = (BORD + r() * ile.lignes) * T;
-      H.aqua.tache(ctx, r, x, y, T * (0.8 + r() * 1.6), T * (0.6 + r() * 1.2), i % 3 === 0 ? "#7fa85a" : i % 3 === 1 ? "#cfdc94" : herbe, { alpha: 0.022, couches: 6 });
-    }
-    for (let i = 0; i < n * 2; i++) {
-      const x = (BORD + r() * ile.cols) * T, y = (BORD + r() * ile.lignes) * T;
-      H.aqua.trait(ctx, r, [[x, y], [x + (r() - 0.5) * 4, y - 5]], { couleur: "#4f7a3a", epaisseur: 0.8, alpha: 0.3 });
+      H.aqua.tache(ctx, r, x, y, T * (0.8 + r() * 1.6), T * (0.6 + r() * 1.2), terreNue[1 + (i % 3)], { alpha: 0.03, couches: 6 });
     }
     ctx.restore();
     for (let y = 0; y < ile.lignes; y++) {
       for (let x = 0; x < ile.cols; x++) {
         const c = caseDe(ile, x, y);
-        if (c.t === "herbe") continue;
+        if (c.t === "sol") continue;
         const tex = textureTuile(c.t, saison, H.hash(cle(x, y)) % 3);
         ctx.drawImage(tex, (x + BORD) * k, (y + BORD) * k, k + 0.5, k + 0.5);
       }
@@ -1013,20 +1032,36 @@
         if (img) { g.imageSmoothingEnabled = false; g.drawImage(img, cx - w / 2, sol - h, w, h); return res; }
       }
       if (st === 0) { R(g, cx - 3, sol - 1, 6, 2, "#6b4423"); R(g, cx, sol - 2, 1, 1, "#4f7a3a"); return res; }
-      // une masse de feuillage ronde, éclairée en haut à gauche
+      // Un feuillage en grappes : une masse sombre, puis des bouquets de feuilles posés dessus,
+      // chacun éclairé en haut à gauche, avec des feuilles claires sur le dessus et des trous
+      // d'ombre entre eux (comme les arbres du pixel art détaillé).
+      const tresSombre = assombrir(feuille, 0.5);
       const masse = (gg, x0, y0, rx, ry) => {
-        for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
-          const d = (x * x) / (rx * rx + 0.01) + (y * y) / (ry * ry + 0.01);
-          if (d > 1 - r() * 0.12) continue;
-          const lum = -x / rx - y / ry + (r() - 0.5) * 0.6;
-          R(gg, x0 + x, y0 + y, 1, 1, d > 0.82 ? sombre : lum > 0.5 ? clair : lum < -0.6 ? sombre : feuille);
+        const dans = (x, y) => (x * x) / (rx * rx + 0.01) + (y * y) / (ry * ry + 0.01);
+        for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) if (dans(x, y) <= 1 - r() * 0.1) R(gg, x0 + x, y0 + y, 1, 1, dans(x, y) > 0.75 ? tresSombre : sombre);
+        const n = Math.max(3, Math.min(16, Math.round((rx * ry) / 18)));
+        for (let k = 0; k < n; k++) {
+          const a2 = r() * Math.PI * 2, dd = Math.sqrt(r()) * 0.7, bx = Math.round(Math.cos(a2) * rx * dd), by = Math.round(Math.sin(a2) * ry * dd - ry * 0.1);
+          const br = Math.max(2, Math.round(Math.min(rx, ry) * (0.35 + r() * 0.2)));
+          for (let y = -br; y <= br; y++) for (let x = -br; x <= br; x++) {
+            const d = (x * x + y * y) / (br * br + 0.01);
+            if (d > 1 - r() * 0.2 || dans(bx + x, by + y) > 1) continue;
+            const lum = (-x - y) / br + (r() - 0.5) * 0.5;
+            R(gg, x0 + bx + x, y0 + by + y, 1, 1, lum > 0.75 ? clair : lum < -0.55 ? sombre : feuille);
+          }
         }
+        // quelques feuilles qui dépassent du bord
+        for (let k = 0; k < (rx + ry) / 2; k++) { const a2 = r() * Math.PI * 2; R(gg, x0 + Math.round(Math.cos(a2) * (rx + 1)), y0 + Math.round(Math.sin(a2) * (ry + 1)), 1, 1, r() < 0.5 ? feuille : sombre); }
       };
       const cycle = v.cycle, hm = hauteurM(p);
       if (cycle === "Arbre" || (cycle === "Arbuste" && hm >= 2.5)) {
         // le tronc, puis la couronne sur une toile à part
         const tw = Math.max(2, Math.round(w * 0.09)), ht = Math.round(h * 0.42);
-        R(g, cx - tw / 2, sol - ht, tw, ht, "#7a4520"); R(g, cx - tw / 2, sol - ht, 1, ht, "#9a6a3c");
+        // le tronc, son écorce et deux branches qui partent vers la couronne
+        R(g, cx - tw / 2, sol - ht, tw, ht, "#7a4520"); R(g, cx - tw / 2, sol - ht, 1, ht, "#9a6a3c"); R(g, cx + tw / 2 - 1, sol - ht, 1, ht, "#4b3427");
+        for (let y = 2; y < ht; y += 3) R(g, cx - tw / 2 + 1 + (y % 2), sol - y, 1, 1, "#4b3427");
+        R(g, cx - tw / 2 - 1, sol, tw + 2, 1, "#4b3427");
+        for (const sens of [-1, 1]) for (let q = 0; q < Math.max(3, w * 0.2); q++) R(g, cx + sens * (tw / 2 + q * 0.8), sol - ht - q, 1, 1, "#7a4520");
         if (st >= 2) {
           const couronne = toile(L, Hh), gc = couronne.getContext("2d");
           masse(gc, cx, sol - ht - (h - ht) * 0.45, Math.max(2, Math.floor(w / 2)), Math.max(2, Math.floor((h - ht) * 0.55)));
@@ -1104,24 +1139,67 @@
     };
     tranche([0, Lg], [C, Lg], true);
     tranche([C, Lg], [C, 0], false);
-    // le dessus : le même plan que la vue de dessus, couché en losanges
-    aplat(ctx, z);
-    const herbe = TEINTES_SAISON[saison] || "#9cc77a";
-    ctx.fillStyle = herbe;
-    ctx.fillRect(0, 0, C * T, Lg * T);
-    const n = Math.ceil((C * Lg) / 6);
-    for (let i = 0; i < n; i++) H.aqua.tache(ctx, r, r() * C * T, r() * Lg * T, T * (0.8 + r() * 1.6), T * (0.6 + r() * 1.2), i % 3 === 0 ? "#7fa85a" : i % 3 === 1 ? "#cfdc94" : herbe, { alpha: 0.022, couches: 6 });
-    for (let y = 0; y < Lg; y++) for (let x = 0; x < C; x++) {
-      const c = caseDe(ile, x, y);
-      if (c.t === "herbe") continue;
-      ctx.drawImage(textureTuile(c.t, saison, H.hash(cle(x, y)) % 3), x * T, y * T, T + 0.5, T + 0.5);
+    // le dessus, pixel par pixel, comme un jardin en pixel art : l'herbe en touffes claires et
+    // sombres avec des fleurettes, la terre bêchée en sillons, les dalles du chemin avec leurs
+    // joints moussus, le gravier, l'eau qui miroite, la serre
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const lw = Math.ceil(W), lh = Math.ceil(Hh), img = new ImageData(lw, lh), px = new Uint32Array(img.data.buffer);
+    const rgb = (h) => { const n = parseInt(h.slice(1), 16); return 0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | (n >> 16); };
+    const PAL = {
+      herbe: { printemps: ["#2f6b35", "#3f8a42", "#4aa63e", "#6cbd5c", "#9cc77a"], "été": ["#2f6b35", "#3f8a42", "#6a9a3a", "#8fae4a", "#c6cf55"], automne: ["#2f6b35", "#3f8a42", "#4aa63e", "#6a9a3a", "#9cc77a"], hiver: ["#2f5a3a", "#3f6a4a", "#5a7a5a", "#7a8a7a", "#9aa89a"] }[saison] || ["#2f6b35", "#3f8a42", "#4aa63e", "#6cbd5c", "#9cc77a"],
+      terre: ["#4b3427", "#7a4520", "#9a6a3c", "#b9834f"], dalle: ["#c9c9c4", "#e9e3cd", "#f3f0dc", "#9a9a9a"], joint: ["#6b6578", "#4a7a3a", "#5a5466"],
+      gravier: ["#9a9a9a", "#c9c9c4", "#e9e3cd", "#6b6578"], eau: ["#2f8fe0", "#3a9ee8", "#6fb6ee", "#a8d8ec"], serre: ["#a8d8ec", "#d6eef7", "#7f97f2"],
+      fleurs: ["#f6ee55", "#ffffff", "#ffb3a8", "#d07ab8", "#8a58cc", "#ff5b4f"],
+    };
+    const cache = {};
+    const c32 = (h) => cache[h] || (cache[h] = rgb(h));
+    const hp = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+      const [fx, fy] = versCase(x + 0.5, y + 0.5);
+      if (fx < 0 || fy < 0 || fx >= C || fy >= Lg) continue;
+      const cx0 = Math.floor(fx), cy0 = Math.floor(fy), t2 = caseDe(ile, cx0, cy0).t, h = hp(x, y), n = hp(x >> 2, y >> 1), u = fx - cx0, v = fy - cy0;
+      let col;
+      if (t2 === "terre") {
+        const sillon = Math.floor(v * 5 + n * 0.3) % 2;
+        col = PAL.terre[h < 0.1 ? 0 : sillon ? 1 : h > 0.85 ? 3 : 2];
+      } else if (t2 === "chemin") {
+        const su = u * 2, sv = v * 2, bord = Math.min(su % 1, sv % 1, 1 - (su % 1), 1 - (sv % 1));
+        col = bord < 0.09 ? PAL.joint[h < 0.4 ? 1 : h < 0.7 ? 0 : 2] : PAL.dalle[h < 0.12 ? 3 : h < 0.45 ? 0 : h < 0.9 ? 1 : 2];
+        if (bord < 0.16 && bord >= 0.09 && h < 0.25) col = PAL.herbe[3];
+      } else if (t2 === "gravier") col = PAL.gravier[Math.floor(h * 4)];
+      else if (t2 === "eau") col = PAL.eau[h < 0.08 ? 3 : n < 0.3 ? 0 : n < 0.7 ? 1 : 2];
+      else if (t2 === "serre") col = (u < 0.05 || v < 0.05) ? PAL.serre[2] : PAL.serre[h < 0.3 ? 1 : 0];
+      else if (t2 === "sol") {
+        // la terre nue, selon le sol de la case : des mottes plus claires ou plus sombres, des cailloux
+        const ts = teintesSol(caseDe(ile, cx0, cy0).sol), nn = hp(x >> 2, y >> 1);
+        col = ts.base[h < 0.1 ? 2 : nn < 0.4 ? 0 : nn < 0.8 ? 1 : 3];
+        if (hp(x >> 1, y) < ts.cailloux) col = hp(y, x) < 0.5 ? "#9a9a9a" : "#c9c9c4";
+      } else {
+        // l'herbe : des plaques plus claires et plus sombres, des brins, quelques fleurettes
+        // des touffes : chaque colonne de pixels a ses brins de 2 à 4 pixels de haut, clairs en
+        // haut et sombres au pied, sur des plaques d'herbe plus claires ou plus sombres
+        const nn = hp(x >> 3, y >> 2) * 0.6 + hp(x >> 4, y >> 3) * 0.4;
+        let k = nn < 0.35 ? 1 : nn < 0.75 ? 2 : 3;
+        const dec = Math.floor(hp(x, 7) * 4), brin = hp(x, Math.floor((y + dec) / 4)), pos = (y + dec) % 4;
+        if (brin > 0.72) k = pos === 0 ? Math.min(4, k + 1) : pos === 3 ? Math.max(0, k - 1) : k;
+        else if (h < 0.05) k = Math.max(0, k - 1);
+        col = PAL.herbe[k];
+        if (h > 0.997) col = PAL.fleurs[Math.floor(hp(y, x) * PAL.fleurs.length)];
+      }
+      px[y * lw + x] = c32(col);
     }
-    ctx.strokeStyle = "rgba(43,38,34,0.08)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x = 0; x <= C; x++) { ctx.moveTo(x * T, 0); ctx.lineTo(x * T, Lg * T); }
-    for (let y = 0; y <= Lg; y++) { ctx.moveTo(0, y * T); ctx.lineTo(C * T, y * T); }
-    ctx.stroke();
+    const plat = document.createElement("canvas");
+    plat.width = lw; plat.height = lh;
+    plat.getContext("2d").putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.setTransform(z, 0, 0, z, 0, 0);
+    ctx.drawImage(plat, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    // un liseré plus clair au bord du dessus, comme l'herbe qui déborde
+    for (const [a, b] of [[[0, Lg], [C, Lg]], [[C, Lg], [C, 0]]]) {
+      const [x0, y0] = proj(a[0], a[1]), [x1, y1] = proj(b[0], b[1]), n2 = Math.round(Math.abs(x1 - x0));
+      for (let q = 0; q <= n2; q++) { const xx = x0 + ((x1 - x0) * q) / n2, yy = y0 + ((y1 - y0) * q) / n2; ctx.fillStyle = PAL.herbe[4]; ctx.fillRect(Math.round(xx), Math.round(yy) - 1, 1, 1); if (H.hash(String(q)) % 3 === 0) { ctx.fillStyle = PAL.herbe[2]; ctx.fillRect(Math.round(xx), Math.round(yy) + 1, 1, 2); } }
+    }
   }
 
   // les racines des plantes du bord, dans les tranches : plus la plante est grande, plus elles
@@ -1190,7 +1268,7 @@
 
     // ce qui se dresse, du fond vers le devant
     ctx.setTransform(z, 0, 0, z, 0, 0);
-    const debout = [], couronnes = [];
+    const debout = [], couronnes = [], aCueillir = [];
     vue.boites = [];
     for (const [k2, pl] of Object.entries(ile.plantes || {})) {
       const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
@@ -1202,6 +1280,7 @@
         if (d.couronne) couronnes.push([d.couronne, gx, gy]);
         vue.boites.push({ x, y, g: gx, h: gy + d.h - 2 - d.haut, d: gx + d.l, b: gy + d.h, grande: d.haut > T * 1.2, prof: x + y });
         if (!ile.croquis && pl.eau < 20 && st > 0 && !aRecolter(q, ile, pl)) { ctx.fillStyle = "#3a8fd8"; ctx.fillRect(Math.round(sx + d.l / 2 - 2), Math.round(sy - Math.min(d.haut, T) - 3), 3, 4); }
+        if (aRecolter(q, ile, pl)) aCueillir.push([sx, sy - d.haut, d.l, d.haut, x * 7 + y * 13]);
       } });
     }
     const enCalin = vue.calin && vue.luigi && !vue.luigi.cible;
@@ -1252,6 +1331,10 @@
     for (const [c, gx, gy] of couronnes) ctx.drawImage(c, gx, gy);
     ctx.restore();
 
+    // ce qui est prêt à cueillir : un petit panier qui sautille au-dessus de la plante, et des
+    // étincelles qui scintillent dans le feuillage
+    for (const [sx, haut, l, h, g] of aCueillir) panierACueillir(ctx, sx, haut, l, h, g, t);
+
     // petits cœurs pendant un câlin
     if (vue.coeurs && vue.coeurs > t && vue.luigi) {
       const tc = (t % 1500) / 1500, [sx, sy] = proj(vue.ovo.x + 0.5, vue.ovo.y + 0.5);
@@ -1273,6 +1356,23 @@
     if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5));
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
+  const PANIER = ["..kkkk..", ".k....k.", "kkkkkkkk", "kAaAaAak", "kaAaAaAk", ".kAaAak.", "..kkkk.."];
+  function panierACueillir(ctx, sx, haut, l, h, g, t) {
+    const saut = Math.round(Math.abs(Math.sin(t / 260 + g)) * 4), x0 = Math.round(sx - 4), y0 = Math.round(haut - 12 - saut);
+    const couleurs = { k: "#23214a", A: "#e9b44c", a: "#b9834f" };
+    PANIER.forEach((ligne, j) => [...ligne].forEach((ch, i) => { if (couleurs[ch]) { ctx.fillStyle = couleurs[ch]; ctx.fillRect(x0 + i, y0 + j, 1, 1); } }));
+    // une petite flèche rose dessous, qui pointe vers la plante
+    ctx.fillStyle = "#ff2e9a"; ctx.fillRect(x0 + 3, y0 + 8, 2, 2); ctx.fillRect(x0 + 2, y0 + 8, 4, 1);
+    // les étincelles
+    for (let k = 0; k < 4; k++) {
+      const u = Math.sin(t / 300 + g + k * 1.7);
+      if (u < 0.3) continue;
+      const ex = Math.round(sx + (H.hash(g + "|" + k) % 100 / 100 - 0.5) * l * 0.9), ey = Math.round(haut + (H.hash(k + "|" + g) % 100 / 100) * h * 0.8);
+      ctx.fillStyle = u > 0.8 ? "#ffffff" : "#f6ee55";
+      ctx.fillRect(ex, ey - 1, 1, 3); ctx.fillRect(ex - 1, ey, 3, 1);
+    }
+  }
+
   // les zones de mi-ombre et d'ombre, en relief : hachures dans les losanges (l'ombre des arbres
   // comprise), liseré jaune là où l'exposition change
   function dessinerZonesIso(ctx, z) {
@@ -1810,7 +1910,7 @@
         if (!ile.croquis && !payer(TUILES[t].cout)) return;
         ile.cases = ile.cases || {};
         ile.cases[k] = Object.assign({}, ile.cases[k], { t });
-        if (t === "herbe") delete ile.cases[k].t;
+        if (t === "sol") delete ile.cases[k].t;
         sauver(ile);
         peindreFond();
         dessiner();
