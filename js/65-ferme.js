@@ -1052,6 +1052,97 @@
     for (const o of objets) if (o.bete && !o.prof) o.prof = o.x + o.y;
   }
 
+  // --- le bassin et ses habitants ---
+  // Quand on a peint un bassin en aménageant : des têtards qui frétillent dans l'eau, des
+  // grenouilles assises sur le bord qui sautent de temps en temps, et le soir un hérisson qui
+  // vient boire (il arrive d'un bord de la ferme, boit un moment, puis repart).
+  const GRENOUILLE = [".e.e.", "ggggg", "gGgGg", "g...g"];
+  const GRENOUILLE_SAUT = [".e.e.", "ggggg", "gGgGg", ".g.g."];
+  const HERISSON = ["..KkKkK..", ".KkKkKkKs", "KkKkKkKse", ".b..b.b.."];
+  const HERISSON_PAS = ["..KkKkK..", ".KkKkKkKs", "KkKkKkKse", "..b..b.b."];
+  const HERISSON_BOIT = ["..KkKkK..", ".KkKkKkK.", "KkKkKkKss", ".b..b.bse"];
+  const PAL_BASSIN = { g: "#4aa63e", G: "#2f6b35", e: "#1b1d4a", K: "#4b3427", k: "#9a6a3c", s: "#d9a07a", b: "#2a1d1b" };
+  function dessinGrille(c, x, y, g, gauche) {
+    const L = g[0].length;
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BASSIN[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, PAL_BASSIN[ch]); }));
+  }
+  const casesBassin = () => elementsIso().filter((e) => e.sol === "bassin");
+  // les cases au bord du bassin (à côté de l'eau, mais pas dans l'eau)
+  function bordsBassin() {
+    const eau = new Set(casesBassin().map((e) => e.i + "," + e.j)), bords = [];
+    for (const k of eau) {
+      const [i, j] = k.split(",").map(Number);
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const a = i + di, b = j + dj;
+        if (a < 0 || b < 0 || a >= N || b >= N || eau.has(a + "," + b) || occupe(a + 0.5, b + 0.5, 0.2)) continue;
+        bords.push([a + 0.5 - di * 0.35, b + 0.5 - dj * 0.35]);
+      }
+    }
+    return bords;
+  }
+  function tetards(c, cx, cy, t) {
+    const eau = casesBassin();
+    eau.forEach((e, n) => {
+      for (let k = 0; k < 3; k++) {
+        const g = n * 3 + k, x = e.i + 0.5 + Math.sin(t / 1300 + g * 2.1) * 0.28, y = e.j + 0.5 + Math.cos(t / 1700 + g * 1.3) * 0.22;
+        const [px, py] = iso(x, y), X = Math.round(px) - cx, Y = Math.round(py) + 4 - cy;
+        pixel(c, X, Y, "#1b1d4a"); pixel(c, X + 1, Y, "#1b1d4a");
+        // la queue qui frétille
+        pixel(c, X - 1, Y + (Math.floor(t / 160 + g) % 2), "#26406a");
+      }
+    });
+  }
+  function majBassin(t) {
+    const bords = bordsBassin();
+    if (!bords.length) { scene.grenouilles = null; scene.herisson = null; return; }
+    // deux grenouilles au plus, posées sur le bord
+    if (!scene.grenouilles || scene.grenouilles.nbBords !== bords.length) {
+      scene.grenouilles = bords.slice(0, Math.min(2, bords.length)).map((b, k) => ({ x: b[0], y: b[1], saut: null, prochain: t + 4000 + k * 3000 + Math.random() * 6000 }));
+      scene.grenouilles.nbBords = bords.length;
+    }
+    for (const g of scene.grenouilles) {
+      if (g.saut) {
+        const u = (t - g.saut.t0) / 600;
+        if (u >= 1) { g.x = g.saut.x1; g.y = g.saut.y1; g.saut = null; g.prochain = t + 6000 + Math.random() * 14000; }
+        else { g.x = g.saut.x0 + (g.saut.x1 - g.saut.x0) * u; g.y = g.saut.y0 + (g.saut.y1 - g.saut.y0) * u; g.haut = Math.sin(Math.PI * u) * 5; }
+      } else if (t > g.prochain) {
+        const b = bords[Math.floor(Math.random() * bords.length)];
+        g.saut = { t0: t, x0: g.x, y0: g.y, x1: b[0], y1: b[1] };
+        g.gauche = b[0] - b[1] < g.x - g.y;
+      }
+      if (!g.saut) g.haut = 0;
+    }
+    // le soir (le soleil couché depuis peu), un hérisson vient boire
+    const alt = H.ciel.etat().soleil.alt, soir = alt < 1 && alt > -16;
+    if (!soir) { scene.herisson = null; return; }
+    if (!scene.herisson && (!scene.prochainHerisson || t > scene.prochainHerisson)) {
+      scene.prochainHerisson = t + 90000 + Math.random() * 120000;
+      const bord = bords[Math.floor(Math.random() * bords.length)], depart = Math.random() < 0.5 ? [0.6, 2 + Math.random() * (N - 4)] : [2 + Math.random() * (N - 4), N - 0.6];
+      const aller = (a, b) => { const pts = passage(a, b), cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, long: cum[cum.length - 1] }; };
+      scene.herisson = { etape: "va", c: aller(depart, bord), u: 0, retour: () => aller(bord, [depart[1] > N / 2 ? N - 0.6 : 0.6, depart[0]]) };
+    }
+    const h = scene.herisson;
+    if (!h) return;
+    if (h.etape === "boit") {
+      if (t > h.fin) { h.etape = "part"; h.c = h.retour(); h.u = 0; }
+      return;
+    }
+    h.u += 0.012 / Math.max(1, h.c.long);
+    if (h.u >= 1) {
+      if (h.etape === "va") { h.etape = "boit"; h.fin = t + 9000 + Math.random() * 6000; h.u = 1; }
+      else scene.herisson = null;
+    }
+  }
+  function objetsBassin(objets) {
+    for (const g of scene.grenouilles || []) objets.push({ prof: g.x + g.y, grenouille: g });
+    const h = scene.herisson;
+    if (h) {
+      const q = Math.min(1, h.u), a = point(h.c, q), b = point(h.c, Math.min(1, q + 0.02));
+      if (h.etape !== "boit") h.gauche = (b[0] - a[0]) - (b[1] - a[1]) < 0;
+      objets.push({ prof: a[0] + a[1], herisson: h, x: a[0], y: a[1] });
+    }
+  }
+
   // --- les poules ---
   // Le jour, elles picorent dans la cour. Le soir (après 15 h, quand le soleil est bas), Mémé
   // descend du dos de Lóló, passe derrière elles et les pousse jusqu'au poulailler, puis remonte.
@@ -1325,6 +1416,7 @@
     }
     ctx.drawImage(sol0, -cx, -cy);
     tracesFouilles(ctx, cx, cy);
+    tetards(ctx, cx, cy, t);
     }
     // Lóló : la première fois, il arrive au galop depuis le bord ; ensuite il suit ƟvƟ
     const lo = scene.lolo;
@@ -1347,12 +1439,14 @@
     majPoules(t);
     majMesi();
     majVisiteur(t, mo.nuit);
+    majBassin(t);
     if (seulementMaj) return;
     // tout ce qui se dresse, trié du fond vers le devant
     const objets = [];
     for (const p of scene.poules) if (!p.dedans) objets.push({ prof: p.x + p.y, poule: p });
     if (scene.rentree) objets.push({ prof: scene.rentree.meme.x + scene.rentree.meme.y, meme: scene.rentree.meme });
     objetsVisiteur(objets);
+    objetsBassin(objets);
     if (scene.mesiVa && scene.mesiVa.pos) objets.push({ prof: scene.mesiVa.pos[0] + scene.mesiVa.pos[1] + 0.03, mesiVa: scene.mesiVa });
     for (const p of plantes) objets.push({ prof: p.x + p.y, p });
     for (const m of MAISONS) objets.push({ prof: m.i + m.w + m.j + m.d, m });
@@ -1403,6 +1497,12 @@
       else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet ? temps : 0); }
       else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.broute && !lo.marche ? "broute" : lo.marche ? Math.floor(t / (lo.course || lo.rejoindre ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
       else if (o.poule) { const [x, y] = iso(o.poule.x, o.poule.y); dessinPoule(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.poule, Math.floor(t / (o.poule.picore ? 260 : 170) + o.poule.robe) % 2); }
+      else if (o.grenouille) { const g = o.grenouille, [x, y] = iso(g.x, g.y); dessinGrille(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy - Math.round(g.haut || 0), g.saut ? GRENOUILLE_SAUT : GRENOUILLE, g.gauche); }
+      else if (o.herisson) {
+        const h = o.herisson, [x, y] = iso(o.x, o.y);
+        const g = h.etape === "boit" ? (Math.floor(t / 420) % 2 ? HERISSON_BOIT : HERISSON) : temps % 2 ? HERISSON_PAS : HERISSON;
+        dessinGrille(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, g, h.gauche);
+      }
       else if (o.bete) {
         const [x, y] = iso(o.x, o.y), arret = scene.visiteur && t < scene.visiteur.pause, f = !arret && temps % 2;
         // la laie qui fouille baisse et relève la hure
