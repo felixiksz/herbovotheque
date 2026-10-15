@@ -152,20 +152,44 @@
   const urlFichier = (f, largeur) => "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(f) + "?width=" + (largeur || 480);
   const sansBalises = (t) => String(t || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 
-  // la partie utilisée, d'après la fiche : les mots latins de la pharmacopée et leurs équivalents
+  // La partie utilisée, d'après la fiche (« Parties utilisées et période de récolte ») : on la
+  // cherche d'abord sous son nom de pharmacopée, celui des droguiers et des herboristeries (le
+  // genre au génitif puis la partie : « Angelicae radix », « Gentianae radix », « Hyperici herba »),
+  // qui montre la partie elle-même, séchée ; puis le nom de la plante avec la partie dans le titre
+  // de la photo ; puis seulement avec les mots de la partie. Quand la fiche cite plusieurs parties
+  // (l'angélique : la racine et les fruits), on les montre toutes, la racine d'abord.
   const PARTIES = [
-    [/racine|rhizome/i, "radix OR rhizoma OR root OR roots"],
-    [/écorce|ecorce/i, "cortex OR bark"],
-    [/graine|semence/i, "semen OR seeds"],
-    [/fruit|baie/i, "fructus OR fruits OR berries"],
-    [/bourgeon|jeunes pousses/i, "gemmae OR buds"],
-    [/fleur|sommité|capitule|pétale/i, "flos OR flores OR flowers"],
-    [/feuille/i, "folium OR folia OR leaves"],
+    [/racine/i, ["radix"], ["root", "roots", "Wurzel", "racine"]],
+    [/rhizome/i, ["rhizoma"], ["rhizome", "rhizomes", "Rhizom"]],
+    [/écorce|ecorce/i, ["cortex"], ["bark", "Rinde", "écorce"]],
+    [/graine|semence/i, ["semen"], ["seeds", "seed", "Samen", "graines"]],
+    [/fruit|baie/i, ["fructus"], ["fruits", "fruit", "berries", "Früchte"]],
+    [/bourgeon|jeunes pousses/i, ["gemmae"], ["buds", "Knospen", "bourgeons"]],
+    [/fleur|sommité|capitule|pétale/i, ["flos", "flores"], ["flowers", "flower", "Blüten", "fleurs"]],
+    [/feuille/i, ["folium", "folia"], ["leaves", "leaf", "Blätter", "feuilles"]],
+    [/partie aérienne|plante entière|herbe/i, ["herba"], ["herb", "Kraut"]],
   ];
-  function motsPartie(p) {
+  // le genre au génitif latin : Angelica → Angelicae, Hypericum → Hyperici, Salix → Salicis…
+  function genitif(genre) {
+    if (/a$/.test(genre)) return genre + "e";
+    if (/(us|um)$/.test(genre)) return genre.slice(0, -2) + "i";
+    if (/ix$/.test(genre)) return genre.slice(0, -1) + "cis";
+    if (/ex$/.test(genre)) return genre.slice(0, -2) + "icis";
+    if (/er$/.test(genre)) return genre + "is";
+    if (/o$/.test(genre)) return genre + "nis";
+    return genre;
+  }
+  function recherchesPartie(p, nom) {
     const texte = String((p.valeurs || {}).partiesRecolte || "");
-    const trouve = PARTIES.find(([m]) => m.test(texte));
-    return trouve ? trouve[1] : "herba OR dried";
+    const parties = PARTIES.filter(([m]) => m.test(texte));
+    const [g, espece] = nom.split(" "), genre = genitif(g), q = [];
+    // (parfois la pharmacopée nomme la plante par son espèce : « Millefolii herba », « Absinthii herba »)
+    const autre = espece && !/^(officinal|vulgar|commun|sativ|major|minor|alb|nigr|lute|dioic)/.test(espece) ? genitif(espece[0].toUpperCase() + espece.slice(1)) : null;
+    for (const [, latin] of parties) for (const l of latin) { q.push('"' + genre + " " + l + '"'); if (autre) q.push('"' + autre + " " + l + '"'); }
+    for (const [, latin, mots] of parties) for (const m of latin.concat(mots.slice(0, 2))) q.push('"' + nom + '" intitle:' + m);
+    for (const [, latin, mots] of parties) q.push('"' + nom + '" (' + latin.concat(mots).join(" OR ") + ")");
+    if (!parties.length) q.push('"' + nom + '" (dried OR drug OR herba OR droge)');
+    return q;
   }
 
   async function chercher(recherche) {
@@ -229,14 +253,15 @@
       etat.textContent = "";
       garder.hidden = x.fichier === choisie(p, quoi);
     }
+    // (les recherches se font au fur et à mesure : la première photo arrive vite, les suivantes
+    // quand on demande une autre photo)
+    let aFaire = null;
     autre.onclick = async () => {
       try {
-        if (!liste) {
+        if (!liste) { liste = []; aFaire = [].concat(recherche); }
+        while (i + 1 >= liste.length && aFaire.length) {
           etat.textContent = "Je cherche…";
-          liste = [];
-          for (const q of [].concat(recherche)) {
-            for (const x of await chercher(q)) if (!liste.some((y) => y.fichier === x.fichier)) liste.push(x);
-          }
+          for (const x of await chercher(aFaire.shift())) if (!liste.some((y) => y.fichier === x.fichier)) liste.push(x);
         }
         if (!liste.length) return montrer(null);
         i = (i + 1) % liste.length;
@@ -271,7 +296,7 @@
       H.el("h3", null, "Photos libres"),
       H.el("div.cadres-photos", null,
         cadre(p, "plante", "La plante", '"' + nom + '"', recharger),
-        cadre(p, "partie", "La partie utilisée", ['"' + nom + '" (dried OR drug OR herbarium OR herba OR droge)', '"' + nom + '" (' + motsPartie(p) + ")"], recharger, illus)
+        cadre(p, "partie", "La partie utilisée", recherchesPartie(p, nom), recharger, illus)
       ),
       H.el("p.discret", null, "Photos de Wikimedia Commons, sous licences libres. « Garder celle-ci » la retient pour la fiche.")
     );
