@@ -1102,6 +1102,17 @@
         H.el("a.sortie-maison", { href: "#village", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme")
       ));
       sceneMaison(toileMaison);
+      // le jour de l'anniversaire d'ƟvƟ, une fois : une coupe de champagne
+      if (H.champagne && H.champagne.anniversaire() && H.local.champagneOffert !== new Date().toDateString()) {
+        setTimeout(async () => {
+          if (!toileMaison || !document.body.contains(toileMaison) || H.$(".dialogue")) return;
+          H.d.majLocal((l) => (l.champagneOffert = new Date().toDateString()));
+          const q = await H.dialogue.dire([{ qui: "luigi", texte: "Joyeux anniversaire, mon cœur ! J’ai mis une bouteille au frais… une coupe de champagne ?", choix: [{ valeur: "oui", libelle: "Oh oui !" }, { valeur: null, libelle: "Non merci" }] }]);
+          if (q !== "oui") return H.dialogue.dire([{ qui: "luigi", texte: "Alors je garde la bouteille pour ce soir." }]);
+          H.champagne.boire();
+          await H.dialogue.dire([{ qui: "ovo", texte: "Santé ! Les bulles me chatouillent le nez." }, { qui: "luigi", texte: "Doucement, hein… les bulles, ça monte vite à la tête !" }]);
+        }, 1800);
+      }
     },
   };
 

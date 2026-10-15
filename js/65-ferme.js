@@ -1062,6 +1062,40 @@
     for (const o of objets) if (o.bete && !o.prof) o.prof = o.x + o.y;
   }
 
+  // --- le champagne : des copies d'ƟvƟ qui traînent sur son chemin, des boucles de couleur
+  // qui tournent, et des bulles qui montent (comme un bug d'affichage, mais exprès) ---
+  function glitchChampagne(c, t, f, cx, cy) {
+    // les copies d'ƟvƟ, le long des derniers pas
+    const traces = scene.traces, n = Math.round(8 * f);
+    for (let k = 1; k <= n; k++) {
+      const p = traces[traces.length - 1 - k * 14];
+      if (!p) break;
+      const [x, y] = iso(p[0], p[1]);
+      c.save(); c.globalAlpha = 0.85 - k * 0.07;
+      dessinOvo(c, Math.round(x) - cx + Math.round(Math.sin(t / 300 + k) * 2 * f), Math.round(y) + 4 - cy, Math.floor(t / 110 + k) % 4);
+      c.restore();
+    }
+    // les grandes boucles de couleur, qui tournent lentement autour d'ƟvƟ
+    const [ox, oy] = iso(scene.ovo.x, scene.ovo.y), mx = Math.round(ox) - cx, my = Math.round(oy) - cy - 10;
+    const couleurs = ["#ff5b4f", "#ffb3a8", "#7f97f2", "#f6ee55"];
+    couleurs.forEach((col, i) => {
+      const a = t / (2600 + i * 700) + i * 1.7, rx = (40 + i * 14) * f, ry = (26 + i * 9) * f;
+      for (let s = 0; s < 1; s += 0.004) {
+        const u = s * Math.PI * 2, x = Math.cos(u) * rx, y = Math.sin(u * (i % 2 ? 2 : 1)) * ry;
+        // le trait tremble un peu, épais, avec un pointillé sombre au milieu
+        const tremble = Math.sin(u * 9 + t / 400 + i) * 2 * f;
+        const X = Math.round(mx + x * Math.cos(a) - y * Math.sin(a) + tremble), Y = Math.round(my + x * Math.sin(a) + y * Math.cos(a));
+        c.fillStyle = col; c.fillRect(X - 1, Y - 1, 3, 3);
+        if (Math.floor(s * 250) % 5 === 0) pixel(c, X, Y, "#23214a");
+      }
+    });
+    // les bulles du champagne, en pointillés roses, qui montent
+    for (let k = 0; k < Math.round(14 * f); k++) {
+      const u = ((t / 5000) + k * 0.13) % 1, x = (hash(k, 77) * W) | 0, y = Math.round(Ht - u * (Ht + 20)), r = 3 + Math.round(hash(77, k) * 4);
+      for (let a = 0; a < 16; a++) if (a % 2 === 0) pixel(c, x + Math.round(Math.cos((a / 16) * Math.PI * 2) * r), y + Math.round(Math.sin((a / 16) * Math.PI * 2) * r), "#e04bb0");
+    }
+  }
+
   // --- le ponton vers les îles ---
   // Il part du bord de la ferme (côté droit) et s'avance au-dessus de la mer, sur ses pieux ; au
   // bout, la barque flotte sur l'eau, au pied de l'échelle, et se balance doucement.
@@ -1586,6 +1620,8 @@
       else if (o.mesiVa) { const [x, y] = iso(o.mesiVa.pos[0], o.mesiVa.pos[1]); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.mesiVa.pause ? 0 : temps); }
       else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
     }
+    // le champagne de l'anniversaire : ƟvƟ voit tout de travers
+    if (H.champagne) { const f = H.champagne.force(); if (f > 0) glitchChampagne(ctx, t, f, cx, cy); }
     // un filet de fumée sort du tuyau de poêle du labo, quand une préparation est en cours
     const labo = parId.labo;
     if (laboActif() && labo.posSprite && labo.cheminee) {

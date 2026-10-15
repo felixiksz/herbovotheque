@@ -295,3 +295,24 @@ window.H = window.H || {};
   }
   H.journal = { noter, recit };
 })();
+
+// Le champagne de l'anniversaire d'ƟvƟ (le 24 février) : Mesi en propose une coupe à la maison.
+// Trois minutes plus tard, et pendant vingt minutes, ƟvƟ voit tout de travers : sur la ferme,
+// des copies d'ƟvƟ traînent derrière iel, des boucles de couleur tournent dans le ciel et des
+// bulles montent. H.champagne.force() renvoie la force de l'effet (0 à 1).
+(function () {
+  const H = window.H;
+  const MONTEE = 3 * 60e3, DUREE = 20 * 60e3;
+  H.champagne = {
+    anniversaire: () => { const d = new Date(); return d.getMonth() === 1 && d.getDate() === 24; },
+    boire() { if (H.d && H.d.majLocal) H.d.majLocal((l) => (l.champagne = Date.now())); },
+    force() {
+      const bu = (H.local || {}).champagne;
+      if (!bu) return 0;
+      const t = Date.now() - bu;
+      if (t < MONTEE * 0.3 || t > MONTEE + DUREE) return 0;
+      if (t < MONTEE) return (t - MONTEE * 0.3) / (MONTEE * 0.7);
+      return Math.min(1, (MONTEE + DUREE - t) / (3 * 60e3));
+    },
+  };
+})();
