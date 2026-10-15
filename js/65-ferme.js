@@ -208,7 +208,7 @@
   // Les racines des arbres plantés près du bord : on les voit dans la tranche de terre, comme sur
   // une maquette coupée. Plus l'arbre est grand et près du bord, plus elles descendent loin.
   function racinesBords() {
-    const PROF = { pin: 24, araucaria: 26, figuier: 18, cedre: 22, yucca: 12, genevrier: 14, romarin: 8, agave: 7 };
+    const PROF = { pin: 24, araucaria: 26, figuier: 22, cedre: 22, yucca: 12, genevrier: 14, romarin: 8, agave: 7 };
     for (const p of plantes) {
       const prof = PROF[p.e];
       if (!prof) continue;
@@ -330,25 +330,46 @@
         vert(15, 4, true); vert(14, 3, false); vert(18, 4, true); vert(19, 3, false);
       });
       case "figuier": {
-        // le figuier perd ses feuilles : jaunes en octobre, de moins en moins en novembre, les
-        // branches grises et lisses tout l'hiver, les jeunes feuilles vert tendre au printemps
+        // Le figuier : plusieurs troncs gris et lisses qui se divisent tout bas, une couronne large
+        // et étalée de grandes feuilles à trois lobes, et des figues violettes l'été. Il perd ses
+        // feuilles : jaunes en octobre, de moins en moins en novembre, les branches nues tout
+        // l'hiver, les jeunes feuilles vert tendre au printemps.
         const f = H.feuillage ? H.feuillage("ficus-carica") : null, cle = f ? f.cle : "";
-        return sprite("fig" + p.v + "|" + cle, 18, 18, (c) => {
-          if (f && f.densite < 0.95) {
-            for (let y = 0; y < 8; y++) { pixel(c, 9, 17 - y, "#8a8a86"); pixel(c, 10, 17 - y, "#6b6b66"); }
-            for (const [x1, y1] of [[4, 5], [14, 4], [9, 1], [6, 9], [13, 9]]) ligne(c, 9, 10, x1, y1, "#8a8a86");
-          }
+        return sprite("fig" + p.v + "|" + cle, 34, 30, (c) => {
+          const graine = p.v * 31;
+          // les troncs et les branches, gris clair et lisses, avec leur liseré sombre
+          const bois = (x0, y0, x1, y1, ep) => {
+            const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+            for (let k = 0; k <= n; k++) {
+              const x = Math.round(x0 + ((x1 - x0) * k) / n), y = Math.round(y0 + ((y1 - y0) * k) / n);
+              for (let e = 0; e < ep; e++) pixel(c, x + e, y, e === 0 ? "#c9c9c4" : e === ep - 1 ? "#6b6b66" : "#9a9a96");
+            }
+          };
+          bois(16, 29, 15, 22, 3); bois(15, 22, 8, 14, 2); bois(16, 22, 25, 13, 2); bois(15, 22, 16, 10, 2);
+          bois(8, 14, 4, 11, 1); bois(25, 13, 29, 11, 1); bois(16, 10, 12, 6, 1); bois(16, 11, 20, 6, 1);
           if (f && f.densite === 0) return;
-          for (const [x, y, rx, ry] of [[9, 13, 3, 4], [5, 8, 3, 3], [12, 7, 3, 3], [9, 3, 2, 3]]) {
-            ovale(c, x, y, rx, ry, null, (dx, dy, l) => {
-              if (f && hash(x * 13 + dx, y * 7 + dy) > f.densite) return null;
-              const jaune = f && hash(x * 5 + dx, y * 11 + dy) < f.automne, tendre = f && f.jeune > 0.5;
-              if (Math.abs(dx) >= l) return jaune ? "#c99a3a" : tendre ? "#6cbd5c" : "#2f6b35";
-              if (jaune) return dx < 0 ? "#f6ee55" : "#ffd23a";
-              return tendre ? (dx < 0 ? "#c6cf55" : "#9cc77a") : dx < 0 ? "#9cc77a" : "#6cbd5c";
-            });
+          // les grandes feuilles lobées, les plus sombres derrière, les plus claires devant
+          const FEUILLE = [".x.x.", "xxxxx", "xxxxx", ".xxx.", "..x.."];
+          const tons = (rang) => {
+            if (f && f.jeune > 0.5) return ["#6cbd5c", "#9cc77a", "#c6cf55"][rang];
+            return ["#2f6b35", "#4aa63e", "#6cbd5c"][rang];
+          };
+          for (let rang = 0; rang < 3; rang++) for (let k = 0; k < 9; k++) {
+            const a = hash(graine + k, rang * 7) * Math.PI * 2, d = Math.sqrt(hash(rang * 3, graine + k * 5));
+            const x = Math.round(16 + Math.cos(a) * 13 * d) - 2, y = Math.round(9 + Math.sin(a) * 6 * d - rang) - 2;
+            if (f && hash(x * 3 + rang, y * 5 + k) > f.densite) continue;
+            const jaune = f && hash(x + k, y + rang * 3) < f.automne;
+            const col = jaune ? ["#c99a3a", "#e9b44c", "#ffd23a"][rang] : tons(rang);
+            FEUILLE.forEach((l, j2) => [...l].forEach((ch, i2) => { if (ch === "x") pixel(c, x + i2, y + j2, (i2 === 0 || j2 === 0) && rang ? (jaune ? "#f6ee55" : tons(Math.min(2, rang + 1))) : col); }));
+            pixel(c, x + 2, y + 2, jaune ? "#9a6a3c" : "#1e3d25"); // la nervure
           }
-          if (!f || (f.densite >= 1 && !f.automne)) { pixel(c, 4, 5, "#e04bb0"); pixel(c, 13, 4, "#ffd23a"); pixel(c, 9, 0, "#e04bb0"); }
+          // les figues, violettes et vertes, l'été
+          if (!f || (f.densite >= 1 && !f.automne && !f.jeune)) {
+            for (let k = 0; k < 6; k++) {
+              const x = Math.round(6 + hash(graine, k) * 22), y = Math.round(6 + hash(k, graine) * 8);
+              pixel(c, x, y, k % 3 ? "#5b3c8f" : "#9cc77a"); pixel(c, x, y + 1, k % 3 ? "#3a2a5a" : "#6cbd5c");
+            }
+          }
         });
       }
       case "yucca": return sprite("yuc" + p.v, 20, 24, (c) => {
@@ -1582,8 +1603,8 @@
           projette([iso(m.i, m.j), iso(m.i + m.w, m.j), iso(m.i + m.w, m.j + m.d), iso(m.i, m.j + m.d)].map(([x, y]) => [x - cx, y - cy + 4]), hh);
         } else if (o.p) {
           const e = o.p.e, [x, y] = iso(o.p.x, o.p.y), bx = x - cx, by = y - cy + 4;
-          const H0 = { pin: 26, cedre: 22, araucaria: 40, figuier: 10, yucca: 14, romarin: 4, genevrier: 18, agave: 4 }[e] || 6;
-          const R0 = { pin: 13, cedre: 8, araucaria: 9, figuier: 4, yucca: 6, romarin: 4, genevrier: 3, agave: 6 }[e] || 4;
+          const H0 = { pin: 26, cedre: 22, araucaria: 40, figuier: 16, yucca: 14, romarin: 4, genevrier: 18, agave: 4 }[e] || 6;
+          const R0 = { pin: 13, cedre: 8, araucaria: 9, figuier: 9, yucca: 6, romarin: 4, genevrier: 3, agave: 6 }[e] || 4;
           ligne(sh, bx, by, bx + dx * H0, by + dy * H0, "#1b1d4a");
           ovale(sh, bx + dx * H0, by + dy * H0, Math.round(R0 * 0.9), Math.max(1, Math.round(R0 / 2.4)), "#1b1d4a");
         } else {

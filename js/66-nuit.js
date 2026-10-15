@@ -2163,8 +2163,20 @@
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
     poses(S.devant, b, 1.3, (x, taille) => pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
-    // on peut aller se baigner quand le chemin longe la crique aux rochers rouges
-    if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !H.$(".dialogue") && !cheminee.froid());
+    // On peut aller se baigner quand le chemin longe la crique aux rochers rouges. En y arrivant,
+    // on s'arrête (même si quelqu'un est en train de raconter une histoire) ; une fois la bulle
+    // fermée, on attend un moment devant la crique avant de repartir. S'il fait froid, ƟvƟ le dit.
+    const parle = !!H.$(".dialogue");
+    if (ici > 0.6 && !b.baignade && !b.criqueVue) { b.criqueVue = true; b.attenteCrique = true; b.criqueDepuis = 0; b.pause = true; }
+    if (ici < 0.2 && !b.baignade) b.criqueVue = false;
+    if (b.attenteCrique && !b.baignade && !parle) {
+      if (!b.criqueDepuis) {
+        b.criqueDepuis = t;
+        if (cheminee.froid()) H.dialogue.dire([{ qui: "ovo", texte: "La crique est belle… mais l’eau est bien trop froide aujourd’hui pour se baigner. On continue !" }]);
+      }
+      if (t - b.criqueDepuis > (cheminee.froid() ? 1500 : 14000)) { b.attenteCrique = false; b.pause = false; }
+    }
+    if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !parle && !cheminee.froid());
     // la pluie, quand il pleut vraiment (ou que Lóló l'a fait tomber)
     const m = H.ciel.meteo || {};
     if ((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage") {
