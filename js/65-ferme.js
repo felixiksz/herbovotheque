@@ -931,6 +931,14 @@
     return bas.slice(0, -1).concat(haut.slice(0, -1));
   }
 
+  // la place des boutons du haut (Aménager, Les îles, Réglages), dans les coordonnées du dessin
+  function zoneBoutons() {
+    if (!scene || !scene.boutons) return null;
+    const b = scene.toile.getBoundingClientRect(), r = scene.boutons.getBoundingClientRect();
+    if (!b.width || !r.width) return null;
+    return { g: ((r.left - b.left) / b.width) * W, d: ((r.right - b.left) / b.width) * W, b: ((r.bottom - b.top) / b.height) * Ht };
+  }
+
   // --- le moment : le vrai soleil du lieu choisi (lever à droite, coucher à gauche), puis la lune ---
   function moment() {
     const s = H.ciel.etat(), maintenant = Date.now();
@@ -1060,40 +1068,6 @@
       if (u > 0 && u <= 1) objets.push(Object.assign({ prof: 0, bete: "marcassin" }, pose(u)));
     }
     for (const o of objets) if (o.bete && !o.prof) o.prof = o.x + o.y;
-  }
-
-  // --- le champagne : des copies d'ƟvƟ qui traînent sur son chemin, des boucles de couleur
-  // qui tournent, et des bulles qui montent (comme un bug d'affichage, mais exprès) ---
-  function glitchChampagne(c, t, f, cx, cy) {
-    // les copies d'ƟvƟ, le long des derniers pas
-    const traces = scene.traces, n = Math.round(8 * f);
-    for (let k = 1; k <= n; k++) {
-      const p = traces[traces.length - 1 - k * 14];
-      if (!p) break;
-      const [x, y] = iso(p[0], p[1]);
-      c.save(); c.globalAlpha = 0.85 - k * 0.07;
-      dessinOvo(c, Math.round(x) - cx + Math.round(Math.sin(t / 300 + k) * 2 * f), Math.round(y) + 4 - cy, Math.floor(t / 110 + k) % 4);
-      c.restore();
-    }
-    // les grandes boucles de couleur, qui tournent lentement autour d'ƟvƟ
-    const [ox, oy] = iso(scene.ovo.x, scene.ovo.y), mx = Math.round(ox) - cx, my = Math.round(oy) - cy - 10;
-    const couleurs = ["#ff5b4f", "#ffb3a8", "#7f97f2", "#f6ee55"];
-    couleurs.forEach((col, i) => {
-      const a = t / (2600 + i * 700) + i * 1.7, rx = (40 + i * 14) * f, ry = (26 + i * 9) * f;
-      for (let s = 0; s < 1; s += 0.004) {
-        const u = s * Math.PI * 2, x = Math.cos(u) * rx, y = Math.sin(u * (i % 2 ? 2 : 1)) * ry;
-        // le trait tremble un peu, épais, avec un pointillé sombre au milieu
-        const tremble = Math.sin(u * 9 + t / 400 + i) * 2 * f;
-        const X = Math.round(mx + x * Math.cos(a) - y * Math.sin(a) + tremble), Y = Math.round(my + x * Math.sin(a) + y * Math.cos(a));
-        c.fillStyle = col; c.fillRect(X - 1, Y - 1, 3, 3);
-        if (Math.floor(s * 250) % 5 === 0) pixel(c, X, Y, "#23214a");
-      }
-    });
-    // les bulles du champagne, en pointillés roses, qui montent
-    for (let k = 0; k < Math.round(14 * f); k++) {
-      const u = ((t / 5000) + k * 0.13) % 1, x = (hash(k, 77) * W) | 0, y = Math.round(Ht - u * (Ht + 20)), r = 3 + Math.round(hash(77, k) * 4);
-      for (let a = 0; a < 16; a++) if (a % 2 === 0) pixel(c, x + Math.round(Math.cos((a / 16) * Math.PI * 2) * r), y + Math.round(Math.sin((a / 16) * Math.PI * 2) * r), "#e04bb0");
-    }
   }
 
   // --- le ponton vers les îles ---
@@ -1510,7 +1484,12 @@
     ctx.drawImage(fond, -40 - Math.round(cx * 0.05), Math.round(-cy * 0.08) - 10);
     // le soleil ou la lune, qui traverse le ciel de droite à gauche
     {
-      const ax = Math.round(W * (0.92 - 0.84 * mo.u)), ay = Math.max(9, Math.round(58 - Math.sin(Math.PI * mo.u) * 44 - cy * 0.08 - 10));
+      let ax = Math.round(W * (0.92 - 0.84 * mo.u));
+      const ay = Math.max(9, Math.round(58 - Math.sin(Math.PI * mo.u) * 44 - cy * 0.08 - 10));
+      // (sur téléphone, les boutons du haut peuvent cacher le soleil : il se range alors juste à
+      // leur gauche, à la même hauteur ; plus bas, la ferme le cacherait)
+      const cache = zoneBoutons();
+      if (cache && ax > cache.g - 10 && ax < cache.d + 10 && ay < cache.b + 10) ax = Math.round(cache.g - 12);
       if (mo.astre === "soleil") {
         const bas = mo.periode === "aube" || mo.periode === "crepuscule";
         ovale(ctx, ax, ay, 8, 8, bas ? "rgba(255,91,79,0.35)" : "rgba(246,238,85,0.3)");
@@ -1622,8 +1601,7 @@
       else if (o.mesiVa) { const [x, y] = iso(o.mesiVa.pos[0], o.mesiVa.pos[1]); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, o.mesiVa.pause ? 0 : temps); }
       else if (o.mesi) { const [x, y] = iso(pm[0] - 0.6, pm[1] + 0.5); dessinMesi(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy); }
     }
-    // le champagne de l'anniversaire : ƟvƟ voit tout de travers
-    if (H.champagne) { const f = H.champagne.force(); if (f > 0) glitchChampagne(ctx, t, f, cx, cy); }
+    // (le champagne du réveillon fait bugger l'île du buzzzzz, plus la ferme)
     // un filet de fumée sort du tuyau de poêle du labo, quand une préparation est en cours
     const labo = parId.labo;
     if (laboActif() && labo.posSprite && labo.cheminee) {
@@ -1783,15 +1761,16 @@
       const toile = H.el("canvas.toile-village", { "aria-label": "La ferme" });
       const etiquette = H.el("div.etiquette-ferme", { hidden: true });
       const heureMeteo = H.el("div.heure-ferme", { "aria-live": "off" });
-      boite.append(toile, etiquette, heureMeteo, H.el("div.pastilles-scene", null,
+      const boutons = H.el("div.pastilles-scene", null,
         H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
         H.el("a.pastille-scene", { href: "#terrain" }, "Les îles"),
         H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
-      ));
+      );
+      boite.append(toile, etiquette, heureMeteo, boutons);
       c.appendChild(boite);
       const depart = H.ciel.nuitCalme() ? "maison" : H.local.dernierLieu && parId[H.local.dernierLieu] ? H.local.dernierLieu : "maison";
       const [px, py] = porte(parId[depart]);
-      scene = { boite, toile, etiquette, cam: { x: 0, y: 0 }, ovo: { x: px, y: py, trajet: null, i: 0, lieu: depart }, traces: [], lolo: { x: null, y: null } };
+      scene = { boite, toile, etiquette, boutons, cam: { x: 0, y: 0 }, ovo: { x: px, y: py, trajet: null, i: 0, lieu: depart }, traces: [], lolo: { x: null, y: null } };
       scene.poules = nouvellesPoules();
       scene.heureMeteo = heureMeteo;
       majHeureMeteo();
