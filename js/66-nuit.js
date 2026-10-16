@@ -392,7 +392,7 @@
   }
   // les ombres de contact, au pied des meubles (dans les mesures élargies)
   function ombresAuSol(ctx) {
-    for (const [x0, x1, y] of [[10, 92, 252], [114, 330, 248], [332, 378, 250], [370, 530, 247], [530, 572, 296], [560, 700, 296], [690, 732, 296], [744, 792, 296]]) {
+    for (const [x0, x1, y] of [[10, 92, 252], [114, 330, 248], [332, 378, 250], [370, 530, 247], [530, 572, 296], [560, 700, 296], [690, 732, 296], [754, 782, 250]]) {
       const cx = (x0 + x1) / 2, rx = (x1 - x0) / 2 + 6;
       ctx.save(); ctx.translate(cx, y); ctx.scale(1, 7 / rx);
       const d = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
@@ -452,8 +452,8 @@
     // (seulement sur le canapé et sur le sol, pas sur le mur)
     ctx.beginPath(); ctx.rect(278 + DX, 168, 152, 80); ctx.rect(0, 232, LARGE, 128); ctx.clip();
     const chaud = SOLEIL[moment].map((v) => v * force).join(",");
-    for (let k = 0; k < 3; k++) {
-      const x0 = fx + (fw * k) / 3 + 5, x1 = fx + (fw * (k + 1)) / 3 - 5, y0 = fy + 5, y1 = fy + fh - 5;
+    for (let k = 0; k < 2; k++) {
+      const x0 = fx + (fw * k) / 2 + 5, x1 = fx + (fw * (k + 1)) / 2 - 5, y0 = fy + 5, y1 = fy + fh - 5;
       const q = [sol(x0, y0), sol(x1, y0), sol(x1, y1), sol(x0, y1)];
       ctx.save();
       ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
@@ -568,23 +568,24 @@
     ctx.fillStyle = "#000";
     cheminFenetre(ctx); ctx.fill();
     ctx.restore();
-    ctx.lineWidth = 7; ctx.strokeStyle = "#f3f0dc"; cheminFenetre(ctx); ctx.stroke();
+    // (le cadre en bois naturel, deux battants)
+    ctx.lineWidth = 7; ctx.strokeStyle = "#c49a6c"; cheminFenetre(ctx); ctx.stroke();
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     ctx.strokeRect(BAIE.x - 4, BAIE.y - 4, BAIE.w + 8, BAIE.h + 8);
     ctx.strokeRect(BAIE.x + 3, BAIE.y + 3, BAIE.w - 6, BAIE.h - 6);
     if (!fenetresOuvertes()) {
-      for (const u of [1 / 3, 2 / 3]) {
+      for (const u of [1 / 2]) {
         const x = BAIE.x + BAIE.w * u;
-        ctx.fillStyle = "#f3f0dc"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
+        ctx.fillStyle = "#c49a6c"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
         ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
       }
     } else {
       // grande ouverte : les battants rabattus contre le mur, de chaque côté, vus en biais
       for (const sens of [-1, 1]) {
-        const xb = sens < 0 ? BAIE.x : BAIE.x + BAIE.w, l = 18 * sens;
+        const xb = sens < 0 ? BAIE.x : BAIE.x + BAIE.w, l = 24 * sens;
         const q = [[xb, BAIE.y - 2], [xb + l, BAIE.y + 8], [xb + l, BAIE.y + BAIE.h - 6], [xb, BAIE.y + BAIE.h + 2]];
         ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-        ctx.fillStyle = "#f3f0dc"; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#c49a6c"; ctx.fill(); ctx.stroke();
         const v = [[xb + l * 0.25, BAIE.y + 8], [xb + l * 0.8, BAIE.y + 14], [xb + l * 0.8, BAIE.y + BAIE.h - 12], [xb + l * 0.25, BAIE.y + BAIE.h - 6]];
         ctx.beginPath(); v.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
         ctx.fillStyle = "#a8d8ec"; ctx.fill(); ctx.stroke();
@@ -637,13 +638,14 @@
     bloc(ctx, 292, 236, 8, 9, 3, ENCRE);
     bloc(ctx, 410, 236, 8, 9, 3, ENCRE);
 
-    // la plante dans son grand pot, tout à droite, à côté de la chaise de Mesi
-    for (const [x, y, l, a, c2] of [[0, 238, 46, -1.9, "#2f7a3e"], [0, 238, 54, -1.45, "#4f9a46"], [0, 238, 44, -1.1, "#2f7a3e"], [0, 238, 38, -2.4, "#4f9a46"], [0, 238, 36, -0.7, "#3f8a42"], [0, 200, 34, -1.7, "#3f8a42"], [4, 205, 30, -0.95, "#2f7a3e"], [-4, 206, 30, -2.25, "#4f9a46"]]) feuille(ctx, PLANTE + x, y, l, a, c2);
+    // la plante, contre le mur tout à droite, à côté de la chaise de Mesi : de grandes feuilles
+    // dans un pot bas
+    for (const [x, y, l, a, c2] of [[0, 226, 58, -1.9, "#2f7a3e"], [0, 226, 66, -1.45, "#4f9a46"], [0, 226, 54, -1.1, "#2f7a3e"], [0, 226, 46, -2.4, "#4f9a46"], [0, 226, 42, -0.7, "#3f8a42"], [0, 196, 40, -1.7, "#3f8a42"], [4, 202, 36, -0.95, "#2f7a3e"], [-4, 202, 36, -2.25, "#4f9a46"]]) feuille(ctx, PLANTE + x, y, l, a, c2);
     ctx.beginPath();
-    ctx.moveTo(PLANTE - 18, 236); ctx.lineTo(PLANTE + 18, 236); ctx.lineTo(PLANTE + 13, 290); ctx.quadraticCurveTo(PLANTE + 12, 294, PLANTE + 8, 294);
-    ctx.lineTo(PLANTE - 8, 294); ctx.quadraticCurveTo(PLANTE - 12, 294, PLANTE - 13, 290); ctx.closePath();
+    ctx.moveTo(PLANTE - 12, 228); ctx.lineTo(PLANTE + 12, 228); ctx.lineTo(PLANTE + 9, 246); ctx.quadraticCurveTo(PLANTE + 8, 249, PLANTE + 5, 249);
+    ctx.lineTo(PLANTE - 5, 249); ctx.quadraticCurveTo(PLANTE - 8, 249, PLANTE - 9, 246); ctx.closePath();
     ctx.fillStyle = "#c96a3a"; ctx.fill(); ctx.stroke();
-    bloc(ctx, PLANTE - 21, 232, 42, 8, 3, "#d9824f");
+    bloc(ctx, PLANTE - 14, 224, 28, 6, 2, "#d9824f");
     chaises(ctx);
     ctx.restore();
 
@@ -705,8 +707,13 @@
   // fenêtres sont grandes ouvertes, ils ondulent doucement dans le courant d'air.
   // (dans les mesures d'avant le décalage : on les peint avec les personnages, qui reçoivent la lumière)
   function rideaux(ctx, t, ouvert) {
-    const x0 = BAIE.x - DX, x1 = x0 + BAIE.w, haut = BAIE.y - 10, bas = 166;
+    const x0 = BAIE.x - DX, x1 = x0 + BAIE.w, haut = BAIE.y - 10, bas = 234;
     ctx.save();
+    // ils descendent jusqu'au sol, en passant derrière le canapé (on ne les voit pas à travers)
+    ctx.beginPath();
+    ctx.rect(-400, -50, 1400, 220); ctx.rect(-400, 170, 678, 80); ctx.rect(430, 170, 1000, 80);
+    ctx.rect(278, 170, 14, 18); ctx.rect(418, 170, 12, 18);
+    ctx.clip();
     ctx.fillStyle = "#7a4520"; ctx.fillRect(x0 - 38, haut - 4, BAIE.w + 76, 4);
     ctx.fillStyle = ENCRE; ctx.fillRect(x0 - 40, haut - 5, 3, 6); ctx.fillRect(x1 + 37, haut - 5, 3, 6);
     const TONS = ["#c96a3a", "#a9512c", "#d97a48", "#b85e33"];
@@ -2755,8 +2762,8 @@
         mg.setTransform(decor.k, 0, 0, decor.k, 0, 0);
         mg.fillStyle = "#000"; mg.fillRect(0, 0, LARGE, 360);
         mg.beginPath(); mg.rect(0, 232, LARGE, 128); mg.clip();
-        for (let k = 0; k < 3; k++) {
-          const x0 = fx + (fw * k) / 3 + 4, x1 = fx + (fw * (k + 1)) / 3 - 4, y0 = fy + 4, y1 = fy + fh - 4;
+        for (let k = 0; k < 2; k++) {
+          const x0 = fx + (fw * k) / 2 + 4, x1 = fx + (fw * (k + 1)) / 2 - 4, y0 = fy + 4, y1 = fy + fh - 4;
           const q = [proj(x0, y0), proj(x1, y0), proj(x1, y1), proj(x0, y1)];
           mg.beginPath(); q.forEach(([x, y], n) => (n ? mg.lineTo(x, y) : mg.moveTo(x, y))); mg.closePath();
           mg.fillStyle = "rgb(120,150,220)"; mg.fill();
