@@ -1005,7 +1005,7 @@
     const casesX = Math.max(ile.cols + BORD * 2, Math.ceil(zw / (T * vue.zoom))), casesY = ile.lignes + BORD * 2;
     vue.bx = (casesX - ile.cols) / 2; vue.by = (casesY - ile.lignes) / 2;
     const w = casesX * T * vue.zoom, h = casesY * T * vue.zoom;
-    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 2.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 3);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
     vue.toile.height = Math.round(h * dpr);
@@ -1238,7 +1238,7 @@
     // (la toile remplit toute la largeur de la zone d'affichage : du ciel de chaque côté de l'île)
     const zw = vue.zoneToile ? vue.zoneToile.clientWidth : 0;
     if (zw > w) { vue.ox += (zw - w) / 2 / vue.zoom; w = zw; }
-    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 2.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 3);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
     vue.toile.height = Math.round(h * dpr);

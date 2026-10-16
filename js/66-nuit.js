@@ -603,51 +603,57 @@
     // la porte d'entrée, tout au bout à droite : c'est par là qu'on part en balade
     porteEntree(ctx);
 
+    // (les meubles sur un plan à part, devant les murs : les rideaux se glissent entre les deux)
+    const a2 = document.createElement("canvas");
+    a2.width = a.width; a2.height = a.height;
+    const cm = a2.getContext("2d");
+    cm.setTransform(k, 0, 0, k, 0, 0);
+    cm.lineJoin = "round"; cm.lineCap = "round"; cm.strokeStyle = ENCRE; cm.lineWidth = 2.2;
     // (le lit, le canapé et la table : dans leurs mesures d'avant, décalées de DX)
-    ctx.save();
-    ctx.translate(DX, 0);
+    cm.save();
+    cm.translate(DX, 0);
     // le lit et ses coussins
-    bloc(ctx, 22, 150, 16, 94, 7, "#e9b44c");
-    bloc(ctx, 34, 202, 198, 32, 11, "#f2f0e8");
-    bloc(ctx, 74, 196, 160, 40, 13, "#3d5ee8");
-    bloc(ctx, 74, 196, 30, 40, 12, "#7f97f2");
-    bloc(ctx, 40, 182, 42, 23, 11, "#ffffff");
-    bloc(ctx, 64, 187, 40, 21, 10, "#ffb3a8");
-    bloc(ctx, 42, 234, 8, 12, 3, "#e9b44c");
-    bloc(ctx, 218, 234, 8, 12, 3, "#e9b44c");
+    bloc(cm, 22, 150, 16, 94, 7, "#e9b44c");
+    bloc(cm, 34, 202, 198, 32, 11, "#f2f0e8");
+    bloc(cm, 74, 196, 160, 40, 13, "#3d5ee8");
+    bloc(cm, 74, 196, 30, 40, 12, "#7f97f2");
+    bloc(cm, 40, 182, 42, 23, 11, "#ffffff");
+    bloc(cm, 64, 187, 40, 21, 10, "#ffb3a8");
+    bloc(cm, 42, 234, 8, 12, 3, "#e9b44c");
+    bloc(cm, 218, 234, 8, 12, 3, "#e9b44c");
 
     // la table de chevet et sa lampe
-    bloc(ctx, 240, 196, 38, 52, 7, "#e9b44c");
-    ctx.beginPath(); ctx.moveTo(244, 220); ctx.lineTo(274, 220); ctx.stroke();
-    ctx.beginPath(); ctx.arc(259, 210, 2.2, 0, Math.PI * 2); ctx.fillStyle = ENCRE; ctx.fill();
-    bloc(ctx, 251, 188, 16, 9, 4, ENCRE, true);
-    ctx.beginPath(); ctx.moveTo(259, 188); ctx.lineTo(259, 162); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(247, 141); ctx.lineTo(271, 141); ctx.quadraticCurveTo(275, 141, 277, 147);
-    ctx.lineTo(280, 160); ctx.quadraticCurveTo(281, 164, 277, 164);
-    ctx.lineTo(241, 164); ctx.quadraticCurveTo(237, 164, 238, 160);
-    abatJour(ctx, "#e9e3cd");
+    bloc(cm, 240, 196, 38, 52, 7, "#e9b44c");
+    cm.beginPath(); cm.moveTo(244, 220); cm.lineTo(274, 220); cm.stroke();
+    cm.beginPath(); cm.arc(259, 210, 2.2, 0, Math.PI * 2); cm.fillStyle = ENCRE; cm.fill();
+    bloc(cm, 251, 188, 16, 9, 4, ENCRE, true);
+    cm.beginPath(); cm.moveTo(259, 188); cm.lineTo(259, 162); cm.stroke();
+    cm.beginPath();
+    cm.moveTo(247, 141); cm.lineTo(271, 141); cm.quadraticCurveTo(275, 141, 277, 147);
+    cm.lineTo(280, 160); cm.quadraticCurveTo(281, 164, 277, 164);
+    cm.lineTo(241, 164); cm.quadraticCurveTo(237, 164, 238, 160);
+    abatJour(cm, "#e9e3cd");
 
     // le canapé corail sous la fenêtre
-    bloc(ctx, 292, 170, 126, 46, 17, "#ff5b4f");
-    bloc(ctx, 304, 180, 36, 30, 11, "#ffd23a");
-    bloc(ctx, 374, 182, 34, 28, 11, "#f2f0e8");
-    bloc(ctx, 286, 206, 138, 30, 13, "#ff7a6b");
-    bloc(ctx, 278, 188, 24, 50, 11, "#ff5b4f");
-    bloc(ctx, 406, 188, 24, 50, 11, "#ff5b4f");
-    bloc(ctx, 292, 236, 8, 9, 3, ENCRE);
-    bloc(ctx, 410, 236, 8, 9, 3, ENCRE);
+    bloc(cm, 292, 170, 126, 46, 17, "#ff5b4f");
+    bloc(cm, 304, 180, 36, 30, 11, "#ffd23a");
+    bloc(cm, 374, 182, 34, 28, 11, "#f2f0e8");
+    bloc(cm, 286, 206, 138, 30, 13, "#ff7a6b");
+    bloc(cm, 278, 188, 24, 50, 11, "#ff5b4f");
+    bloc(cm, 406, 188, 24, 50, 11, "#ff5b4f");
+    bloc(cm, 292, 236, 8, 9, 3, ENCRE);
+    bloc(cm, 410, 236, 8, 9, 3, ENCRE);
 
     // la plante, contre le mur tout à droite, à côté de la chaise de Mesi : de grandes feuilles
     // dans un pot bas
-    for (const [x, y, l, a, c2] of [[0, 226, 58, -1.9, "#2f7a3e"], [0, 226, 66, -1.45, "#4f9a46"], [0, 226, 54, -1.1, "#2f7a3e"], [0, 226, 46, -2.4, "#4f9a46"], [0, 226, 42, -0.7, "#3f8a42"], [0, 196, 40, -1.7, "#3f8a42"], [4, 202, 36, -0.95, "#2f7a3e"], [-4, 202, 36, -2.25, "#4f9a46"]]) feuille(ctx, PLANTE + x, y, l, a, c2);
-    ctx.beginPath();
-    ctx.moveTo(PLANTE - 12, 228); ctx.lineTo(PLANTE + 12, 228); ctx.lineTo(PLANTE + 9, 246); ctx.quadraticCurveTo(PLANTE + 8, 249, PLANTE + 5, 249);
-    ctx.lineTo(PLANTE - 5, 249); ctx.quadraticCurveTo(PLANTE - 8, 249, PLANTE - 9, 246); ctx.closePath();
-    ctx.fillStyle = "#c96a3a"; ctx.fill(); ctx.stroke();
-    bloc(ctx, PLANTE - 14, 224, 28, 6, 2, "#d9824f");
-    chaises(ctx);
-    ctx.restore();
+    for (const [x, y, l, a, c2] of [[0, 226, 58, -1.9, "#2f7a3e"], [0, 226, 66, -1.45, "#4f9a46"], [0, 226, 54, -1.1, "#2f7a3e"], [0, 226, 46, -2.4, "#4f9a46"], [0, 226, 42, -0.7, "#3f8a42"], [0, 196, 40, -1.7, "#3f8a42"], [4, 202, 36, -0.95, "#2f7a3e"], [-4, 202, 36, -2.25, "#4f9a46"]]) feuille(cm, PLANTE + x, y, l, a, c2);
+    cm.beginPath();
+    cm.moveTo(PLANTE - 12, 228); cm.lineTo(PLANTE + 12, 228); cm.lineTo(PLANTE + 9, 246); cm.quadraticCurveTo(PLANTE + 8, 249, PLANTE + 5, 249);
+    cm.lineTo(PLANTE - 5, 249); cm.quadraticCurveTo(PLANTE - 8, 249, PLANTE - 9, 246); cm.closePath();
+    cm.fillStyle = "#c96a3a"; cm.fill(); cm.stroke();
+    bloc(cm, PLANTE - 14, 224, 28, 6, 2, "#d9824f");
+    chaises(cm);
+    cm.restore();
 
     // la boule éteinte reçoit la lumière de la pièce comme le reste
     const allumee = !eteint && moment !== "jour";
@@ -666,15 +672,22 @@
     const c = document.createElement("canvas");
     c.width = a.width; c.height = a.height;
     eclairerCouche(c, a, carte, reflets);
+    const c2 = document.createElement("canvas");
+    c2.width = a.width; c2.height = a.height;
+    eclairerCouche(c2, a2, carte, reflets);
+    // (les vraies couleurs de tout, pour le soleil et le feu)
+    const tout = document.createElement("canvas");
+    tout.width = a.width; tout.height = a.height;
+    tout.getContext("2d").drawImage(a, 0, 0); tout.getContext("2d").drawImage(a2, 0, 0);
     const chL = document.createElement("canvas");
     chL.width = a.width; chL.height = a.height;
     eclairerCouche(chL, ch, carte, reflets);
     // ce qui brille par soi-même : l'abat-jour allumé et la boule
-    const g = c.getContext("2d");
+    const g = c2.getContext("2d");
     g.setTransform(k, 0, 0, k, 0, 0);
     g.lineJoin = "round"; g.lineCap = "round"; g.strokeStyle = ENCRE; g.lineWidth = 2.2;
     if (allumee) { g.save(); g.translate(DX, 0); abatJour(g, "#fff06a"); g.restore(); plafonnier(g, moment, false); }
-    Object.assign(c, { couleurs: a, carte, eclats: reflets, chaises: chL, k, L });
+    Object.assign(c, { couleurs: tout, meubles: c2, carte, eclats: reflets, chaises: chL, k, L });
     return c;
   }
 
@@ -703,17 +716,23 @@
     ctx.beginPath(); ctx.arc(x + w - 8, y + 70, 2.8, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
     bloc(ctx, x - 8, y + h - 2, w + 16, 4, 1, "#9a6a3c");
   }
-  // Les rideaux terracotta, de chaque côté de la baie, tenus par une tringle de bois. Quand les
-  // fenêtres sont grandes ouvertes, ils ondulent doucement dans le courant d'air.
+  // Les rideaux terracotta, de chaque côté de la baie, tenus par une tringle de bois, jusqu'au sol,
+  // contre le mur (derrière le canapé et la table de chevet). Quand les fenêtres sont grandes
+  // ouvertes, ils ondulent doucement dans le courant d'air.
   // (dans les mesures d'avant le décalage : on les peint avec les personnages, qui reçoivent la lumière)
+  // les rideaux de l'image, éclairés comme la pièce (on les peint entre les murs et les meubles)
+  function rideauxEclaires(decor, t) {
+    const c = tampon("rideaux", decor.width, decor.height), g = c.getContext("2d");
+    g.setTransform(decor.k, 0, 0, decor.k, decor.k * DX, 0);
+    rideaux(g, t, fenetresOuvertes());
+    const vraies = tampon("rideauxVrais", decor.width, decor.height);
+    vraies.getContext("2d").drawImage(c, 0, 0);
+    eclairerCouche(c, vraies, decor.carte, decor.eclats);
+    return c;
+  }
   function rideaux(ctx, t, ouvert) {
     const x0 = BAIE.x - DX, x1 = x0 + BAIE.w, haut = BAIE.y - 10, bas = 234;
     ctx.save();
-    // ils descendent jusqu'au sol, en passant derrière le canapé (on ne les voit pas à travers)
-    ctx.beginPath();
-    ctx.rect(-400, -50, 1400, 220); ctx.rect(-400, 170, 678, 80); ctx.rect(430, 170, 1000, 80);
-    ctx.rect(278, 170, 14, 18); ctx.rect(418, 170, 12, 18);
-    ctx.clip();
     ctx.fillStyle = "#7a4520"; ctx.fillRect(x0 - 38, haut - 4, BAIE.w + 76, 4);
     ctx.fillStyle = ENCRE; ctx.fillRect(x0 - 40, haut - 5, 3, 6); ctx.fillRect(x1 + 37, haut - 5, 3, 6);
     const TONS = ["#c96a3a", "#a9512c", "#d97a48", "#b85e33"];
@@ -976,7 +995,8 @@
 
   // Le soir (à partir de 17 h), en touchant Mesi, ƟvƟ peut lui raconter sa journée : tout ce
   // qu'iel a fait, dans l'ordre et dans le détail. Une fois racontée, on ne la raconte plus.
-  const peutRaconter = () => new Date().getHours() >= 17 && H.local.journeeRacontee !== new Date().toDateString();
+  // (et seulement si ƟvƟ a vraiment fait quelque chose aujourd'hui)
+  const peutRaconter = () => new Date().getHours() >= 17 && H.local.journeeRacontee !== new Date().toDateString() && !!(H.journal && H.journal.recit().length);
   async function soireeOvo() {
     const q = await H.dialogue.dire([{ qui: "luigi", texte: "Alors, c’était comment, ta journée ?", choix: [{ valeur: "raconter", libelle: "Raconter ma journée" }, { valeur: "compliment", libelle: "Un compliment, plutôt" }, { valeur: null, libelle: "Plus tard" }] }]);
     if (q === "compliment") return complimentMesi();
@@ -1304,7 +1324,7 @@
       requestAnimationFrame(image);
       if (t - derniere < 66) return;
       derniere = t;
-      const dpr = Math.min(2, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
+      const dpr = Math.min(3, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
       const moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
       const cleD = w + "|" + moment + "|" + dpr + "|" + cheminee.feuActif() + "|" + cheminee.bois() + "|" + fenetresOuvertes();
@@ -1325,6 +1345,8 @@
       dehorsBaie(ctx, t, moment, etat);
       ctx.restore();
       ctx.drawImage(decor, 0, 0, LARGE, 360);
+      ctx.drawImage(rideauxEclaires(decor, t), 0, 0, LARGE, 360);
+      ctx.drawImage(decor.meubles, 0, 0, LARGE, 360);
       // le jour, le soleil entre par la baie : l'ombre du cadre et des feuilles qui bougent ; il
       // passe derrière les chaises
       toileCourante = toile;
@@ -1355,7 +1377,6 @@
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 2.2;
       ECL = { k: decor.k, L: decor.L };
-      rideaux(cc, t, fenetresOuvertes());
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
       memeEnBoule(cc, 168, 203, t);
       const surCanape = canapeJusqua > t;
@@ -1774,7 +1795,7 @@
       meublesIso(g, t, o);
       lumiereIso(g, t, moment, o);
       // à l'écran : agrandi sans flou, aux couleurs des pochettes
-      const w = toile.clientWidth || 600, dpr = Math.min(2, window.devicePixelRatio || 1), h = Math.round((w * MI.H) / MI.L);
+      const w = toile.clientWidth || 600, dpr = Math.min(3, window.devicePixelRatio || 1), h = Math.round((w * MI.H) / MI.L);
       if (toile.width !== Math.round(w * dpr)) { toile.width = Math.round(w * dpr); toile.height = Math.round(h * dpr); }
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.imageSmoothingEnabled = false;
@@ -1824,7 +1845,7 @@
   // de nuit, des collines sombres sous un ciel violet et la vraie lune.
   function scene(toile, compagnons) {
     const ctx = toile.getContext("2d");
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
     const w = toile.clientWidth || 600;
     const h = window.innerWidth < 640 ? 300 : 360;
     // sur un écran en hauteur (téléphone), le paysage garde ses proportions : on ajoute du ciel
@@ -2536,7 +2557,7 @@
     boite.addEventListener("pointerdown", suivre);
     const dessiner = () => {
       if (!document.body.contains(toile)) return;
-      const dpr = Math.min(2, window.devicePixelRatio || 1), w = boite.clientWidth, h = boite.clientHeight;
+      const dpr = Math.min(3, window.devicePixelRatio || 1), w = boite.clientWidth, h = boite.clientHeight;
       if (toile.width !== Math.round(w * dpr) || toile.height !== Math.round(h * dpr)) {
         toile.width = Math.round(w * dpr);
         toile.height = Math.round(h * dpr);
@@ -2662,7 +2683,7 @@
       requestAnimationFrame(image);
       if (t - derniere < 66) return;
       derniere = t;
-      const dpr = Math.min(2, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
+      const dpr = Math.min(3, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
       if (cle !== w + "|" + dpr + "|" + fenetresOuvertes()) {
         cle = w + "|" + dpr + "|" + fenetresOuvertes();
         toile.width = Math.round(w * dpr); toile.height = Math.round(h * dpr);
@@ -2677,6 +2698,8 @@
       dehorsBaie(ctx, t, "nuit", H.ciel.etat());
       ctx.restore();
       ctx.drawImage(decor, 0, 0, LARGE, 360);
+      ctx.drawImage(rideauxEclaires(decor, t), 0, 0, LARGE, 360);
+      ctx.drawImage(decor.meubles, 0, 0, LARGE, 360);
       if (!calque || calque.width !== toile.width || calque.height !== toile.height) { calque = document.createElement("canvas"); calque.width = toile.width; calque.height = toile.height; }
       const cc = calque.getContext("2d");
       cc.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
@@ -2684,7 +2707,6 @@
       cc.lineJoin = "round"; cc.lineCap = "round"; cc.strokeStyle = ENCRE; cc.lineWidth = 1.6;
       cc.save();
       cc.translate(DX, 0);
-      rideaux(cc, t, fenetresOuvertes());
       {
       const ctx = cc;
 
