@@ -4,8 +4,20 @@
   H.vues = H.vues || {};
   let vueActive = null;
 
+  // Le monde qu'on ouvre : celui d'ƟvƟ, ou, sur l'appareil de Mesi et si elle l'a choisi dans
+  // ses réglages, le sien (la pharmacopée chinoise, ses propres îles, ses formules).
+  async function choisirMonde() {
+    const l = (await H.kv.lire("local")) || {};
+    H.monde = l.role === "mesi" && l.monde === "mesi" ? "mesi" : "ovo";
+    document.documentElement.dataset.monde = H.monde;
+    if (H.monde === "mesi") {
+      document.title = "L’herbothèque de Mesi";
+      document.querySelectorAll(".titre-jeu").forEach((t) => (t.textContent = "L’herbothèque de Mesi"));
+    }
+  }
   async function lireBase() {
-    const r = await fetch("data/base.enc", { cache: "no-cache" });
+    await choisirMonde();
+    const r = await fetch(H.monde === "mesi" ? "data/mesi.enc" : "data/base.enc", { cache: "no-cache" });
     if (!r.ok) throw new Error("Fiches introuvables (" + r.status + ")");
     return r.json();
   }

@@ -50,6 +50,8 @@
   };
 
   const copie = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
+  // chaque monde garde sa partie à part sur l'appareil (celui de Mesi : « mesi:herbier », « mesi:jeu »)
+  const cleKv = (q) => (H.monde === "mesi" ? "mesi:" + q : q);
 
   function herbierNeuf(base) {
     const t = H.maintenant();
@@ -101,6 +103,7 @@
   // créées ensuite par ƟvƟ ne sont jamais touchées.
   const OUVERTURE = Date.parse("2026-10-15T00:00:00+02:00");
   function tisaneDeDepart() {
+    if (H.monde === "mesi") return;
     const h = H.herbier;
     h.tisanes = h.tisanes || {};
     if (h.tisanes.pizsoma) {
@@ -165,8 +168,8 @@
   H.d = {
     async charger(base) {
       H.base = base;
-      H.herbier = (await H.kv.lire("herbier")) || herbierNeuf(base);
-      H.jeu = Object.assign(jeuNeuf(), (await H.kv.lire("jeu")) || {});
+      H.herbier = (await H.kv.lire(cleKv("herbier"))) || herbierNeuf(base);
+      H.jeu = Object.assign(jeuNeuf(), (await H.kv.lire(cleKv("jeu"))) || {});
       H.local = Object.assign({ son: true, musique: true, theme: "auto" }, (await H.kv.lire("local")) || {});
       completerSchema();
       index = null;
@@ -270,7 +273,7 @@
     async enregistrerMaintenant() {
       const q = Array.from(enAttente);
       enAttente.clear();
-      for (const quoi of q) await H.kv.ecrire(quoi, quoi === "jeu" ? H.jeu : H.herbier);
+      for (const quoi of q) await H.kv.ecrire(cleKv(quoi), quoi === "jeu" ? H.jeu : H.herbier);
       if (q.length && H.synchro) H.synchro.planifier();
     },
     async majLocal(fn) {
@@ -280,6 +283,7 @@
     invalider() {
       index = null;
     },
+    cleKv: (q) => cleKv(q),
   };
 
   let index = null;

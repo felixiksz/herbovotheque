@@ -94,7 +94,7 @@
     conteneur.appendChild(H.bureau.onglets([
       { nom: "Les récoltes" + (recoltes.length ? " (" + recoltes.length + ")" : ""), el: ongletRecoltes },
       { nom: "Les préparations" + (enCours ? " (" + enCours + ")" : ""), el: grille },
-      { nom: "Une tisane", el: sectionTisane(l) },
+      { nom: H.monde === "mesi" ? "Une décoction" : "Une tisane", el: sectionTisane(l) },
     ], { cle: "labo" }));
   }
 
@@ -106,15 +106,15 @@
       if (!melange) {
         l.tisane = null;
       } else if (reste > 0) {
-        return H.el("p", null, "« " + melange.nom + " » infuse… encore " + duree(reste) + ".");
+        return H.el("p", null, "« " + melange.nom + " » " + (H.monde === "mesi" ? "mijote" : "infuse") + "… encore " + duree(reste) + ".");
       } else {
         return H.el("div", null,
           H.el("p", null, "« " + melange.nom + " » est prête, bien chaude."),
-          H.el("button.bouton.petit.actif", { type: "button", onclick: boire }, "Boire la tisane"));
+          H.el("button.bouton.petit.actif", { type: "button", onclick: boire }, H.monde === "mesi" ? "Boire la décoction" : "Boire la tisane"));
       }
     }
     const melanges = Object.values(H.herbier.tisanes || {}).filter((x) => !x.supprime && (x.plantes || []).length);
-    if (!melanges.length) return H.el("p.discret", null, "Compose d’abord un mélange dans le placard à tisanes de l’herbothèque.");
+    if (!melanges.length) return H.el("p.discret", null, H.monde === "mesi" ? "Compose d’abord une formule dans l’herbothèque." : "Compose d’abord un mélange dans le placard à tisanes de l’herbothèque.");
     return H.el("div.pastilles", null, melanges.map((m) => {
       const vides = m.plantes.map((x) => H.d.plante(x.id)).filter((p) => p && H.d.stock(p, "plante-seche") === "vide");
       return H.el("button.bouton.petit", {
@@ -219,7 +219,7 @@
     labo().tisane = { id: m.id, le: H.maintenant() };
     sauver();
     H.bruit("eau");
-    if (H.journal) H.journal.noter("tisane", "j’ai infusé une tisane : ", "« " + m.nom + " »", "");
+    if (H.journal) H.journal.noter("tisane", H.monde === "mesi" ? "j’ai préparé une décoction : " : "j’ai infusé une tisane : ", "« " + m.nom + " »", "");
     dessiner();
   }
 

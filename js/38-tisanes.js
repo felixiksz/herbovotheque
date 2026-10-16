@@ -5,6 +5,19 @@
   const H = window.H;
   const choisies = new Set(); // bocaux choisis dans le placard pour un nouveau mélange
   let recherche = "";
+  // Dans le monde de Mesi, ce sont des formules de pharmacopée chinoise : chaque substance a son
+  // rang (Empereur, Ministre, Assistant, Messager), sa dose et son action dans la formule.
+  const M = () => H.monde === "mesi";
+  const RANGS = [["jun", "Empereur (jūn)"], ["chen", "Ministre (chén)"], ["zuo", "Assistant (zuǒ)"], ["shi", "Messager (shǐ)"]];
+  const nomRang = (r) => (RANGS.find((x) => x[0] === r) || [])[1] || "";
+  const ordreRang = (r) => { const i = RANGS.findIndex((x) => x[0] === r); return i < 0 ? 9 : i; };
+  const MOTS = {
+    titre: ["Placard à tisanes", "Mes formules"], nouveau: ["Nouveau mélange", "Nouvelle formule"], mes: ["Mes mélanges", "Mes formules"],
+    exporter: ["Exporter les recettes", "Exporter les formules"], vide: ["Pas encore de mélange. Choisis des bocaux plus bas, ou clique sur « Nouveau mélange ».", "Pas encore de formule. Choisis des bocaux plus bas, ou clique sur « Nouvelle formule »."],
+    seches: ["Les plantes sèches", "Les substances"], chercher: ["Chercher une plante sèche", "Chercher une substance"], aide: ["Clique sur les bocaux pour préparer un mélange.", "Clique sur les bocaux pour composer une formule."],
+    enPrep: ["Mélange en préparation : ", "Formule en préparation : "], composer: ["Composer le mélange", "Composer la formule"], aucune: ["Aucune plante sèche ne correspond.", "Aucune substance ne correspond."],
+  };
+  const mot = (cle) => MOTS[cle][M() ? 1 : 0];
 
   const tisanes = () =>
     Object.values(H.herbier.tisanes || {})
@@ -20,15 +33,20 @@
 
   function composition(t) {
     return (t.plantes || [])
+      .slice().sort((a, b) => ordreRang(a.rang) - ordreRang(b.rang))
       .map((x) => {
         const p = H.d.plante(x.id);
-        return p ? (x.part ? x.part + " " : "") + p.nom + (x.role ? " : " + x.role : "") : null;
+        return p ? (x.rang ? nomRang(x.rang) + " · " : "") + (x.part ? x.part + " " : "") + p.nom + (x.role ? " : " + x.role : "") : null;
       })
       .filter(Boolean);
   }
 
   // Quelques propriétés en gras dans la fiche, pour aider à argumenter.
   function piste(p) {
+    if (M()) {
+      const a = String((p.valeurs || {}).actions || "").split("\n").map((l) => l.replace(/^•\s*/, "").trim()).filter(Boolean).slice(0, 2);
+      return a.length ? "ex. : " + a.join(", ").toLowerCase() + "…" : "Son action dans la formule";
+    }
     const gras = [];
     String((p.valeurs || {}).proprietes || "").replace(/\*\*(.+?)\*\*/g, (_, x) => {
       for (const morceau of x.split(/[,\-–;]| et /)) {
@@ -55,13 +73,14 @@
     const corps = H.el("div.tisane-detail",
       null,
       H.el("h2", null, t.nom),
-      t.usage ? H.el("div", null, H.el("h3", null, "Pour quoi"), H.el("div.texte-fiche", { html: H.texteRiche(t.usage) })) : null,
+      t.usage ? H.el("div", null, H.el("h3", null, M() ? "Indications" : "Pour quoi"), H.el("div.texte-fiche", { html: H.texteRiche(t.usage) })) : null,
       H.el("h3", null, "Composition"),
       H.el("ul.tisane-compo", null,
-        (t.plantes || []).map((x) => {
+        (t.plantes || []).slice().sort((a, b) => ordreRang(a.rang) - ordreRang(b.rang)).map((x) => {
           const p = H.d.plante(x.id);
           if (!p) return null;
           return H.el("li", null,
+            x.rang ? H.el("span.discret", null, nomRang(x.rang) + " · ") : null,
             x.part ? H.el("strong", null, x.part + " ") : null,
             H.el("a", { href: "#fiche/" + encodeURIComponent(p.id) }, p.nom),
             x.role ? H.el("span.role-plante", null, " : " + x.role) : H.el("span.discret", null, " (rôle à préciser)")
@@ -82,24 +101,27 @@
       ? JSON.parse(JSON.stringify(t))
       : { id: H.uid("tisane"), nom: "", plantes: (idsDepart || []).map((id) => ({ id, part: "", role: "" })), usage: "", preparation: "", notes: "", creeLe: H.maintenant() };
     const existe = !!(H.herbier.tisanes && H.herbier.tisanes[t.id] && !H.herbier.tisanes[t.id].supprime);
-    const nom = H.el("input", { type: "text", value: t.nom, placeholder: "Nom du mélange" });
+    const nom = H.el("input", { type: "text", value: t.nom, placeholder: M() ? "Nom de la formule" : "Nom du mélange" });
     const liste = H.el("div.tisane-liste");
     const dessinerListe = () => {
       liste.innerHTML = "";
       t.plantes.forEach((x, i) => {
         const p = H.d.plante(x.id);
         if (!p) return;
-        const role = H.el("textarea.role", { rows: 2, placeholder: piste(p), "aria-label": "Effet thérapeutique " + H.duNom(p), oninput: (e) => (x.role = e.target.value.trim()) });
+        const role = H.el("textarea.role", { rows: 2, placeholder: piste(p), "aria-label": (M() ? "Action dans la formule : " + p.nom : "Effet thérapeutique " + H.duNom(p)), oninput: (e) => (x.role = e.target.value.trim()) });
         role.value = x.role || "";
-        const props = (p.valeurs || {}).proprietes;
+        const props = (p.valeurs || {})[M() ? "actions" : "proprietes"];
+        const rang = M() ? H.el("select", { "aria-label": "Rang de " + p.nom, onchange: (e) => (x.rang = e.target.value || undefined) },
+          H.el("option", { value: "" }, "Rang…"), ...RANGS.map(([v, n]) => H.el("option", { value: v, selected: x.rang === v }, n))) : null;
         liste.appendChild(H.el("div.tisane-plante", null,
           H.el("div.org-sous-ligne", null,
-            H.el("input", { type: "text", value: x.part || "", placeholder: "1 part", size: 8, "aria-label": "Proportion " + H.duNom(p), oninput: (e) => (x.part = e.target.value.trim()) }),
+            H.el("input", { type: "text", value: x.part || "", placeholder: M() ? "9 g" : "1 part", size: 8, "aria-label": (M() ? "Dose : " + p.nom : "Proportion " + H.duNom(p)), oninput: (e) => (x.part = e.target.value.trim()) }),
             H.el("strong", null, p.nom),
+            rang,
             H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { t.plantes.splice(i, 1); dessinerListe(); } }, "Retirer")
           ),
           role,
-          props ? H.el("details.rappel-proprietes", null, H.el("summary.discret", null, "Revoir ses propriétés"), H.el("div.texte-fiche", { html: H.texteRiche(props) })) : null
+          props ? H.el("details.rappel-proprietes", null, H.el("summary.discret", null, M() ? "Revoir ses actions" : "Revoir ses propriétés"), H.el("div.texte-fiche", { html: H.texteRiche(props) })) : null
         ));
       });
       liste.appendChild(
@@ -110,8 +132,8 @@
               const avant = new Map(t.plantes.map((x) => [x.id, x]));
               t.plantes = ids.map((id) => avant.get(id) || { id, part: "", role: "" });
               dessinerListe();
-            }, "Plantes du mélange"),
-        }, t.plantes.length ? "Ajouter ou retirer des plantes" : "Choisir les plantes")
+            }, M() ? "Substances de la formule" : "Plantes du mélange"),
+        }, M() ? (t.plantes.length ? "Ajouter ou retirer des substances" : "Choisir les substances") : (t.plantes.length ? "Ajouter ou retirer des plantes" : "Choisir les plantes"))
       );
     };
     dessinerListe();
@@ -120,25 +142,25 @@
       z.value = val || "";
       return z;
     };
-    const usage = zone(t.usage, "Indications, moments de la journée…");
-    const prep = zone(t.preparation, "Infusion 10 min, 1 cuillère à soupe par tasse…");
-    const notes = zone(t.notes, "Goût, variantes, pour qui…");
+    const usage = zone(t.usage, M() ? "Syndrome, indications…" : "Indications, moments de la journée…");
+    const prep = zone(t.preparation, M() ? "Décoction, poudre, pilules…" : "Infusion 10 min, 1 cuillère à soupe par tasse…");
+    const notes = zone(t.notes, M() ? "Variantes, précautions…" : "Goût, variantes, pour qui…");
     const msg = H.el("p.discret.erreur", { role: "alert" });
     let fermer;
     const form = H.el("form.formulaire", {
       onsubmit(e) {
         e.preventDefault();
         if (!nom.value.trim()) {
-          msg.textContent = "Donne un nom au mélange.";
+          msg.textContent = M() ? "Donne un nom à la formule." : "Donne un nom au mélange.";
           return;
         }
         if (!t.plantes.length) {
-          msg.textContent = "Choisis au moins une plante.";
+          msg.textContent = M() ? "Choisis au moins une substance." : "Choisis au moins une plante.";
           return;
         }
         const sansRole = t.plantes.filter((x) => !x.role || x.role.length < 3).map((x) => (H.d.plante(x.id) || {}).nom).filter(Boolean);
         if (sansRole.length) {
-          msg.textContent = "Explique l’effet thérapeutique de chaque plante : il manque " + sansRole.join(", ") + ".";
+          msg.textContent = (M() ? "Explique l’action de chaque substance dans la formule : il manque " : "Explique l’effet thérapeutique de chaque plante : il manque ") + sansRole.join(", ") + ".";
           return;
         }
         t.nom = nom.value.trim();
@@ -151,12 +173,12 @@
         H.router();
       },
     },
-      H.el("h2", null, existe ? "Modifier le mélange" : "Nouveau mélange"),
+      H.el("h2", null, M() ? (existe ? "Modifier la formule" : "Nouvelle formule") : (existe ? "Modifier le mélange" : "Nouveau mélange")),
       H.el("label", null, "Nom", nom),
-      H.el("label", null, "Pour quoi", usage),
+      H.el("label", null, M() ? "Indications" : "Pour quoi", usage),
       H.el("div", null,
-        H.el("h3", null, "Plantes, proportions et effet de chacune"),
-        H.el("p.discret.aide", null, "Pour chaque plante, argumente l’effet thérapeutique qu’elle apporte au mélange."),
+        H.el("h3", null, M() ? "Substances, doses et rang de chacune" : "Plantes, proportions et effet de chacune"),
+        H.el("p.discret.aide", null, M() ? "Pour chaque substance, son rang (Empereur, Ministre, Assistant, Messager) et l’action qu’elle apporte à la formule." : "Pour chaque plante, argumente l’effet thérapeutique qu’elle apporte au mélange."),
         liste),
       H.el("label", null, "Préparation", prep),
       H.el("label", null, "Notes", notes),
@@ -166,14 +188,14 @@
           ? H.el("button.bouton.discret-bouton", {
               type: "button",
               onclick() {
-                if (!confirm("Jeter le mélange « " + t.nom + " » ?")) return;
+                if (!confirm((M() ? "Jeter la formule « " : "Jeter le mélange « ") + t.nom + " » ?")) return;
                 enregistrer({ id: t.id, supprime: true });
                 fermer();
                 H.router();
               },
             }, "Supprimer")
           : null,
-        H.el("button.bouton", { type: "submit" }, "Ranger dans le placard")
+        H.el("button.bouton", { type: "submit" }, M() ? "Ranger la formule" : "Ranger dans le placard")
       )
     );
     fermer = H.fenetre(form);
@@ -184,13 +206,13 @@
     const lignes = [];
     for (const t of tisanes()) {
       lignes.push(t.nom.toUpperCase());
-      if (t.usage) lignes.push("  Pour quoi : " + t.usage.replace(/\n/g, " "));
+      if (t.usage) lignes.push((M() ? "  Indications : " : "  Pour quoi : ") + t.usage.replace(/\n/g, " "));
       composition(t).forEach((c) => lignes.push("  - " + c));
       if (t.preparation) lignes.push("  Préparation : " + t.preparation.replace(/\n/g, " "));
       if (t.notes) lignes.push("  Notes : " + t.notes.replace(/\n/g, " "));
       lignes.push("");
     }
-    H.telecharger("placard-a-tisanes.txt", lignes.join("\n"));
+    H.telecharger(M() ? "mes-formules.txt" : "placard-a-tisanes.txt", lignes.join("\n"));
   }
 
   // --- les bocaux de plantes sèches, au fond du placard -----------------------------
@@ -198,7 +220,7 @@
     const q = H.sansAccents(recherche.trim());
     const plantes = H.d.plantes().filter((p) => (p.preparations || []).includes("plante-seche") && (!q || H.sansAccents(p.nom + " " + p.latin).includes(q)));
     zone.innerHTML = "";
-    if (!plantes.length) zone.appendChild(H.el("p.discret", null, "Aucune plante sèche ne correspond."));
+    if (!plantes.length) zone.appendChild(H.el("p.discret", null, mot("aucune")));
     for (const p of plantes) {
       const choisie = choisies.has(p.id);
       zone.appendChild(H.el("button.bocal.bocal-placard" + (choisie ? ".choisi" : ""), {
@@ -219,9 +241,9 @@
     if (choisies.size) {
       const noms = Array.from(choisies).map((id) => (H.d.plante(id) || {}).nom).filter(Boolean);
       barre.append(
-        H.el("span", null, "Mélange en préparation : " + noms.join(", ")),
+        H.el("span", null, mot("enPrep") + noms.join(", ")),
         H.el("button.bouton.petit", { type: "button", onclick: () => { choisies.clear(); bocaux(zone, barre); } }, "Tout reposer"),
-        H.el("button.bouton.petit.actif", { type: "button", onclick: () => editer(null, Array.from(choisies)) }, "Composer le mélange")
+        H.el("button.bouton.petit.actif", { type: "button", onclick: () => editer(null, Array.from(choisies)) }, mot("composer"))
       );
     }
   }
@@ -230,18 +252,18 @@
     afficher(c) {
       const liste = tisanes();
       c.appendChild(H.el("div.herbo-tete", null,
-        H.el("h1", null, "Placard à tisanes"),
+        H.el("h1", null, mot("titre")),
         H.el("div.herbo-boutons", null,
           H.el("a.bouton.discret-bouton", { href: "#herbotheque" }, "Retour aux étagères"),
-          H.el("button.bouton", { type: "button", onclick: () => editer() }, "Nouveau mélange"),
-          liste.length ? H.el("button.bouton", { type: "button", onclick: exporter }, "Exporter les recettes") : null
+          H.el("button.bouton", { type: "button", onclick: () => editer() }, mot("nouveau")),
+          liste.length ? H.el("button.bouton", { type: "button", onclick: exporter }, mot("exporter")) : null
         )
       ));
       const planche = { style: "--planche:url(" + H.aqua.planche() + ")" };
       const placard = H.el("div.placard", planche);
-      placard.appendChild(H.el("h2.titre-placard", null, "Mes mélanges"));
+      placard.appendChild(H.el("h2.titre-placard", null, mot("mes")));
       if (!liste.length) {
-        placard.appendChild(H.el("p.placard-vide", null, "Pas encore de mélange. Choisis des bocaux plus bas, ou clique sur « Nouveau mélange »."));
+        placard.appendChild(H.el("p.placard-vide", null, mot("vide")));
       }
       liste.forEach((t) => placard.appendChild(sachet(t)));
       c.appendChild(placard);
@@ -250,17 +272,17 @@
       const zone = H.el("div.rangee.bocaux-placard");
       const champ = H.el("input", {
         type: "search",
-        placeholder: "Chercher une plante sèche",
+        placeholder: mot("chercher"),
         value: recherche,
-        "aria-label": "Chercher une plante sèche",
+        "aria-label": mot("chercher"),
         oninput: H.anti((e) => {
           recherche = e.target.value;
           bocaux(zone, barre);
         }, 180),
       });
       c.appendChild(H.el("div.placard.placard-plantes", planche,
-        H.el("h2.titre-placard", null, "Les plantes sèches"),
-        H.el("p.discret.aide-placard", null, "Clique sur les bocaux pour préparer un mélange."),
+        H.el("h2.titre-placard", null, mot("seches")),
+        H.el("p.discret.aide-placard", null, mot("aide")),
         champ,
         zone
       ));
@@ -269,5 +291,5 @@
     },
   };
 
-  H.tisanes = { liste: tisanes, composition };
+  H.tisanes = { liste: tisanes, composition, mot: (cle) => mot(cle) };
 })();

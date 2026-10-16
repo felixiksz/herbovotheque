@@ -19,7 +19,7 @@
     if (quoi.includes("/")) return quoi;
     if (quoi === "acces") return FICHIERS.acces;
     if (role() === "testeur" && H.local.empreinte) return "data/essais/" + H.local.empreinte.slice(0, 16) + "/" + quoi + ".enc";
-    if (role() === "mesi") return "data/mesi/" + quoi + ".enc";
+    if (role() === "mesi") return "data/mesi/" + (H.monde === "mesi" ? "monde/" : "") + quoi + ".enc";
     return FICHIERS[quoi];
   }
   async function empreinte(jeton) {
@@ -185,7 +185,7 @@
           const chezMoi = Object.assign({}, H.jeu, commun);
           if (canon(chezMoi) !== canon(H.jeu)) {
             H.jeu = chezMoi;
-            await H.kv.ecrire("jeu", chezMoi);
+            await H.kv.ecrire(H.d.cleKv("jeu"), chezMoi);
             H.emettre("donnees", "jeu");
           }
           const versOvo = Object.assign({}, chezOvo || { modifieLe: 0 }, commun);
@@ -200,7 +200,7 @@
             if (quoi === "jeu") H.jeu = fusion;
             else H.herbier = fusion;
             H.d.invalider();
-            await H.kv.ecrire(quoi, fusion);
+            await H.kv.ecrire(H.d.cleKv(quoi), fusion);
             H.emettre("donnees", quoi);
           }
           if (!distant || canon(fusion) !== canon(distant)) aEcrire[chemin(quoi)] = fusion;

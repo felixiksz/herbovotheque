@@ -263,7 +263,7 @@
     veille.setAttribute("aria-label", "Revenir au jeu");
     const titre = document.createElement("h1");
     titre.className = "titre-jeu";
-    titre.textContent = "L’herbothèque d’ƟvƟ";
+    titre.textContent = H.monde === "mesi" ? "L’herbothèque de Mesi" : "L’herbothèque d’ƟvƟ";
     const aide = document.createElement("p");
     aide.className = "veille-aide";
     aide.textContent = "Touche l’écran pour revenir";

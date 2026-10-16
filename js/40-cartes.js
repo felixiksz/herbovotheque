@@ -46,7 +46,7 @@
         id: "tisane|" + t.id,
         rubrique: "tisanes",
         categorie: "tisanes",
-        recto: () => texte("Composition du mélange ", H.el("strong", null, t.nom)),
+        recto: () => texte(H.monde === "mesi" ? "Composition de la formule " : "Composition du mélange ", H.el("strong", null, t.nom)),
         verso: () => H.el("ul", null, H.tisanes.composition(t).map((x) => H.el("li", null, x))),
       });
       for (const x of t.plantes || []) {
@@ -57,7 +57,7 @@
           plante: x.id,
           rubrique: "tisanesRoles",
           categorie: "tisanes",
-          recto: () => texte("Dans le mélange ", H.el("strong", null, t.nom), ", pourquoi ", H.el("strong", null, p.nom), " ?"),
+          recto: () => texte(H.monde === "mesi" ? "Dans la formule " : "Dans le mélange ", H.el("strong", null, t.nom), ", pourquoi ", H.el("strong", null, p.nom), " ?"),
           verso: () => H.el("p.reponse-courte", null, x.role),
         });
       }
@@ -87,10 +87,10 @@
       const items = H.d.champs().filter((c) => c.cartes && c.section === s.id).map((c) => ({ cle: c.id, nom: c.nom }));
       if (items.length) g.push({ titre: s.nom, items });
     }
-    const autres = [{ cle: "tisanes", nom: "Mes tisanes" }, { cle: "tisanesRoles", nom: "Rôle de chaque plante dans mes tisanes" }];
+    const autres = H.monde === "mesi" ? [{ cle: "tisanes", nom: "Mes formules" }, { cle: "tisanesRoles", nom: "Rôle de chaque substance dans mes formules" }] : [{ cle: "tisanes", nom: "Mes tisanes" }, { cle: "tisanesRoles", nom: "Rôle de chaque plante dans mes tisanes" }];
     const paquets = new Set(Object.values(H.jeu.cartesPerso || {}).filter((c) => !c.supprime).map((c) => c.paquet || "Mes cartes"));
     paquets.forEach((p) => autres.push({ cle: "perso:" + p, nom: p }));
-    g.push({ titre: "Tisanes et cartes perso", items: autres });
+    g.push({ titre: H.monde === "mesi" ? "Formules et cartes perso" : "Tisanes et cartes perso", items: autres });
     return g;
   }
 
@@ -382,7 +382,7 @@
       parRubrique.set(c.rubrique, r);
       if (estFragile(s)) fragiles.push(c);
     }
-    const nomRubrique = (cle) => (cle === "_latin" ? "Nom latin" : cle === "_nom" ? "Plante d’après le nom latin" : cle === "tisanes" ? "Mes tisanes" : cle === "tisanesRoles" ? "Rôle des plantes dans mes tisanes" : cle.startsWith("perso:") ? cle.slice(6) : (H.d.champ(cle) || {}).nom || cle);
+    const nomRubrique = (cle) => (cle === "_latin" ? "Nom latin" : cle === "_nom" ? "Plante d’après le nom latin" : cle === "tisanes" ? (H.monde === "mesi" ? "Mes formules" : "Mes tisanes") : cle === "tisanesRoles" ? (H.monde === "mesi" ? "Rôle des substances dans mes formules" : "Rôle des plantes dans mes tisanes") : cle.startsWith("perso:") ? cle.slice(6) : (H.d.champ(cle) || {}).nom || cle);
     if (!vues) {
       det.appendChild(H.el("p.discret", null, "Les statistiques apparaîtront après tes premières révisions."));
     } else {
@@ -488,7 +488,7 @@
   function recompenses() {
     const det = H.el("details.cartes-recompenses");
     det.appendChild(H.el("summary", null, H.el("h2", null, "Ce que rapportent les cartes")));
-    const cats = [["identite", "Identité"]].concat(H.d.sections().map((s) => [s.id, s.nom]), [["tisanes", "Tisanes"], ["perso", "Mes cartes"]]);
+    const cats = [["identite", "Identité"]].concat(H.d.sections().map((s) => [s.id, s.nom]), [["tisanes", H.monde === "mesi" ? "Formules" : "Tisanes"], ["perso", "Mes cartes"]]);
     const grille = H.el("div.grille-recompenses");
     cats.forEach(([id, nom]) => {
       const choisie = H.ressources.ressourcePour(id);

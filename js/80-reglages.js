@@ -384,8 +384,24 @@
       H.el("option", { value: "ovo" }, "la partie d’ƟvƟ"),
       H.el("option", { value: "testeur" }, "partie d’essai à part (invisible pour ƟvƟ)"),
       H.el("option", { value: "mesi" }, "appareil de Mesi"));
+    // le monde à ouvrir sur cet appareil : on enregistre et on synchronise la partie en cours, puis on recharge
+    const choixMonde = (id, nom) => H.el("button.bouton.petit" + ((H.monde || "ovo") === id ? ".actif" : ""), {
+      type: "button",
+      "aria-pressed": String((H.monde || "ovo") === id),
+      async onclick(e) {
+        if ((H.monde || "ovo") === id) return;
+        e.target.textContent = "Un instant…";
+        await H.d.enregistrerMaintenant();
+        if (H.local.jeton) await H.synchro.lancer().catch(() => {});
+        await H.d.majLocal((l) => (l.monde = id));
+        location.reload();
+      },
+    }, nom);
     return H.el("section.reglage", null,
       H.el("h2", null, "Mesi"),
+      H.el("h3", null, "Quel monde ?"),
+      H.el("p.discret", null, "Jusqu’à Noël, tu peux tester le monde d’ƟvƟ, ou jouer dans ton monde à toi : la pharmacopée chinoise, tes propres îles, et des formules au lieu des tisanes. Les deux mondes restent séparés, chacun avec sa sauvegarde."),
+      H.el("p.pastilles", null, choixMonde("ovo", "Le monde d’ƟvƟ"), choixMonde("mesi", "Mon monde")),
       H.el("p.discret", null, "Cet appareil est relié avec le jeton de Mesi : ta partie (herbier, îles, ferme…) se retrouve sur tous tes appareils, à part de celle d’ƟvƟ. Avec ƟvƟ, seules les lettres et les textes du jeu s’échangent."),
       H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")),
       H.el("label.case", null,

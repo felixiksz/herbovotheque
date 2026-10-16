@@ -242,7 +242,7 @@
         H.el("div.barre-bureau", null,
           H.el("b", null, "Herbothèque"),
           H.el("button.menu-bureau", { type: "button", onclick: nouvellePlante }, "Ajouter une plante"),
-          H.el("a.menu-bureau", { href: "#tisanes" }, "Placard à tisanes"),
+          H.el("a.menu-bureau", { href: "#tisanes" }, H.monde === "mesi" ? "Mes formules" : "Placard à tisanes"),
           H.el("button.menu-bureau", { type: "button", onclick: () => H.organiser && H.organiser() }, "Organiser"),
           H.el("button.menu-bureau", { type: "button", onclick: exporterVisible }, "Exporter"),
           H.el("label.menu-bureau", null, "Ranger ", rgSelect),

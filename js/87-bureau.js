@@ -7,7 +7,7 @@
   // le titre de chaque fenêtre ; les vues absentes de cette liste ne s'ouvrent pas en fenêtre
   const FENETRES = {
     cartes: "Flashcartes",
-    tisanes: "Placard à tisanes",
+    get tisanes() { return H.monde === "mesi" ? "Mes formules" : "Placard à tisanes"; },
     labo: "Labo",
     serre: "Serre",
     lettres: "Boîte aux lettres",
@@ -71,7 +71,7 @@
 
   function icones(vue) {
     return H.el("nav.icones-bureau", { "aria-label": "Bureau" },
-      ICONES.map(([v, nom, motif]) => H.el("a.icone-bureau" + (v === vue ? ".ouverte" : ""), { href: "#" + v }, icone(motif), H.el("span", null, nom)))
+      ICONES.map(([v, nom, motif]) => H.el("a.icone-bureau" + (v === vue ? ".ouverte" : ""), { href: "#" + v }, icone(motif), H.el("span", null, v === "tisanes" && H.monde === "mesi" ? "Formules" : nom)))
     );
   }
 

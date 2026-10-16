@@ -71,7 +71,7 @@ champs = [
     {"id": "recherches", "nom": "Recherches modernes", "section": "recherches", "type": "texte", "cartes": False},
 ] + jardin
 preparations = [
-    {"id": "piece-sechee", "nom": "Pièces médicinales séchées", "forme": "bocal"},
+    {"id": "plante-seche", "nom": "Pièces médicinales séchées", "forme": "bocal"},
     {"id": "poudre", "nom": "Poudre", "forme": "pot"},
     {"id": "granules", "nom": "Extraits en granulés", "forme": "flacon"},
 ]
@@ -104,7 +104,7 @@ for h in herbes:
             v[champ] = t
     v = {k: x for k, x in v.items() if x}
     plantes.append({"id": pid, "code": h["id"], "nom": h["pinyin"], "latin": "", "valeurs": v,
-                    "preparations": ["piece-sechee"], "source": "Pharmacopée chinoise (cours), " + h["id"]})
+                    "preparations": ["plante-seche"], "source": "Pharmacopée chinoise (cours), " + h["id"]})
 
 sortie = {"version": 1, "monde": "mesi", "sections": sections, "champs": champs, "preparations": preparations, "plantes": plantes}
 io.open(os.path.join(ici, "..", "prive", "mesi.json"), "w", encoding="utf-8").write(json.dumps(sortie, ensure_ascii=False, indent=1))
