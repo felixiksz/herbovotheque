@@ -1473,7 +1473,7 @@
     const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     const zones = [
       { id: "fenetre", x: BAIE.x, y: BAIE.y, w: BAIE.w, h: 110, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
-      { id: "meme", x: 282, y: 186, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que le canapé vibre.)"]) }]) },
+      { id: "meme", x: 282, y: 186, w: 34, h: 20, nom: "Caresser Mémé", agir: () => (H.sons.caresseMeme && H.sons.caresseMeme(), H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que le canapé vibre.)"]) }])) },
       { id: "lolo", x: 246, y: 150, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
         // le premier matin de la journée, on lui demande seulement s'il a bien dormi
         if (H.lolo.leMatin()) {

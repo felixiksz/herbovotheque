@@ -4,7 +4,9 @@
   const H = window.H;
   const FICHIERS = { miaou: "sons/miaou.mp3", attention: "sons/attention.mp3", pas: "sons/pas.mp3", pluie: "sons/roll.mp3", galop: "sons/galop.mp3",
     criquets: "sons/criquets.wav", criquetsLoin: "sons/criquets-loin.wav", cigales: "sons/cigales.wav",
-    sanglier: "sons/sanglier.wav", rieuse: "sons/grenouille-rieuse.mp3", alyte: "sons/alyte.mp3" };
+    sanglier: "sons/sanglier.wav", rieuse: "sons/grenouille-rieuse.mp3", alyte: "sons/alyte.mp3",
+    // les ronronnements de Mémé (Kerzoven, OpenGameArt, domaine public CC0)
+    ronronDort: "sons/ronron-dort.wav", ronron: "sons/ronron.wav" };
   // les longs enregistrements de nature joués en boucle : leur fin se fond dans leur début
   const FONDUS = new Set(["rieuse", "alyte"]);
   function enBoucle(buf) {
@@ -190,6 +192,7 @@
       return { x: c.x0 + (c.x1 - c.x0) * k, enCourse: k < 1 };
     },
     // un son joué une fois
+    caresseMeme: () => caresseMeme(),
     jouer(nom, volume) {
       if (!actif()) return null;
       return jouerUrl(FICHIERS[nom], (volume == null ? 0.6 : volume) * H.volume("bruitages"));
@@ -497,6 +500,33 @@
   programmerOiseaux();
   // en entrant dans la maison, on les entend vite par la baie
   window.addEventListener("hashchange", () => { if (DEDANS.includes(document.documentElement.dataset.vue)) setTimeout(() => { const s = H.ciel && H.jeu ? H.ciel.etat() : null; if (s && s.soleil.alt > 0) oiseau(); }, 2500); });
+
+  // --- Mémé ronronne -----------------------------------------------------------------------
+  // À la maison (et pendant le dodo), de temps en temps, un ronronnement endormi, tout doux ; quand
+  // on la caresse, un ronronnement plus franc, quelques secondes.
+  let ronronPhase = false;
+  function majRonron() {
+    const ici = actif() && DEDANS.includes(document.documentElement.dataset.vue);
+    boucles.ronronDort = boucles.ronronDort || {};
+    boucles.ronronDort.voulu = ici && ronronPhase;
+    boucleContinue("ronronDort", boucles.ronronDort.voulu, 0.07 * H.volume("bruitages"));
+  }
+  (function alterner() {
+    ronronPhase = !ronronPhase;
+    majRonron();
+    setTimeout(alterner, (ronronPhase ? 25 + Math.random() * 25 : 30 + Math.random() * 50) * 1000);
+  })();
+  window.addEventListener("hashchange", () => setTimeout(majRonron, 70));
+  document.addEventListener("pointerdown", () => setTimeout(majRonron, 70));
+  let finCaresse = null;
+  function caresseMeme() {
+    if (!actif() || !contexte()) return;
+    boucles.ronron = boucles.ronron || {};
+    boucles.ronron.voulu = true;
+    boucleContinue("ronron", true, 0.15 * H.volume("bruitages"));
+    clearTimeout(finCaresse);
+    finCaresse = setTimeout(() => { boucles.ronron.voulu = false; boucleContinue("ronron", false); }, 7000);
+  }
 
   // Les cigales, enregistrées en Ardèche : l'été, en journée, quand il fait chaud et qu'il ne pleut pas,
   // dehors. Une boucle sans couture, qui monte et descend doucement avec le volume des bruitages.
