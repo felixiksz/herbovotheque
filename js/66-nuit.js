@@ -910,12 +910,14 @@
     await H.dialogue.dire([{ qui: "duo", texte: "Na-na-nana !" }]);
   }
 
-  // Le soir, ƟvƟ peut raconter sa journée à Mesi (tout ce qu'iel a fait, dans l'ordre), ou
-  // chanter leur chanson.
+  // Le soir (à partir de 17 h), en touchant Mesi, ƟvƟ peut lui raconter sa journée : tout ce
+  // qu'iel a fait, dans l'ordre et dans le détail. Une fois racontée, on ne la raconte plus.
+  const peutRaconter = () => new Date().getHours() >= 17 && H.local.journeeRacontee !== new Date().toDateString();
   async function soireeOvo() {
-    const q = await H.dialogue.dire([{ qui: "luigi", texte: "Alors, c’était comment, ta journée ?", choix: [{ valeur: "raconter", libelle: "Raconter ma journée" }, { valeur: "chanter", libelle: "Chanter notre chanson" }, { valeur: null, libelle: "Plus tard" }] }]);
-    if (q === "chanter") return chanson();
+    const q = await H.dialogue.dire([{ qui: "luigi", texte: "Alors, c’était comment, ta journée ?", choix: [{ valeur: "raconter", libelle: "Raconter ma journée" }, { valeur: "compliment", libelle: "Un compliment, plutôt" }, { valeur: null, libelle: "Plus tard" }] }]);
+    if (q === "compliment") return complimentMesi();
     if (q !== "raconter") return;
+    H.d.majLocal((l) => (l.journeeRacontee = new Date().toDateString()));
     const lignes = H.journal ? H.journal.recit() : [];
     if (!lignes.length) return H.dialogue.dire([{ qui: "ovo", texte: "Aujourd’hui, je n’ai pas fait grand-chose… je me suis surtout reposé·e." }, { qui: "luigi", texte: "Ça fait du bien aussi, des journées comme ça." }]);
     await H.dialogue.dire(lignes.map((texte) => ({ qui: "ovo", texte })));
@@ -945,8 +947,9 @@
       } },
       { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
       { id: "canape", x: 278, y: 168, w: 152, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
-      { id: "mesi", x: 572, y: 160, w: 66, h: 136, nom: "Un compliment de Mesi", agir: complimentMesi },
-      { id: "ovo", x: 428, y: 160, w: 72, h: 136, get nom() { return new Date().getHours() >= 17 ? "Raconter ma journée" : "Chanter notre chanson"; }, agir: () => (new Date().getHours() >= 17 ? soireeOvo() : chanson()) },
+      // le soir, c'est à Mesi qu'ƟvƟ raconte sa journée (une fois par soir) ; sinon, un compliment
+      { id: "mesi", x: 572, y: 160, w: 66, h: 136, get nom() { return peutRaconter() ? "Raconter ma journée à Mesi" : "Un compliment de Mesi"; }, agir: () => (peutRaconter() ? soireeOvo() : complimentMesi()) },
+      { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: () => chanson() },
       { id: "table", x: 500, y: 196, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },

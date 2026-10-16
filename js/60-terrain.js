@@ -2009,7 +2009,10 @@
         sauver(ile);
         H.bruit("plante");
         const p = H.d.plante(vue.plante);
-        if (H.journal && p) H.journal.noter("planter:" + ile.id, "j’ai planté ", H.leNom ? H.leNom(p).toLowerCase() : p.nom.toLowerCase(), " sur « " + ile.nom + " »");
+        if (H.journal && p) {
+          if (repiquage) H.journal.noter("repiquer:" + ile.id, "j’ai repiqué ", H.leNom(p), " de la serre sur « " + ile.nom + " »");
+          else H.journal.noter("planter:" + ile.id, "j’ai planté ", H.leNom(p), " sur « " + ile.nom + " »");
+        }
         const ev = evaluer(ile, x, y, p, ile.plantes[k]);
         if (!ile.croquis && ev.facteur < 0.6) {
           H.dialogue.dire([{ qui: "ovo", texte: "Hmm… " + (ev.raisons[0] || "Elle n’a pas l’air très à l’aise ici.") }]);
@@ -2024,11 +2027,12 @@
           if (q) {
             pousser(ile, x + dx, y + dy, q, H.maintenant());
             q.eau = 100;
+            const pq = H.d.plante(q.p);
+            if (H.journal && pq) H.journal.noter("arroser:" + ile.id, "j’ai arrosé ", H.leNom(pq), " sur « " + ile.nom + " »");
           }
         }
         sauver(ile);
         H.bruit("eau");
-        if (H.journal) H.journal.noter("arroser:" + ile.id, "j’ai arrosé les plantes de « " + ile.nom + " »");
         dessiner();
         break;
       }
@@ -2037,7 +2041,6 @@
         const p = H.d.plante(pl.p);
         if (!p || !aRecolter(p, ile, pl)) return libre("Pas encore prête à récolter.");
         recolter(x, y);
-        if (H.journal) H.journal.noter("recolter:" + ile.id, "j’ai récolté ", p.nom.toLowerCase(), " sur « " + ile.nom + " »");
         break;
       }
       case "amenager": {
@@ -2048,6 +2051,7 @@
         ile.cases = ile.cases || {};
         ile.cases[k] = Object.assign({}, ile.cases[k], { t });
         if (t === "sol") delete ile.cases[k].t;
+        if (H.journal) H.journal.noter("amenager:" + ile.id, "j’ai aménagé « " + ile.nom + " » (", t === "sol" ? "de la terre nue" : TUILES[t].nom.toLowerCase(), ")");
         sauver(ile);
         peindreFond();
         dessiner();
@@ -2065,6 +2069,8 @@
       }
       case "retirer": {
         if (pl) {
+          const pr = H.d.plante(pl.p);
+          if (H.journal && pr) H.journal.noter("retirer:" + ile.id, "j’ai retiré ", H.leNom(pr), " de « " + ile.nom + " »");
           delete ile.plantes[k];
         } else if (ile.cases && ile.cases[k] && ile.cases[k].t) {
           delete ile.cases[k].t;
@@ -2100,6 +2106,7 @@
     if ((p.preparations || []).includes("plante-seche")) gains.paille = 1;
     Object.entries(gains).forEach(([k2, n]) => H.ressources.ajouter(k2, n));
     if (H.labo) H.labo.ajouterRecolte(p.id, 1);
+    if (H.journal) H.journal.noter("recolter:" + ile.id, "j’ai récolté ", H.leNom(p), " sur « " + ile.nom + " »");
     if (p.valeurs.cycle === "Annuelle") pl.c = 40;
     sauver(ile);
     H.bruit("recolte");
@@ -2221,11 +2228,12 @@
     if (!ile.croquis) {
       const act = (nom, couts, fn, fluo) => actions.appendChild(H.el("button.bouton.petit" + (fluo ? ".actif" : ""), { type: "button", title: cout(couts), onclick: () => { if (payer(couts)) { fn(); sauver(ile); dessiner(); inspecter(x, y); } } }, nom));
       if (aRecolter(p, ile, pl)) actions.appendChild(H.el("button.bouton.petit.actif", { type: "button", onclick: () => { recolter(x, y); inspecter(x, y); } }, "Récolter"));
-      act("Arroser", { eau: 1, energie: 1 }, () => { pl.eau = 100; H.bruit("eau"); });
-      act("Pailler", { paille: 1 }, () => { pl.pailleJusqua = H.maintenant() + 14 * 24 * HEURE; });
-      act("Compost", { compost: 1, energie: 1 }, () => { pl.c = Math.min(100, pl.c + 15); });
-      act("Purin", { purin: 1 }, () => { pl.purinJusqua = H.maintenant() + 7 * 24 * HEURE; });
-      act("Rayon de soleil", { soleil: 1 }, () => { pl.c = Math.min(100, pl.c + 25); });
+      const note = (cle2, avant, nom) => H.journal && H.journal.noter(cle2 + ":" + ile.id, avant, nom, " sur « " + ile.nom + " »");
+      act("Arroser", { eau: 1, energie: 1 }, () => { pl.eau = 100; H.bruit("eau"); note("arroser", "j’ai arrosé ", H.leNom(p)); });
+      act("Pailler", { paille: 1 }, () => { pl.pailleJusqua = H.maintenant() + 14 * 24 * HEURE; note("pailler", "j’ai paillé ", H.leNom(p)); });
+      act("Compost", { compost: 1, energie: 1 }, () => { pl.c = Math.min(100, pl.c + 15); note("compost", "j’ai mis du compost ", H.auNom(p)); });
+      act("Purin", { purin: 1 }, () => { pl.purinJusqua = H.maintenant() + 7 * 24 * HEURE; note("purin", "j’ai donné du purin ", H.auNom(p)); });
+      act("Rayon de soleil", { soleil: 1 }, () => { pl.c = Math.min(100, pl.c + 25); note("soleil", "j’ai offert un rayon de soleil ", H.auNom(p)); });
     }
     actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, () => { dessiner(); inspecter(x, y); }) }, p.dessinCarte || p.dessinFace || p.dessinCote ? "Modifier son modèle" : "Dessiner son modèle"));
     actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.fiche.carte(p.id) }, "Voir la fiche"));

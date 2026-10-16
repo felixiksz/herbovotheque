@@ -241,6 +241,7 @@
     sauver();
     H.bruit("plante");
     const p = H.d.plante(id);
+    if (H.journal && p) H.journal.noter("semer", "dans la serre, j’ai semé ", H.leNom(p), " dans un pot");
     H.toast(bonMois(p) ? "C’est le bon mois pour semer " + H.duNom(p) + " : ça lèvera deux fois plus vite" : p.nom + " est semé·e dans un pot");
     dessiner();
   }

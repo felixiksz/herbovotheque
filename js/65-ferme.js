@@ -1901,7 +1901,8 @@
       bonjourDuMatin();
     },
     quitter() {
-      if (H.sons && H.sons.grenouilles) H.sons.grenouilles(false);
+      // (les grenouilles du bassin s'entendent encore depuis la maison)
+      if (H.sons && H.sons.grenouilles && !/^#(maison|dodo)/.test(location.hash)) H.sons.grenouilles(false);
       if (!scene) return;
       cancelAnimationFrame(scene.anim);
       clearInterval(scene.minuteur);

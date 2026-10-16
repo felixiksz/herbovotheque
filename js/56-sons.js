@@ -212,8 +212,10 @@
   };
 
   // --- ambiance du dehors : goélands au loin, cigales en été (sons de synthèse) ----------
-  const DEHORS = ["village", "terrain", "serre", "balade"];
-  const dehors = () => DEHORS.includes(document.documentElement.dataset.vue);
+  // (depuis la maison et pendant le dodo, on entend encore le dehors, plus bas, à travers les murs)
+  const DEHORS = ["village", "terrain", "serre", "balade"], DEDANS = ["maison", "dodo"];
+  const dehors = () => DEHORS.includes(document.documentElement.dataset.vue) || DEDANS.includes(document.documentElement.dataset.vue);
+  const sourdine = () => (DEDANS.includes(document.documentElement.dataset.vue) ? 0.4 : 1);
 
   // Le goéland leucophée de Marseille, au loin. Son grand cri a trois parties : parfois quelques
   // aboiements, puis un ou deux longs cris aigus, puis une série régulière de 8 à 14 notes plus
@@ -236,7 +238,7 @@
   function voixGoeland(volume) {
     const entree = ctx.createGain();
     const sortie = ctx.createGain();
-    sortie.gain.value = volume * H.volume("bruitages");
+    sortie.gain.value = volume * H.volume("bruitages") * sourdine();
     for (const [f, q, g] of [[680, 1.4, 0.55], [1400, 2.6, 1], [2750, 3.5, 0.5]]) {
       const bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
@@ -437,7 +439,7 @@
       m.type !== "pluie" && m.type !== "orage" && dehors() && actif();
     boucles.cigales = boucles.cigales || {};
     boucles.cigales.voulu = chant;
-    boucleContinue("cigales", chant, 0.12 * H.volume("bruitages"));
+    boucleContinue("cigales", chant, 0.12 * H.volume("bruitages") * sourdine());
   }
   H.sur("ciel", majCigales);
   H.sur("meteo", majCigales);
@@ -450,7 +452,7 @@
     for (const [nom, vol] of [["criquets", 0.13], ["criquetsLoin", 0.07]]) {
       boucles[nom] = boucles[nom] || {};
       boucles[nom].voulu = !!oui;
-      boucleContinue(nom, !!oui && actif(), vol * H.volume("bruitages"));
+      boucleContinue(nom, !!oui && actif(), vol * H.volume("bruitages") * sourdine());
     }
   }
 
@@ -569,7 +571,7 @@
   function pluie() {
     const m = H.ciel && H.ciel.meteo;
     const pleut = (!!m && (m.type === "pluie" || m.type === "orage")) || (H.pluieMagique && H.pluieMagique());
-    H.sons.boucle("pluie", pleut && !!H.jeu, m && m.type === "orage" ? 0.5 : 0.32);
+    H.sons.boucle("pluie", pleut && !!H.jeu, (m && m.type === "orage" ? 0.5 : 0.32) * (sourdine() < 1 ? 0.6 : 1));
   }
   H.sons.majPluie = pluie;
   // le curseur « Bruitages » a bougé : les criquets, les cigales et la pluie suivent aussitôt
@@ -586,10 +588,12 @@
     for (const [nom, vol] of [["alyte", 0.5], ["rieuse", 0.32]]) {
       boucles[nom] = boucles[nom] || {};
       boucles[nom].voulu = chant[nom];
-      boucleContinue(nom, chant[nom] && actif(), vol * H.volume("bruitages"));
+      boucleContinue(nom, chant[nom] && actif(), vol * H.volume("bruitages") * sourdine());
     }
   }
   H.sons.grenouilles = grenouilles;
+  // en entrant dans la maison ou en en sortant, les bruits du dehors baissent ou remontent
+  window.addEventListener("hashchange", () => setTimeout(() => { grenouilles(); pluie(); }, 90));
   H.sons.majVolumes = () => { majNuit(); majCigales(); pluie(); grenouilles(); };
   // dans les réglages : faire entendre la pluie quelques secondes, même s'il fait beau
   let finApercu = null;

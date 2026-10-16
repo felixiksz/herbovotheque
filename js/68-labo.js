@@ -142,6 +142,7 @@
       }
       ajouterRecolte(id, 2);
       H.bruit("recolte");
+      if (H.journal) H.journal.noter("cueillir", "je suis allé·e cueillir dans la nature : ", H.leNom(H.d.plante(id)), "");
       H.toast("Cueillette : " + H.leNom(H.d.plante(id)) + " (2 récoltes)");
       dessiner();
     }, "Que cueillir ce mois-ci ?", {
@@ -202,6 +203,7 @@
     const poste = l.postes[i];
     const p = H.d.plante(poste.p), prep = H.d.preparation(poste.prep);
     H.d.fixerStock(poste.p, poste.prep, "plein");
+    if (H.journal) H.journal.noter("bocal", "au labo, j’ai rempli des bocaux : ", prep.nom.toLowerCase() + " " + H.duNom(p), "");
     l.postes[i] = null;
     sauver();
     H.bruit("recolte");
@@ -217,6 +219,7 @@
     labo().tisane = { id: m.id, le: H.maintenant() };
     sauver();
     H.bruit("eau");
+    if (H.journal) H.journal.noter("tisane", "j’ai infusé une tisane : ", "« " + m.nom + " »", "");
     dessiner();
   }
 
