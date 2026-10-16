@@ -17,15 +17,17 @@
   }
   async function lireBase() {
     await choisirMonde();
-    const r = await fetch(H.monde === "mesi" ? "data/mesi.enc" : "data/base.enc", { cache: "no-cache" });
+    const r = await fetch("data/base.enc", { cache: "no-cache" });
     if (!r.ok) throw new Error("Fiches introuvables (" + r.status + ")");
     return r.json();
   }
 
   async function ouvrirAvecCle(paquet, cle) {
-    const base = await H.chiffre.ouvrir(paquet, cle);
+    let base = await H.chiffre.ouvrir(paquet, cle);
     H.cle = cle;
     H.meta = { sel: paquet.sel, iter: paquet.iter };
+    // dans le monde de Mesi : les fiches d'ƟvƟ, et la pharmacopée chinoise en plus
+    if (H.monde === "mesi") base = await H.pharmacopee.avec(base);
     await H.d.charger(base);
   }
 

@@ -571,7 +571,8 @@
     const fiches = {};
     for (const pl of Object.values(copie.plantes || {})) {
       const p = H.d.plante(pl.p);
-      if (p && !fiches[p.id]) fiches[p.id] = JSON.parse(JSON.stringify(p));
+      // (ƟvƟ n'a jamais les fiches chinoises de Mesi : seulement le nom de la plante et son jardin)
+      if (p && !fiches[p.id]) fiches[p.id] = p.pc && H.pharmacopee ? H.pharmacopee.pourOvo(p) : JSON.parse(JSON.stringify(p));
     }
     Object.assign(c, { ile: copie, fiches, modifieLe: H.maintenant() });
   }

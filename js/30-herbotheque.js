@@ -2,13 +2,16 @@
 (function () {
   const H = window.H;
 
-  H.rangementsParDefaut = () => [
+  H.rangementsParDefaut = () => (H.monde === "mesi" ? [
+    { id: "origine", nom: "Chinoises ou d’ƟvƟ", type: "champ", champ: "origine" },
+    { id: "classe", nom: "Par classe (pharmacopée)", type: "champ", champ: "classe" },
+  ] : []).concat([
     { id: "famille", nom: "Par famille botanique", type: "champ", champ: "famille" },
     { id: "spheres", nom: "Par sphère d’action", type: "champ", champ: "spheres" },
     { id: "preparations", nom: "Par préparation", type: "preparation" },
     { id: "alpha", nom: "De A à Z", type: "alpha" },
     { id: "mes-etageres", nom: "Mes étagères", type: "manuel", etageres: [{ id: "preferees", nom: "Mes préférées", plantes: [] }] },
-  ];
+  ]);
 
   const etat = { recherche: "", partout: false, aVerifier: false, aRemplir: false };
 
