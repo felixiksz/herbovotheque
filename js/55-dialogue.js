@@ -132,7 +132,19 @@
     file = tour.catch(() => {});
     return tour;
   }
+  // Dans le monde de Mesi, c'est Mesi qui joue et ƟvƟ qui l'accompagne : les rôles et les prénoms
+  // s'échangent (sauf pour les répliques marquées « brut », où chacun·e est déjà à sa place).
+  const ECHANGE = { ovo: "luigi", luigi: "ovo" };
+  const permuter = (t) => (typeof t === "string" ? t.replace(/ƟvƟ|Mesi/g, (m) => (m === "Mesi" ? "ƟvƟ" : "Mesi")) : t);
+  H.permuter = (t) => (H.monde === "mesi" ? permuter(t) : t);
   function montrer(repliques) {
+    if (H.monde === "mesi") {
+      repliques = repliques.map((r) => (r.brut ? r : Object.assign({}, r, {
+        qui: ECHANGE[r.qui] || r.qui,
+        texte: permuter(r.texte),
+        choix: r.choix && r.choix.map((c) => Object.assign({}, c, { libelle: permuter(c.libelle) })),
+      })));
+    }
     return new Promise((fin) => {
       let i = 0;
       boite = H.el("div.dialogue", { role: "dialog", "aria-live": "polite" });

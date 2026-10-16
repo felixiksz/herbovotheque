@@ -166,20 +166,20 @@
     if (h < 5 || h >= 12 || H.local.messageMatin === jour() || H.$(".dialogue") || !H.jeu) return;
     H.d.majLocal((l) => (l.messageMatin = jour()));
     if (moi() === "mesi") {
-      await H.dialogue.dire([{ qui: "luigi", texte: "Jó reggelt!" }, { qui: "luigi", texte: "JQTBD?" }]);
+      await H.dialogue.dire([{ brut: true, qui: "luigi", texte: "Jó reggelt!" }, { brut: true, qui: "luigi", texte: "JQTBD?" }]);
       const r = reponseDe("ovo");
-      if (r) await H.dialogue.dire([{ qui: "ovo", texte: "JR BB!" }, { qui: "ovo", texte: r }, { qui: "ovo", texte: "JQTBD?" }]);
-      const m = await H.dialogue.dire([{ qui: "luigi", texte: r ? "…" : "(Quand ƟvƟ te demandera « JQTBD? »…)", choix: [{ valeur: "O!!:)", libelle: "O!!:)" }, { valeur: "N :(", libelle: "N :(" }] }]);
+      if (r) await H.dialogue.dire([{ brut: true, qui: "ovo", texte: "JR BB!" }, { brut: true, qui: "ovo", texte: r }, { brut: true, qui: "ovo", texte: "JQTBD?" }]);
+      const m = await H.dialogue.dire([{ brut: true, qui: "luigi", texte: r ? "…" : "(Quand ƟvƟ te demandera « JQTBD? »…)", choix: [{ valeur: "O!!:)", libelle: "O!!:)" }, { valeur: "N :(", libelle: "N :(" }] }]);
       if (m) noterMatin("mesi", m);
       return;
     }
-    const a = await H.dialogue.dire([{ qui: "luigi", texte: "Jó reggelt!" }, { qui: "luigi", texte: "JQTBD?", choix: [{ valeur: "jr", libelle: "JR BB!" }] }]);
+    const a = await H.dialogue.dire([{ brut: true, qui: "luigi", texte: "Jó reggelt!" }, { brut: true, qui: "luigi", texte: "JQTBD?", choix: [{ valeur: "jr", libelle: "JR BB!" }] }]);
     if (!a) return;
-    const r = await H.dialogue.dire([{ qui: "ovo", texte: "JR BB!", choix: [{ valeur: "O", libelle: "O" }, { valeur: "PT :(", libelle: "PT :(" }] }]);
+    const r = await H.dialogue.dire([{ brut: true, qui: "ovo", texte: "JR BB!", choix: [{ valeur: "O", libelle: "O" }, { valeur: "PT :(", libelle: "PT :(" }] }]);
     if (!r) return;
     noterMatin("ovo", r);
     const m = reponseDe("mesi") || (Math.random() < 0.8 ? "O!!:)" : "N :(");
-    await H.dialogue.dire([{ qui: "ovo", texte: r }, { qui: "ovo", texte: "JQTBD?" }, { qui: "luigi", texte: m }]);
+    await H.dialogue.dire([{ brut: true, qui: "ovo", texte: r }, { brut: true, qui: "ovo", texte: "JQTBD?" }, { brut: true, qui: "luigi", texte: m }]);
   }
   H.sur("vue", (v) => { if (v === "village" || v === "maison") setTimeout(messageDuMatin, 1500); });
 
