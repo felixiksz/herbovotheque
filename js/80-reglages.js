@@ -287,22 +287,25 @@
         type: "button",
         onclick() {
           H.jeu.cri = nouveau;
+          // (partagé avec l'autre : c'est ce cri qu'il ou elle entendra quand tu l'appelleras de loin)
+          const moi = H.local.role === "mesi" ? "mesi" : "ovo";
+          H.jeu.cris = Object.assign({}, H.jeu.cris, { [moi]: { id: moi, son: nouveau, modifieLe: H.maintenant() } });
           H.d.changer("jeu");
           apercu.hidden = true;
-          msg.textContent = "C’est ce miaou qui appellera Mesi.";
+          msg.textContent = H.permuter("C’est ce miaou qui appellera Mesi.");
           majEtat();
         },
       }, "Garder ce miaou")
     );
 
     return H.el("section.reglage", null,
-      H.el("h2", null, "Le miaou pour appeler Mesi"),
+      H.el("h2", null, H.permuter("Le miaou pour appeler Mesi")),
       etat,
       H.el("div.pastilles", null,
         H.el("button.bouton.petit", { type: "button", onclick: () => H.jouerCri() }, "Écouter le cri actuel"),
         boutonEnreg,
         H.jeu.cri ? H.el("button.bouton.petit", { type: "button", onclick: () => H.telecharger("miaou.wav", H.chiffre.deB64(H.jeu.cri.split(",")[1]), "audio/wav") }, "Télécharger ce miaou") : null,
-        H.jeu.cri ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { delete H.jeu.cri; H.d.changer("jeu"); H.router(); } }, "Revenir au cri d’origine") : null
+        H.jeu.cri ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { delete H.jeu.cri; const moi = H.local.role === "mesi" ? "mesi" : "ovo"; H.jeu.cris = Object.assign({}, H.jeu.cris, { [moi]: { id: moi, son: null, modifieLe: H.maintenant() } }); H.d.changer("jeu"); H.router(); } }, "Revenir au cri d’origine") : null
       ),
       apercu,
       msg

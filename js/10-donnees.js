@@ -174,6 +174,12 @@
       completerSchema();
       index = null;
       tisaneDeDepart();
+      // le cri enregistré avant qu'on le partage avec l'autre : on le partage maintenant
+      const moi = H.local.role === "mesi" ? "mesi" : "ovo";
+      if (H.jeu.cri && !(H.jeu.cris || {})[moi]) {
+        H.jeu.cris = Object.assign({}, H.jeu.cris, { [moi]: { id: moi, son: H.jeu.cri, modifieLe: H.maintenant() } });
+        H.d.changer("jeu");
+      }
     },
 
     // --- schéma ---

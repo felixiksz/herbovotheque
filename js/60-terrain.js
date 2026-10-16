@@ -904,7 +904,7 @@
       (vue.boutonVue = H.el("button.bouton.petit", { type: "button", onclick: () => basculerVue() }, vue.iso ? "Vue d’oiseau" : "Vue en relief")),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
       Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser les plantes de l’île") : null,
-      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
+      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, H.permuter("Appeler Mesi")) : null,
       H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null,
       ile.secrete ? H.el("button.bouton.petit", { type: "button", onclick: () => emmenerAnimal(ile) }, "Emmener un animal sur une de mes îles") : null,
@@ -2562,7 +2562,7 @@
       if (H.$(".dialogue")) return;
       const astuce = plante && astuceMTC(plante);
       H.d.majLocal((l) => (l.derniereVisiteMesi = H.maintenant()));
-      H.sons.jouer("attention", 0.4);
+      H.jouerCriDe(H.monde === "mesi" ? "ovo" : "mesi");
       H.dialogue.dire([{
         qui: "luigi",
         nom: "Mesi, au loin",

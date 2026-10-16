@@ -111,6 +111,15 @@
     else if (H.sons) H.sons.jouer("miaou", 0.4);
   };
 
+  // Le cri de l'autre, qui appelle au loin : celui qu'il ou elle a enregistré (partagé par la
+  // synchronisation) ; sinon, l'appel d'origine
+  H.jouerCriDe = function (qui) {
+    if (!H.local || !H.local.son || !H.sons) return;
+    const c = ((H.jeu && H.jeu.cris) || {})[qui];
+    if (c && c.son) H.sons.jouerUrl(c.son, 0.45 * H.volume("bruitages"));
+    else H.sons.jouer(qui === "mesi" ? "attention" : "miaou", 0.4);
+  };
+
   // Un seul dialogue à la fois : un nouveau dialogue attend que le précédent soit fini (avant,
   // il l'effaçait sans le terminer, et ce qui attendait la fin restait bloqué : Lóló ne
   // répondait plus). Fermer (en quittant une page) termine le dialogue en cours, et ce qui
@@ -142,6 +151,7 @@
       repliques = repliques.map((r) => (r.brut ? r : Object.assign({}, r, {
         qui: ECHANGE[r.qui] || r.qui,
         texte: permuter(r.texte),
+        nom: permuter(r.nom),
         choix: r.choix && r.choix.map((c) => Object.assign({}, c, { libelle: permuter(c.libelle) })),
       })));
     }
@@ -164,7 +174,10 @@
       function afficher() {
         const r = repliques[i];
         const voix = VOIX[r.qui] || VOIX.ovo;
-        portrait.src = H.pixel.portrait(r.qui === "meme" ? "lolo" : r.qui, 5);
+        // (les portraits suivent déjà le monde de Mesi : on demande celui qui, une fois échangé,
+        // montre bien la personne qui parle)
+        const visage = H.monde === "mesi" ? ECHANGE[r.qui] || r.qui : r.qui;
+        portrait.src = H.pixel.portrait(visage === "meme" ? "lolo" : visage, 5);
         portrait.className = "dialogue-portrait portrait-" + r.qui;
         nom.textContent = r.nom || voix.nom;
         texte.textContent = "";

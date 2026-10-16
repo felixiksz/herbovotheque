@@ -479,10 +479,19 @@
     return c;
   }
 
+  // Dans le monde de Mesi, c'est elle qu'on joue : partout où le jeu dessine ƟvƟ (le personnage
+  // qu'on joue), on voit Mesi, et ƟvƟ prend la place de la compagne.
+  function perso(nom) {
+    if (H.monde !== "mesi" || typeof nom !== "string") return nom;
+    const n = nom.startsWith("ovo") ? "luigi" + nom.slice(3) : nom.startsWith("luigi") ? "ovo" + nom.slice(5) : nom;
+    return SPRITES[n] ? n : nom;
+  }
   H.pixel = {
     PAL,
+    perso,
     // toile (1 pixel = 1 pixel) d'un personnage ; image 0 = repos, 1 = pas
     sprite(nom, image) {
+      nom = perso(nom);
       // de mai à septembre, ƟvƟ est en sandales
       const mois = new Date().getMonth();
       if (mois >= 4 && mois <= 8 && SPRITES[nom + "Ete"]) nom += "Ete";
@@ -492,12 +501,14 @@
     },
     // la tête qui dort, de face : sans les lunettes (posées sur la table de chevet), les yeux fermés
     dort(nom) {
+      nom = perso(nom);
       const cle = nom + "-dort";
       if (!cache.has(cle)) cache.set(cle, toile(SPRITES[nom][0].slice(0, 12).map((l, y) => l.split("").map((c) => (y >= 5 && y <= 7 && "aqe".includes(c) ? "s" : c)).join("")), PAL));
       return cache.get(cle);
     },
     // portrait (tête seule) agrandi, en image
     portrait(nom, echelle) {
+      nom = perso(nom);
       // ƟvƟ et Mesi qui parlent d'une seule voix : les deux visages côte à côte
       if (nom === "duo") return H.dessinPixel(SPRITES.ovo[0].slice(0, 12).map((l, i) => l + SPRITES.luigi[0][i]), PAL, (echelle || 5) * 0.75);
       if (nom === "lolo") return H.dessinPixel(SPRITES.lolo[0].slice(0, 14).map((l) => l.slice(18)), PAL_LOLO, echelle || 5);
@@ -505,6 +516,7 @@
       return H.dessinPixel(lignes, PAL, echelle || 5);
     },
     image(nom, echelle, image) {
+      nom = perso(nom);
       return H.dessinPixel(SPRITES[nom][image || 0], PAL, echelle || 3);
     },
     // dessine un personnage centré en bas sur (x, y)
