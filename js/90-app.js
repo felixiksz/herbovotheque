@@ -96,6 +96,7 @@
     }
     vueActive = { nom: vue, params };
     document.documentElement.dataset.vue = vue;
+    H.emettre("vue", vue);
   }
   H.router = router;
   H.aller = (hash) => {

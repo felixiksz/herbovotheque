@@ -202,6 +202,13 @@
       plantes.push({ x: rx, y: ry, e, v: Math.floor(alea() * 3), taille: 0.4 + alea() * 0.35 });
     }
   }
+  // l'araucaria, à la place choisie par Mesi : à gauche de l'herbothèque, au-dessus du labo
+  {
+    const A = { x: 3.3, y: 10.6 }, k = plantes.findIndex((q) => q.e === "araucaria");
+    for (let n = plantes.length - 1; n >= 0; n--) if (n !== k && Math.hypot(plantes[n].x - A.x, plantes[n].y - A.y) < 1.3) plantes.splice(n, 1);
+    const a = plantes.find((q) => q.e === "araucaria");
+    if (a) Object.assign(a, A); else plantes.push({ x: A.x, y: A.y, e: "araucaria", v: 0 });
+  }
   // trois agaves en fleur au plus, parmi les plus grandes mères (c'est rare : la plante fleurit une fois dans sa vie)
   plantes.filter((q) => q.e === "agave" && q.taille > 0.95).sort((a, b) => hash(a.x, a.y) - hash(b.x, b.y)).slice(0, 3)
     .forEach((q) => { q.fleur = true; q.penche = hash(q.y, q.x) < 0.5 ? -1 : 1; });

@@ -57,7 +57,7 @@
   // Lóló se montre. ƟvƟ et Mesi disent alors d'une seule voix « Sacré Lóló ! ».
   const FARCES = [
     { id: "cache", etapes: [
-      [["ovo", "Mais… où est passé Lóló ?"], ["luigi", "Il était là il y a une seconde !"], ["ovo", "Lóló ? Lólóóó ?"], ["lolo", "(Deux oreilles couleur caramel dépassent, et une queue chocolat qui frétille.)"]],
+      [["ovo", "Mais… où est passé Lóló ?"], ["luigi", "Il était là il y a une seconde !"], ["ovo", "Lóló ? Lólóóó ?"], ["lolo", "(Sous la table, une boule couleur caramel essaie de se faire toute petite. Une queue chocolat frétille.)"]],
       [["lolo", "Hiii ! Coucou ! J’étais caché !"]],
     ] },
     { id: "plante", etapes: [

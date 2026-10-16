@@ -292,14 +292,31 @@
     const pres = moment === "jour" ? "#2f6b35" : moment === "soir" ? "#2a2450" : "#10102e";
     const eclaire = moment === "jour" ? "#4aa63e" : moment === "soir" ? "#ff9a5a" : "#e9b44c";
     const tronc = moment === "jour" ? "#7a4520" : moment === "soir" ? "#3a2440" : "#1a1430";
-    for (const x of [-60, -150, -270, -430, -620, LARGE + 60, LARGE + 150, LARGE + 270, LARGE + 430, LARGE + 610]) {
+    // Près de la maison, de grands pins (certains en Y), aussi hauts que ceux qu'on voit par la baie
+    // du salon, et deux grands cyprès. Des guirlandes partent de la maison et passent d'un arbre à
+    // l'autre : le soir, leurs ampoules éclairent le dessous du feuillage. Plus loin, des pins moins
+    // hauts, dans l'ombre.
+    const lumBas = moment !== "jour", bas = SOL_DEHORS + 2;
+    const accroches = { g: [[0, 150]], d: [[LARGE, 150]] };
+    for (const [x, hc] of [[-96, 300], [LARGE + 104, 320]]) {
+      accroches[x < 0 ? "g" : "d"].push([x, bas - hc * 0.62]);
+      if (x < R.x0 - 40 || x > R.x1 + 40) continue;
+      ctx.fillStyle = pres;
+      ctx.beginPath(); ctx.moveTo(x, bas - hc); ctx.quadraticCurveTo(x + 16, bas - hc * 0.5, x + 11, bas); ctx.lineTo(x - 11, bas); ctx.quadraticCurveTo(x - 16, bas - hc * 0.5, x, bas - hc); ctx.fill();
+      ctx.fillStyle = eclaire;
+      if (!lumBas) { ctx.beginPath(); ctx.moveTo(x - 2, bas - hc + 6); ctx.quadraticCurveTo(x - 12, bas - hc * 0.6, x - 8, bas - hc * 0.25); ctx.lineTo(x - 4, bas - hc * 0.25); ctx.quadraticCurveTo(x - 7, bas - hc * 0.6, x - 2, bas - hc + 6); ctx.fill(); }
+      else { ctx.beginPath(); ctx.ellipse(x, bas - hc * 0.62 + 5, 11, 6, 0, 0, Math.PI); ctx.fill(); }
+    }
+    for (const x of [-40, -170, -290, -430, -620, LARGE + 46, LARGE + 170, LARGE + 290, LARGE + 430, LARGE + 610]) {
+      const pres2 = x > -200 && x < LARGE + 200;
+      const hP = pres2 ? 330 + hsh(x, 2) * 60 : 200 + hsh(x, 2) * 90, pe = (hsh(x, 4) - 0.5) * 24, rx = 30 + hsh(x, 5) * 8;
+      const enY = hsh(x, 9) < 0.45;
+      if (pres2) accroches[x < 0 ? "g" : "d"].push(enY ? [x + hP * 0.04, bas - hP * 0.78] : [x + pe, bas - hP + 4]);
       if (x < R.x0 - 80 || x > R.x1 + 80) continue;
-      // (le soir, seuls les arbres tout près de la maison reçoivent sa lumière)
-      const pres2 = x > -200 && x < LARGE + 200, lumBas = moment !== "jour";
-      const hP = 120 + hsh(x, 2) * 80, pe = (hsh(x, 4) - 0.5) * 24, rx = 30 + hsh(x, 5) * 8, bas = SOL_DEHORS + 2;
+      // (le soir, seuls les arbres des guirlandes ont le dessous du feuillage éclairé)
+      if (enY) { pinEnY(ctx, x, bas, hP * 1.05, pres, lumBas ? (pres2 ? eclaire : pres) : pres, tronc); continue; }
       ctx.strokeStyle = tronc; ctx.lineWidth = 6;
       ctx.beginPath(); ctx.moveTo(x, bas); ctx.quadraticCurveTo(x + pe * 0.4, bas - hP * 0.5, x + pe, bas - hP); ctx.stroke();
-      if (lumBas && pres2) { ctx.strokeStyle = eclaire; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x - 2, bas); ctx.quadraticCurveTo(x - 2 + pe * 0.4, bas - hP * 0.5, x - 2 + pe, bas - hP * 0.8); ctx.stroke(); }
       for (const [cx, cy, hx, hy] of [[x + pe - rx * 0.4, bas - hP - 6, rx * 0.7, 9], [x + pe + rx * 0.35, bas - hP - 2, rx * 0.75, 10], [x + pe, bas - hP - 12, rx * 0.6, 8]]) {
         ctx.fillStyle = pres;
         ctx.beginPath(); ctx.ellipse(cx, cy, hx, hy, 0, 0, Math.PI * 2); ctx.fill();
@@ -312,6 +329,11 @@
           ctx.restore();
         }
       }
+    }
+    // les guirlandes : de la maison au premier arbre, puis d'arbre en arbre, en festons
+    for (const cote of ["g", "d"]) {
+      const pts = accroches[cote].sort((a, b) => (cote === "g" ? b[0] - a[0] : a[0] - b[0]));
+      for (let k = 0; k + 1 < pts.length; k++) guirlande(ctx, pts[k], pts[k + 1], lumBas, t, k);
     }
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     // l'herbe, puis la terre sous la maison, avec ses cailloux
@@ -348,6 +370,28 @@
     }
     ctx.fillStyle = COUL.herbe; ctx.fillRect(R.x0 - 2, SOL_DEHORS - 2, R.x1 - R.x0 + 4, 8);
     for (let x = Math.floor(R.x0 / 7) * 7; x < R.x1; x += 7) ctx.fillRect(x, SOL_DEHORS - 4 - hsh(x, 1) * 5, 2, 5);
+  }
+  // une guirlande tendue entre deux accroches, qui pend un peu ; le soir, ses ampoules s'allument
+  function guirlande(ctx, [x0, y0], [x1, y1], allumee, t, k) {
+    const creux = 18 + Math.abs(x1 - x0) * 0.08, mx = (x0 + x1) / 2, my = (y0 + y1) / 2 + creux * 2;
+    const pt = (u) => [(1 - u) * (1 - u) * x0 + 2 * u * (1 - u) * mx + u * u * x1, (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * my + u * u * y1];
+    ctx.strokeStyle = "#2c2a3e"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx, my, x1, y1); ctx.stroke();
+    const n = Math.max(3, Math.round(Math.hypot(x1 - x0, y1 - y0) / 13));
+    for (let i = 1; i < n; i++) {
+      const [x, y] = pt(i / n);
+      if (allumee) {
+        const a = 0.75 + 0.25 * Math.sin(t / 500 + i * 1.7 + k);
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        const g = ctx.createRadialGradient(x, y + 2, 0, x, y + 2, 9);
+        g.addColorStop(0, "rgba(255,210,110," + (0.45 * a).toFixed(2) + ")"); g.addColorStop(1, "rgba(255,210,110,0)");
+        ctx.fillStyle = g; ctx.fillRect(x - 9, y - 7, 18, 18);
+        ctx.restore();
+        ctx.fillStyle = "#fff06a";
+      } else ctx.fillStyle = "#e9e3cd";
+      ctx.fillRect(x - 1.3, y + 0.5, 2.6, 3);
+    }
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
   }
   // les vitres de la maison (le dehors proche, derrière la baie et la petite fenêtre)
   function fenetresDehors(m, t, moment, etat) {
@@ -1641,22 +1685,18 @@
     ctx.lineWidth = 1.6;
     ctx.strokeStyle = ENCRE;
     if (farce.id === "cache") {
-      // caché derrière le canapé : les oreilles qui dépassent du dossier, la queue sur le côté
-      if (!vu) {
-        for (const dx of [0, 9]) {
-          ctx.beginPath(); ctx.moveTo(355 + dx, 171); ctx.quadraticCurveTo(355 + dx, 158, 359 + dx, 152 + Math.sin(t / 300 + dx) * 1.5); ctx.quadraticCurveTo(363 + dx, 159, 363 + dx, 171);
-          ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
-        }
-      } else {
-        jambeLolo(ctx, 352, 186, 346, 172);
-        jambeLolo(ctx, 378, 186, 384, 172);
-        teteLolo(ctx, 366, 156 + Math.sin(t / 160) * 1.5, { droite: true, ouvert: true, parle: true, t, angle: -0.1 });
-      }
+      // caché sous la table du goûter (dans les mesures de la table), roulé en boule : on ne voit
+      // que son dos caramel, ses oreilles et sa queue qui frétille ; puis il lève la tête
+      ctx.save();
+      ctx.translate(536, 286);
+      ctx.scale(0.62, 0.62);
+      loloCouche(ctx, 0, 0, t, vu);
+      ctx.restore();
       ctx.save();
       ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(429, 222); ctx.quadraticCurveTo(440 + Math.sin(t / 140) * 4, 226, 438, 238);
-      ctx.lineWidth = 8; ctx.strokeStyle = ENCRE; ctx.stroke();
-      ctx.lineWidth = 5; ctx.strokeStyle = choco; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(564, 280); ctx.quadraticCurveTo(576 + Math.sin(t / 140) * 4, 282, 574, 292);
+      ctx.lineWidth = 7; ctx.strokeStyle = ENCRE; ctx.stroke();
+      ctx.lineWidth = 4.5; ctx.strokeStyle = choco; ctx.stroke();
       ctx.restore();
     } else if (farce.id === "plante") {
       // debout dans un grand pot, les jambes de devant levées comme des branches, couvert de feuilles
@@ -1782,7 +1822,7 @@
         assis(cc, "ovo", 240, 1, t, 2, loloRaconte, 210);
         assis(cc, "luigi", 362, -1, t, 4, false, 210);
         // la tête de Mesi sur le canapé (dos 362, siège plus bas de 36)
-        if (farce) dessinerFarce(cc, t, { x: 340, y: 120 });
+        if (farce && farce.id === "tete") dessinerFarce(cc, t, { x: 340, y: 120 });
       }
       cc.restore();
       cc.save();
@@ -1794,8 +1834,12 @@
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;
       tableGouter(cc);
-      if (farce && !surCanape) dessinerFarce(cc, t, { x: 604, y: 156 });
+      if (farce && farce.id === "tete" && !surCanape) dessinerFarce(cc, t, { x: 604, y: 156 });
+      // caché sous la table du goûter
+      if (farce && farce.id === "cache") dessinerFarce(cc, t);
       cc.restore();
+      // la fausse plante, dans le coin du salon, entre l'escalier et l'enceinte
+      if (farce && farce.id === "plante") { cc.save(); cc.translate(130 - 338, NIV.salon.sol - 332); dessinerFarce(cc, t); cc.restore(); }
       ECL = null;
       // les personnages reçoivent la même lumière que la maison (celle du ciel et du feu aussi),
       // sans les reflets vifs des ampoules : les visages restent dans la lumière du moment
