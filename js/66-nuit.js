@@ -156,6 +156,11 @@
   // la taille d'un gros pixel : la même partout dans le dessin, quel que soit l'écran
   let pixK = 1; // (pixels de la toile par unité du dessin, pour s'aligner sur les gros pixels)
   const grosPixel = () => Math.max(1, Math.round(2.3 * pixK * H.finesse()));
+  // une case des petits dessins « en vrais pixels » (Mémé, les photos) : elle garde sa taille dans
+  // le dessin ; quand les gros pixels sont plus fins, elle en contient plusieurs (n × n), qui
+  // laissent place au modelé et au grain
+  const caseDessin = () => { const g = grosPixel() / pixK, n = Math.max(1, Math.round(2.3 / g)); return { cell: g * n, n, g }; };
+  const teinte = (hex, d, t) => { const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); return "rgb(" + v.map((x, i) => Math.round(x + (d[i] - x) * t)).join(",") + ")"; };
   // Où poser la maison sur l'écran : elle tient toujours en entier, au milieu en largeur, avec un
   // peu plus de ciel au-dessus que de terre en dessous. (Une toile de 2,6 millions de pixels au
   // plus : au-delà, les gros pixels n'y gagnent rien, sauf de la lenteur.)
@@ -1568,7 +1573,7 @@
   );
   function photoEncadree(ctx, x0, y0, grille) {
     // la taille d'une case : un gros pixel (chaque case tombe pile sur un gros pixel de l'écran)
-    const m = ctx.getTransform(), cell = grosPixel() / pixK, ox = m.e / pixK, oy = m.f / pixK, larg = grille[0].length, haut = grille.length;
+    const m = ctx.getTransform(), cell = caseDessin().cell, ox = m.e / pixK, oy = m.f / pixK, larg = grille[0].length, haut = grille.length;
     const bord = cell * 2, x = Math.round((x0 + ox) / cell) * cell - ox, y = Math.round((y0 + oy) / cell) * cell - oy, W2 = larg * cell + bord * 2, H2 = haut * cell + bord * 2;
     ctx.fillStyle = "#c9a878"; ctx.fillRect(x, y, W2, H2);
     ctx.fillStyle = "#e0c49a"; ctx.fillRect(x, y, W2, cell);
@@ -1627,7 +1632,7 @@
   function assis(ctx, nom, dos, sens, t, phase, retourne, hauteurSiege) {
     const k = 4.4, siege = hauteurSiege || 246, genou = 30;
     const mois = new Date().getMonth(), ete = nom === "ovo" && mois >= 4 && mois <= 8;
-    const s = H.pixel.sprite(nom + "Profil", 4);
+    const s = H.pixel.detail(H.pixel.sprite(nom + "Profil", 4)), f = s.f || 1;
     const souffle = Math.sin(t / 900 + phase) > 0.6 ? 1 : 0;
     const jambe = (angle, pantalon) => {
       ctx.save();
@@ -1650,7 +1655,7 @@
     jambe(-0.15 + balance * 0.32, "#3a5fd0");
     ctx.imageSmoothingEnabled = false;
     const haut = siege + 2 - 18 * k - souffle;
-    ctx.drawImage(s, 0, 12, 16, 6, -3 * k, haut + 12 * k, 16 * k, 6 * k);
+    ctx.drawImage(s, 0, 12 * f, 16 * f, 6 * f, -3 * k, haut + 12 * k, 16 * k, 6 * k);
     // la tête, retournée vers Lóló quand il raconte
     if (retourne) {
       ctx.save();
@@ -1658,7 +1663,7 @@
       ctx.scale(-1, 1);
       ctx.translate(-5 * k, 0);
     }
-    ctx.drawImage(s, 0, 0, 16, 12, -3 * k, haut, 16 * k, 12 * k);
+    ctx.drawImage(s, 0, 0, 16 * f, 12 * f, -3 * k, haut, 16 * k, 12 * k);
     if (retourne) ctx.restore();
     ctx.restore();
   }
@@ -1805,7 +1810,8 @@
   ];
   // (cellFixe : la taille d'une case quand la scène n'a pas la grille de la maison, en balade)
   function memeEnBoule(ctx, x, y, t, cellFixe) {
-    const m = ctx.getTransform(), cell = cellFixe || grosPixel() / pixK, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
+    const cd = cellFixe ? { cell: cellFixe, n: 1, g: cellFixe } : caseDessin();
+    const m = ctx.getTransform(), cell = cd.cell, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
     const grille = cellFixe ? MEME_DORT_GRAND : MEME_DORT, tete = cellFixe ? 8 : 5;
     const L = grille[0].length, Hh = grille.length, inspire = Math.sin(t / 700) > 0.55;
     const X = Math.round((x + ox - (L * cell) / 2) / cell) * cell - ox, Y = Math.round((y + oy - Hh * cell * 0.6) / cell) * cell - oy;
@@ -1816,6 +1822,18 @@
       ctx.fillStyle = H.pixel.PAL[ch];
       ctx.fillRect(X + i * cell, Y + j * cell + leve, cell + 0.05, cell + 0.05);
       if (leve && j === 2) { ctx.fillStyle = H.pixel.PAL.t; ctx.fillRect(X + i * cell, Y + j * cell, cell + 0.05, cell + 0.05); }
+      // (en plus fin : le pelage éclairé en haut, plus sombre en bas, et quelques poils)
+      if (cd.n > 1 && ch !== "k") {
+        const vide = (a, b) => { const l = grille[b]; return !l || !l[a] || l[a] === "." || l[a] === "k"; }, g = cd.g, x0 = X + i * cell, y0 = Y + j * cell + leve;
+        for (let sy = 0; sy < cd.n; sy++) for (let sx = 0; sx < cd.n; sx++) {
+          const v = Math.sin((i * cd.n + sx) * 127.1 + (j * cd.n + sy) * 311.7) * 43758.5453, gr = v - Math.floor(v);
+          let c = null;
+          if (sy === 0 && vide(i, j - 1)) c = teinte(H.pixel.PAL[ch], [255, 250, 235], 0.25);
+          else if (sy === cd.n - 1 && vide(i, j + 1)) c = teinte(H.pixel.PAL[ch], [35, 33, 74], 0.28);
+          else if (gr < 0.18) c = teinte(H.pixel.PAL[ch], gr < 0.09 ? [255, 250, 235] : [35, 33, 74], 0.18);
+          if (c) { ctx.fillStyle = c; ctx.fillRect(x0 + sx * g, y0 + sy * g, g + 0.05, g + 0.05); }
+        }
+      }
     }));
   }
 
@@ -3398,9 +3416,9 @@
     });
     // une tête endormie, de face sur l'oreiller : les lunettes enlevées, les yeux fermés
     const tete = (ctx, nom, x, y) => {
-      const sp = H.pixel.dort(nom), k = 3;
+      const sp = H.pixel.detail(H.pixel.dort(nom)), k = 3, f = sp.f || 1;
       ctx.save(); ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(sp, 0, 0, 16, 12, x, y, 16 * k, 12 * k);
+      ctx.drawImage(sp, 0, 0, 16 * f, 12 * f, x, y, 16 * k, 12 * k);
       ctx.fillStyle = ENCRE;
       for (const ex of [6, 9]) ctx.fillRect(x + (ex - 0.3) * k, y + 6.6 * k, k * 1.6, k * 0.45);
       ctx.restore();

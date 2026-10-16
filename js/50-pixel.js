@@ -486,8 +486,59 @@
     const n = nom.startsWith("ovo") ? "luigi" + nom.slice(3) : nom.startsWith("luigi") ? "ovo" + nom.slice(5) : nom;
     return SPRITES[n] ? n : nom;
   }
+  // Les personnages en plus détaillé, quand les gros pixels sont plus fins (réglages) : chaque
+  // case du dessin devient 2 × 2 ou 3 × 3 cases, sans rien lisser, et on y ajoute ce qu'un dessin
+  // plus fin laisse voir : le modelé (le bord éclairé en haut à gauche, ombré en bas à droite), le
+  // grain du tissu, des mèches dans les cheveux, un petit reflet dans les yeux.
+  const detailles = new WeakMap();
+  const CLAIR = [255, 250, 235], NUIT = [35, 33, 74];
+  const vers = (c, d, t) => [0, 1, 2].map((i) => Math.round(c[i] + (d[i] - c[i]) * t));
+  const grain = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
+  function detailler(base, f) {
+    const w = base.width, h = base.height, src = base.getContext("2d").getImageData(0, 0, w, h).data;
+    const out = document.createElement("canvas");
+    out.width = w * f; out.height = h * f;
+    const og = out.getContext("2d"), img = og.createImageData(w * f, h * f), d = img.data;
+    const at = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return null; const k = (y * w + x) * 4; return src[k + 3] < 10 ? null : [src[k], src[k + 1], src[k + 2]]; };
+    const pareil = (a, b) => !!a && !!b && a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+    const sombre = (c) => !!c && c[0] + c[1] + c[2] < 230;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = at(x, y);
+      if (!c) continue;
+      const haut = at(x, y - 1), bas = at(x, y + 1), g = at(x - 1, y), dr = at(x + 1, y);
+      const cheveux = c[0] > c[2] + 25 && c[0] + c[1] + c[2] < 420 && c[1] < c[0];
+      const tissu = c[2] > c[0] + 30 || (c[1] > c[0] + 20 && c[1] > c[2]);
+      const oeil = sombre(c) && haut && g && bas && dr && !sombre(haut) && !sombre(g) && !sombre(bas) && !sombre(dr);
+      for (let sy = 0; sy < f; sy++) for (let sx = 0; sx < f; sx++) {
+        const X = x * f + sx, Y = y * f + sy, gr = grain(X, Y);
+        let col = c;
+        if (oeil) { if (sx === 0 && sy === 0) col = [243, 240, 220]; }
+        else if (!sombre(c)) {
+          if ((sy === 0 && !pareil(haut, c)) || (sx === 0 && !pareil(g, c))) col = vers(c, CLAIR, 0.24);
+          else if ((sy === f - 1 && !pareil(bas, c)) || (sx === f - 1 && !pareil(dr, c))) col = vers(c, NUIT, 0.3);
+          else if (cheveux && (X + Y) % 3 === 0) col = vers(c, CLAIR, 0.2);
+          else if (tissu && (X + Y) % 2 === 0 && gr < 0.35) col = vers(c, NUIT, 0.16);
+          else if (gr < 0.07) col = vers(c, CLAIR, 0.14);
+        }
+        const k = (Y * w * f + X) * 4;
+        d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255;
+      }
+    }
+    og.putImageData(img, 0, 0);
+    out.f = f;
+    return out;
+  }
+  // le dessin à employer : le sprite tel quel, ou sa version détaillée selon la finesse choisie
+  function detail(base) {
+    const fin = H.finesse ? H.finesse() : 1, f = fin <= 0.5 ? 3 : fin < 1 ? 2 : 1;
+    if (f === 1 || !base) return base;
+    let m = detailles.get(base);
+    if (!m) detailles.set(base, (m = {}));
+    return m[f] || (m[f] = detailler(base, f));
+  }
   H.pixel = {
     PAL,
+    detail,
     perso,
     // toile (1 pixel = 1 pixel) d'un personnage ; image 0 = repos, 1 = pas
     sprite(nom, image) {
@@ -521,10 +572,10 @@
     },
     // dessine un personnage centré en bas sur (x, y)
     dessiner(ctx, nom, x, y, echelle, image, miroir) {
-      const s = H.pixel.sprite(nom, image);
+      const s0 = H.pixel.sprite(nom, image), s = detail(s0);
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      const w = s.width * echelle, h = s.height * echelle;
+      const w = s0.width * echelle, h = s0.height * echelle;
       if (miroir) {
         ctx.translate(Math.round(x), 0);
         ctx.scale(-1, 1);
