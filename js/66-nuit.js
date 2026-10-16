@@ -2130,8 +2130,8 @@
       // caché sous la table du goûter
       if (farce && farce.id === "cache") dessinerFarce(cc, t);
       cc.restore();
-      // la fausse plante, dans le coin du salon, entre l'escalier et l'enceinte
-      if (farce && farce.id === "plante") { cc.save(); cc.translate(130 - 338, NIV.salon.sol - 332); dessinerFarce(cc, t); cc.restore(); }
+      // la fausse plante, au rez-de-chaussée, entre le poêle et la table (là où il y avait la porte)
+      if (farce && farce.id === "plante") { cc.save(); cc.translate(226 - 338, NIV.bas.sol - 332); dessinerFarce(cc, t); cc.restore(); }
       ECL = null;
       // les personnages reçoivent la même lumière que la maison (celle du ciel et du feu aussi),
       // sans les reflets vifs des ampoules : les visages restent dans la lumière du moment
