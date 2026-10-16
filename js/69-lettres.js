@@ -3,7 +3,8 @@
 // Quand une lettre attend d'être lue, le petit drapeau de la boîte se lève à la ferme.
 (function () {
   const H = window.H;
-  const NOMS = { ovo: "ƟvƟ", mesi: "Mesi" };
+  // (ici, les prénoms désignent vraiment les personnes : ils ne s'échangent pas dans le monde de Mesi)
+  const NOMS = { ovo: H.fixe("ƟvƟ"), mesi: H.fixe("Mesi") };
   const moi = () => (H.local.role === "mesi" ? "mesi" : "ovo");
   const autre = () => (moi() === "mesi" ? "ovo" : "mesi");
 

@@ -299,7 +299,7 @@
     );
 
     return H.el("section.reglage", null,
-      H.el("h2", null, H.permuter("Le miaou pour appeler Mesi")),
+      H.el("h2", null, "Le miaou pour appeler Mesi"),
       etat,
       H.el("div.pastilles", null,
         H.el("button.bouton.petit", { type: "button", onclick: () => H.jouerCri() }, "Écouter le cri actuel"),
@@ -357,7 +357,7 @@
     if (H.local.role !== "mesi") return null;
     const liste = H.el("ul.liste-acces", null, H.el("li.discret", null, "Chargement…"));
     const msg = H.el("p.discret");
-    const NOMS_ROLES = { ovo: "la partie d’ƟvƟ", mesi: "appareil de Mesi", testeur: "partie d’essai à part" };
+    const NOMS_ROLES = { ovo: H.fixe("la partie d’ƟvƟ"), mesi: H.fixe("appareil de Mesi"), testeur: "partie d’essai à part" };
     async function charger() {
       try {
         const acces = await H.synchro.listeAcces();
@@ -382,11 +382,11 @@
     }
     charger();
     const jeton = H.el("input", { type: "password", placeholder: "github_pat_…", autocomplete: "off", "aria-label": "Nouveau jeton" });
-    const nom = H.el("input", { type: "text", placeholder: "Nom (ƟvƟ, Vénus…)", "aria-label": "Nom" });
+    const nom = H.el("input", { type: "text", placeholder: H.fixe("Nom (ƟvƟ, Vénus…)"), "aria-label": "Nom" });
     const sonRole = H.el("select", { "aria-label": "Rôle" },
-      H.el("option", { value: "ovo" }, "la partie d’ƟvƟ"),
-      H.el("option", { value: "testeur" }, "partie d’essai à part (invisible pour ƟvƟ)"),
-      H.el("option", { value: "mesi" }, "appareil de Mesi"));
+      H.el("option", { value: "ovo" }, H.fixe("la partie d’ƟvƟ")),
+      H.el("option", { value: "testeur" }, H.fixe("partie d’essai à part (invisible pour ƟvƟ)")),
+      H.el("option", { value: "mesi" }, H.fixe("appareil de Mesi")));
     // le monde à ouvrir sur cet appareil : on enregistre et on synchronise la partie en cours, puis on recharge
     const choixMonde = (id, nom) => H.el("button.bouton.petit" + ((H.monde || "ovo") === id ? ".actif" : ""), {
       type: "button",
@@ -401,11 +401,11 @@
       },
     }, nom);
     return H.el("section.reglage", null,
-      H.el("h2", null, "Mesi"),
+      H.el("h2", null, H.fixe("Mesi")),
       H.el("h3", null, "Quel monde ?"),
-      H.el("p.discret", null, "Jusqu’à Noël, tu peux tester le monde d’ƟvƟ, ou jouer dans ton monde à toi : la pharmacopée chinoise, tes propres îles, et des formules au lieu des tisanes. Les deux mondes restent séparés, chacun avec sa sauvegarde."),
-      H.el("p.pastilles", null, choixMonde("ovo", "Le monde d’ƟvƟ"), choixMonde("mesi", "Mon monde")),
-      H.el("p.discret", null, "Cet appareil est relié avec le jeton de Mesi : ta partie (herbier, îles, ferme…) se retrouve sur tous tes appareils, à part de celle d’ƟvƟ. Avec ƟvƟ, seules les lettres et les textes du jeu s’échangent."),
+      H.el("p.discret", null, H.fixe("Jusqu’à Noël, tu peux tester le monde d’ƟvƟ, ou jouer dans ton monde à toi : la pharmacopée chinoise, tes propres îles, et des formules au lieu des tisanes. Les deux mondes restent séparés, chacun avec sa sauvegarde.")),
+      H.el("p.pastilles", null, choixMonde("ovo", H.fixe("Le monde d’ƟvƟ")), choixMonde("mesi", "Mon monde")),
+      H.el("p.discret", null, H.fixe("Cet appareil est relié avec le jeton de Mesi : ta partie (herbier, îles, ferme…) se retrouve sur tous tes appareils, à part de celle d’ƟvƟ. Avec ƟvƟ, seules les lettres et les textes du jeu s’échangent.")),
       H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")),
       H.el("label.case", null,
         H.el("input", {

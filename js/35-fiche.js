@@ -417,7 +417,7 @@
   function etiquetteHerbier(p) {
     const n = H.d.plantes().findIndex((x) => x.id === p.id) + 1;
     return H.el("aside.etiquette-herbier", null,
-      H.el("p.titre-etiquette", null, H.monde === "mesi" ? "Herbier de Mesi" : "Herbier d’ƟvƟ"),
+      H.el("p.titre-etiquette", null, H.fixe(H.monde === "mesi" ? "Herbier de Mesi" : "Herbier d’ƟvƟ")),
       H.el("p", null, H.el("span.discret", null, "N° "), String(n).padStart(3, "0")),
       p.latin ? H.el("p", null, H.el("em", null, p.latin)) : null,
       (p.valeurs || {}).famille ? H.el("p", null, p.valeurs.famille) : null,

@@ -550,7 +550,7 @@
   // Le cadeau (une copie de l'île, et les fiches de ses plantes) passe par la même voie que les
   // lettres ; le jour venu, l'île arrive chez l'autre, avec un petit mot. Tant que la date n'est
   // pas arrivée, on peut encore la retoucher : la copie suit l'île.
-  const NOMS = { ovo: "ƟvƟ", mesi: "Mesi" };
+  const NOMS = { ovo: H.fixe("ƟvƟ"), mesi: H.fixe("Mesi") };
   const moi = () => (H.local.role === "mesi" ? "mesi" : "ovo");
   const autre = () => (moi() === "mesi" ? "ovo" : "mesi");
   const deux = (n) => String(n).padStart(2, "0");
@@ -904,7 +904,7 @@
       (vue.boutonVue = H.el("button.bouton.petit", { type: "button", onclick: () => basculerVue() }, vue.iso ? "Vue d’oiseau" : "Vue en relief")),
       H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages de l’île"),
       Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser les plantes de l’île") : null,
-      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, H.permuter("Appeler Mesi")) : null,
+      !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
       H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null,
       ile.secrete ? H.el("button.bouton.petit", { type: "button", onclick: () => emmenerAnimal(ile) }, "Emmener un animal sur une de mes îles") : null,

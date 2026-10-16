@@ -287,7 +287,7 @@
         H.el("h2.titre-placard", null, mot("seches")),
         H.el("p.discret.aide-placard", null, mot("aide")),
         champ,
-        M() ? H.el("div.pastilles.filtre-origine", null, [["pc", "Pharmacopée chinoise"], ["ovo", "Herbier d’ƟvƟ"], ["toutes", "Toutes"]].map(([v, t]) =>
+        M() ? H.el("div.pastilles.filtre-origine", null, [["pc", "Pharmacopée chinoise"], ["ovo", H.fixe("Herbier d’ƟvƟ")], ["toutes", "Toutes"]].map(([v, t]) =>
           H.el("button.bouton.petit" + (origine === v ? ".actif" : ""), { type: "button", "aria-pressed": String(origine === v), onclick: (e) => {
             origine = v;
             e.target.parentNode.querySelectorAll("button").forEach((b) => { b.classList.toggle("actif", b === e.target); b.setAttribute("aria-pressed", String(b === e.target)); });

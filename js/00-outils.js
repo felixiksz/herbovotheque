@@ -9,6 +9,14 @@ window.H = window.H || {};
   H.$$ = (sel, racine) => Array.from((racine || document).querySelectorAll(sel));
 
   // el("div.classe", {attributs}, enfants…)
+  // Dans le monde de Mesi, c'est elle qu'on joue : toute l'interface échange ƟvƟ et Mesi. H.fixe
+  // garde un nom tel quel, quand il désigne vraiment la personne (les lettres, les cadeaux, les
+  // fiches d'ƟvƟ, les réglages) : un caractère invisible le protège de l'échange.
+  const LIEN = "\u2060";
+  H.fixe = (t) => String(t).replace(/ƟvƟ|Mesi/g, (m) => m[0] + LIEN + m.slice(1));
+  const echange = (t) => (H.monde === "mesi" && typeof t === "string" ? t.replace(/ƟvƟ|Mesi/g, (m) => (m === "Mesi" ? "ƟvƟ" : "Mesi")) : t);
+  H.echangeNoms = echange;
+  const ATTRS_TEXTE = new Set(["title", "aria-label", "placeholder", "alt"]);
   H.el = function (tag, attrs, ...enfants) {
     const [tete, ...classes] = tag.split(".");
     const [nom, id] = tete.split("#");
@@ -21,12 +29,12 @@ window.H = window.H || {};
         if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
         else if (k === "html") n.innerHTML = v;
         else if (k === "style" && typeof v === "object") Object.assign(n.style, v);
-        else n.setAttribute(k, v === true ? "" : v);
+        else n.setAttribute(k, v === true ? "" : ATTRS_TEXTE.has(k) ? echange(v) : v);
       }
     }
     for (const e of enfants.flat()) {
       if (e == null || e === false) continue;
-      n.appendChild(typeof e === "string" || typeof e === "number" ? document.createTextNode(String(e)) : e);
+      n.appendChild(typeof e === "string" || typeof e === "number" ? document.createTextNode(echange(String(e))) : e);
     }
     return n;
   };
@@ -246,7 +254,7 @@ window.H = window.H || {};
       t = H.el("div#toast", { role: "status" });
       document.body.appendChild(t);
     }
-    t.textContent = texte;
+    t.textContent = echange(texte);
     t.classList.add("visible");
     clearTimeout(t._t);
     t._t = setTimeout(() => t.classList.remove("visible"), ms || 2600);

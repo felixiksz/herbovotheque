@@ -152,7 +152,6 @@
         qui: ECHANGE[r.qui] || r.qui,
         texte: permuter(r.texte),
         nom: permuter(r.nom),
-        choix: r.choix && r.choix.map((c) => Object.assign({}, c, { libelle: permuter(c.libelle) })),
       })));
     }
     return new Promise((fin) => {

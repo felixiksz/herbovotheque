@@ -3,7 +3,7 @@
   const H = window.H;
 
   H.rangementsParDefaut = () => (H.monde === "mesi" ? [
-    { id: "origine", nom: "Chinoises ou d’ƟvƟ", type: "champ", champ: "origine" },
+    { id: "origine", nom: H.fixe("Chinoises ou d’ƟvƟ"), type: "champ", champ: "origine" },
     { id: "classe", nom: "Par classe (pharmacopée)", type: "champ", champ: "classe" },
   ] : []).concat([
     { id: "famille", nom: "Par famille botanique", type: "champ", champ: "famille" },

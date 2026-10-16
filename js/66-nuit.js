@@ -2954,7 +2954,7 @@
       { titre: "Les douceurs de Mesi", sous: "histoires pour s’endormir", couverture: "corail", motif: "lune", pages: () => h.auHasard(h.LUIGI) },
       loloLa() ? { titre: "Les drames de Lóló", sous: "absurdes et bouleversants", couverture: "fluo", motif: "fer", pages: () => h.auHasard(h.LOLO) } : null,
       // la nuit, on ne révise pas : seulement des histoires
-      H.ciel.nuitCalme() ? null : { titre: "Une fiche au hasard", sous: H.monde === "mesi" ? "l’herbier de Mesi" : "l’herbier d’ƟvƟ", couverture: "pin", motif: "feuille", pages: () => {
+      H.ciel.nuitCalme() ? null : { titre: "Une fiche au hasard", sous: H.fixe(H.monde === "mesi" ? "l’herbier de Mesi" : "l’herbier d’ƟvƟ"), couverture: "pin", motif: "feuille", pages: () => {
         const p = h.auHasard(H.d.plantes());
         const v = p.valeurs || {};
         const lignes = H.lignesFiche(p, "description").concat(H.lignesFiche(p, "ethnobotanique"));

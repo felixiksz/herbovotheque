@@ -62,7 +62,7 @@
   ];
   function champs(classes) {
     return [
-      { id: "origine", nom: "Origine", section: "pc-identite", type: "choix", options: ["Pharmacopée chinoise", "Herbier d’ƟvƟ"], cartes: false },
+      { id: "origine", nom: "Origine", section: "pc-identite", type: "choix", options: ["Pharmacopée chinoise", H.fixe("Herbier d’ƟvƟ")], cartes: false },
       { id: "hanzi", nom: "Caractères", section: "pc-identite", type: "court", cartes: true },
       { id: "nomFr", nom: "Nom français", section: "pc-identite", type: "court", cartes: true },
       { id: "synonymes", nom: "Synonymes", section: "pc-identite", type: "court", cartes: false },
@@ -120,7 +120,7 @@
     return Object.assign({}, base, {
       sections: base.sections.concat(SECTIONS.filter((s) => !base.sections.some((x) => x.id === s.id))),
       champs: base.champs.concat(pc.champs.filter((c) => !ids.has(c.id))),
-      plantes: base.plantes.map((p) => Object.assign({}, p, { valeurs: Object.assign({ origine: "Herbier d’ƟvƟ" }, p.valeurs) })).concat(pc.plantes),
+      plantes: base.plantes.map((p) => Object.assign({}, p, { valeurs: Object.assign({ origine: H.fixe("Herbier d’ƟvƟ") }, p.valeurs) })).concat(pc.plantes),
     });
   }
 
