@@ -330,9 +330,9 @@
   // les pins plus loin).
   const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 96, fond: SOL_DEHORS + 124, ile: { g: -870, d: 1650 } };
   const ARBRES = [
-    ...[[-96, 300], [LARGE + 104, 320]].map(([x, h]) => ({ x, h, cypres: true, pres: true })),
-    ...[-40, -170, -290, -430, -740, LARGE + 46, LARGE + 170, LARGE + 290, LARGE + 760, LARGE + 900].map((x) => {
-      const pres = x > -200 && x < LARGE + 200;
+    ...[[-300, 300], [LARGE + 104, 320]].map(([x, h]) => ({ x, h, cypres: true, pres: true })),
+    ...[-216, -380, -480, -620, -760, LARGE + 46, LARGE + 170, LARGE + 290, LARGE + 760, LARGE + 900].map((x) => {
+      const pres = x > -400 && x < LARGE + 200;
       return { x, pres, h: pres ? 330 + hsh(x, 2) * 60 : 230 + hsh(x, 2) * 90, pe: (hsh(x, 4) - 0.5) * 24, rx: (pres ? 46 : 36) + hsh(x, 5) * 12, enY: hsh(x, 9) < 0.45 };
     }),
   ];
@@ -501,6 +501,34 @@
         ovale(x + dx, bas - 26, 26, 26, (i, j, ux, uy) => pose(i, j, b(ux * ux + uy * uy > 0.55 ? "#2c2a3e" : ux * ux + uy * uy < 0.12 ? "#c49a6c" : (Math.abs(ux) < 0.12 || Math.abs(uy) < 0.12) ? "#7a4520" : "#4b3427")));
       }
     }
+    // le petit porche devant la porte, à gauche de la maison : la terrasse en planches, deux
+    // poteaux, l'auvent de tuiles, et le bois sec rangé contre le mur, à l'abri
+    {
+      const m = -10, x0 = -184, haut = (x) => 326 + ((m - x) * 26) / (m - x0);
+      for (let j = J(504); j < J(SOL_DEHORS + 2); j++) for (let i = I(x0); i < I(m); i++) {
+        const x = X(i), y = Y(j), lame = Math.floor((x - x0) / 15);
+        let c = y > SOL_DEHORS - 3 ? "#7a4520" : lame % 2 ? "#b9834f" : "#c49a6c";
+        if ((x - x0) % 15 < p) c = "#9a6a3c";
+        if (y < 504 + p) c = "#e9c99a";
+        pose(i, j, c);
+      }
+      for (const x of [-178, -104]) { rect(x, haut(x) + 2, 8, 504 - haut(x) - 2, "#9a6a3c"); rect(x, haut(x) + 2, 3, 504 - haut(x) - 2, "#c49a6c"); }
+      for (let i = I(x0 - 8); i < I(m); i++) {
+        const y = haut(X(i));
+        for (let j = J(y - 10); j < J(y + 5); j++) {
+          const yy = Y(j);
+          pose(i, j, yy < y - 5 ? (((i + i0) >> 1) % 2 ? "#e8714a" : "#c96a3a") : yy < y ? "#b2552e" : "#c49a6c");
+        }
+      }
+      for (let r = 0; r < 5; r++) for (let k = 0; k < 5; k++) {
+        const cx = -84 + k * 15 + (r % 2) * 7, cy = 496 - r * 13;
+        if (cx > -20 || (r === 4 && k > 2)) continue;
+        ovale(cx, cy, 7.5, 6.5, (i, j, dx, dy) => {
+          const e = dx * dx + dy * dy;
+          pose(i, j, e > 0.62 ? "#7a4520" : e > 0.3 ? "#e9c99a" : e > 0.14 ? "#c49a6c" : dx + dy < 0 ? "#f3f0dc" : "#e9c99a");
+        });
+      }
+    }
     // l'île : l'herbe en touffes, la terre rouge, la terre et ses cailloux, la roche en pavés, les bords
     const { g: IG, d: ID } = PAYS.ile, F = PAYS.fond;
     const bord = (x, y) => (x < (IG + ID) / 2 ? IG + (y - SOL_DEHORS) * 0.18 + hsh(Math.floor(y / 9), 5) * 6 : ID - (y - SOL_DEHORS) * 0.18 - hsh(Math.floor(y / 9), 6) * 6);
@@ -551,7 +579,7 @@
     }
     // la garrigue, le long du sol : romarin, lentisque, lavande
     for (let x = Math.floor(R.x0 / 23) * 23; x < R.x1; x += 23) {
-      if (x < IG + 30 || x > ID - 30 || (x > -40 && x < LARGE + 40) || hsh(x, 21) > 0.6) continue;
+      if (x < IG + 30 || x > ID - 30 || (x > -200 && x < LARGE + 40) || hsh(x, 21) > 0.6) continue;
       const sorte = Math.floor(hsh(x, 22) * 3), r = 10 + hsh(x, 23) * 10;
       const T = [["#9cc77a", "#4aa63e", "#2f6b35"], ["#a8d8ec", "#7f97f2", "#3a3aa8"], ["#9cc77a", "#3f8a42", "#1e3d25"]][sorte];
       ovale(x, bas - r * 0.55, r, r * 0.6, (i, j, dx, dy) => {
@@ -1041,8 +1069,6 @@
     coupe(ctx, r);
     // le poêle à bois du salon, et son conduit argenté qui traverse le grenier et sort par le toit
     poeleABois(ctx, moment, eteint);
-    // la porte d'entrée, en bas : c'est par là qu'on part en balade
-    porteEntree(ctx);
 
     // (les meubles sur un plan à part, devant les murs : les rideaux se glissent entre les deux)
     const a2 = nouvelle(), cm = prete(a2);
@@ -1179,6 +1205,13 @@
       ctx.beginPath(); ctx.moveTo(x0, toitY(x0) + EP_TOIT); ctx.lineTo(x1, toitY(x1) + EP_TOIT); ctx.lineTo(x1, SOL_DEHORS); ctx.lineTo(x0, SOL_DEHORS); ctx.closePath();
       ctx.fill(); ctx.stroke();
     }
+    // la porte d'entrée, dans le mur de gauche : on la voit coupée, dans l'épaisseur du mur (le
+    // linteau au-dessus, la vitre par la tranche, la poignée dehors). C'est par là qu'on sort sur
+    // le petit porche, et qu'on part en balade.
+    ctx.fillStyle = "#b9834f"; ctx.fillRect(PORTE.x, PORTE.y, PORTE.w, PORTE.h); ctx.strokeRect(PORTE.x, PORTE.y, PORTE.w, PORTE.h);
+    ctx.fillStyle = "#a8d8ec"; ctx.fillRect(PORTE.x + 3, PORTE.y + 12, 4, 44);
+    ctx.fillStyle = "#7a4520"; ctx.fillRect(PORTE.x - 3, PORTE.y - 7, PORTE.w + 6, 7); ctx.strokeRect(PORTE.x - 3, PORTE.y - 7, PORTE.w + 6, 7);
+    ctx.beginPath(); ctx.arc(PORTE.x - 2, PORTE.y + 92, 2.8, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
     // les fondations, en pierre
     ctx.fillStyle = "#9a9a9a"; ctx.fillRect(-14, SOL_DEHORS, LARGE + 28, 14); ctx.strokeRect(-14, SOL_DEHORS, LARGE + 28, 14);
     // les trémies de l'escalier, dans les planchers
@@ -1381,7 +1414,7 @@
   // la plante (son milieu, dans les mesures d'avant le décalage)
   const PLANTE = 672;
   // la porte d'entrée : bois clair, une petite vitre en haut, deux panneaux moulurés, la poignée
-  const PORTE = { x: 196, y: 342, w: 60, h: 160 };
+  const PORTE = { x: -10, y: 342, w: 10, h: 160 };
   function porteEntree(ctx) {
     const { x, y, w, h } = PORTE;
     bloc(ctx, x - 6, y - 7, w + 12, h + 7, 2, "#7a4520");
@@ -1736,7 +1769,8 @@
         ? crepeMesi(() => H.aller("maison"))
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
       { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
-      { id: "porte", x: PORTE.x - 8, y: PORTE.y - 8, w: PORTE.w + 16, h: PORTE.h + 10, nom: "Sortir faire une balade", agir: fenetreBalade },
+      { id: "bois", x: -92, y: 430, w: 78, h: 80, nom: "Prendre du bois sec", agir: () => cheminee.prendreBois() },
+      { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: fenetreBalade },
     ];
     return zones;
   }
