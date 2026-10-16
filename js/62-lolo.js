@@ -77,7 +77,6 @@
   const compliments = () => T("complimentsLolo", COMPLIMENTS);
   // Et quelques vraies blagues, ses préférées
   const BLAGUES = [
-    { id: "nioc", lignes: [["lolo", "Qu’est-ce qui fait « nioc nioc » ?"], ["lolo", "Un canard qui recule ! Hiii hiii !"]] },
     { id: "toctoc", lignes: [["lolo", "Toc toc !"], ["ovo", "Qui est là ?"], ["lolo", "Lóló."], ["ovo", "Lóló qui ?"], ["lolo", "Lóló… euh… j’ai oublié la suite ! Hiii !"]] },
     { id: "meme", lignes: [["lolo", "Tu sais pourquoi Mémé dort tout le temps ?"], ["lolo", "Parce que sinon, elle serait réveillée ! Hiii hiii !"]] },
     { id: "moi", lignes: [["lolo", "Qu’est-ce qui est drôle, couleur caramel, et qui fait « hiii » ?"], ["lolo", "C’est moi ! Hiii !"]] },
