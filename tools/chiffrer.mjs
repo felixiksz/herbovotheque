@@ -1,5 +1,7 @@
 // Chiffre prive/donnees.json -> data/base.enc (même format que js/05-chiffre.js).
 // Usage : node tools/chiffrer.mjs motdepasse
+// Le monde de Mesi : node tools/chiffrer.mjs motdepasse mesi (prive/mesi.json -> data/mesi.enc,
+// avec le même sel que data/base.enc : la même clé ouvre les deux, et les sauvegardes aussi)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { webcrypto as crypto } from "node:crypto";
@@ -15,11 +17,13 @@ if (!mdp) {
 const ITER = 250000;
 const b64 = (u8) => Buffer.from(u8).toString("base64");
 
-const json = JSON.stringify(JSON.parse(readFileSync(join(ici, "../prive/donnees.json"), "utf8")));
+const monde = process.argv[3] || null;
+const json = JSON.stringify(JSON.parse(readFileSync(join(ici, "../prive/" + (monde ? monde : "donnees") + ".json"), "utf8")));
 // Le sel ne doit jamais changer : la clé (donc les sauvegardes synchronisées) en dépend.
-const sortie = join(ici, "../data/base.enc");
-const sel = existsSync(sortie)
-  ? new Uint8Array(Buffer.from(JSON.parse(readFileSync(sortie, "utf8")).sel, "base64"))
+const sortie = join(ici, "../data/" + (monde ? monde : "base") + ".enc");
+const reference = join(ici, "../data/base.enc");
+const sel = existsSync(reference)
+  ? new Uint8Array(Buffer.from(JSON.parse(readFileSync(reference, "utf8")).sel, "base64"))
   : crypto.getRandomValues(new Uint8Array(16));
 const iv = crypto.getRandomValues(new Uint8Array(12));
 const brut = await crypto.subtle.importKey("raw", new TextEncoder().encode(mdp), "PBKDF2", false, ["deriveKey"]);
@@ -36,4 +40,4 @@ writeFileSync(
   sortie,
   JSON.stringify({ v: 1, sel: b64(sel), iter: ITER, iv: b64(iv), data: b64(chiffre) })
 );
-console.log("data/base.enc", Math.round(chiffre.length / 1024), "Ko");
+console.log(sortie.replace(/.*[\/]data[\/]/, "data/"), Math.round(chiffre.length / 1024), "Ko");
