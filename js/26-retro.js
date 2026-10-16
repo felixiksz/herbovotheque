@@ -104,7 +104,9 @@
     ctx.restore();
   }
   // la taille d'un gros pixel pour une toile affichée à l'écran : n points d'écran
-  const taillePour = (n) => Math.max(1, Math.round((n || 3) * Math.min(3, window.devicePixelRatio || 1)));
+  // (la taille des gros pixels reste la même qu'avant, même sur un écran très fin : la toile, elle, est
+  // calculée à la vraie résolution de l'écran, sans agrandissement)
+  const taillePour = (n) => Math.max(1, Math.round((n || 3) * Math.min(2, window.devicePixelRatio || 1)));
 
   H.retro = { appliquer, taillePour, PALETTE };
 })();
