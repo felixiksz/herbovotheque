@@ -49,7 +49,7 @@
     "Mémé a bien de la chance de dormir sur toi.",
     "Tu sens bon le foin et la lavande.",
     "Tes sabots font la plus jolie musique.",
-    "Tu es la plus douce des juments.",
+    "Tu es le plus doux des chevaux.",
     "Tes yeux pétillent comme la mer aux calanques.",
   ];
   // Les blagues de Lóló (seulement à la maison, jamais dehors), ce sont des farces : il se cache, il fait semblant d'être une plante, il

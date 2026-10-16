@@ -1231,7 +1231,10 @@
         if (u >= 1) { g.x = g.saut.x1; g.y = g.saut.y1; g.saut = null; g.prochain = t + 6000 + Math.random() * 14000; }
         else { g.x = g.saut.x0 + (g.saut.x1 - g.saut.x0) * u; g.y = g.saut.y0 + (g.saut.y1 - g.saut.y0) * u; g.haut = Math.sin(Math.PI * u) * 5; }
       } else if (t > g.prochain) {
-        const b = bords[Math.floor(Math.random() * bords.length)];
+        // (un saut court, vers un bord tout proche : avant, elle pouvait filer d'un bassin à un
+        // autre, à l'autre bout de la ferme, en une demi-seconde)
+        const proches = bords.filter((b2) => Math.hypot(b2[0] - g.x, b2[1] - g.y) < 1.6);
+        const b = proches.length ? proches[Math.floor(Math.random() * proches.length)] : [g.x, g.y];
         g.saut = { t0: t, x0: g.x, y0: g.y, x1: b[0], y1: b[1] };
         g.gauche = b[0] - b[1] < g.x - g.y;
       }

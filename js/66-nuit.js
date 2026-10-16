@@ -128,9 +128,10 @@
   // la fenêtre aux volets bleus, la table, les deux chaises et la plante derrière la chaise.
   // Mesi, ƟvƟ, Lóló et Mémé sont là ; la fenêtre suit le ciel (nuages, étoiles, vraie lune).
   const ENCRE = "#23214a";
-  // La pièce de face fait 800 × 360 : à gauche, la place du poêle à bois ; à droite, celle de la
-  // plante. Le lit, le canapé et la table gardent leurs mesures d'avant, décalées de DX.
-  const LARGE = 800, DX = 96;
+  // La pièce de face fait 870 × 360 : à gauche, la place du poêle à bois ; à droite, la plante puis
+  // la porte d'entrée. Le lit, le canapé et la table gardent leurs mesures d'avant, décalées de DX.
+  const LARGE = 870, DX = 96;
+  const fenetresOuvertes = () => !!(H.local && H.local.fenetresOuvertes);
   const MOMENTS = {
     // le mur du lit bleu foncé, le mur de la baie vert foncé
     jour: { murG: "#26406a", murD: "#2f6b35", sol: "#c93f6e", plinthe: "#7a2444", ombreMur: "rgba(15,13,58,0.45)", lampe: true },
@@ -571,10 +572,23 @@
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     ctx.strokeRect(BAIE.x - 4, BAIE.y - 4, BAIE.w + 8, BAIE.h + 8);
     ctx.strokeRect(BAIE.x + 3, BAIE.y + 3, BAIE.w - 6, BAIE.h - 6);
-    for (const u of [1 / 3, 2 / 3]) {
-      const x = BAIE.x + BAIE.w * u;
-      ctx.fillStyle = "#f3f0dc"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
-      ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
+    if (!fenetresOuvertes()) {
+      for (const u of [1 / 3, 2 / 3]) {
+        const x = BAIE.x + BAIE.w * u;
+        ctx.fillStyle = "#f3f0dc"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
+        ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
+      }
+    } else {
+      // grande ouverte : les battants rabattus contre le mur, de chaque côté, vus en biais
+      for (const sens of [-1, 1]) {
+        const xb = sens < 0 ? BAIE.x : BAIE.x + BAIE.w, l = 18 * sens;
+        const q = [[xb, BAIE.y - 2], [xb + l, BAIE.y + 8], [xb + l, BAIE.y + BAIE.h - 6], [xb, BAIE.y + BAIE.h + 2]];
+        ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+        ctx.fillStyle = "#f3f0dc"; ctx.fill(); ctx.stroke();
+        const v = [[xb + l * 0.25, BAIE.y + 8], [xb + l * 0.8, BAIE.y + 14], [xb + l * 0.8, BAIE.y + BAIE.h - 12], [xb + l * 0.25, BAIE.y + BAIE.h - 6]];
+        ctx.beginPath(); v.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+        ctx.fillStyle = "#a8d8ec"; ctx.fill(); ctx.stroke();
+      }
     }
 
     // au-dessus du lit, deux photos dans des cadres en bois naturel : ƟvƟ et Mesi qui se tiennent
@@ -585,6 +599,8 @@
 
     // le poêle à bois, tout à gauche, posé sur le sol, et son conduit argenté jusqu'au plafond
     poeleABois(ctx, moment, eteint);
+    // la porte d'entrée, tout au bout à droite : c'est par là qu'on part en balade
+    porteEntree(ctx);
 
     // (le lit, le canapé et la table : dans leurs mesures d'avant, décalées de DX)
     ctx.save();
@@ -672,6 +688,47 @@
 
   // la plante (son milieu, dans les mesures d'avant le décalage)
   const PLANTE = 672;
+  // la porte d'entrée : bois clair, une petite vitre en haut, deux panneaux moulurés, la poignée
+  const PORTE = { x: 810, y: 110, w: 46, h: 122 };
+  function porteEntree(ctx) {
+    const { x, y, w, h } = PORTE;
+    bloc(ctx, x - 6, y - 7, w + 12, h + 7, 2, "#7a4520");
+    bloc(ctx, x, y, w, h, 2, "#b9834f");
+    bloc(ctx, x + 7, y + 8, w - 14, 28, 2, "#a8d8ec");
+    ctx.beginPath(); ctx.moveTo(x + w / 2, y + 8); ctx.lineTo(x + w / 2, y + 36); ctx.stroke();
+    bloc(ctx, x + 7, y + 44, w - 14, 32, 2, "#c99a3a");
+    bloc(ctx, x + 7, y + 84, w - 14, 30, 2, "#c99a3a");
+    ctx.beginPath(); ctx.arc(x + w - 8, y + 70, 2.8, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
+    bloc(ctx, x - 8, y + h - 2, w + 16, 4, 1, "#9a6a3c");
+  }
+  // Les rideaux terracotta, de chaque côté de la baie, tenus par une tringle de bois. Quand les
+  // fenêtres sont grandes ouvertes, ils ondulent doucement dans le courant d'air.
+  // (dans les mesures d'avant le décalage : on les peint avec les personnages, qui reçoivent la lumière)
+  function rideaux(ctx, t, ouvert) {
+    const x0 = BAIE.x - DX, x1 = x0 + BAIE.w, haut = BAIE.y - 10, bas = 166;
+    ctx.save();
+    ctx.fillStyle = "#7a4520"; ctx.fillRect(x0 - 38, haut - 4, BAIE.w + 76, 4);
+    ctx.fillStyle = ENCRE; ctx.fillRect(x0 - 40, haut - 5, 3, 6); ctx.fillRect(x1 + 37, haut - 5, 3, 6);
+    const TONS = ["#c96a3a", "#a9512c", "#d97a48", "#b85e33"];
+    for (const [cote, xa] of [[-1, x0 - 34], [1, x1 - 8]]) {
+      const plis = 6, l = 42, lp = l / plis;
+      for (let i = 0; i < plis; i++) {
+        for (let y = haut; y < bas; y += 2) {
+          const u = (y - haut) / (bas - haut);
+          // le courant d'air pousse le bas du rideau vers la pièce, en vagues
+          const vent = ouvert ? (Math.sin(t / 900 + cote + i * 0.35) * 6 + Math.sin(t / 340 + i + cote * 2) * 2) * u * u : 0;
+          const pli = Math.sin(u * 4 + i * 1.3 + (ouvert ? t / 600 : 0)) * (ouvert ? 1.2 : 0.4);
+          const x = xa + i * lp + vent + pli;
+          ctx.fillStyle = y > bas - 6 ? "#8a4224" : TONS[i % 4];
+          ctx.fillRect(Math.round(x), y, Math.ceil(lp) + 1, 2);
+          if (i === 0 || i === plis - 1) { ctx.fillStyle = ENCRE; ctx.fillRect(Math.round(x + (i === 0 ? 0 : lp)), y, 1, 2); }
+        }
+      }
+      // les anneaux sur la tringle
+      for (let i = 0; i <= plis; i++) { ctx.fillStyle = "#e9b44c"; ctx.fillRect(Math.round(xa + i * lp) - 1, haut - 5, 3, 3); }
+    }
+    ctx.restore();
+  }
   // les deux chaises bleues de la table
   function chaises(ctx) {
     bloc(ctx, 438, 196, 7, 54, 3, "#3d5ee8");
@@ -929,7 +986,7 @@
     // on peut aller faire dodo à partir de 21 h
     const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     const zones = [
-      { id: "fenetre", x: 290, y: 24, w: 146, h: 140, nom: "Faire une balade", agir: fenetreBalade },
+      { id: "fenetre", x: 290, y: 24, w: 146, h: 140, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
       { id: "meme", x: 152, y: 192, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
       { id: "lolo", x: 116, y: 156, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
         // le premier matin de la journée, on lui demande seulement s'il a bien dormi
@@ -957,6 +1014,7 @@
     // (rectangles mesurés avant l'élargissement de la pièce : on les décale)
     for (const z of zones) z.x += DX;
     zones.push({ id: "poele", x: POELE.x - 6, y: 0, w: POELE.w + 12, h: POELE.y + POELE.h + 12, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() });
+    zones.push({ id: "porte", x: PORTE.x - 8, y: PORTE.y - 8, w: PORTE.w + 16, h: PORTE.h + 10, nom: "Sortir faire une balade", agir: fenetreBalade });
     return zones;
   }
 
@@ -1242,7 +1300,7 @@
       const dpr = Math.min(2, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
       const moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
-      const cleD = w + "|" + moment + "|" + dpr + "|" + cheminee.feuActif() + "|" + cheminee.bois();
+      const cleD = w + "|" + moment + "|" + dpr + "|" + cheminee.feuActif() + "|" + cheminee.bois() + "|" + fenetresOuvertes();
       if (cle !== cleD) {
         cle = cleD;
         toile.width = Math.round(w * dpr);
@@ -1290,6 +1348,7 @@
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 2.2;
       ECL = { k: decor.k, L: decor.L };
+      rideaux(cc, t, fenetresOuvertes());
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
       memeEnBoule(cc, 168, 203, t);
       const surCanape = canapeJusqua > t;
@@ -1376,6 +1435,12 @@
   // La maison, c'est la scène et rien d'autre : pas d'en-tête, pas de titre, pas de papier autour.
   // Tout se fait en cliquant sur la pièce ; une petite porte en haut à gauche ramène à la ferme.
   let toileMaison = null;
+  // ouvrir grand les fenêtres (ou les refermer) : l'air entre, les rideaux bougent, on entend mieux le dehors
+  function basculerFenetres() {
+    H.d.majLocal((l) => (l.fenetresOuvertes = !l.fenetresOuvertes));
+    H.bruit && H.bruit("ouvre");
+    if (H.sons && H.sons.majVolumes) H.sons.majVolumes();
+  }
   function fenetreBalade() {
     let fermer;
     const corps = H.el("div", null, H.el("h2", null, "Faire une balade"), choixCompagnons());
@@ -2048,10 +2113,13 @@
     ctx.fillStyle = g;
     ctx.fillRect(0, -haut, w, h + haut);
     if (nuit) {
-      for (const [x, y, a] of S.etoiles) {
-        ctx.fillStyle = "rgba(255,240,250," + (a + Math.sin(t / 700 + x) * 0.15) + ")";
-        ctx.fillRect(x, y, 1.6, 1.6);
-      }
+      // (des étoiles posées sur les gros pixels, qui ne clignotent pas : seule une sur huit scintille,
+      // lentement ; avant, toutes vacillaient et le passage en gros pixels les faisait clignoter)
+      S.etoiles.forEach(([x, y, a], i) => {
+        const scintille = i % 8 === 0 ? (Math.sin(t / 2600 + i) > 0.6 ? 0.25 : 0) : 0;
+        ctx.fillStyle = "rgba(255,240,250," + Math.min(1, a + scintille) + ")";
+        ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+      });
       // une étoile filante, de temps en temps
       const f = ((t / 1000) % 9) / 9;
       if (f < 0.07) {
@@ -2588,8 +2656,8 @@
       if (t - derniere < 66) return;
       derniere = t;
       const dpr = Math.min(2, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
-      if (cle !== w + "|" + dpr) {
-        cle = w + "|" + dpr;
+      if (cle !== w + "|" + dpr + "|" + fenetresOuvertes()) {
+        cle = w + "|" + dpr + "|" + fenetresOuvertes();
         toile.width = Math.round(w * dpr); toile.height = Math.round(h * dpr);
         decor = decorMaison(w, h, dpr, "nuit", true);
       }
@@ -2609,6 +2677,7 @@
       cc.lineJoin = "round"; cc.lineCap = "round"; cc.strokeStyle = ENCRE; cc.lineWidth = 1.6;
       cc.save();
       cc.translate(DX, 0);
+      rideaux(cc, t, fenetresOuvertes());
       {
       const ctx = cc;
 

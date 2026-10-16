@@ -215,7 +215,7 @@
   // (depuis la maison et pendant le dodo, on entend encore le dehors, plus bas, à travers les murs)
   const DEHORS = ["village", "terrain", "serre", "balade"], DEDANS = ["maison", "dodo"];
   const dehors = () => DEHORS.includes(document.documentElement.dataset.vue) || DEDANS.includes(document.documentElement.dataset.vue);
-  const sourdine = () => (DEDANS.includes(document.documentElement.dataset.vue) ? 0.4 : 1);
+  const sourdine = () => (DEDANS.includes(document.documentElement.dataset.vue) ? (H.local && H.local.fenetresOuvertes ? 0.8 : 0.4) : 1);
 
   // Le goéland leucophée de Marseille, au loin. Son grand cri a trois parties : parfois quelques
   // aboiements, puis un ou deux longs cris aigus, puis une série régulière de 8 à 14 notes plus

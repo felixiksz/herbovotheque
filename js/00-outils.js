@@ -321,8 +321,9 @@ window.H = window.H || {};
 // H.feuillage(id) dit où en est leur feuillage aujourd'hui, au rythme du Midi : null pour les
 // plantes qui gardent leurs feuilles ; sinon { densite (0 nu → 1 plein), automne (part des
 // feuilles colorées), jeune (feuilles tendres du printemps), couleur, cle (pour les dessins) }.
-// Les feuilles prennent leurs couleurs dans la première quinzaine d'octobre, tombent en novembre ;
-// les branches restent nues en décembre, janvier et février ; tout repousse en mars et avril.
+// À Marseille, tout reste vert jusqu'à la fin octobre : les feuilles prennent leurs couleurs en
+// novembre, quand il fait vraiment plus froid, et tombent de la fin novembre à la mi-décembre ;
+// les branches restent nues jusqu'à la fin février ; tout repousse en mars et avril.
 (function () {
   const H = window.H;
   const CADUCS = {
@@ -339,11 +340,11 @@ window.H = window.H || {};
     if (!couleur) return null;
     const d = date || new Date();
     const j = (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 1)) / 864e5;
-    // (1er mars ≈ jour 59, 1er mai ≈ 120, 1er octobre ≈ 273, 27 octobre ≈ 299, 1er décembre ≈ 334)
+    // (1er mars ≈ jour 59, 1er mai ≈ 120, 1er novembre ≈ 304, 22 novembre ≈ 325, 18 décembre ≈ 351)
     let densite = 1, automne = 0, jeune = 0;
-    if (j < 59 || j >= 334) densite = 0;
+    if (j < 59 || j >= 351) densite = 0;
     else if (j < 120) { densite = Math.min(1, (j - 59) / 50); jeune = Math.min(1, 1 - (j - 100) / 20); }
-    else if (j >= 273) { automne = Math.min(1, (j - 273) / 26); densite = j < 299 ? 1 : Math.max(0, 1 - (j - 299) / 35); }
+    else if (j >= 304) { automne = Math.min(1, (j - 304) / 20); densite = j < 325 ? 1 : Math.max(0, 1 - (j - 325) / 26); }
     const q = (v) => Math.round(v * 10) / 10;
     const f = { couleur, densite: q(densite), automne: q(automne), jeune: q(Math.max(0, jeune)) };
     f.cle = f.densite + "," + f.automne + "," + f.jeune;
