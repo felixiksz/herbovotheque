@@ -3099,9 +3099,10 @@
     lp.type = "lowpass";
     lp.frequency.value = 420;
     trem.frequency.value = 26;
-    tg.gain.value = 0.35;
+    // (un ronflement tout doux : la vibration reste à la mesure du souffle)
+    const v = 0.022 * H.volume("bruitages");
+    tg.gain.value = v * 0.45;
     trem.connect(tg).connect(g.gain);
-    const v = 0.05 * H.volume("bruitages");
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(v, t + 0.5);
     g.gain.linearRampToValueAtTime(0.0001, t + d);
@@ -3162,12 +3163,7 @@
       cc.setTransform(1, 0, 0, 1, 0, 0); cc.clearRect(0, 0, calque.width, calque.height);
       repere(cc, v.K);
       cc.lineJoin = "round"; cc.lineCap = "round"; cc.strokeStyle = ENCRE; cc.lineWidth = 1.6;
-      // au salon, Lóló et Mémé dorment sur le canapé ; en bas, la table du goûter reste à sa place
-      cc.save();
-      cc.translate(DX + CANAPE_T.x, CANAPE_T.y);
-      if (!surLesYeux.oui) loloCouche(cc, 172, 200, t, false);
-      memeEnBoule(cc, 168, 203, t);
-      cc.restore();
+      // en bas, la table du goûter reste à sa place
       cc.save();
       cc.translate(TABLE_T.x, TABLE_T.y);
       cc.strokeStyle = ENCRE; cc.lineWidth = 1.6;
@@ -3225,14 +3221,18 @@
       ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
       ctx.beginPath(); ctx.ellipse(126, 205, 4, 3, 0.4, 0, Math.PI * 2); ctx.fillStyle = "#f2c29b"; ctx.fill(); ctx.stroke();
 
-      // s'il y a trop de lumière, Lóló monte se coucher sur les yeux de tout le monde
-      if (surLesYeux.oui) {
-        ctx.save(); ctx.translate(92, 178); ctx.scale(0.72, 0.72);
-        loloCouche(ctx, 0, 0, t, false);
-        ctx.restore();
-      }
+      // Lóló dort sur nous, couché en travers de la couverture ; s'il y a trop de lumière, il
+      // monte se coucher sur les yeux de tout le monde
+      ctx.save();
+      if (surLesYeux.oui) { ctx.translate(92, 178); ctx.scale(0.72, 0.72); }
+      else { ctx.translate(152, 190); ctx.scale(0.72, 0.72); }
+      loloCouche(ctx, 0, 0, t, false);
+      ctx.restore();
       }
       cc.restore();
+      // Mémé, roulée en boule sur la couverture, sur nous aussi (hors du lit retourné, pour que
+      // ses cases tombent pile sur les gros pixels)
+      memeEnBoule(cc, LIT.x - 122, LIT.y + 186, t);
 
       // tout le monde reçoit la lumière de la nuit, comme le décor (et celle de la lune)
       {
@@ -3256,7 +3256,7 @@
         ctx.globalAlpha = 1 - u;
         ctx.font = "16px VT323, monospace";
         ctx.fillStyle = "#f3f0dc";
-        ctx.fillText("rrr…", 284 + u * 10, 180 - u * 30);
+        ctx.fillText("rrr…", LIT.x - 130 + u * 10, LIT.y + 172 - u * 30);
         ctx.globalAlpha = 1;
       }
       // tout passe en gros pixels, aux couleurs des pochettes
