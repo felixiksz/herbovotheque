@@ -1251,7 +1251,7 @@
   // la plante (son milieu, dans les mesures d'avant le décalage)
   const PLANTE = 672;
   // la porte d'entrée : bois clair, une petite vitre en haut, deux panneaux moulurés, la poignée
-  const PORTE = { x: 196, y: 350, w: 60, h: 160 };
+  const PORTE = { x: 196, y: 342, w: 60, h: 160 };
   function porteEntree(ctx) {
     const { x, y, w, h } = PORTE;
     bloc(ctx, x - 6, y - 7, w + 12, h + 7, 2, "#7a4520");
