@@ -150,7 +150,7 @@
     return x < FAITE.x ? EGOUT.y + ((FAITE.y - EGOUT.y) * (x - x0)) / (FAITE.x - x0) : FAITE.y + ((EGOUT.y - FAITE.y) * (x - FAITE.x)) / (x1 - FAITE.x);
   };
   // les places des dessins d'avant dans la maison
-  const CANAPE_T = { x: 34, y: -6 }, TABLE_T = { x: -205, y: 216 }, PLANTE_T = { x: -210, y: 261 }, ENC_DY = 18;
+  const CANAPE_T = { x: 34, y: -6 }, TABLE_T = { x: -165, y: 216 }, PLANTE_T = { x: -167, y: 261 }, ENC_DY = 18;
   // poser la maison sur une toile à sa taille : k pixels par unité
   const repere = (ctx, k) => ctx.setTransform(k, 0, 0, k, -BOITE.x * k, -BOITE.y * k);
   // la taille d'un gros pixel : la même partout dans le dessin, quel que soit l'écran
@@ -251,6 +251,12 @@
         ctx.fillStyle = "rgba(255,245,230," + Math.max(0.1, a).toFixed(2) + ")";
         ctx.fillRect(x, y, grosse ? 2.6 : 1.8, grosse ? 2.6 : 1.8);
       }
+      // dans le velux, une ou deux étoiles, qu'ƟvƟ regarde depuis son oreiller
+      for (const [dx, dy, ph] of [[24, 14, 0], [64, 26, 2]]) {
+        const x = VELUX.x0 + dx, y = veluxY(VELUX.x0 + dx) + dy, a = moment === "nuit" ? 0.6 + 0.4 * Math.sin(t / 650 + ph) : 0.35;
+        ctx.fillStyle = "rgba(255,245,230," + a.toFixed(2) + ")";
+        ctx.fillRect(x - 1, y - 1, 2.6, 2.6);
+      }
       if (etat.lune.alt > -2) lunePlate(ctx, Math.min(R.x1 - 60, LARGE + 150), Math.max(R.y0 + 64, -330), 14, etat.lune.phase);
     }
     // les nuages, plus nombreux quand le ciel est couvert ; ils passent aussi derrière le velux
@@ -275,13 +281,37 @@
       for (let x = R.x0 - 4; x <= R.x1 + 8; x += 8) ctx.lineTo(x, base - a1 * Math.sin(x / f1) - a2 * Math.sin(x / f2 + 1));
       ctx.lineTo(R.x1 + 8, SOL_DEHORS + 2); ctx.closePath(); ctx.fill();
     }
-    for (const x of [-120, -270, -430, -620, LARGE + 110, LARGE + 260, LARGE + 420, LARGE + 610]) {
+    // (les mêmes arbres que par la baie : au loin des arbres ronds bleuis par l'air ; tout près, des
+    // pins dont le jour le soleil éclaire le haut, et le soir la lumière de la maison le bas)
+    ctx.fillStyle = moment === "jour" ? "#9cc77a" : moment === "soir" ? "#4a3a7a" : "#1b1d4a";
+    for (let x = Math.floor(R.x0 / 13) * 13; x < R.x1 + 13; x += 13) {
+      const hh = 22 + hsh(x, 6) * 26;
+      ctx.beginPath(); ctx.ellipse(x, SOL_DEHORS - hh, 9 + hsh(x, 7) * 5, 11 + hsh(x, 8) * 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(x - 9, SOL_DEHORS - hh, 18, hh);
+    }
+    const pres = moment === "jour" ? "#2f6b35" : moment === "soir" ? "#2a2450" : "#10102e";
+    const eclaire = moment === "jour" ? "#4aa63e" : moment === "soir" ? "#ff9a5a" : "#e9b44c";
+    const tronc = moment === "jour" ? "#7a4520" : moment === "soir" ? "#3a2440" : "#1a1430";
+    for (const x of [-60, -150, -270, -430, -620, LARGE + 60, LARGE + 150, LARGE + 270, LARGE + 430, LARGE + 610]) {
       if (x < R.x0 - 80 || x > R.x1 + 80) continue;
-      const hP = 120 + hsh(x, 2) * 70, pe = (hsh(x, 4) - 0.5) * 24;
-      ctx.strokeStyle = COUL.tronc; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(x, SOL_DEHORS + 2); ctx.quadraticCurveTo(x + pe * 0.4, SOL_DEHORS - hP * 0.5, x + pe, SOL_DEHORS - hP); ctx.stroke();
-      ctx.fillStyle = COUL.pin;
-      for (const [dx, dy, rx, ry] of [[-22, 4, 30, 12], [20, 8, 32, 13], [0, -6, 28, 11]]) { ctx.beginPath(); ctx.ellipse(x + pe + dx, SOL_DEHORS - hP + dy, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); }
+      // (le soir, seuls les arbres tout près de la maison reçoivent sa lumière)
+      const pres2 = x > -200 && x < LARGE + 200, lumBas = moment !== "jour";
+      const hP = 120 + hsh(x, 2) * 80, pe = (hsh(x, 4) - 0.5) * 24, rx = 30 + hsh(x, 5) * 8, bas = SOL_DEHORS + 2;
+      ctx.strokeStyle = tronc; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(x, bas); ctx.quadraticCurveTo(x + pe * 0.4, bas - hP * 0.5, x + pe, bas - hP); ctx.stroke();
+      if (lumBas && pres2) { ctx.strokeStyle = eclaire; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x - 2, bas); ctx.quadraticCurveTo(x - 2 + pe * 0.4, bas - hP * 0.5, x - 2 + pe, bas - hP * 0.8); ctx.stroke(); }
+      for (const [cx, cy, hx, hy] of [[x + pe - rx * 0.4, bas - hP - 6, rx * 0.7, 9], [x + pe + rx * 0.35, bas - hP - 2, rx * 0.75, 10], [x + pe, bas - hP - 12, rx * 0.6, 8]]) {
+        ctx.fillStyle = pres;
+        ctx.beginPath(); ctx.ellipse(cx, cy, hx, hy, 0, 0, Math.PI * 2); ctx.fill();
+        if (!lumBas || pres2) {
+          ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, hx, hy, 0, 0, Math.PI * 2); ctx.clip();
+          ctx.fillStyle = eclaire;
+          ctx.beginPath(); ctx.ellipse(cx + (lumBas ? 0 : -hx * 0.2), cy + (lumBas ? hy * 0.75 : -hy * 0.7), hx * 0.95, hy * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = pres;
+          ctx.beginPath(); ctx.ellipse(cx + (lumBas ? 0 : -hx * 0.2), cy + (lumBas ? hy * 1.05 : -hy * 1.0), hx * 0.95, hy * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+      }
     }
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     // l'herbe, puis la terre sous la maison, avec ses cailloux
@@ -294,6 +324,27 @@
       const h = hsh(i + 3, j - 5);
       if (h > 0.35) continue;
       ctx.beginPath(); ctx.ellipse(i * C + hsh(i, j + 2) * C, j * C + hsh(i + 2, j) * C, 3 + h * 8, 2 + h * 5, h * 3, 0, Math.PI * 2); ctx.fill();
+    }
+    // de temps en temps, un ver de terre creuse sa galerie dans la terre
+    if (R.y1 - SOL_DEHORS > 60) {
+      const P = 23000, n0 = Math.floor(t / P), fond = Math.min(R.y1 - SOL_DEHORS - 40, 220);
+      for (const k of [n0 - 1, n0]) {
+        if (hsh(k, 11) > 0.65) continue;
+        const u = (t - k * P) / 15000;
+        if (u < 0 || u > 1.5) continue;
+        const sens = hsh(k, 14) < 0.5 ? -1 : 1, x0 = R.x0 + 60 + hsh(k, 12) * (R.x1 - R.x0 - 120), y0 = SOL_DEHORS + 30 + hsh(k, 13) * fond;
+        const pos = (v) => [x0 + sens * v * 80, y0 + Math.sin(v * 6 + k) * 9 - v * 12];
+        const chemin = (a, b) => { ctx.beginPath(); for (let v = Math.max(0, a), i = 0; v <= b + 1e-6; v += 0.02, i++) { const [x, y] = pos(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
+        const tete = Math.min(1, u);
+        ctx.lineCap = "round";
+        ctx.strokeStyle = COUL.terre[1]; ctx.lineWidth = 6; chemin(0, tete); ctx.stroke();
+        if (u < 1.15) {
+          const ondule = Math.sin(t / 160) * 0.015;
+          ctx.strokeStyle = ENCRE; ctx.lineWidth = 5; chemin(tete - 0.2 + ondule, tete); ctx.stroke();
+          ctx.strokeStyle = moment === "nuit" ? "#a86a7a" : "#e88a9a"; ctx.lineWidth = 3; chemin(tete - 0.2 + ondule, tete); ctx.stroke();
+        }
+      }
+      ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     }
     ctx.fillStyle = COUL.herbe; ctx.fillRect(R.x0 - 2, SOL_DEHORS - 2, R.x1 - R.x0 + 4, 8);
     for (let x = Math.floor(R.x0 / 7) * 7; x < R.x1; x += 7) ctx.fillRect(x, SOL_DEHORS - 4 - hsh(x, 1) * 5, 2, 5);
@@ -537,7 +588,7 @@
   }
   // les ombres de contact, au pied des meubles (dans les mesures élargies)
   function ombresAuSol(ctx) {
-    for (const [x0, x1, y] of [[82, 156, 252], [186, 218, 252], [518, 550, 252], [222, 518, 254], [229, 271, 512], [259, 399, 512], [389, 431, 512], [440, 484, 512]]) {
+    for (const [x0, x1, y] of [[86, 160, 512], [172, 204, 252], [518, 550, 252], [222, 518, 254], [269, 311, 512], [299, 439, 512], [429, 471, 512], [483, 527, 512]]) {
       const cx = (x0 + x1) / 2, rx = (x1 - x0) / 2 + 6;
       ctx.save(); ctx.translate(cx, y); ctx.scale(1, 7 / rx);
       const d = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
@@ -668,10 +719,10 @@
     // poêle ; ni sur le mur derrière, ni sous le poêle
     const cx = POELE.x + POELE.w / 2;
     g.save();
-    g.beginPath(); g.rect(0, NIV.salon.plancher, LARGE, 16); g.clip();
+    g.beginPath(); g.rect(0, NIV.bas.plancher, LARGE, 16); g.clip();
     g.globalCompositeOperation = "lighter";
-    tache(g, cx + bx, NIV.salon.sol + by * 0.3, 190, 16, FEU_COUL, vac);
-    tache(g, cx + bx * 0.6, NIV.salon.plancher + 2, 70, 6, FEU_COUL, vac * 0.8);
+    tache(g, cx + bx, NIV.bas.sol + by * 0.3, 190, 16, FEU_COUL, vac);
+    tache(g, cx + bx * 0.6, NIV.bas.plancher + 2, 70, 6, FEU_COUL, vac * 0.8);
     g.restore();
     return masque;
   }
@@ -833,8 +884,8 @@
     // au rez-de-chaussée, de chaque côté de la boule, deux photos dans des cadres en bois
     // naturel : ƟvƟ et Mesi en salopette qui se tiennent la main au bord de la mer, et Lóló et
     // Mémé qui sourient. Dessinées case par case, chaque case tombant pile sur un gros pixel.
-    photoEncadree(ctx, 152, 318, PHOTO_DUO);
-    photoEncadree(ctx, 398, 312, PHOTO_LOLO);
+    photoEncadree(ctx, 270, 318, PHOTO_DUO);
+    photoEncadree(ctx, 408, 312, PHOTO_LOLO);
 
     // en haut, le grenier
     grenier(ctx);
@@ -934,7 +985,7 @@
 
   // Les enceintes, en noyer, de chaque côté de la baie : un tweeter et deux haut-parleurs. Quand
   // la musique joue, les membranes battent (voir membranes).
-  const ENCEINTES = [190, 522], HP = [[163, 4.5], [186, 9], [212, 9]];
+  const ENCEINTES = [176, 522], HP = [[163, 4.5], [186, 9], [212, 9]];
   function enceinte(ctx, x) {
     bloc(ctx, x + 3, 226, 4, 6, 1, ENCRE);
     bloc(ctx, x + 19, 226, 4, 6, 1, ENCRE);
@@ -955,7 +1006,7 @@
     ctx.restore();
   }
   // la petite lampe posée sur l'enceinte de gauche (son abat-jour s'allume le soir)
-  const LAMPE = { x: 203, y: 121 };
+  const LAMPE = { x: 189, y: 121 };
   function lampeEnceinte(ctx, couleur, pied) {
     const x = LAMPE.x;
     if (pied) {
@@ -1046,16 +1097,16 @@
   // la plante (son milieu, dans les mesures d'avant le décalage)
   const PLANTE = 672;
   // la porte d'entrée : bois clair, une petite vitre en haut, deux panneaux moulurés, la poignée
-  const PORTE = { x: 92, y: 388, w: 46, h: 122 };
+  const PORTE = { x: 196, y: 350, w: 60, h: 160 };
   function porteEntree(ctx) {
     const { x, y, w, h } = PORTE;
     bloc(ctx, x - 6, y - 7, w + 12, h + 7, 2, "#7a4520");
     bloc(ctx, x, y, w, h, 2, "#b9834f");
-    bloc(ctx, x + 7, y + 8, w - 14, 28, 2, "#a8d8ec");
-    ctx.beginPath(); ctx.moveTo(x + w / 2, y + 8); ctx.lineTo(x + w / 2, y + 36); ctx.stroke();
-    bloc(ctx, x + 7, y + 44, w - 14, 32, 2, "#c99a3a");
-    bloc(ctx, x + 7, y + 84, w - 14, 30, 2, "#c99a3a");
-    ctx.beginPath(); ctx.arc(x + w - 8, y + 70, 2.8, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
+    bloc(ctx, x + 8, y + 10, w - 16, 40, 2, "#a8d8ec");
+    ctx.beginPath(); ctx.moveTo(x + w / 2, y + 10); ctx.lineTo(x + w / 2, y + 50); ctx.stroke();
+    bloc(ctx, x + 8, y + 60, w - 16, 42, 2, "#c99a3a");
+    bloc(ctx, x + 8, y + 110, w - 16, 40, 2, "#c99a3a");
+    ctx.beginPath(); ctx.arc(x + w - 9, y + 92, 3.2, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
     bloc(ctx, x - 8, y + h - 2, w + 16, 4, 1, "#9a6a3c");
   }
   // Les rideaux terracotta, de chaque côté de la baie, tenus par une tringle de bois, jusqu'au sol,
@@ -1114,7 +1165,7 @@
   // jusqu'au plafond : de l'inox argenté, poli comme un miroir, qui reflète la pièce en bandes
   // étirées (le plafond sombre en haut, le mur bleu, le sol magenta en bas, la fenêtre en un
   // trait clair). À côté, les bûches qu'on a rapportées de dehors.
-  const POELE = { x: 86, y: 160, w: 66, h: 80, vitre: { x: 100, y: 180, w: 34, h: 34 } };
+  const POELE = { x: 90, y: 420, w: 66, h: 80, vitre: { x: 104, y: 440, w: 34, h: 34 } };
   function poeleABois(ctx, moment, eteint) {
     const M = MOMENTS[moment], { x, y, w, h, vitre } = POELE, cx = x + w / 2;
     // le conduit
@@ -1135,7 +1186,7 @@
     ctx.fillRect(cl + cw * 0.72, 30, 1.5, y - 60);
     ctx.restore();
     // les colliers qui joignent les tronçons
-    for (const yy of [-60, 60, 120]) { ctx.fillStyle = "#9a9eb0"; ctx.fillRect(cl - 1, yy, cw + 2, 4); ctx.strokeRect(cl - 1, yy, cw + 2, 4); }
+    for (const yy of [-60, 120, 330]) { ctx.fillStyle = "#9a9eb0"; ctx.fillRect(cl - 1, yy, cw + 2, 4); ctx.strokeRect(cl - 1, yy, cw + 2, 4); }
     ctx.beginPath(); ctx.moveTo(cl, sommet); ctx.lineTo(cl, y - 2); ctx.moveTo(cl + cw, sommet); ctx.lineTo(cl + cw, y - 2); ctx.stroke();
     // le chapeau de la cheminée, au-dessus du toit
     bloc(ctx, cl - 5, sommet - 6, cw + 10, 7, 2, "#9a9eb0");
@@ -1157,7 +1208,7 @@
     const n = cheminee.bois();
     for (let k = 0; k < n; k++) {
       const rang = k < 3 ? 0 : k < 5 ? 1 : 2, i = k < 3 ? k : k < 5 ? k - 3 : 0;
-      const bx = x + w + 8 + i * 8 + rang * 4, by = 246 - rang * 7;
+      const bx = x + w + 8 + i * 8 + rang * 4, by = y + h + 6 - rang * 7;
       bloc(ctx, bx - 4, by - 3, 9, 7, 3.5, "#7a4520");
       ctx.beginPath(); ctx.arc(bx, by + 0.5, 1.6, 0, Math.PI * 2); ctx.fillStyle = "#e9c99a"; ctx.fill();
     }
@@ -1391,7 +1442,7 @@
       } },
       { id: "lit", x: 168, y: -112, w: 262, h: 108, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
       { id: "velux", x: VELUX.x0, y: veluxY(VELUX.x0) - 4, w: VELUX.x1 - VELUX.x0, h: veluxY(VELUX.x1) + VELUX.prof - veluxY(VELUX.x0) + 8, get nom() { return momentMaison() === "jour" ? "Regarder le ciel" : "Regarder les étoiles"; }, agir: regarderLeCiel },
-      { id: "enceintes", x: 186, y: 124, w: 34, h: 128, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
+      { id: "enceintes", x: 172, y: 124, w: 34, h: 128, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
       { id: "enceinte", x: 518, y: 164, w: 34, h: 88, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
       { id: "canape", x: 364, y: 144, w: 150, h: 96, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
       // le soir, c'est à Mesi qu'ƟvƟ raconte sa journée (une fois par soir) ; sinon, un compliment
@@ -1400,7 +1451,7 @@
       { id: "table", x: 500 + TABLE_T.x, y: 196 + TABLE_T.y, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
-      { id: "poele", x: POELE.x - 6, y: 40, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
+      { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "porte", x: PORTE.x - 8, y: PORTE.y - 8, w: PORTE.w + 16, h: PORTE.h + 10, nom: "Sortir faire une balade", agir: fenetreBalade },
     ];
     return zones;
@@ -3025,13 +3076,11 @@
       if (H.$(".dialogue") || surLesYeux.oui) return;
       H.lolo.cacherLaLumiere({ couche: () => (surLesYeux.oui = true) });
     });
-    // une tête endormie, de face sur l'oreiller (le sprite du jeu, les paupières closes)
+    // une tête endormie, de face sur l'oreiller : les lunettes enlevées, les yeux fermés
     const tete = (ctx, nom, x, y) => {
-      const sp = H.pixel.sprite(nom, 0), k = 3;
+      const sp = H.pixel.dort(nom), k = 3;
       ctx.save(); ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sp, 0, 0, 16, 12, x, y, 16 * k, 12 * k);
-      ctx.fillStyle = H.pixel.PAL.s;
-      for (const ex of [6, 9]) ctx.fillRect(x + ex * k, y + 6 * k, k, k);
       ctx.fillStyle = ENCRE;
       for (const ex of [6, 9]) ctx.fillRect(x + (ex - 0.3) * k, y + 6.6 * k, k * 1.6, k * 0.45);
       ctx.restore();

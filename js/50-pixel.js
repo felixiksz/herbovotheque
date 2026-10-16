@@ -490,6 +490,12 @@
       if (!cache.has(cle)) cache.set(cle, toile(SPRITES[nom][image || 0], nom.startsWith("lolo") ? PAL_LOLO : PAL));
       return cache.get(cle);
     },
+    // la tête qui dort, de face : sans les lunettes (posées sur la table de chevet), les yeux fermés
+    dort(nom) {
+      const cle = nom + "-dort";
+      if (!cache.has(cle)) cache.set(cle, toile(SPRITES[nom][0].slice(0, 12).map((l, y) => l.split("").map((c) => (y >= 5 && y <= 7 && "aqe".includes(c) ? "s" : c)).join("")), PAL));
+      return cache.get(cle);
+    },
     // portrait (tête seule) agrandi, en image
     portrait(nom, echelle) {
       // ƟvƟ et Mesi qui parlent d'une seule voix : les deux visages côte à côte
