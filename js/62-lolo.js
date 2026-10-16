@@ -235,6 +235,14 @@
       if (!d) return;
       await bienDormi();
     }
+    // sur la ferme, tant qu'il n'y a pas de bassin, Lóló a une idée (une fois par jour)
+    if (!ile && H.ferme && H.ferme.aUnBassin && !H.ferme.aUnBassin() && H.local.ideeBassin !== new Date().toDateString()) {
+      H.d.majLocal((l) => (l.ideeBassin = new Date().toDateString()));
+      await H.dialogue.dire([
+        { qui: "lolo", texte: "Hiii ! J’ai une idée ! La nuit, les hérissons, les renards et les sangliers cherchent de l’eau pour boire…" },
+        { qui: "lolo", texte: "Si tu creusais un bassin sur la ferme (« Aménager », puis « Bassin »), ils viendraient y boire. On pourrait les regarder par la fenêtre !" },
+      ]);
+    }
     let intro = "Hiii ! Qu’est-ce que je peux faire pour toi ?";
     for (;;) {
       const q = await L(intro, [

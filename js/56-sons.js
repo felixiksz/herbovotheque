@@ -176,10 +176,11 @@
       const b = await H.sons.bornes("galop");
       const joue = H.sons.jouer("galop", volume == null ? 0.6 : volume);
       const t = performance.now();
-      if (!joue) return { x0, x1, t0: t, t1: t + 1500 };
-      // Lóló entre quand on a entendu un bon bout du galop, et s'arrête quand le bruit s'arrête
+      if (!joue) return { x0, x1, t0: t, t1: t + 3500 };
+      // Lóló entre dès qu'on entend le galop, et met au moins trois secondes et demie à traverser
+      // (avant, il filait d'un bord à l'autre en une seconde)
       const debut = b.debut * 1000, fin = b.fin * 1000;
-      return { x0, x1, t0: t + (arrivee ? debut + (fin - debut) * 0.4 : debut), t1: t + fin };
+      return { x0, x1, t0: t + debut, t1: t + Math.max(fin, debut + 3500) };
     },
     // position d'une course à l'instant t : null tant que Lóló n'est pas encore entrée
     position(c, t) {

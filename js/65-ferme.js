@@ -1061,10 +1061,16 @@
     // le coin gauche de l'écran est vers (0, N), le coin droit vers (N, 0) : on traverse de l'un à l'autre
     const gauche = [1 + Math.random() * 5, N - 1 - Math.random() * 5], droite = [N - 1 - Math.random() * 5, 1 + Math.random() * 5];
     const [a, b] = Math.random() < 0.5 ? [gauche, droite] : [droite, gauche];
-    const pts = passage(a, b), cum = [0];
+    // s'il y a un bassin, le plus souvent on passe par lui pour boire
+    const bords = bordsBassin(), bord = bords.length && Math.random() < 0.8 ? bords[Math.floor(Math.random() * bords.length)] : null;
+    const pts = bord ? passage(a, bord).concat(passage(bord, b).slice(1)) : passage(a, b), cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const espece = Math.random() < 0.55 ? "renard" : "sanglier";
     const v = { espece, c: { pts, cum, long: cum[cum.length - 1] }, u: 0, petits: espece === "sanglier" && Math.random() < 0.6 ? 2 + Math.floor(Math.random() * 2) : 0, pause: 0 };
+    if (bord) {
+      const iBord = passage(a, bord).length - 1;
+      v.boire = { u: cum[iBord] / Math.max(0.001, cum[cum.length - 1]) };
+    }
     // une fois sur deux, la laie s'arrête au pied d'un pin pour retourner la terre (elle cherche
     // des champignons) : on prend le pin le plus proche du chemin, entre le premier et le dernier quart
     if (espece === "sanglier" && Math.random() < 0.5) {
@@ -1098,8 +1104,16 @@
       const trace = { x: v.fouille.x + 0.45, y: v.fouille.y + 0.45, le: H.maintenant(), g: Math.floor(Math.random() * 1000) };
       H.d.majLocal((l) => { l.fouilles = (l.fouilles || []).filter((f) => H.maintenant() - f.le < FOUILLE_DUREE).concat([trace]).slice(-12); });
     }
+    // au bord du bassin : on boit un bon moment
+    if (v.boire && !v.boire.fait && v.u >= v.boire.u) {
+      v.boire.fait = true;
+      v.boit = true;
+      v.pause = t + 8000 + Math.random() * 6000;
+      v.prochainBruit = v.pause;
+    }
     // le renard trotte, s'arrête parfois pour humer l'air ; la laie avance d'un pas lourd
     if (t < v.pause) return;
+    v.boit = false;
     v.u += (v.espece === "renard" ? 0.045 : 0.03) / Math.max(1, v.c.long);
     if (v.espece === "renard" && Math.random() < 0.004) v.pause = t + 900 + Math.random() * 1400;
     if (v.u >= 1 + (v.petits ? 0.12 : 0)) { scene.visiteur = null; scene.prochainVisiteur = t + 40000 + Math.random() * 90000; }
@@ -1639,7 +1653,13 @@
       else if (o.bete) {
         const [x, y] = iso(o.x, o.y), arret = scene.visiteur && t < scene.visiteur.pause, f = !arret && temps % 2;
         // la laie qui fouille baisse et relève la hure
-        if (arret && o.bete === "sanglier" && scene.visiteur.fouille && scene.visiteur.fouille.fait && Math.floor(t / 240) % 2) { dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 5 - cy, SANGLIER_FOUILLE, o.gauche); continue; }
+        if (arret && o.bete === "sanglier" && scene.visiteur.fouille && scene.visiteur.fouille.fait && !scene.visiteur.boit && Math.floor(t / 240) % 2) { dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 5 - cy, SANGLIER_FOUILLE, o.gauche); continue; }
+        // au bassin, tout le monde boit : la tête baissée vers l'eau, qui lape par petits coups
+        if (arret && scene.visiteur.boit) {
+          const lape = Math.floor(t / 300) % 2;
+          if (o.bete === "sanglier") { dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 5 - cy, lape ? SANGLIER_FOUILLE : SANGLIER, o.gauche); continue; }
+          if (o.bete === "renard") { dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 4 + lape - cy, RENARD, o.gauche); continue; }
+        }
         const g = o.bete === "renard" ? (f ? RENARD_PAS : RENARD) : o.bete === "sanglier" ? (f ? SANGLIER_PAS : SANGLIER) : (f ? MARCASSIN_PAS : MARCASSIN);
         dessinBete(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, g, o.gauche);
       }
@@ -1800,7 +1820,7 @@
     }
   }
 
-  H.ferme = { scene: () => scene, fond: () => fond };
+  H.ferme = { scene: () => scene, fond: () => fond, aUnBassin: () => casesBassin().length > 0 };
   H.vues.village = {
     afficher(c) {
       const boite = H.el("div.village");
