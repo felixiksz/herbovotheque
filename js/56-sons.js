@@ -430,6 +430,74 @@
   }
   programmerGoeland();
 
+  // --- dans la maison : le bois qui crépite dans le poêle quand le feu brûle, et les petits
+  // oiseaux du jardin qu'on entend par la baie le jour (mieux quand elle est grande ouverte)
+  let crepite = null;
+  function craquement() {
+    if (!actif() || Math.random() > 0.4) return;
+    const t = ctx.currentTime, src = souffle(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = "bandpass"; f.frequency.value = 900 + Math.random() * 3200; f.Q.value = 1.2;
+    const v = (Math.random() < 0.12 ? 0.3 : 0.09) * H.volume("bruitages");
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, v), t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.02 + Math.random() * 0.05);
+    src.connect(f).connect(g).connect(H.audio.sortie());
+    src.start(t, Math.random() * 0.9);
+    src.stop(t + 0.12);
+  }
+  function majFeu() {
+    const oui = !!(actif() && DEDANS.includes(document.documentElement.dataset.vue) && H.cheminee && H.cheminee.feuActif());
+    if (oui && !crepite && contexte()) crepite = setInterval(craquement, 80);
+    else if (!oui && crepite) { clearInterval(crepite); crepite = null; }
+  }
+  window.addEventListener("hashchange", () => setTimeout(majFeu, 60));
+  document.addEventListener("pointerdown", () => setTimeout(majFeu, 60));
+  setInterval(majFeu, 5000);
+
+  // un petit sifflement d'oiseau : la fréquence glisse de f0 à f1
+  function siffle(t, f0, f1, d, vol, pan) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + d);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + d * 0.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g);
+    if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p).connect(H.audio.sortie()); }
+    else g.connect(H.audio.sortie());
+    o.start(t);
+    o.stop(t + d + 0.02);
+  }
+  function oiseau() {
+    if (!actif() || !contexte()) return;
+    const vol = 0.05 * H.volume("bruitages") * sourdine(), pan = hasard(-0.7, 0.7);
+    let t = ctx.currentTime + 0.05;
+    const espece = Math.random();
+    if (espece < 0.45) {
+      // la mésange charbonnière : « ti-tu, ti-tu, ti-tu »
+      const n = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) { siffle(t, 5400, 5000, 0.08, vol, pan); siffle(t + 0.12, 4200, 3900, 0.1, vol * 0.9, pan); t += 0.3; }
+    } else if (espece < 0.8) {
+      // le rouge-gorge : une petite cascade de notes claires qui descend
+      let f = 6000 + Math.random() * 1500;
+      for (let i = 0; i < 9 + Math.floor(Math.random() * 6); i++) { const f1 = f * (0.8 + Math.random() * 0.35); siffle(t, f, f1, 0.05 + Math.random() * 0.04, vol * 0.8, pan); f = Math.max(2400, f1 * (0.92 + Math.random() * 0.12)); t += 0.07 + Math.random() * 0.05; }
+    } else {
+      // le merle, au loin : quelques notes flûtées, plus graves
+      for (let i = 0; i < 4; i++) { const f = 1800 + Math.random() * 1400; siffle(t, f, f * (0.85 + Math.random() * 0.3), 0.18 + Math.random() * 0.12, vol * 0.7, pan); t += 0.24 + Math.random() * 0.1; }
+    }
+  }
+  function programmerOiseaux(delai) {
+    setTimeout(() => {
+      const s = H.ciel && H.jeu ? H.ciel.etat() : null, m = (H.ciel && H.ciel.meteo) || {};
+      if (s && s.soleil.alt > 0 && dehors() && m.type !== "pluie" && m.type !== "orage" && !H.ciel.nuitCalme()) oiseau();
+      programmerOiseaux();
+    }, delai != null ? delai : (9 + Math.random() * 22) * 1000);
+  }
+  programmerOiseaux();
+  // en entrant dans la maison, on les entend vite par la baie
+  window.addEventListener("hashchange", () => { if (DEDANS.includes(document.documentElement.dataset.vue)) setTimeout(() => { const s = H.ciel && H.jeu ? H.ciel.etat() : null; if (s && s.soleil.alt > 0) oiseau(); }, 2500); });
+
   // Les cigales, enregistrées en Ardèche : l'été, en journée, quand il fait chaud et qu'il ne pleut pas,
   // dehors. Une boucle sans couture, qui monte et descend doucement avec le volume des bruitages.
   function majCigales() {

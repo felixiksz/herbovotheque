@@ -131,6 +131,18 @@
   // La pièce de face fait 870 × 360 : à gauche, la place du poêle à bois ; à droite, la plante puis
   // la porte d'entrée. Le lit, le canapé et la table gardent leurs mesures d'avant, décalées de DX.
   const LARGE = 870, DX = 96;
+  // Au-dessus de la pièce, sous le toit à deux pentes, la mezzanine où l'on monte par l'échelle :
+  // le lit, sous un velux. Dans le dessin, elle est au-dessus du zéro (les y y sont négatifs).
+  const MEZ = 244, HAUT = MEZ + 360;
+  const FAITE = { x: 450, y: -236 }, EGOUT = -118, EP_TOIT = 12;
+  // le dessus du toit en chaque x (le faîte au milieu, les deux pentes)
+  const toitY = (x) => (x < FAITE.x ? EGOUT + ((FAITE.y - EGOUT) * x) / FAITE.x : FAITE.y + ((EGOUT - FAITE.y) * (x - FAITE.x)) / (LARGE - FAITE.x));
+  // poser le dessin sur une toile : k pixels par unité, la mezzanine au-dessus de la pièce
+  const repere = (ctx, k) => ctx.setTransform(k, 0, 0, k, 0, k * MEZ);
+  // la taille d'un gros pixel : la même partout dans le dessin, quel que soit l'écran (sur un
+  // téléphone, la pièce garde ainsi tous ses détails au lieu d'être peinte en très gros carrés)
+  let pixK = 1; // (pixels de la toile par unité du dessin, pour s'aligner sur les gros pixels)
+  const grosPixel = () => Math.max(1, Math.round(2.3 * pixK));
   const fenetresOuvertes = () => !!(H.local && H.local.fenetresOuvertes);
   const MOMENTS = {
     // le mur du lit bleu foncé, le mur de la baie vert foncé
@@ -173,10 +185,49 @@
     ctx.restore();
   }
   // la baie vitrée, au-dessus du canapé : on voit le dehors, les arbres et le ciel
-  const BAIE = { x: 290 + DX, y: 24, w: 146, h: 150 };
+  // la grande baie vitrée, du plafond jusqu'au sol, derrière le canapé
+  const BAIE = { x: 206, y: 18, w: 264, h: 208 };
   function cheminFenetre(ctx) {
     ctx.beginPath();
     ctx.rect(BAIE.x, BAIE.y, BAIE.w, BAIE.h);
+  }
+  // le velux, dans la pente du toit, juste au-dessus des oreillers
+  const VELUX = { x0: 330, x1: 432, prof: 50 };
+  const veluxY = (x) => toitY(x) + EP_TOIT + 3;
+  function cheminVelux(ctx) {
+    const { x0, x1, prof } = VELUX;
+    ctx.moveTo(x0, veluxY(x0)); ctx.lineTo(x1, veluxY(x1)); ctx.lineTo(x1, veluxY(x1) + prof); ctx.lineTo(x0, veluxY(x0) + prof); ctx.closePath();
+  }
+  // le ciel au-dessus du toit (la maison est vue en coupe)
+  function cheminDehorsToit(ctx) {
+    ctx.moveTo(0, -MEZ); ctx.lineTo(LARGE, -MEZ); ctx.lineTo(LARGE, toitY(LARGE)); ctx.lineTo(FAITE.x, FAITE.y); ctx.lineTo(0, toitY(0)); ctx.closePath();
+  }
+  // Le ciel du toit et du velux : de jour, des nuages qui passent ; la nuit, beaucoup d'étoiles
+  // (ƟvƟ adore les regarder depuis son oreiller) et la vraie lune, quand elle est levée.
+  const ETOILES_TOIT = (() => { const r = H.alea("toit"); return Array.from({ length: 90 }, (_, i) => [r() * LARGE, -MEZ + r() * 150, i % 5, r() < 0.15]); })();
+  function dehorsToit(ctx, t, moment, etat) {
+    ctx.save();
+    ctx.beginPath(); cheminDehorsToit(ctx); cheminVelux(ctx); ctx.clip();
+    const CIEL = moment === "jour" ? ["#2f8fe0", "#6fb6ee", "#a8d8ec"] : moment === "soir" ? ["#2a2c6a", "#5b3c8f", "#c93f6e"] : ["#15124a", "#1b1d4a", "#232a63"];
+    const g = ctx.createLinearGradient(0, -MEZ, 0, -110);
+    CIEL.forEach((c, k) => g.addColorStop(k / (CIEL.length - 1), c));
+    ctx.fillStyle = g; ctx.fillRect(0, -MEZ, LARGE, MEZ);
+    if (moment === "jour") {
+      ctx.fillStyle = "#f3f0dc";
+      for (const [v, y, l, d] of [[0.008, -226, 38, 0], [0.005, -196, 26, 300], [0.006, -170, 30, 620]]) {
+        const x = -60 + ((t * v + d) % (LARGE + 120));
+        arrondi(ctx, x, y, l, 9, 4.5); ctx.fill();
+        arrondi(ctx, x + l * 0.25, y - 5, l * 0.5, 9, 4.5); ctx.fill();
+      }
+    } else {
+      for (const [x, y, n, grosse] of ETOILES_TOIT) {
+        const a = moment === "nuit" ? 0.45 + 0.55 * Math.sin(t / 700 + n * 2 + x) : 0.3;
+        ctx.fillStyle = "rgba(255,245,230," + Math.max(0.1, a) + ")";
+        ctx.fillRect(x, y, grosse ? 2.6 : 1.8, grosse ? 2.6 : 1.8);
+      }
+      if (etat.lune.alt > -2) lunePlate(ctx, 408, -188, 9, etat.lune.phase);
+    }
+    ctx.restore();
   }
   // Le dehors, derrière la vitre : le ciel du moment, des arbres au loin, plus sombres et bleuis,
   // puis des arbres tout proches. Le jour, le soleil les éclaire par le haut ; le soir et la nuit,
@@ -194,14 +245,14 @@
     const r = H.alea("baie");
     if (moment === "jour") {
       ctx.fillStyle = "#f3f0dc";
-      for (const [v, y, l] of [[0.010, 44, 34], [0.006, 70, 24]]) {
+      for (const [v, y, l] of [[0.010, Y + 26, 34], [0.006, Y + 52, 24]]) {
         const x = X - 40 + ((t * v) % (L + 80));
         arrondi(ctx, x, y, l, 9, 4.5); ctx.fill();
         arrondi(ctx, x + l * 0.25, y - 5, l * 0.5, 9, 4.5); ctx.fill();
       }
     } else {
-      for (let i = 0; i < 22; i++) {
-        const x = X + r() * L, y = Y + r() * 70, n = i % 4;
+      for (let i = 0; i < 40; i++) {
+        const x = X + r() * L, y = Y + r() * Hh * 0.45, n = i % 4;
         ctx.fillStyle = "rgba(255,245,230," + (moment === "nuit" ? 0.5 + 0.5 * Math.sin(t / 600 + n * 2 + x) : 0.3) + ")";
         ctx.fillRect(x, y, 1.8, 1.8);
       }
@@ -240,6 +291,7 @@
       houppe(x + penche, bas - haut - 12, rx * 0.6, 8);
     };
     pin(X + 26, 92, 30, 8);
+    pin(X + L * 0.56, 78, 28, 6);
     pin(X + L - 40, 104, 34, -10);
     // le cyprès, fin et sombre
     ctx.fillStyle = pres;
@@ -270,11 +322,16 @@
   function lumieres(moment, eteint) {
     const lampes = !eteint && moment !== "jour";
     const ciel = { jour: [66, 62, 46], soir: [130, 72, 66], nuit: [26, 34, 70] }[moment];
+    const rim = moment === "jour" ? [255, 248, 222] : moment === "soir" ? [255, 172, 140] : [170, 190, 255];
     const sources = [
-      { x: BAIE.x + BAIE.w / 2, y: 215, rx: 330, ry: 190, col: ciel, rim: moment === "jour" ? [255, 248, 222] : moment === "soir" ? [255, 172, 140] : [170, 190, 255], poids: lampes ? 0.3 : 1 },
+      // le ciel qui entre par la grande baie, et en haut par le velux
+      { x: BAIE.x + BAIE.w / 2, y: 215, rx: 380, ry: 200, col: ciel, rim, poids: lampes ? 0.3 : 1 },
+      { x: 381, y: -120, rx: 290, ry: 140, col: ciel, rim, poids: lampes ? 0.3 : 1, haut: true },
     ];
     if (lampes) {
-      sources.push({ x: 259 + DX, y: 168, rx: 180, ry: 140, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 75 });
+      // la petite lampe posée sur l'enceinte, à côté du canapé ; en haut, la lampe de chevet
+      sources.push({ x: LAMPE.x, y: LAMPE.y + 34, rx: 190, ry: 140, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 60 });
+      sources.push({ x: CHEVET.x, y: CHEVET.y + 30, rx: 170, ry: 110, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 60, haut: true });
       sources.push({ x: BOULE.x, y: 196, rx: 195, ry: 150, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 75, ey: 206, table: true });
     }
     return {
@@ -293,14 +350,20 @@
     g.fillStyle = d; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
     g.restore();
   }
+  // une lumière reste à son étage : en haut (sous le toit) ou en bas (dans la pièce)
+  function etage(g, s, fn) {
+    g.save(); g.beginPath();
+    if (s.haut) g.rect(0, -MEZ, LARGE, MEZ); else g.rect(0, -14, LARGE, 374);
+    g.clip(); fn(); g.restore();
+  }
   // la carte de la lumière reçue en chaque point (k : échelle du dessin vers les pixels)
   function carteLumiere(lw, lh, k, L) {
     const c = document.createElement("canvas"), g = c.getContext("2d");
     c.width = lw; c.height = lh;
-    g.setTransform(k, 0, 0, k, 0, 0);
-    g.fillStyle = rgba(L.ambiant); g.fillRect(0, 0, LARGE, 360);
+    repere(g, k);
+    g.fillStyle = rgba(L.ambiant); g.fillRect(0, -MEZ, LARGE, HAUT);
     g.globalCompositeOperation = "lighter";
-    for (const s of L.sources) tache(g, s.x, s.y, s.rx, s.ry, s.col);
+    for (const s of L.sources) etage(g, s, () => tache(g, s.x, s.y, s.rx, s.ry, s.col));
     // sous la table, le plateau fait de l'ombre : la boule (juste au-dessus) n'y arrive pas, la
     // lumière de la pièce un peu
     // (entre les pieds, on voit le sol derrière la table, encore éclairé par la boule tout autour ;
@@ -325,10 +388,10 @@
     if (!avec.length) return null;
     const c = document.createElement("canvas"), g = c.getContext("2d");
     c.width = lw; c.height = lh;
-    g.setTransform(k, 0, 0, k, 0, 0);
-    g.fillStyle = "#000"; g.fillRect(0, 0, LARGE, 360);
+    repere(g, k);
+    g.fillStyle = "#000"; g.fillRect(0, -MEZ, LARGE, HAUT);
     g.globalCompositeOperation = "lighter";
-    for (const s of avec) tache(g, s.x, s.ey || s.y + 30, s.re, s.re * 0.6, s.eclat);
+    for (const s of avec) etage(g, s, () => tache(g, s.x, s.ey || s.y + 30, s.re, s.re * 0.6, s.eclat));
     return c;
   }
   const tampons = {};
@@ -392,7 +455,7 @@
   }
   // les ombres de contact, au pied des meubles (dans les mesures élargies)
   function ombresAuSol(ctx) {
-    for (const [x0, x1, y] of [[10, 92, 252], [114, 330, 248], [332, 378, 250], [370, 530, 247], [530, 572, 296], [560, 700, 296], [690, 732, 296], [754, 782, 250]]) {
+    for (const [x0, x1, y] of [[10, 92, 252], [110, 160, 236], [160, 192, 234], [480, 512, 234], [190, 480, 258], [530, 572, 296], [560, 700, 296], [690, 732, 296], [748, 790, 250]]) {
       const cx = (x0 + x1) / 2, rx = (x1 - x0) / 2 + 6;
       ctx.save(); ctx.translate(cx, y); ctx.scale(1, 7 / rx);
       const d = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
@@ -414,6 +477,7 @@
     const lumi = [L.ambiant];
     for (const src of L.sources) { lumi.push(plus(L.ambiant, src.col, 0.5), plus(L.ambiant, src.col, 1)); if (src.eclat) lumi.push(plus(plus(L.ambiant, src.col, 1), src.eclat, 1)); }
     if (SOLEIL[moment]) lumi.push(plus(plus(L.ambiant, L.sources[0].col, 1), SOLEIL[moment], 0.8));
+    lumi.push(plus(L.ambiant, LUNE_COUL, 0.6), plus(L.ambiant, LUNE_COUL, 1));
     lumi.push(plus(L.ambiant, FEU_COUL, 0.7));
     const out = [];
     for (const m of MATIERES) for (const l of lumi) {
@@ -431,46 +495,80 @@
     const a = Math.sin(i * 12.9898) * 43758.5453, b = Math.sin(i * 78.233) * 12345.678;
     return [a - Math.floor(a), b - Math.floor(b), 3 + ((i * 7) % 6), i * 0.7];
   });
-  function soleilParLaBaie(ctx, t, etat, moment, decor) {
-    const s = etat.soleil, m = H.ciel.meteo || {};
-    if (s.alt < 2) return;
+  // La lumière du ciel se voit toujours, que les lampes soient allumées ou non : le jour le soleil,
+  // la nuit la lune (plus ou moins selon sa phase ; même sans lune, la nuit claire un peu), au
+  // crépuscule une lueur mauve. Elle entre par la baie (sur le canapé et le sol) et par le velux
+  // (sur le lit). On rend le masque de cette lumière : sa couleur en chaque point, noir ailleurs.
+  const LUNE_COUL = [120, 150, 220], CREPUSCULE = [170, 120, 170];
+  function masqueCiel(t, etat, decor) {
+    const s = etat.soleil, lu = etat.lune, m = H.ciel.meteo || {};
     const couvert = m.nuages != null ? m.nuages / 100 : 0;
-    const force = Math.max(0, 1 - couvert * 0.9) * Math.min(1, s.alt / 12) * (moment === "soir" ? 0.7 : 1);
-    if (force < 0.08) return;
-    // le soleil haut fait une tache courte, bas une tache longue ; il tourne avec l'azimut
-    const pente = Math.max(-1.2, Math.min(1.2, (180 - s.az) / 55)), long = Math.max(0.35, Math.min(1.1, 18 / Math.max(6, s.alt)));
-    const { x: fx, y: fy, w: fw, h: fh } = BAIE;
-    // un point de la vitre (x, y) → où sa lumière tombe : le haut sur le dossier du canapé, le bas
-    // sur le sol devant
-    const sol = (x, y) => { const d = (y - fy) / fh; return [x + pente * 120 * d * long, 184 + d * 160 * long]; };
-    const vent = Math.sin(t / 2100) * 5 + Math.sin(t / 830) * 2;
-    const masque = tampon("soleil", decor.width, decor.height);
-    ctx = masque.getContext("2d");
-    ctx.setTransform(decor.k, 0, 0, decor.k, 0, 0);
-    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, LARGE, 360);
-    ctx.save();
-    // (seulement sur le canapé et sur le sol, pas sur le mur)
-    ctx.beginPath(); ctx.rect(278 + DX, 168, 152, 80); ctx.rect(0, 232, LARGE, 128); ctx.clip();
-    const chaud = SOLEIL[moment].map((v) => v * force).join(",");
-    for (let k = 0; k < 2; k++) {
-      const x0 = fx + (fw * k) / 2 + 5, x1 = fx + (fw * (k + 1)) / 2 - 5, y0 = fy + 5, y1 = fy + fh - 5;
-      const q = [sol(x0, y0), sol(x1, y0), sol(x1, y1), sol(x0, y1)];
-      ctx.save();
-      ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-      ctx.clip();
-      ctx.fillStyle = "rgb(" + chaud + ")";
-      ctx.fillRect(0, 160, LARGE, 200);
-      // l'ombre tachetée des feuilles, aplatie par la perspective
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
-      for (const [u, v, r, ph] of FEUILLES) {
-        const [x, y] = sol(fx + u * fw + vent * (0.6 + v), fy + v * fh * 0.85);
-        const rr = r * (0.8 + 0.2 * Math.sin(t / 900 + ph));
-        ctx.beginPath(); ctx.ellipse(x, y, rr * 1.6, rr * 0.6 * long + 1, 0.2, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.restore();
+    let force, col, astre, feuilles = false;
+    if (s.alt >= 2) {
+      force = Math.max(0, 1 - couvert * 0.9) * Math.min(1, s.alt / 12) * (s.alt > 6 ? 1 : 0.7);
+      col = SOLEIL[s.alt > 6 ? "jour" : "soir"]; astre = s; feuilles = true;
+    } else if (s.alt > -6) {
+      force = 0.4 * Math.max(0.3, 1 - couvert * 0.6); col = CREPUSCULE; astre = { alt: 20, az: s.az };
+    } else {
+      const levee = lu.alt > 0;
+      force = Math.max(0.3, 1 - couvert * 0.7) * (levee ? 0.5 + 0.5 * (lu.fraction != null ? lu.fraction : 0.5) : 0.4);
+      col = LUNE_COUL; astre = levee ? lu : { alt: 35, az: 180 }; feuilles = levee;
     }
+    if (force < 0.08) return null;
+    // l'astre haut fait une tache courte, bas une tache longue ; elle tourne avec l'azimut
+    const pente = Math.max(-1.2, Math.min(1.2, (180 - astre.az) / 55)), long = Math.max(0.35, Math.min(1.1, 18 / Math.max(6, astre.alt)));
+    const { x: fx, y: fy, w: fw, h: fh } = BAIE;
+    // un point de la vitre → où sa lumière tombe : le haut sur le dossier du canapé, le bas sur le sol
+    const sol = (x, y) => { const d = (y - fy) / fh; return [x + pente * 110 * d * long, 168 + d * 170 * long]; };
+    const vent = Math.sin(t / 2100) * 5 + Math.sin(t / 830) * 2;
+    const masque = tampon("ciel", decor.width, decor.height), g = masque.getContext("2d");
+    repere(g, decor.k);
+    g.fillStyle = "#000"; g.fillRect(0, -MEZ, LARGE, HAUT);
+    const couleur = "rgb(" + col.map((v) => Math.round(v * force)).join(",") + ")";
+    g.save();
+    // (seulement sur le canapé et sur le sol, pas sur le mur)
+    g.beginPath(); g.rect(186, 150, 300, 104); g.rect(0, 232, LARGE, 128); g.clip();
+    for (let k = 0; k < 3; k++) {
+      const x0 = fx + (fw * k) / 3 + 5, x1 = fx + (fw * (k + 1)) / 3 - 5, y0 = fy + 5, y1 = fy + fh - 5;
+      const q = [sol(x0, y0), sol(x1, y0), sol(x1, y1), sol(x0, y1)];
+      g.save();
+      g.beginPath(); q.forEach(([x, y], n) => (n ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.clip();
+      g.fillStyle = couleur; g.fillRect(0, 140, LARGE, 220);
+      // l'ombre tachetée des feuilles des arbres dehors, aplatie par la perspective
+      if (feuilles) {
+        g.fillStyle = "rgba(0,0,0,0.7)";
+        for (const [u, v, r, ph] of FEUILLES) {
+          const [x, y] = sol(fx + u * fw + vent * (0.6 + v), fy + v * fh * 0.6);
+          const rr = r * (0.8 + 0.2 * Math.sin(t / 900 + ph));
+          g.beginPath(); g.ellipse(x, y, rr * 1.6, rr * 0.6 * long + 1, 0.2, 0, Math.PI * 2); g.fill();
+        }
+      }
+      g.restore();
+    }
+    g.restore();
+    // par le velux, la lumière tombe sur le lit (les oreillers, la couverture) et le plancher
+    g.save();
+    g.beginPath(); g.rect(200, -150, 320, 132); g.clip();
+    const dv = -pente * 34 * long, { x0, x1, prof } = VELUX;
+    const q = [[x0 + dv - 6, -112], [x1 + dv + 6, -122], [x1 + dv + 10, -24], [x0 + dv - 10, -24]];
+    g.beginPath(); q.forEach(([x, y], n) => (n ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
+    g.filter = "blur(" + Math.round(3 * decor.k) + "px)";
+    g.globalAlpha = 0.75; g.fillStyle = couleur; g.fill();
+    g.globalAlpha = 1; g.filter = "none";
+    g.restore();
+    masque.force = force; masque.col = col; masque.pente = dv;
+    return masque;
+  }
+  // le rai de lumière du velux, dans l'air de la mezzanine (à peine visible)
+  function raiDuVelux(ctx, masque) {
+    const { x0, x1, prof } = VELUX, dv = masque.pente;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createLinearGradient(0, veluxY(x0) + prof, 0, -40);
+    g.addColorStop(0, rgba(masque.col, 0.16 * masque.force)); g.addColorStop(1, rgba(masque.col, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(x0, veluxY(x0) + prof); ctx.lineTo(x1, veluxY(x1) + prof); ctx.lineTo(x1 + dv + 10, -40); ctx.lineTo(x0 + dv - 10, -40); ctx.closePath(); ctx.fill();
     ctx.restore();
-    ajouterLumiere(toileDe(decor), decor.couleurs, masque, 1);
   }
 
   // Les flammes derrière la vitre de la cheminée, qui dansent, et leur lueur qui se pose sur le sol et
@@ -482,8 +580,8 @@
     const vac = 0.72 + Math.sin(t / 130) * 0.12 + Math.sin(t / 57 + 1) * 0.07 + Math.sin(t / 23 + 2) * 0.05 + flambee;
     const bx = Math.sin(t / 210) * 3 + Math.sin(t / 77) * 1.5, by = Math.sin(t / 160 + 1) * 2;
     const masque = tampon("feu", decor.width, decor.height), g = masque.getContext("2d");
-    g.setTransform(decor.k, 0, 0, decor.k, 0, 0);
-    g.fillStyle = "#000"; g.fillRect(0, 0, LARGE, 360);
+    repere(g, decor.k);
+    g.fillStyle = "#000"; g.fillRect(0, -MEZ, LARGE, HAUT);
     // la lumière sort seulement par la vitre, vers l'avant : elle se pose sur le sol devant le
     // poêle, en s'élargissant ; ni sur le mur derrière, ni sous le poêle
     const pied = POELE.y + POELE.h + 12;
@@ -495,8 +593,6 @@
     g.restore();
     return masque;
   }
-  let toileCourante = null;
-  const toileDe = () => toileCourante;
   function feuDuPoele(ctx, t, moment, decor) {
     ajouterLumiere(ctx.canvas, decor.couleurs, masqueFeu(t, decor), moment === "jour" ? 0.5 : 0.95);
     // les flammes derrière la vitre du poêle
@@ -523,14 +619,16 @@
     a.width = Math.round(w * dpr);
     a.height = Math.round(h * dpr);
     const ctx = a.getContext("2d"), S = w / LARGE, r = H.alea("mazet"), k = dpr * S;
+    pixK = k;
     ECL = { k, L };
-    ctx.setTransform(k, 0, 0, k, 0, 0);
+    repere(ctx, k);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.strokeStyle = ENCRE;
     ctx.lineWidth = 2.2;
-    // les murs, deux couleurs franches, plus sombres vers le plafond et dans le coin
-    const COIN = 214 + DX;
+    // les murs, deux couleurs franches (le coin bleu du poêle, le grand mur vert de la baie), plus
+    // sombres vers le plafond et dans le coin
+    const COIN = 112;
     ctx.fillStyle = M.murG; ctx.fillRect(0, 0, COIN, 230);
     ctx.fillStyle = M.murD; ctx.fillRect(COIN, 0, LARGE - COIN, 230);
     const plafond = ctx.createLinearGradient(0, 0, 0, 70);
@@ -555,50 +653,36 @@
     ctx.globalAlpha = 1;
     ctx.fillStyle = M.plinthe; ctx.fillRect(0, 226, LARGE, 6);
     ctx.beginPath(); ctx.moveTo(0, 232); ctx.lineTo(LARGE, 232); ctx.stroke();
-    // le tapis rond, rose, sous Lóló
+    // le tapis rond, devant le canapé
     ctx.beginPath(); ctx.ellipse(338 + DX, 322, 118, 22, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(338 + DX, 322, 96, 15, 0, 0, Math.PI * 2);
     ctx.strokeStyle = "#7f97f2"; ctx.stroke(); ctx.strokeStyle = ENCRE;
     ombresAuSol(ctx);
 
-    // la baie vitrée : on la découpe (le dehors se peint derrière), puis le cadre et les montants
+    // la grande baie vitrée : on la découpe (le dehors se peint derrière), puis le cadre en bois
+    // naturel et ses trois vantaux coulissants
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
     ctx.fillStyle = "#000";
     cheminFenetre(ctx); ctx.fill();
     ctx.restore();
-    // (le cadre en bois naturel, deux battants)
     ctx.lineWidth = 7; ctx.strokeStyle = "#c49a6c"; cheminFenetre(ctx); ctx.stroke();
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     ctx.strokeRect(BAIE.x - 4, BAIE.y - 4, BAIE.w + 8, BAIE.h + 8);
     ctx.strokeRect(BAIE.x + 3, BAIE.y + 3, BAIE.w - 6, BAIE.h - 6);
-    if (!fenetresOuvertes()) {
-      for (const u of [1 / 2]) {
-        const x = BAIE.x + BAIE.w * u;
-        ctx.fillStyle = "#c49a6c"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
-        ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
-      }
-    } else {
-      // grande ouverte : les battants rabattus contre le mur, de chaque côté, vus en biais
-      for (const sens of [-1, 1]) {
-        const xb = sens < 0 ? BAIE.x : BAIE.x + BAIE.w, l = 24 * sens;
-        const q = [[xb, BAIE.y - 2], [xb + l, BAIE.y + 8], [xb + l, BAIE.y + BAIE.h - 6], [xb, BAIE.y + BAIE.h + 2]];
-        ctx.beginPath(); q.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-        ctx.fillStyle = "#c49a6c"; ctx.fill(); ctx.stroke();
-        const v = [[xb + l * 0.25, BAIE.y + 8], [xb + l * 0.8, BAIE.y + 14], [xb + l * 0.8, BAIE.y + BAIE.h - 12], [xb + l * 0.25, BAIE.y + BAIE.h - 6]];
-        ctx.beginPath(); v.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-        ctx.fillStyle = "#a8d8ec"; ctx.fill(); ctx.stroke();
-      }
-    }
+    const montant = (x) => {
+      ctx.fillStyle = "#c49a6c"; ctx.fillRect(x - 3, BAIE.y, 6, BAIE.h);
+      ctx.beginPath(); ctx.moveTo(x - 3, BAIE.y + 3); ctx.lineTo(x - 3, BAIE.y + BAIE.h); ctx.moveTo(x + 3, BAIE.y + 3); ctx.lineTo(x + 3, BAIE.y + BAIE.h); ctx.stroke();
+    };
+    // (grande ouverte : les deux vantaux de droite ont glissé derrière celui de gauche)
+    if (!fenetresOuvertes()) { montant(BAIE.x + BAIE.w / 3); montant(BAIE.x + (2 * BAIE.w) / 3); }
+    else { montant(BAIE.x + BAIE.w / 3); montant(BAIE.x + BAIE.w / 3 + 8); montant(BAIE.x + BAIE.w / 3 + 16); }
 
-    // au-dessus du lit, deux photos dans des cadres en bois naturel : ƟvƟ et Mesi qui se tiennent
-    // la main au bord de la mer, et Lóló et Mémé qui sourient. Elles sont dessinées case par case,
-    // chaque case tombant pile sur un gros pixel de l'écran, pour que les visages restent nets.
-    photoEncadree(ctx, 24 + DX, 56, PHOTO_DUO, w);
-    photoEncadree(ctx, 126 + DX, 66, PHOTO_LOLO, w);
-
-    // le poêle à bois, tout à gauche, posé sur le sol, et son conduit argenté jusqu'au plafond
+    // en haut, la mezzanine sous le toit
+    mezzanine(ctx);
+    // le poêle à bois, tout à gauche, posé sur le sol, et son conduit argenté qui monte à travers
+    // la mezzanine et sort par le toit
     poeleABois(ctx, moment, eteint);
     // la porte d'entrée, tout au bout à droite : c'est par là qu'on part en balade
     porteEntree(ctx);
@@ -607,43 +691,20 @@
     const a2 = document.createElement("canvas");
     a2.width = a.width; a2.height = a.height;
     const cm = a2.getContext("2d");
-    cm.setTransform(k, 0, 0, k, 0, 0);
+    repere(cm, k);
     cm.lineJoin = "round"; cm.lineCap = "round"; cm.strokeStyle = ENCRE; cm.lineWidth = 2.2;
-    // (le lit, le canapé et la table : dans leurs mesures d'avant, décalées de DX)
+    // les deux enceintes de chaque côté de la baie, la petite lampe posée sur celle de gauche
+    for (const x of ENCEINTES) enceinte(cm, x);
+    lampeEnceinte(cm, "#e9e3cd", true);
+    canapeL(cm);
+    echelle(cm);
+    // en haut : le lit, la lunette pour les étoiles, l'étagère de livres
+    litMezzanine(cm);
+    lunette(cm);
+    etagere(cm, r);
+    // (la plante et les chaises : dans leurs mesures d'avant, décalées de DX)
     cm.save();
     cm.translate(DX, 0);
-    // le lit et ses coussins
-    bloc(cm, 22, 150, 16, 94, 7, "#e9b44c");
-    bloc(cm, 34, 202, 198, 32, 11, "#f2f0e8");
-    bloc(cm, 74, 196, 160, 40, 13, "#3d5ee8");
-    bloc(cm, 74, 196, 30, 40, 12, "#7f97f2");
-    bloc(cm, 40, 182, 42, 23, 11, "#ffffff");
-    bloc(cm, 64, 187, 40, 21, 10, "#ffb3a8");
-    bloc(cm, 42, 234, 8, 12, 3, "#e9b44c");
-    bloc(cm, 218, 234, 8, 12, 3, "#e9b44c");
-
-    // la table de chevet et sa lampe
-    bloc(cm, 240, 196, 38, 52, 7, "#e9b44c");
-    cm.beginPath(); cm.moveTo(244, 220); cm.lineTo(274, 220); cm.stroke();
-    cm.beginPath(); cm.arc(259, 210, 2.2, 0, Math.PI * 2); cm.fillStyle = ENCRE; cm.fill();
-    bloc(cm, 251, 188, 16, 9, 4, ENCRE, true);
-    cm.beginPath(); cm.moveTo(259, 188); cm.lineTo(259, 162); cm.stroke();
-    cm.beginPath();
-    cm.moveTo(247, 141); cm.lineTo(271, 141); cm.quadraticCurveTo(275, 141, 277, 147);
-    cm.lineTo(280, 160); cm.quadraticCurveTo(281, 164, 277, 164);
-    cm.lineTo(241, 164); cm.quadraticCurveTo(237, 164, 238, 160);
-    abatJour(cm, "#e9e3cd");
-
-    // le canapé corail sous la fenêtre
-    bloc(cm, 292, 170, 126, 46, 17, "#ff5b4f");
-    bloc(cm, 304, 180, 36, 30, 11, "#ffd23a");
-    bloc(cm, 374, 182, 34, 28, 11, "#f2f0e8");
-    bloc(cm, 286, 206, 138, 30, 13, "#ff7a6b");
-    bloc(cm, 278, 188, 24, 50, 11, "#ff5b4f");
-    bloc(cm, 406, 188, 24, 50, 11, "#ff5b4f");
-    bloc(cm, 292, 236, 8, 9, 3, ENCRE);
-    bloc(cm, 410, 236, 8, 9, 3, ENCRE);
-
     // la plante, contre le mur tout à droite, à côté de la chaise de Mesi : de grandes feuilles
     // dans un pot bas
     for (const [x, y, l, a, c2] of [[0, 226, 58, -1.9, "#2f7a3e"], [0, 226, 66, -1.45, "#4f9a46"], [0, 226, 54, -1.1, "#2f7a3e"], [0, 226, 46, -2.4, "#4f9a46"], [0, 226, 42, -0.7, "#3f8a42"], [0, 196, 40, -1.7, "#3f8a42"], [4, 202, 36, -0.95, "#2f7a3e"], [-4, 202, 36, -2.25, "#4f9a46"]]) feuille(cm, PLANTE + x, y, l, a, c2);
@@ -658,11 +719,11 @@
     // la boule éteinte reçoit la lumière de la pièce comme le reste
     const allumee = !eteint && moment !== "jour";
     if (!allumee) plafonnier(ctx, moment, true);
-    // les chaises à part : la lumière du soleil passe derrière elles (voir soleilParLaBaie)
+    // les chaises à part : la lumière du soleil passe derrière elles (voir masqueCiel)
     const ch = document.createElement("canvas");
     ch.width = a.width; ch.height = a.height;
     const cg = ch.getContext("2d");
-    cg.setTransform(k, 0, 0, k, 0, 0);
+    repere(cg, k);
     cg.lineJoin = "round"; cg.lineCap = "round"; cg.strokeStyle = ENCRE; cg.lineWidth = 2.2;
     cg.save(); cg.translate(DX, 0); chaises(cg); cg.restore();
     ECL = null;
@@ -675,20 +736,203 @@
     const c2 = document.createElement("canvas");
     c2.width = a.width; c2.height = a.height;
     eclairerCouche(c2, a2, carte, reflets);
-    // (les vraies couleurs de tout, pour le soleil et le feu)
+    // (les vraies couleurs de tout, pour le soleil, la lune et le feu)
     const tout = document.createElement("canvas");
     tout.width = a.width; tout.height = a.height;
     tout.getContext("2d").drawImage(a, 0, 0); tout.getContext("2d").drawImage(a2, 0, 0);
     const chL = document.createElement("canvas");
     chL.width = a.width; chL.height = a.height;
     eclairerCouche(chL, ch, carte, reflets);
-    // ce qui brille par soi-même : l'abat-jour allumé et la boule
+    // ce qui brille par soi-même : les abat-jour allumés et la boule
     const g = c2.getContext("2d");
-    g.setTransform(k, 0, 0, k, 0, 0);
+    repere(g, k);
     g.lineJoin = "round"; g.lineCap = "round"; g.strokeStyle = ENCRE; g.lineWidth = 2.2;
-    if (allumee) { g.save(); g.translate(DX, 0); abatJour(g, "#fff06a"); g.restore(); plafonnier(g, moment, false); }
+    if (allumee) {
+      g.save(); versLeLit(g); g.translate(-264, 0); abatJour(g, "#fff06a"); g.restore();
+      lampeEnceinte(g, "#fff06a");
+      plafonnier(g, moment, false);
+    }
     Object.assign(c, { couleurs: tout, meubles: c2, carte, eclats: reflets, chaises: chL, k, L });
     return c;
+  }
+
+  // La mezzanine, sous le toit à deux pentes (vu en coupe) : le mur du fond bleu, l'ombre sous les
+  // pentes, les tuiles terracotta et les planches du toit, le velux, le plancher en bois posé sur
+  // sa poutre (le plafond de la pièce) et la trémie où arrive l'échelle. Au mur, les deux photos.
+  function mezzanine(ctx) {
+    const pente = (d) => { ctx.lineTo(-8, toitY(-8) + d); ctx.lineTo(FAITE.x, FAITE.y + d); ctx.lineTo(LARGE + 8, toitY(LARGE + 8) + d); };
+    const bande = (d0, d1) => {
+      ctx.beginPath();
+      ctx.moveTo(-8, toitY(-8) + d0); pente(d0);
+      ctx.lineTo(LARGE + 8, toitY(LARGE + 8) + d1); ctx.lineTo(FAITE.x, FAITE.y + d1); ctx.lineTo(-8, toitY(-8) + d1); ctx.closePath();
+    };
+    // le mur du fond
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(-8, 0); pente(EP_TOIT - 1); ctx.lineTo(LARGE + 8, 0); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = "#26406a"; ctx.fillRect(0, -MEZ, LARGE, MEZ);
+    // l'ombre sous les pentes, de plus en plus douce
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = "rgba(15,13,58,0.13)"; bande(EP_TOIT - 2, EP_TOIT + 12 + i * 10); ctx.fill(); }
+    ctx.restore();
+    // les photos du mur, à droite : ƟvƟ et Mesi qui se tiennent la main au bord de la mer, et
+    // Lóló et Mémé qui sourient. Dessinées case par case, chaque case tombant pile sur un gros
+    // pixel de l'écran, pour que les visages restent nets.
+    photoEncadree(ctx, 524, -158, PHOTO_DUO);
+    photoEncadree(ctx, 606, -148, PHOTO_LOLO);
+    // le velux : on le découpe (le ciel se peint derrière), puis son cadre et l'appui en bois
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath(); cheminVelux(ctx); ctx.fillStyle = "#000"; ctx.fill();
+    ctx.restore();
+    const { x0, x1, prof } = VELUX;
+    ctx.beginPath(); ctx.moveTo(x0 - 4, veluxY(x0) + prof + 3); ctx.lineTo(x1 + 4, veluxY(x1) + prof + 3); ctx.lineTo(x1 + 8, veluxY(x1) + prof + 11); ctx.lineTo(x0 - 8, veluxY(x0) + prof + 11); ctx.closePath();
+    ctx.fillStyle = "#c49a6c"; ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 7; ctx.strokeStyle = "#c49a6c"; ctx.beginPath(); cheminVelux(ctx); ctx.stroke();
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
+    ctx.save(); ctx.translate(0, 0);
+    for (const d of [-4, 3]) {
+      ctx.beginPath();
+      ctx.moveTo(x0 - d, veluxY(x0) - d); ctx.lineTo(x1 + d, veluxY(x1) - d); ctx.lineTo(x1 + d, veluxY(x1) + prof + d); ctx.lineTo(x0 - d, veluxY(x0) + prof + d); ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+    // la poignée, en haut du velux
+    const xm = (x0 + x1) / 2;
+    bloc(ctx, xm - 9, veluxY(xm) + 1, 18, 4, 2, "#c9ccd6");
+    // les planches du toit, puis les tuiles par-dessus
+    bande(-1, EP_TOIT); ctx.fillStyle = "#c49a6c"; ctx.fill(); ctx.stroke();
+    bande(-8, 0); ctx.fillStyle = "#c96a3a"; ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#8a4224"; ctx.lineWidth = 1.4;
+    for (let x = 4; x < LARGE; x += 11) { ctx.beginPath(); ctx.moveTo(x, toitY(x) - 7); ctx.lineTo(x, toitY(x) - 1); ctx.stroke(); }
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+    // le plancher de la mezzanine, puis sa poutre (le plafond de la pièce)
+    ctx.fillStyle = "#b9834f"; ctx.fillRect(-2, -30, LARGE + 4, 16);
+    ctx.strokeStyle = "#9a6a3c"; ctx.lineWidth = 1.2;
+    for (let x = 20; x < LARGE; x += 46) { ctx.beginPath(); ctx.moveTo(x, -29); ctx.lineTo(x - 5, -15); ctx.stroke(); }
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+    ctx.fillStyle = "#7a4520"; ctx.fillRect(-2, -14, LARGE + 4, 14);
+    ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(LARGE, -30); ctx.moveTo(0, -14); ctx.lineTo(LARGE, -14); ctx.moveTo(0, 0); ctx.lineTo(LARGE, 0); ctx.stroke();
+    // la trémie de l'échelle
+    ctx.fillStyle = "#1b1d4a"; ctx.fillRect(110, -30, 52, 30); ctx.strokeRect(110, -30, 52, 30);
+  }
+
+  // l'échelle de bois, du sol de la pièce jusqu'à la mezzanine (elle dépasse un peu, pour s'y tenir)
+  function echelle(ctx) {
+    for (let y = -38; y < 228; y += 23) bloc(ctx, 121, y, 30, 5, 2, "#b9834f");
+    for (const x of [116, 149]) bloc(ctx, x, -56, 7, 290, 3, "#c49a6c");
+  }
+
+  // Les enceintes, en noyer, de chaque côté de la baie : un tweeter et deux haut-parleurs. Quand
+  // la musique joue, les membranes battent (voir membranes).
+  const ENCEINTES = [164, 484], HP = [[163, 4.5], [186, 9], [212, 9]];
+  function enceinte(ctx, x) {
+    bloc(ctx, x + 3, 226, 4, 6, 1, ENCRE);
+    bloc(ctx, x + 19, 226, 4, 6, 1, ENCRE);
+    bloc(ctx, x, 150, 26, 78, 4, "#7a4520");
+    for (const [cy, rr] of HP) {
+      ctx.beginPath(); ctx.arc(x + 13, cy, rr, 0, Math.PI * 2); ctx.fillStyle = "#2c2a3e"; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + 13, cy, rr * 0.4, 0, Math.PI * 2); ctx.fillStyle = "#9a9a9a"; ctx.fill();
+    }
+  }
+  function membranes(ctx, t) {
+    ctx.save();
+    ctx.lineWidth = 1.4;
+    for (const x of ENCEINTES) for (const [cy, rr] of HP.slice(1)) {
+      const u = (t / 420 + x / 97 + cy / 31) % 1;
+      ctx.strokeStyle = "rgba(243,240,220," + (0.55 * (1 - u)).toFixed(2) + ")";
+      ctx.beginPath(); ctx.arc(x + 13, cy, rr * (0.45 + 0.5 * u), 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // la petite lampe posée sur l'enceinte de gauche (son abat-jour s'allume le soir)
+  const LAMPE = { x: 177, y: 121 };
+  function lampeEnceinte(ctx, couleur, pied) {
+    if (pied) {
+      bloc(ctx, 170, 142, 14, 8, 3, "#e9b44c");
+      ctx.beginPath(); ctx.moveTo(177, 142); ctx.lineTo(177, 128); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(168, 110); ctx.lineTo(186, 110); ctx.lineTo(193, 130); ctx.lineTo(161, 130); ctx.closePath();
+    ctx.fillStyle = couleur; ctx.fill(); ctx.stroke();
+  }
+
+  // Le grand canapé corail en L, devant la baie : le dossier tout du long, l'assise, l'accoudoir de
+  // droite, et à gauche la méridienne qui avance vers nous, où Lóló et Mémé dorment (un plaid bleu
+  // sur le bout). ƟvƟ et Mesi s'y affalent pour écouter de la musique.
+  function canapeL(ctx) {
+    bloc(ctx, 200, 150, 268, 58, 18, "#ff5b4f");
+    bloc(ctx, 334, 160, 40, 34, 12, "#ffd23a");
+    bloc(ctx, 412, 162, 38, 32, 12, "#f2f0e8");
+    bloc(ctx, 300, 196, 168, 38, 13, "#ff7a6b");
+    bloc(ctx, 454, 176, 26, 64, 11, "#ff5b4f");
+    bloc(ctx, 462, 238, 8, 9, 3, ENCRE);
+    // la méridienne
+    bloc(ctx, 188, 172, 24, 82, 11, "#ff5b4f");
+    bloc(ctx, 196, 200, 130, 30, 13, "#ff7a6b");
+    bloc(ctx, 196, 224, 130, 30, 11, "#ff5b4f");
+    // le plaid plié, posé sur l'accoudoir, qui retombe un peu
+    bloc(ctx, 186, 168, 30, 14, 6, "#3d5ee8");
+    bloc(ctx, 204, 176, 12, 40, 5, "#3d5ee8");
+    ctx.strokeStyle = "#7f97f2"; ctx.lineWidth = 2;
+    for (const y of [190, 202]) { ctx.beginPath(); ctx.moveTo(206, y); ctx.lineTo(214, y); ctx.stroke(); }
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+    bloc(ctx, 200, 252, 8, 8, 3, ENCRE);
+    bloc(ctx, 314, 252, 8, 8, 3, ENCRE);
+  }
+
+  // Le lit de la mezzanine : le même lit qu'avant, tourné (la tête à droite, juste sous le velux),
+  // posé sur le plancher, et sa table de chevet avec la lampe. (Dessiné dans ses mesures d'avant ;
+  // versLeLit les retourne et les monte à l'étage.)
+  const LIT = { x: 478, y: -268 };
+  const CHEVET = { x: 483, y: -116 };
+  function versLeLit(ctx) { ctx.translate(LIT.x, LIT.y); ctx.scale(-1, 1); }
+  function litMezzanine(cm) {
+    cm.save();
+    versLeLit(cm);
+    bloc(cm, 22, 150, 16, 94, 7, "#e9b44c");
+    bloc(cm, 34, 202, 198, 32, 11, "#f2f0e8");
+    bloc(cm, 74, 196, 160, 40, 13, "#3d5ee8");
+    bloc(cm, 74, 196, 30, 40, 12, "#7f97f2");
+    bloc(cm, 40, 182, 42, 23, 11, "#ffffff");
+    bloc(cm, 64, 187, 40, 21, 10, "#ffb3a8");
+    bloc(cm, 42, 234, 8, 12, 3, "#e9b44c");
+    bloc(cm, 218, 234, 8, 12, 3, "#e9b44c");
+    // la table de chevet et sa lampe, côté tête
+    cm.translate(-264, 0);
+    bloc(cm, 240, 196, 38, 52, 7, "#e9b44c");
+    cm.beginPath(); cm.moveTo(244, 220); cm.lineTo(274, 220); cm.stroke();
+    cm.beginPath(); cm.arc(259, 210, 2.2, 0, Math.PI * 2); cm.fillStyle = ENCRE; cm.fill();
+    bloc(cm, 251, 188, 16, 9, 4, ENCRE, true);
+    cm.beginPath(); cm.moveTo(259, 188); cm.lineTo(259, 162); cm.stroke();
+    abatJour(cm, "#e9e3cd");
+    cm.restore();
+  }
+  // la lunette d'ƟvƟ, au pied du lit, sur son trépied, pointée vers le velux
+  function lunette(ctx) {
+    for (const [lw, c] of [[5.4, ENCRE], [3, "#9a6a3c"]]) {
+      ctx.lineWidth = lw; ctx.strokeStyle = c;
+      ctx.beginPath(); ctx.moveTo(222, -84); ctx.lineTo(206, -22); ctx.moveTo(222, -84); ctx.lineTo(238, -22); ctx.moveTo(222, -84); ctx.lineTo(223, -26); ctx.stroke();
+    }
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
+    ctx.save(); ctx.translate(222, -90); ctx.rotate(-0.5);
+    bloc(ctx, -24, -6, 50, 12, 4, "#f3f0dc");
+    bloc(ctx, 24, -8, 9, 16, 2, "#3d5ee8");
+    bloc(ctx, -32, -3, 9, 6, 2, "#2c2a3e");
+    ctx.restore();
+    bloc(ctx, 218, -90, 8, 8, 2, "#2c2a3e");
+  }
+  // une étagère basse sous la pente de droite, avec les livres
+  function etagere(ctx, r) {
+    bloc(ctx, 712, -78, 106, 56, 4, "#b9834f");
+    ctx.beginPath(); ctx.moveTo(716, -50); ctx.lineTo(814, -50); ctx.stroke();
+    const LIVRES = ["#ff5b4f", "#3d5ee8", "#ffd23a", "#2f6b35", "#e04bb0", "#f3f0dc", "#c96a3a", "#7f97f2"];
+    for (const [y0, y1] of [[-75, -50], [-48, -25]]) {
+      let x = 718;
+      while (x < 806) {
+        const l = 6 + Math.floor(r() * 5), hh = (y1 - y0) * (0.7 + r() * 0.28);
+        if (x + l > 810) break;
+        bloc(ctx, x, y1 - hh, l, hh, 1, LIVRES[Math.floor(r() * LIVRES.length)]);
+        x += l + (r() < 0.15 ? 6 : 1);
+      }
+    }
   }
 
   // l'abat-jour de la lampe de chevet
@@ -723,7 +967,7 @@
   // les rideaux de l'image, éclairés comme la pièce (on les peint entre les murs et les meubles)
   function rideauxEclaires(decor, t) {
     const c = tampon("rideaux", decor.width, decor.height), g = c.getContext("2d");
-    g.setTransform(decor.k, 0, 0, decor.k, decor.k * DX, 0);
+    g.setTransform(decor.k, 0, 0, decor.k, decor.k * DX, decor.k * MEZ);
     rideaux(g, t, fenetresOuvertes());
     const vraies = tampon("rideauxVrais", decor.width, decor.height);
     vraies.getContext("2d").drawImage(c, 0, 0);
@@ -776,14 +1020,14 @@
   function poeleABois(ctx, moment, eteint) {
     const M = MOMENTS[moment], { x, y, w, h, vitre } = POELE, cx = x + w / 2;
     // le conduit
-    const cl = cx - 8, cw = 16;
+    const cl = cx - 8, cw = 16, sommet = toitY(cx) - 34;
     const inox = ctx.createLinearGradient(cl, 0, cl + cw, 0);
     inox.addColorStop(0, "#8a8ea0"); inox.addColorStop(0.18, "#f4f6fa"); inox.addColorStop(0.32, "#c9ccd6");
     inox.addColorStop(0.62, "#aeb2c0"); inox.addColorStop(0.8, "#e6e8ee"); inox.addColorStop(1, "#6e7286");
-    ctx.fillStyle = inox; ctx.fillRect(cl, 0, cw, y - 2);
+    ctx.fillStyle = inox; ctx.fillRect(cl, sommet, cw, y - 2 - sommet);
     // les reflets de la pièce, étirés le long du tuyau
     ctx.save();
-    ctx.beginPath(); ctx.rect(cl, 0, cw, y - 2); ctx.clip();
+    ctx.beginPath(); ctx.rect(cl, sommet, cw, y - 2 - sommet); ctx.clip();
     ctx.globalAlpha = 0.28;
     const refl = ctx.createLinearGradient(0, 0, 0, y);
     refl.addColorStop(0, ENCRE); refl.addColorStop(0.35, M.murG); refl.addColorStop(0.75, M.murD); refl.addColorStop(1, M.sol);
@@ -793,8 +1037,10 @@
     ctx.fillRect(cl + cw * 0.72, 30, 1.5, y - 60);
     ctx.restore();
     // les colliers qui joignent les tronçons
-    for (const yy of [46, 104]) { ctx.fillStyle = "#9a9eb0"; ctx.fillRect(cl - 1, yy, cw + 2, 4); ctx.strokeRect(cl - 1, yy, cw + 2, 4); }
-    ctx.beginPath(); ctx.moveTo(cl, 0); ctx.lineTo(cl, y - 2); ctx.moveTo(cl + cw, 0); ctx.lineTo(cl + cw, y - 2); ctx.stroke();
+    for (const yy of [-70, 46, 104]) { ctx.fillStyle = "#9a9eb0"; ctx.fillRect(cl - 1, yy, cw + 2, 4); ctx.strokeRect(cl - 1, yy, cw + 2, 4); }
+    ctx.beginPath(); ctx.moveTo(cl, sommet); ctx.lineTo(cl, y - 2); ctx.moveTo(cl + cw, sommet); ctx.lineTo(cl + cw, y - 2); ctx.stroke();
+    // le chapeau de la cheminée, au-dessus du toit
+    bloc(ctx, cl - 5, sommet - 6, cw + 10, 7, 2, "#9a9eb0");
     // la buse, puis le corps du poêle
     bloc(ctx, cx - 12, y - 6, 24, 8, 2, "#2c2a3e");
     bloc(ctx, x - 4, y, w + 8, 9, 3, "#3a3550");
@@ -854,11 +1100,10 @@
     [[0, 0, LOLO_PHOTO], [12, 0, MEME_PHOTO]],
     20
   );
-  function photoEncadree(ctx, x0, y0, grille, largeurToile) {
-    // la taille d'une case : un gros pixel de l'écran (sur les petits écrans, la photo rétrécit)
-    const S = largeurToile / LARGE, gros = 4 / S, larg = grille[0].length, haut = grille.length;
-    const cell = Math.min(gros, 92 / larg), aligne = (v) => (cell === gros ? Math.round(v / cell) * cell : v);
-    const bord = cell * 2, x = aligne(x0), y = aligne(y0), W2 = larg * cell + bord * 2, H2 = haut * cell + bord * 2;
+  function photoEncadree(ctx, x0, y0, grille) {
+    // la taille d'une case : un gros pixel (chaque case tombe pile sur un gros pixel de l'écran)
+    const m = ctx.getTransform(), cell = grosPixel() / pixK, ox = m.e / pixK, oy = m.f / pixK, larg = grille[0].length, haut = grille.length;
+    const bord = cell * 2, x = Math.round((x0 + ox) / cell) * cell - ox, y = Math.round((y0 + oy) / cell) * cell - oy, W2 = larg * cell + bord * 2, H2 = haut * cell + bord * 2;
     ctx.fillStyle = "#c9a878"; ctx.fillRect(x, y, W2, H2);
     ctx.fillStyle = "#e0c49a"; ctx.fillRect(x, y, W2, cell);
     ctx.fillStyle = "#9a6a3c"; ctx.fillRect(x, y + H2 - cell, W2, cell); ctx.fillRect(x + W2 - cell, y, cell, H2);
@@ -1008,12 +1253,28 @@
     await H.dialogue.dire([{ qui: "luigi", texte: H.histoires.auHasard(["Quelle journée ! Je suis fière de toi.", "Tu as bien travaillé, mon cœur. Viens te reposer.", "Eh bien ! Tu mérites une crêpe, toi."]) }]);
   }
 
-  // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin de 800 × 360)
+  // la nuit, depuis le lit, on regarde les étoiles par le velux
+  function regarderLeCiel() {
+    const etat = H.ciel.etat(), jour = momentMaison() === "jour", m = H.ciel.meteo || {};
+    const couvert = m.nuages != null && m.nuages > 70;
+    const lignes = jour
+      ? (couvert ? ["Des nuages tout gris qui passent au-dessus du velux… On dirait un troupeau de moutons pressés.", "Le ciel est tout couvert. On verra les étoiles une autre nuit."] : ["Un grand carré de ciel bleu au-dessus du lit. Ce soir, on verra les étoiles d’ici.", "Un nuage en forme de crêpe passe lentement… J’ai faim, du coup."])
+      : (couvert ? ["Les nuages cachent les étoiles ce soir… Elles sont quand même là, derrière."] : ["Regarde ! Il y en a tellement… On dirait du sucre renversé sur un tissu bleu.", "Je reconnais la Grande Ourse, là, la casserole.", "Une étoile filante ! Vite, un vœu… (ƟvƟ ferme les yeux et sourit.)"].concat(etat.lune.alt > 0 ? ["La lune nous regarde dormir. Ce soir : " + H.ciel.nomPhase(etat.lune.phase) + "."] : []));
+    return H.dialogue.dire([{ qui: "ovo", texte: H.histoires.auHasard(lignes) }]);
+  }
+  function basculerMusique() {
+    if (!H.musique) return;
+    if (H.musique.enCours()) { H.musique.arreter(); H.d.majLocal((l) => (l.musique = false)); return; }
+    H.d.majLocal((l) => (l.musique = true));
+    H.musique.jouer();
+    canapeJusqua = performance.now() + 150000;
+  }
+  // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin ; la mezzanine au-dessus du zéro)
   function zonesMaison(nuit) {
     // on peut aller faire dodo à partir de 21 h
     const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     const zones = [
-      { id: "fenetre", x: 290, y: 24, w: 146, h: 140, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
+      { id: "fenetre", x: BAIE.x - DX, y: BAIE.y, w: BAIE.w, h: 140, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
       { id: "meme", x: 152, y: 192, w: 34, h: 20, nom: "Caresser Mémé", agir: () => H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que la couverture vibre.)"]) }]) },
       { id: "lolo", x: 116, y: 156, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
         // le premier matin de la journée, on lui demande seulement s'il a bien dormi
@@ -1029,8 +1290,11 @@
         if (q === "drame") raconter("lolo");
         else if (q === "blague") blagueLolo();
       } },
-      { id: "lit", x: 22, y: 150, w: 214, h: 96, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
-      { id: "canape", x: 278, y: 168, w: 152, h: 78, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
+      { id: "lit", x: 236 - DX, y: -150, w: 270, h: 130, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
+      { id: "velux", x: VELUX.x0 - DX, y: veluxY(VELUX.x1) - 4, w: VELUX.x1 - VELUX.x0, h: VELUX.prof + 30, get nom() { return momentMaison() === "jour" ? "Regarder le ciel" : "Regarder les étoiles"; }, agir: regarderLeCiel },
+      { id: "enceintes", x: 160 - DX, y: 108, w: 30, h: 126, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
+      { id: "enceinte", x: 482 - DX, y: 148, w: 30, h: 86, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
+      { id: "canape", x: 330 - DX, y: 150, w: 150, h: 90, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
       // le soir, c'est à Mesi qu'ƟvƟ raconte sa journée (une fois par soir) ; sinon, un compliment
       { id: "mesi", x: 572, y: 160, w: 66, h: 136, get nom() { return peutRaconter() ? "Raconter ma journée à Mesi" : "Un compliment de Mesi"; }, agir: () => (peutRaconter() ? soireeOvo() : complimentMesi()) },
       { id: "ovo", x: 428, y: 160, w: 72, h: 136, nom: "Chanter notre chanson", agir: () => chanson() },
@@ -1073,10 +1337,9 @@
     "..kTTTTttttttTTk..",
     "...kkkkkkkkkkkk...",
   ];
-  let pixK = 1; // (pixels de la toile par unité du dessin, pour s'aligner sur les gros pixels)
   // (cellFixe : la taille d'une case quand la scène n'a pas la grille de la maison, en balade)
   function memeEnBoule(ctx, x, y, t, cellFixe) {
-    const m = ctx.getTransform(), cell = cellFixe || H.retro.taillePour(4) / pixK, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
+    const m = ctx.getTransform(), cell = cellFixe || grosPixel() / pixK, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
     const grille = cellFixe ? MEME_DORT_GRAND : MEME_DORT, tete = cellFixe ? 8 : 5;
     const L = grille[0].length, Hh = grille.length, inspire = Math.sin(t / 700) > 0.55;
     const X = Math.round((x + ox - (L * cell) / 2) / cell) * cell - ox, Y = Math.round((y + oy - Hh * cell * 0.6) / cell) * cell - oy;
@@ -1295,7 +1558,7 @@
     const etoiles = Array.from({ length: 26 }, (_, i) => [296 + ((i * 37) % 76), 36 + ((i * 53) % 100), i % 4]);
     const zoneSous = (e) => {
       const r = toile.getBoundingClientRect(), k = LARGE / r.width;
-      const x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
+      const x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k - MEZ;
       return zones.find((z) => x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) || null;
     };
     toile.addEventListener("pointermove", (e) => {
@@ -1324,7 +1587,7 @@
       requestAnimationFrame(image);
       if (t - derniere < 66) return;
       derniere = t;
-      const dpr = Math.min(3, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
+      const dpr = Math.min(3, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * HAUT) / LARGE);
       const moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
       const cleD = w + "|" + moment + "|" + dpr + "|" + cheminee.feuActif() + "|" + cheminee.bois() + "|" + fenetresOuvertes();
@@ -1336,21 +1599,26 @@
       }
       const S = w / LARGE;
       pixK = dpr * S;
-      ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
-      ctx.clearRect(0, 0, LARGE, 360);
-      // le dehors, derrière la baie vitrée
+      repere(ctx, dpr * S);
+      ctx.clearRect(0, -MEZ, LARGE, HAUT);
+      // le dehors, derrière la baie vitrée ; au-dessus du toit et dans le velux, le ciel
+      const etat = H.ciel.etat();
+      dehorsToit(ctx, t, moment, etat);
       ctx.save();
       cheminFenetre(ctx); ctx.clip();
-      const etat = H.ciel.etat();
       dehorsBaie(ctx, t, moment, etat);
       ctx.restore();
-      ctx.drawImage(decor, 0, 0, LARGE, 360);
-      ctx.drawImage(rideauxEclaires(decor, t), 0, 0, LARGE, 360);
-      ctx.drawImage(decor.meubles, 0, 0, LARGE, 360);
-      // le jour, le soleil entre par la baie : l'ombre du cadre et des feuilles qui bougent ; il
-      // passe derrière les chaises
-      toileCourante = toile;
-      if (moment !== "nuit") { soleilParLaBaie(ctx, t, etat, moment, decor); ctx.drawImage(decor.chaises, 0, 0, LARGE, 360); }
+      ctx.drawImage(decor, 0, -MEZ, LARGE, HAUT);
+      ctx.drawImage(rideauxEclaires(decor, t), 0, -MEZ, LARGE, HAUT);
+      ctx.drawImage(decor.meubles, 0, -MEZ, LARGE, HAUT);
+      // le soleil (ou la lune) entre par la baie et par le velux : l'ombre du cadre et des
+      // feuilles qui bougent ; il passe derrière les chaises
+      const ciel = masqueCiel(t, etat, decor);
+      if (ciel) {
+        ajouterLumiere(toile, decor.couleurs, ciel, 1);
+        ctx.drawImage(decor.chaises, 0, -MEZ, LARGE, HAUT);
+        raiDuVelux(ctx, ciel);
+      }
       const feu = cheminee.feuActif();
       if (feu) feuDuPoele(ctx, t, moment, decor);
       // la vapeur du tilleul
@@ -1368,8 +1636,8 @@
         calque.height = toile.height;
       }
       const cc = calque.getContext("2d");
-      cc.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
-      cc.clearRect(0, 0, LARGE, 360);
+      repere(cc, dpr * S);
+      cc.clearRect(0, -MEZ, LARGE, HAUT);
       cc.save();
       cc.translate(DX, 0);
       cc.lineJoin = "round";
@@ -1382,8 +1650,8 @@
       const surCanape = canapeJusqua > t;
       if (surCanape) {
         // sur le canapé, face à face, les jambes qui se balancent au-dessus du tapis
-        assis(cc, "ovo", 300, 1, t, 2, loloRaconte, 216);
-        assis(cc, "luigi", 412, -1, t, 4, false, 216);
+        assis(cc, "ovo", 240, 1, t, 2, loloRaconte, 210);
+        assis(cc, "luigi", 362, -1, t, 4, false, 210);
       } else {
         assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
         assis(cc, "luigi", 626, -1, t, 4);
@@ -1391,15 +1659,17 @@
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;
       tableGouter(cc);
-      // la tête de Mesi : à table (dos 626) ou sur le canapé (dos 412, siège plus bas de 30)
-      if (farce) dessinerFarce(cc, t, surCanape ? { x: 390, y: 126 } : { x: 604, y: 156 });
+      // la tête de Mesi : à table (dos 626) ou sur le canapé (dos 362, siège plus bas de 36)
+      if (farce) dessinerFarce(cc, t, surCanape ? { x: 340, y: 120 } : { x: 604, y: 156 });
       cc.restore();
       ECL = null;
-      // les personnages reçoivent la même lumière que la pièce (et celle du feu)
+      // les personnages reçoivent la même lumière que la pièce (celle du ciel et du feu aussi),
+      // sans les reflets vifs des ampoules : les visages restent dans la lumière du moment
       {
         const vraies = tampon("persos", calque.width, calque.height);
         vraies.getContext("2d").drawImage(calque, 0, 0);
-        eclairerCouche(calque, vraies, decor.carte, decor.eclats);
+        eclairerCouche(calque, vraies, decor.carte, null);
+        if (ciel) ajouterLumiere(calque, vraies, ciel, 1);
         if (feu) ajouterLumiere(calque, vraies, masqueFeu(t, decor), moment === "jour" ? 0.4 : 0.8);
       }
       ctx.save();
@@ -1431,22 +1701,24 @@
           const u = ((t / 1400) + i / 6) % 1;
           ctx.globalAlpha = Math.min(1, (chantJusqua - t) / 600) * (1 - u);
           ctx.fillStyle = i % 2 ? "#ff5b4f" : "#f3f0dc";
-          const base = canapeJusqua > t ? 318 : 470;
+          const base = canapeJusqua > t ? 262 : 470;
           ctx.fillText(i % 3 ? "♪" : "♫", base + (i % 3) * 40 + Math.sin(u * 6 + i) * 6, 170 - u * 60);
         }
         ctx.globalAlpha = 1;
         ctx.textAlign = "start";
       }
       ctx.restore();
+      // les enceintes : quand la musique joue, les membranes battent
+      if (H.musique && H.musique.enCours()) membranes(ctx, t);
       // de gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
-      H.retro.appliquer(toile, H.retro.taillePour(4), 0.6, null, paletteMaison(moment, false));
-      ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+      H.retro.appliquer(toile, grosPixel(), 0.6, null, paletteMaison(moment, false));
+      repere(ctx, dpr * S);
       // le nom de ce qu'on survole
       if (survol) {
         // (comme les menus des scènes : un bloc d'encre cerné de corail, la police pixel en crème)
         ctx.font = "19px VT323, monospace";
         const l = Math.round(ctx.measureText(survol.nom).width) + 28;
-        const x = Math.round(Math.max(8, Math.min(LARGE - 8 - l, survol.x + survol.w / 2 - l / 2))), y = Math.round(Math.max(8, survol.y - 30));
+        const x = Math.round(Math.max(8, Math.min(LARGE - 8 - l, survol.x + survol.w / 2 - l / 2))), y = Math.round(Math.max(8 - MEZ, survol.y - 30));
         ctx.fillStyle = "rgba(15,16,53,0.6)"; ctx.fillRect(x + 4, y + 4, l + 6, 28);
         ctx.fillStyle = "#1b1d4a"; ctx.fillRect(x - 3, y - 3, l + 6, 28);
         ctx.strokeStyle = "#ff5b4f"; ctx.lineWidth = 2; ctx.strokeRect(x - 1, y - 1, l + 2, 24);
@@ -2683,7 +2955,7 @@
       requestAnimationFrame(image);
       if (t - derniere < 66) return;
       derniere = t;
-      const dpr = Math.min(3, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * 360) / LARGE);
+      const dpr = Math.min(3, window.devicePixelRatio || 1), w = toile.clientWidth || 600, h = Math.round((w * HAUT) / LARGE);
       if (cle !== w + "|" + dpr + "|" + fenetresOuvertes()) {
         cle = w + "|" + dpr + "|" + fenetresOuvertes();
         toile.width = Math.round(w * dpr); toile.height = Math.round(h * dpr);
@@ -2691,22 +2963,36 @@
       }
       const S = w / LARGE;
       pixK = dpr * S;
-      ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
-      ctx.clearRect(0, 0, LARGE, 360);
-      // la nuit derrière la baie
+      repere(ctx, dpr * S);
+      ctx.clearRect(0, -MEZ, LARGE, HAUT);
+      // la nuit derrière la baie, les étoiles au-dessus du toit et dans le velux
+      const etat = H.ciel.etat();
+      dehorsToit(ctx, t, "nuit", etat);
       ctx.save(); cheminFenetre(ctx); ctx.clip();
-      dehorsBaie(ctx, t, "nuit", H.ciel.etat());
+      dehorsBaie(ctx, t, "nuit", etat);
       ctx.restore();
-      ctx.drawImage(decor, 0, 0, LARGE, 360);
-      ctx.drawImage(rideauxEclaires(decor, t), 0, 0, LARGE, 360);
-      ctx.drawImage(decor.meubles, 0, 0, LARGE, 360);
+      ctx.drawImage(decor, 0, -MEZ, LARGE, HAUT);
+      ctx.drawImage(rideauxEclaires(decor, t), 0, -MEZ, LARGE, HAUT);
+      ctx.drawImage(decor.meubles, 0, -MEZ, LARGE, HAUT);
+      // la lune entre par la baie et par le velux, sur le sol et sur le lit
+      const ciel = masqueCiel(t, etat, decor);
+      if (ciel) { ajouterLumiere(toile, decor.couleurs, ciel, 1); ctx.drawImage(decor.chaises, 0, -MEZ, LARGE, HAUT); raiDuVelux(ctx, ciel); }
       if (!calque || calque.width !== toile.width || calque.height !== toile.height) { calque = document.createElement("canvas"); calque.width = toile.width; calque.height = toile.height; }
       const cc = calque.getContext("2d");
-      cc.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
-      cc.clearRect(0, 0, LARGE, 360);
+      repere(cc, dpr * S);
+      cc.clearRect(0, -MEZ, LARGE, HAUT);
       cc.lineJoin = "round"; cc.lineCap = "round"; cc.strokeStyle = ENCRE; cc.lineWidth = 1.6;
+      // en bas, Lóló et Mémé dorment sur le canapé ; la table du goûter reste à sa place
       cc.save();
       cc.translate(DX, 0);
+      if (!surLesYeux.oui) loloCouche(cc, 172, 200, t, false);
+      memeEnBoule(cc, 168, 203, t);
+      cc.strokeStyle = ENCRE; cc.lineWidth = 1.6;
+      tableGouter(cc);
+      cc.restore();
+      // en haut, dans le lit de la mezzanine
+      cc.save();
+      versLeLit(cc);
       {
       const ctx = cc;
 
@@ -2756,47 +3042,23 @@
       ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
       ctx.beginPath(); ctx.ellipse(126, 205, 4, 3, 0.4, 0, Math.PI * 2); ctx.fillStyle = "#f2c29b"; ctx.fill(); ctx.stroke();
 
-      // Lóló au pied du lit, Mémé en boule sur la couverture ; s'il y a trop de lumière, Lóló vient
-      // se coucher sur les yeux de tout le monde
-      ctx.save();
-      if (surLesYeux.oui) { ctx.translate(92, 178); ctx.scale(0.72, 0.72); }
-      else { ctx.translate(196, 196); ctx.scale(0.72, 0.72); }
-      loloCouche(ctx, 0, 0, t, false);
-      ctx.restore();
-      memeEnBoule(ctx, 160, 186, t);
+      // s'il y a trop de lumière, Lóló monte se coucher sur les yeux de tout le monde
+      if (surLesYeux.oui) {
+        ctx.save(); ctx.translate(92, 178); ctx.scale(0.72, 0.72);
+        loloCouche(ctx, 0, 0, t, false);
+        ctx.restore();
+      }
       }
       cc.restore();
 
-      // tout le monde reçoit la lumière de la nuit, à moitié seulement : les visages restent lisibles
+      // tout le monde reçoit la lumière de la nuit, comme le décor (et celle de la lune)
       {
         const vraies = tampon("persos", calque.width, calque.height);
         vraies.getContext("2d").drawImage(calque, 0, 0);
-        eclairerCouche(calque, vraies, decor.carte, null, 0.55);
+        eclairerCouche(calque, vraies, decor.carte, null);
+        if (ciel) ajouterLumiere(calque, vraies, ciel, 1);
       }
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(calque, 0, 0); ctx.restore();
-
-      // la lune entre par les trois vitres et se pose sur le sol, en biais, avec l'ombre des branches
-      const vent = Math.sin(t / 1800) * 6, { x: fx, y: fy, w: fw, h: fh } = BAIE;
-      const proj = (x, y) => [x - (y - fy) * 0.75 - 40, 232 + (y - fy) * 0.62];
-      {
-        // (la lune sur les choses : leur couleur × la couleur de la lune)
-        const masque = tampon("lune", decor.width, decor.height), mg = masque.getContext("2d");
-        mg.setTransform(decor.k, 0, 0, decor.k, 0, 0);
-        mg.fillStyle = "#000"; mg.fillRect(0, 0, LARGE, 360);
-        mg.beginPath(); mg.rect(0, 232, LARGE, 128); mg.clip();
-        for (let k = 0; k < 2; k++) {
-          const x0 = fx + (fw * k) / 2 + 4, x1 = fx + (fw * (k + 1)) / 2 - 4, y0 = fy + 4, y1 = fy + fh - 4;
-          const q = [proj(x0, y0), proj(x1, y0), proj(x1, y1), proj(x0, y1)];
-          mg.beginPath(); q.forEach(([x, y], n) => (n ? mg.lineTo(x, y) : mg.moveTo(x, y))); mg.closePath();
-          mg.fillStyle = "rgb(120,150,220)"; mg.fill();
-        }
-        mg.fillStyle = "rgba(0,0,0,0.6)";
-        for (const [dx, dy] of [[30, 30], [46, 22], [24, 96], [40, 88], [70, 64], [96, 44], [110, 110]]) {
-          const [x, y] = proj(fx + dx + vent * 1.4, fy + dy);
-          mg.beginPath(); mg.ellipse(x, y, 11, 4.5, 0.3, 0, Math.PI * 2); mg.fill();
-        }
-        ajouterLumiere(toile, decor.couleurs, masque, 1);
-      }
 
       // de temps en temps, Mémé ronfle : un petit « rrr » s'envole
       if (t > prochainRonflement) {
@@ -2809,11 +3071,11 @@
         ctx.globalAlpha = 1 - u;
         ctx.font = "16px VT323, monospace";
         ctx.fillStyle = "#f3f0dc";
-        ctx.fillText("rrr…", 154 + DX + u * 10, 176 - u * 30);
+        ctx.fillText("rrr…", 250 + u * 10, 186 - u * 30);
         ctx.globalAlpha = 1;
       }
       // tout passe en gros pixels, aux couleurs des pochettes
-      H.retro.appliquer(toile, H.retro.taillePour(4), 0.6, null, paletteMaison("nuit", true));
+      H.retro.appliquer(toile, grosPixel(), 0.6, null, paletteMaison("nuit", true));
     }
     requestAnimationFrame(image);
   }

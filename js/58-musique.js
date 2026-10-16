@@ -616,6 +616,7 @@
       }
       lancerLecture();
     },
+    enCours: () => actif,
     STYLES: Object.fromEntries(Object.entries(STYLES).map(([id, st]) => [id, st.nom])),
     // changer de style : on coupe, et on relance dans le nouveau style
     changerStyle() {
