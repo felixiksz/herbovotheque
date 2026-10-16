@@ -1752,12 +1752,17 @@
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = toile.clientWidth || 600;
     const h = window.innerWidth < 640 ? 300 : 360;
+    // sur un écran en hauteur (téléphone), le paysage garde ses proportions : on ajoute du ciel
+    // au-dessus et de la garrigue au premier plan, au lieu de laisser du vide
+    const portrait = window.innerHeight > window.innerWidth * 1.15;
+    const Htot = portrait ? Math.max(h, Math.min(window.innerHeight - 30, Math.round(w * 2))) : h;
+    const haut = Math.round((Htot - h) * 0.55), bas = Htot - h - haut;
     toile.width = Math.round(w * dpr);
-    toile.height = Math.round(h * dpr);
-    toile.style.height = h + "px";
+    toile.height = Math.round(Htot * dpr);
+    toile.style.height = Htot + "px";
     const nuit = H.ciel.etat().soleil.alt < -4;
     const rEt = H.alea("etoiles-balade");
-    const etoiles = Array.from({ length: 70 }, () => [rEt() * w, rEt() * rEt() * h * 0.5, rEt() * 0.6 + 0.35]);
+    const etoiles = Array.from({ length: 70 + Math.round(haut / 3) }, () => [rEt() * w, rEt() * rEt() * (h * 0.5 + haut) - haut, rEt() * 0.6 + 0.35]);
     const tirage = (graine, n) => {
       const r = H.alea(graine);
       return Array.from({ length: n }, () => r());
@@ -1776,7 +1781,7 @@
       }
     }
     return {
-      ctx, dpr, w, h, nuit, etoiles, arbres, devant, grain,
+      ctx, dpr, w, h, haut, bas, Htot, nuit, etoiles, arbres, devant, grain,
       couvert: H.ciel.couvert(nuit),
       profils: { falaises: tirage("falaises", 24), rochers: tirage("rochers", 24), collines: tirage("collines", 24), collines2: tirage("collines2", 24), nuages: tirage("nuages", 12) },
       decalage: 0, compagnons, derniere: performance.now(),
@@ -2025,9 +2030,10 @@
     const alt = etat.soleil.alt;
     const nuit = alt < -4;
     const ici = rouge(avance);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const haut = S.haut || 0, bas = S.bas || 0;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, dpr * haut);
     // le ciel : bleu franc le jour, les vraies couleurs de l'aube et du couchant, violet la nuit
-    const g = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+    const g = ctx.createLinearGradient(0, -haut, 0, h * 0.6);
     if (nuit) {
       g.addColorStop(0, "#15124a"); g.addColorStop(0.55, "#3a3aa8"); g.addColorStop(0.85, "#8a58cc"); g.addColorStop(1, "#d07ab8");
     } else if (alt > 8) {
@@ -2037,7 +2043,7 @@
       g.addColorStop(0, teinte.haut); g.addColorStop(1, teinte.bas);
     }
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, -haut, w, h + haut);
     if (nuit) {
       for (const [x, y, a] of S.etoiles) {
         ctx.fillStyle = "rgba(255,240,250," + (a + Math.sin(t / 700 + x) * 0.15) + ")";
@@ -2057,7 +2063,7 @@
     if (S.couvert) {
       if (S.couvert.voile) {
         ctx.fillStyle = "rgba(" + S.couvert.voile + ")";
-        ctx.fillRect(0, 0, w, h * 0.6);
+        ctx.fillRect(0, -haut, w, h * 0.6 + haut);
       }
       S.profils.nuages.forEach((v, i) => {
         if (i >= S.couvert.n * 2) return;
@@ -2194,13 +2200,22 @@
         ctx.stroke();
       }
     }
+    // sur téléphone, le premier plan continue sous le chemin : la garrigue, de plus en plus près
+    if (bas > 0) {
+      ctx.fillStyle = nuit ? "#0d1d15" : "#2a7a36";
+      ctx.fillRect(0, h - 2, w, bas + 4);
+      for (let rang = 0; rang < 4; rang++) {
+        const y = h + (bas * (rang + 0.6)) / 4, vite = 1.3 + rang * 0.25;
+        for (let i = 0; i < 9; i++) buissonPlat(ctx, boucler(i * (120 + rang * 30) + rang * 47 - avance * vite, w, 80), y, 26 + rang * 10 + (i % 3) * 8, nuit ? ["#10241a", "#0f2218", "#0b1a12", "#081410"][rang] : ["#3fa04a", "#2f8a3e", "#2a7a36", "#1f6b34"][rang]);
+      }
+    }
     // le grain de risographie (celui du sol avance avec le chemin), puis la lumière de l'aube ou du couchant
     const grain = ctx.createPattern(S.grain, "repeat");
     ctx.fillStyle = grain;
-    ctx.fillRect(0, 0, w, h * 0.72);
+    ctx.fillRect(0, -haut, w, h * 0.72 + haut);
     ctx.save();
     ctx.translate(-(avance % S.grain.width), 0);
-    ctx.fillRect(avance % S.grain.width, h * 0.72, w, h * 0.28);
+    ctx.fillRect(avance % S.grain.width, h * 0.72, w, h * 0.28 + bas);
     ctx.restore();
     if (!nuit) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2210,7 +2225,7 @@
       }
     }
     // la trame des gros pixels glisse avec le chemin, sous la ligne du rivage
-    H.retro.appliquer(b.toile, H.retro.taillePour(3), 0.7, { x: avance * (b.toile.width / w), depuis: 0.72 });
+    H.retro.appliquer(b.toile, H.retro.taillePour(3), 0.7, { x: avance * (b.toile.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) });
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 
