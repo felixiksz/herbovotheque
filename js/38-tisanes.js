@@ -5,6 +5,8 @@
   const H = window.H;
   const choisies = new Set(); // bocaux choisis dans le placard pour un nouveau mélange
   let recherche = "";
+  // (dans le monde de Mesi : les substances chinoises, les plantes d'ƟvƟ, ou toutes)
+  let origine = "pc";
   // Dans le monde de Mesi, ce sont des formules de pharmacopée chinoise : chaque substance a son
   // rang (Empereur, Ministre, Assistant, Messager), sa dose et son action dans la formule.
   const M = () => H.monde === "mesi";
@@ -218,7 +220,8 @@
   // --- les bocaux de plantes sèches, au fond du placard -----------------------------
   function bocaux(zone, barre) {
     const q = H.sansAccents(recherche.trim());
-    const plantes = H.d.plantes().filter((p) => (p.preparations || []).includes("plante-seche") && (!q || H.sansAccents(p.nom + " " + p.latin).includes(q)));
+    const plantes = H.d.plantes().filter((p) => (p.preparations || []).includes("plante-seche") && (!q || H.sansAccents(p.nom + " " + p.latin + " " + ((p.valeurs || {}).nomFr || "")).includes(q))
+      && (!M() || origine === "toutes" || (origine === "pc") === !!p.pc));
     zone.innerHTML = "";
     if (!plantes.length) zone.appendChild(H.el("p.discret", null, mot("aucune")));
     for (const p of plantes) {
@@ -284,6 +287,12 @@
         H.el("h2.titre-placard", null, mot("seches")),
         H.el("p.discret.aide-placard", null, mot("aide")),
         champ,
+        M() ? H.el("div.pastilles.filtre-origine", null, [["pc", "Pharmacopée chinoise"], ["ovo", "Herbier d’ƟvƟ"], ["toutes", "Toutes"]].map(([v, t]) =>
+          H.el("button.bouton.petit" + (origine === v ? ".actif" : ""), { type: "button", "aria-pressed": String(origine === v), onclick: (e) => {
+            origine = v;
+            e.target.parentNode.querySelectorAll("button").forEach((b) => { b.classList.toggle("actif", b === e.target); b.setAttribute("aria-pressed", String(b === e.target)); });
+            bocaux(zone, barre);
+          } }, t))) : null,
         zone
       ));
       c.appendChild(barre);
