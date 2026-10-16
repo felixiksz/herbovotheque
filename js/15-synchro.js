@@ -143,6 +143,7 @@
     r.textes = fusionnerCollection(local.textes, distant.textes);
     r.lettres = fusionnerCollection(local.lettres, distant.lettres);
     r.matins = fusionnerCollection(local.matins, distant.matins);
+    r.cadeaux = fusionnerCollection(local.cadeaux, distant.cadeaux);
     r.ferme = { elements: fusionnerCollection((local.ferme || {}).elements, (distant.ferme || {}).elements) };
     const labo = plusRecent(local, distant, "laboModifieLe");
     r.labo = labo.labo;
@@ -181,7 +182,7 @@
         // à son herbier ni à ses jardins
         if (role() === "mesi") {
           const chezOvo = await lireDistant(FICHIERS.jeu, parent);
-          const commun = { lettres: fusionnerCollection(H.jeu.lettres, chezOvo && chezOvo.lettres), textes: fusionnerCollection(H.jeu.textes, chezOvo && chezOvo.textes), matins: fusionnerCollection(H.jeu.matins, chezOvo && chezOvo.matins) };
+          const commun = { lettres: fusionnerCollection(H.jeu.lettres, chezOvo && chezOvo.lettres), textes: fusionnerCollection(H.jeu.textes, chezOvo && chezOvo.textes), matins: fusionnerCollection(H.jeu.matins, chezOvo && chezOvo.matins), cadeaux: fusionnerCollection(H.jeu.cadeaux, chezOvo && chezOvo.cadeaux) };
           const chezMoi = Object.assign({}, H.jeu, commun);
           if (canon(chezMoi) !== canon(H.jeu)) {
             H.jeu = chezMoi;

@@ -31,6 +31,7 @@
     ile.modifieLe = H.maintenant();
     H.jeu.iles = H.jeu.iles || {};
     H.jeu.iles[ile.id] = ile;
+    if (ile.cadeau) suivreCadeau(ile);
     H.d.changer("jeu");
   }
 
@@ -527,7 +528,7 @@
         H.el("span.infos-ile", null,
           H.el("span.nom-ile", null, ile.nom),
           H.el("span.mesures-ile", null, ile.largeur + " × " + ile.longueur + " m · " + Object.keys(ile.plantes || {}).length + " plantes"),
-          H.el("span.sorte-ile" + (ile.croquis ? ".croquis" : ""), null, ile.croquis ? "croquis" : "île de jeu"))
+          H.el("span.sorte-ile" + (ile.croquis ? ".croquis" : ""), null, etiquetteIle(ile)))
       ));
     });
     if (!ileSecreteOuverte()) {
@@ -543,6 +544,79 @@
     }
     conteneur.appendChild(grille);
   }
+
+  // --- les îles surprises ---------------------------------------------------------------
+  // ƟvƟ et Mesi peuvent se préparer une île en secret, et l'offrir à l'autre pour un jour choisi.
+  // Le cadeau (une copie de l'île, et les fiches de ses plantes) passe par la même voie que les
+  // lettres ; le jour venu, l'île arrive chez l'autre, avec un petit mot. Tant que la date n'est
+  // pas arrivée, on peut encore la retoucher : la copie suit l'île.
+  const NOMS = { ovo: "ƟvƟ", mesi: "Mesi" };
+  const moi = () => (H.local.role === "mesi" ? "mesi" : "ovo");
+  const autre = () => (moi() === "mesi" ? "ovo" : "mesi");
+  const deux = (n) => String(n).padStart(2, "0");
+  const jourIso = (d) => d.getFullYear() + "-" + deux(d.getMonth() + 1) + "-" + deux(d.getDate());
+  const dateLisible = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const cadeaux = () => Object.values(H.jeu.cadeaux || {}).filter((c) => c && !c.supprime);
+  function etiquetteIle(ile) {
+    const c = ile.cadeau && (H.jeu.cadeaux || {})[ile.cadeau];
+    if (c && !c.supprime) return c.recuLe ? "offerte à " + NOMS[c.pour] + " ✓" : "surprise pour " + NOMS[c.pour] + " · " + dateLisible(c.le);
+    if (ile.aOffrir) return "surprise à offrir";
+    if (ile.offertePar) return "cadeau de " + NOMS[ile.offertePar];
+    return ile.croquis ? "croquis" : "île de jeu";
+  }
+  // la copie du cadeau : l'île telle qu'elle est, et les fiches de toutes ses plantes
+  function emballer(ile, c) {
+    const copie = JSON.parse(JSON.stringify(ile));
+    delete copie.cadeau; delete copie.aOffrir;
+    const fiches = {};
+    for (const pl of Object.values(copie.plantes || {})) {
+      const p = H.d.plante(pl.p);
+      if (p && !fiches[p.id]) fiches[p.id] = JSON.parse(JSON.stringify(p));
+    }
+    Object.assign(c, { ile: copie, fiches, modifieLe: H.maintenant() });
+  }
+  function offrir(ile, le, mot) {
+    const id = ile.cadeau || H.uid("cadeau");
+    const c = Object.assign({}, (H.jeu.cadeaux || {})[id], { id, de: moi(), pour: autre(), le, mot });
+    emballer(ile, c);
+    H.jeu.cadeaux = Object.assign({}, H.jeu.cadeaux, { [id]: c });
+    ile.cadeau = id;
+    delete ile.aOffrir;
+    sauver(ile);
+  }
+  // tant que la surprise n'est pas arrivée, la copie suit les retouches de l'île
+  function suivreCadeau(ile) {
+    const c = ile.cadeau && (H.jeu.cadeaux || {})[ile.cadeau];
+    if (!c || c.supprime || c.recuLe || c.le <= jourIso(new Date())) return;
+    emballer(ile, c);
+  }
+  // le jour venu, chez l'autre : l'île arrive, avec le petit mot
+  async function livrerCadeaux() {
+    if (!H.jeu || !H.local || H.$(".dialogue")) return;
+    const aujourdhui = jourIso(new Date());
+    const c = cadeaux().find((x) => x.pour === moi() && !x.recuLe && x.le <= aujourdhui && x.ile && !Object.values(H.jeu.iles || {}).some((i) => i.deCadeau === x.id));
+    if (!c) return;
+    const id = H.uid("ile");
+    const ile = Object.assign(JSON.parse(JSON.stringify(c.ile)), { id, deCadeau: c.id, offertePar: c.de, mot: c.mot || "", recueLe: H.maintenant() });
+    // les plantes que cette herbothèque n'a pas encore rejoignent l'herbier
+    let nouvelles = 0;
+    for (const [pid, p] of Object.entries(c.fiches || {})) {
+      if (H.d.plante(pid)) continue;
+      H.herbier.plantes[pid] = Object.assign({}, p, { offertePar: c.de, modifieLe: H.maintenant() });
+      nouvelles++;
+    }
+    if (nouvelles) { H.d.invalider(); H.d.changer("herbier"); }
+    sauver(ile);
+    H.jeu.cadeaux = Object.assign({}, H.jeu.cadeaux, { [c.id]: Object.assign({}, c, { recuLe: H.maintenant(), modifieLe: H.maintenant() }) });
+    H.d.changer("jeu");
+    const qui = c.de === "mesi" ? "luigi" : "ovo";
+    await H.dialogue.dire([
+      { brut: true, qui, texte: "Surprise ! Je t’ai préparé une île en secret : « " + ile.nom + " »." },
+    ].concat(c.mot ? [{ brut: true, qui, texte: c.mot }] : []).concat(nouvelles ? [{ brut: true, qui, texte: nouvelles > 1 ? "Ses " + nouvelles + " plantes sont aussi dans ton herbothèque, maintenant." : "Sa plante est aussi dans ton herbothèque, maintenant." }] : []));
+    H.aller("terrain/" + encodeURIComponent(id));
+  }
+  H.sur("vue", (v) => { if (["village", "terrain", "maison"].includes(v)) setTimeout(livrerCadeaux, 2600); });
+  H.sur("donnees", (quoi) => { if (quoi === "jeu") setTimeout(livrerCadeaux, 2600); });
 
   // La fenêtre « Nouvelle île », dans le style des menus du jeu : un bloc d'encre, la police
   // pixel, des choix qu'on coche (le curseur ▶ devant celui qui est pris) plutôt que des listes.
@@ -560,7 +634,7 @@
       return boite;
     };
     const echelle = choix([["0.25", "25 cm"], ["0.5", "50 cm"], ["1", "1 m"], ["2", "2 m"]], "0.5");
-    const type = choix([["jeu", "Île de jeu", "elle pousse en temps réel"], ["croquis", "Croquis de projet", "à l’échelle, sans ressources"]], "jeu");
+    const type = choix([["jeu", "Île de jeu", "elle pousse en temps réel"], ["croquis", "Croquis de projet", "à l’échelle, sans ressources"], ["surprise", "Île surprise", "à offrir à " + NOMS[autre()] + ", à la date de ton choix"]], "jeu");
     const expo = choix(EXPOS.map((e) => [e, e]), EXPOS[0]);
     const options = (H.d.champ("sol") || {}).options || [];
     const defaut = ["Calcaire", "Caillouteux", "Sec", "Bien drainé"];
@@ -586,7 +660,7 @@
         if (cols < 3 || lignes < 3) return (msg.textContent = "C’est trop petit pour cette échelle : choisis des cases plus petites.");
         const ile = {
           id: H.uid("ile"), nom: n, largeur: L, longueur: l, caseM: k, cols, lignes,
-          croquis: type.valeur() === "croquis", expo: expo.valeur(),
+          croquis: type.valeur() === "croquis", expo: expo.valeur(), aOffrir: type.valeur() === "surprise" || undefined,
           sol: H.$$("input:checked", sols).map((i) => i.value),
           notes: notes.value.trim(), cases: {}, plantes: {}, creeLe: H.maintenant(),
         };
@@ -2646,6 +2720,40 @@
     }, "image/png");
   }
 
+  // offrir l'île en surprise : la date, le petit mot ; on peut changer d'avis avant le jour
+  function sectionOffrir(ile, fermer) {
+    const c = ile.cadeau && (H.jeu.cadeaux || {})[ile.cadeau];
+    if (c && !c.supprime && c.recuLe) return H.el("p.discret", null, "Offerte à " + NOMS[c.pour] + " le " + dateLisible(c.le) + ". Elle l’a reçue.");
+    const demain = new Date(); demain.setDate(demain.getDate() + 1);
+    const date = H.el("input", { type: "date", min: jourIso(new Date()), value: c && !c.supprime ? c.le : jourIso(demain) });
+    const mot = H.el("textarea", { rows: 2, placeholder: "Un petit mot, qui arrivera avec l’île" });
+    mot.value = (c && !c.supprime && c.mot) || "";
+    const msg = H.el("p.discret.erreur", { role: "alert" });
+    return H.el("fieldset.offrir-ile", null,
+      H.el("legend", null, "Offrir cette île en surprise à " + NOMS[autre()]),
+      H.el("p.discret", null, c && !c.supprime
+        ? "Elle arrivera chez " + NOMS[c.pour] + " le " + dateLisible(c.le) + ". D’ici là, tes retouches la suivent."
+        : "Le jour venu, l’île arrivera chez " + NOMS[autre()] + ", avec les fiches de ses plantes. Tu peux la retoucher jusque-là."),
+      H.el("label", null, "Le jour", date),
+      H.el("label", null, "Le petit mot", mot),
+      msg,
+      H.el("div.boutons-bas", null,
+        c && !c.supprime ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => {
+          if (!confirm("Garder l’île pour toi, finalement ?")) return;
+          H.jeu.cadeaux = Object.assign({}, H.jeu.cadeaux, { [c.id]: { id: c.id, supprime: true, modifieLe: H.maintenant() } });
+          delete ile.cadeau; ile.aOffrir = true; sauver(ile); fermer(); H.router();
+        } }, "Ne plus l’offrir") : null,
+        H.el("button.bouton", { type: "button", onclick: () => {
+          if (!date.value) return (msg.textContent = "Choisis le jour où elle arrivera.");
+          if (date.value < jourIso(new Date())) return (msg.textContent = "Ce jour est déjà passé.");
+          offrir(ile, date.value, mot.value.trim());
+          H.toast("Surprise prête : elle arrivera chez " + NOMS[autre()] + " le " + dateLisible(date.value) + ".");
+          fermer(); H.router();
+        } }, c && !c.supprime ? "Mettre à jour la surprise" : "Offrir l’île")
+      )
+    );
+  }
+
   function reglagesIle(ile) {
     const nom = H.el("input", { type: "text", value: ile.nom });
     const notes = H.el("textarea", { rows: 4 });
@@ -2665,6 +2773,8 @@
       H.el("label", null, "Nom", nom),
       H.el("label", null, "Notes", notes),
       H.el("p.discret", null, ile.largeur + " × " + ile.longueur + " m, " + ile.cols + " × " + ile.lignes + " cases, sol de départ : " + (ile.sol || []).join(", ").toLowerCase()),
+      ile.mot ? H.el("p", null, H.el("em", null, "Le mot de " + NOMS[ile.offertePar] + " : « " + ile.mot + " »")) : null,
+      (!ile.secrete && !ile.croquis && !ile.offertePar) ? sectionOffrir(ile, () => fermer()) : null,
       H.el("div.boutons-bas", null,
         !ile.secrete ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { if (confirm("Supprimer l’île « " + ile.nom + " » ?")) { H.jeu.iles[ile.id] = { id: ile.id, supprime: true, modifieLe: H.maintenant() }; H.d.changer("jeu"); fermer(); H.aller("terrain"); } } }, "Supprimer l’île") : null,
         H.el("button.bouton", { type: "submit" }, "Enregistrer")
