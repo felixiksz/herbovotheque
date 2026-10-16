@@ -14,7 +14,34 @@ window.H = window.H || {};
   // fiches d'ƟvƟ, les réglages) : un caractère invisible le protège de l'échange.
   const LIEN = "\u2060";
   H.fixe = (t) => String(t).replace(/ƟvƟ|Mesi/g, (m) => m[0] + LIEN + m.slice(1));
-  const echange = (t) => (H.monde === "mesi" && typeof t === "string" ? t.replace(/ƟvƟ|Mesi/g, (m) => (m === "Mesi" ? "ƟvƟ" : "Mesi")) : t);
+  // Les accords suivent : ƟvƟ est non-binaire (écriture inclusive, « fier·e »), Mesi se genre au
+  // féminin. Dans le monde de Mesi, les formes inclusives qui parlaient d'ƟvƟ (qu'on jouait)
+  // parlent maintenant de Mesi : elles passent au féminin (« allé·e » → « allée », « iel » →
+  // « elle »). auteur : qui disait la réplique dans le monde d'ƟvƟ ; quand ƟvƟ s'adressait à Mesi
+  // (« tu es le·la meilleur·e »), c'est désormais Mesi qui s'adresse à ƟvƟ : l'inclusif reste.
+  const SPECIAUX = { "le·la": "la", "Le·la": "La", "lui·elle": "elle", "Lui·elle": "Elle", "il·elle": "elle", "Il·elle": "Elle", "celui·celle": "celle" };
+  function feminin(a, b) {
+    if (SPECIAUX[a + "·" + b]) return SPECIAUX[a + "·" + b];
+    if (/eur$/.test(a) && /^rices?$/.test(b)) return a.slice(0, -3) + b;
+    if (/eur$/.test(a) && /^euses?$/.test(b)) return a.slice(0, -3) + b;
+    if (/eur$/.test(a) && /^ses?$/.test(b)) return a.slice(0, -1) + b;
+    if (/x$/.test(a) && /^ses?$/.test(b)) return a.slice(0, -1) + b;
+    if (/f$/.test(a) && /^ves?$/.test(b)) return a.slice(0, -1) + b;
+    if (/ier$/.test(a) && /^es?$/.test(b)) return a.slice(0, -2) + "èr" + b;
+    return a + b;
+  }
+  function accorder(t, auteur) {
+    t = t.replace(/du·de la/g, "de la").replace(/\b(I|i)el\b/g, (m, i) => (i === "I" ? "Elle" : "elle"));
+    t = t.replace(/([A-Za-zÀ-ÿ’']+)·([a-zà-ÿ]+)(?:·([a-zà-ÿ]+))?/g, (m, a, b, c, i) => {
+      if (auteur === "ovo" && /\b(tu|t’|toi|te)\b[^.!?]{0,30}$/i.test(t.slice(Math.max(0, i - 40), i))) return m;
+      return feminin(a, b) + (c || "");
+    });
+    // ce que Mesi disait d'elle-même (« je suis fière ») : c'est ƟvƟ qui le dit, en inclusif
+    if (auteur === "luigi") t = t.replace(/\b(je suis|je me sens|j’étais|je serai) (fière|contente|heureuse|ravie|désolée|sûre|fatiguée|amoureuse|émue|prête)\b/gi, (m, v, adj) => v + " " + ({ fière: "fier·e", contente: "content·e", heureuse: "heureux·se", ravie: "ravi·e", désolée: "désolé·e", sûre: "sûr·e", fatiguée: "fatigué·e", amoureuse: "amoureux·se", émue: "ému·e", prête: "prêt·e" })[adj.toLowerCase()]);
+    return t;
+  }
+  H.accorder = (t, auteur) => (H.monde === "mesi" && typeof t === "string" ? accorder(t, auteur) : t);
+  const echange = (t) => (H.monde === "mesi" && typeof t === "string" ? accorder(t.replace(/ƟvƟ|Mesi/g, (m) => (m === "Mesi" ? "ƟvƟ" : "Mesi"))) : t);
   H.echangeNoms = echange;
   const ATTRS_TEXTE = new Set(["title", "aria-label", "placeholder", "alt"]);
   H.el = function (tag, attrs, ...enfants) {

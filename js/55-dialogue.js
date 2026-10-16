@@ -150,7 +150,7 @@
     if (H.monde === "mesi") {
       repliques = repliques.map((r) => (r.brut ? r : Object.assign({}, r, {
         qui: ECHANGE[r.qui] || r.qui,
-        texte: permuter(r.texte),
+        texte: H.accorder(permuter(r.texte), r.qui),
         nom: permuter(r.nom),
       })));
     }

@@ -82,6 +82,20 @@
           }, t)
         )
       ),
+      H.el("h3", null, "Les gros pixels"),
+      H.el("p.discret", null, "Plus fins, on voit plus de détails ; plus gros, l’image ressemble davantage à un vieux jeu (et le téléphone travaille moins)."),
+      H.el("div.pastilles", null,
+        [[0.5, "Très fins"], [0.75, "Fins"], [1, "Normaux"], [1.5, "Gros"], [2, "Très gros"]].map(([v, t]) =>
+          H.el("button.bouton.petit" + ((H.local.finesse || 1) === v ? ".actif" : ""), {
+            type: "button",
+            "aria-pressed": String((H.local.finesse || 1) === v),
+            async onclick() {
+              await H.d.majLocal((l) => { if (v === 1) delete l.finesse; else l.finesse = v; });
+              H.router();
+            },
+          }, t)
+        )
+      ),
       H.el("div.pastilles", { style: { marginTop: "10px" } },
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.son, onchange: (e) => H.d.majLocal((l) => (l.son = e.target.checked)) }), " Bruitages et babillage"),
         H.el("label", null, H.el("input", { type: "checkbox", checked: H.local.musique, onchange: async (e) => { await H.d.majLocal((l) => (l.musique = e.target.checked)); e.target.checked ? H.musique.jouer() : H.musique.arreter(); } }), " Musique ambiante")

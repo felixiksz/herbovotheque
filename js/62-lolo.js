@@ -172,7 +172,7 @@
       c.n = 0;
       await H.dialogue.dire([
         { qui: "ovo", texte: choix },
-        { qui: "lolo", texte: "Hiii ! Tu me rends tellement heureuse que… regarde le ciel !" },
+        { qui: "lolo", texte: "Hiii ! Tu me rends tellement heureux que… regarde le ciel !" },
       ]);
       faireTomberLaPluie();
       await H.dialogue.dire([

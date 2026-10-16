@@ -155,7 +155,7 @@
   const repere = (ctx, k) => ctx.setTransform(k, 0, 0, k, -BOITE.x * k, -BOITE.y * k);
   // la taille d'un gros pixel : la même partout dans le dessin, quel que soit l'écran
   let pixK = 1; // (pixels de la toile par unité du dessin, pour s'aligner sur les gros pixels)
-  const grosPixel = () => Math.max(1, Math.round(2.3 * pixK));
+  const grosPixel = () => Math.max(1, Math.round(2.3 * pixK * H.finesse()));
   // Où poser la maison sur l'écran : elle tient toujours en entier, au milieu en largeur, avec un
   // peu plus de ciel au-dessus que de terre en dessous. (Une toile de 2,6 millions de pixels au
   // plus : au-delà, les gros pixels n'y gagnent rien, sauf de la lenteur.)
@@ -163,7 +163,7 @@
     const cw = toile.clientWidth || 400, ch = toile.clientHeight || 700;
     const dpr = Math.min(3, window.devicePixelRatio || 1, Math.sqrt(2.6e6 / (cw * ch)));
     const echelle = Math.min(cw / BOITE.w, ch / (BOITE.h + 30)), K = echelle * dpr;
-    const taille = Math.max(1, Math.round(2.3 * K)), W = Math.round(cw * dpr), Hc = Math.round(ch * dpr);
+    const taille = Math.max(1, Math.round(2.3 * K * H.finesse())), W = Math.round(cw * dpr), Hc = Math.round(ch * dpr);
     // (la maison tombe pile sur la grille des gros pixels)
     const px = Math.round(((W - BOITE.w * K) / 2) / taille) * taille, py = Math.round(((Hc - BOITE.h * K) * 0.6) / taille) * taille;
     return { dpr, K, taille, W, Hc, px, py };
@@ -1781,7 +1781,7 @@
       derniere = t;
       const v = vueMaison(toile), moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
-      const cleD = [v.W, v.Hc, v.K, moment, cheminee.feuActif(), cheminee.bois(), fenetresOuvertes()].join("|");
+      const cleD = [v.W, v.Hc, v.K, v.taille, moment, cheminee.feuActif(), cheminee.bois(), fenetresOuvertes()].join("|");
       if (cle !== cleD) {
         cle = cleD;
         vue = v;
@@ -3139,7 +3139,7 @@
       requestAnimationFrame(image);
       if (t - derniere < 66) return;
       derniere = t;
-      const v = vueMaison(toile), cleD = [v.W, v.Hc, v.K, fenetresOuvertes()].join("|");
+      const v = vueMaison(toile), cleD = [v.W, v.Hc, v.K, v.taille, fenetresOuvertes()].join("|");
       if (cle !== cleD) {
         cle = cleD;
         toile.width = v.W; toile.height = v.Hc;
