@@ -516,7 +516,10 @@
       sources.push({ x: BOULE.x, y: BOULE.y + 80, rx: 195, ry: 140, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 75, ey: BOULE.y + 92, table: true, etage: "bas" });
     }
     return {
-      ambiant: eteint ? [38, 42, 94] : { jour: [204, 198, 210], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
+      ambiant: eteint ? [38, 42, 94] : { jour: [250, 246, 240], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
+      // le jour, la lumière du dehors remplit toute la maison : les couleurs s'éclaircissent un peu
+      // partout, et davantage près des fenêtres
+      jour: !eteint && moment === "jour",
       ombre: { jour: "50,46,120", soir: "70,26,96", nuit: "16,16,64" }[moment],
       sources,
     };
@@ -562,12 +565,13 @@
   // les reflets vifs tout près des ampoules (null s'il n'y en a pas)
   function carteEclats(lw, lh, k, L) {
     const avec = L.sources.filter((s) => s.eclat);
-    if (!avec.length) return null;
+    if (!avec.length && !L.jour) return null;
     const c = document.createElement("canvas"), g = c.getContext("2d");
     c.width = lw; c.height = lh;
     repere(g, k);
-    g.fillStyle = "#000"; g.fillRect(BOITE.x, BOITE.y, BOITE.w, BOITE.h);
+    g.fillStyle = L.jour ? "rgb(52,50,42)" : "#000"; g.fillRect(BOITE.x, BOITE.y, BOITE.w, BOITE.h);
     g.globalCompositeOperation = "lighter";
+    if (L.jour) for (const s of L.sources) etage(g, s, () => tache(g, s.x, s.y, s.rx * 0.8, s.ry * 0.8, [70, 68, 56]));
     for (const s of avec) etage(g, s, () => tache(g, s.x, s.ey || s.y + 30, s.re, s.re * 0.6, s.eclat));
     return c;
   }
