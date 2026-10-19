@@ -2849,8 +2849,7 @@
     const v = p.valeurs || {};
     if (!v.mtcSaveur && !v.mtc) return null;
     const premiere = String(v.mtc || "").split("\n").map((l) => l.replace(/^[•\-–#\s]+/, "").replace(/\*\*/g, "").trim()).filter(Boolean)[0] || "";
-    const intro = ["Psst, ƟvƟ ! J’ai un bâton pour toi.", "Mon bâton du jour, c’est la MTC, évidemment !", "Tu savais ?", "Petit bâton chinois, gratuit !"][Math.floor(Math.random() * 4)];
-    const phrases = [{ qui: "luigi", texte: intro }];
+    const phrases = [];
     if (v.mtcSaveur) phrases.push({ qui: "luigi", texte: "En médecine chinoise, saveur et nature " + H.duNom(p) + " : " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "." });
     if (premiere) {
       phrases.push({ qui: "luigi", texte: "Dans sa fiche MTC, on lit :" });
@@ -3099,7 +3098,10 @@
         if (!choix || !vue || vue.luigi) return;
         const fin = choix === "calin"
           ? () => calin().then(() => partirMesi())
-          : () => (astuce ? H.dialogue.dire(astuce) : consulterMesi()).then(() => partirMesi());
+          : () => (astuce
+            // (Mesi demande d'abord la permission)
+            ? H.dialogue.dire([{ qui: "luigi", texte: "Est-ce que je peux bâtonsplainer ?", choix: [{ valeur: "oui", libelle: "Vas-y !" }, { valeur: null, libelle: "Pas maintenant" }] }]).then((r) => (r === "oui" ? H.dialogue.dire(astuce) : null))
+            : consulterMesi()).then(() => partirMesi());
         vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite: fin, occupe: true };
         if (document.visibilityState === "hidden") {
           vue.luigi.x = vue.luigi.cible.x;

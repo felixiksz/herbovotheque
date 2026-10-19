@@ -215,7 +215,7 @@
   }
   // l'araucaria, à la place choisie par Mesi : à gauche de l'herbothèque, au-dessus du labo
   {
-    const A = { x: 3.3, y: 10.6 }, k = plantes.findIndex((q) => q.e === "araucaria");
+    const A = { x: 1.25, y: 10.2 }, k = plantes.findIndex((q) => q.e === "araucaria");
     for (let n = plantes.length - 1; n >= 0; n--) if (n !== k && Math.hypot(plantes[n].x - A.x, plantes[n].y - A.y) < 1.3) plantes.splice(n, 1);
     const a = plantes.find((q) => q.e === "araucaria");
     if (a) Object.assign(a, A); else plantes.push({ x: A.x, y: A.y, e: "araucaria", v: 0 });
@@ -1155,7 +1155,7 @@
     // les pas lourds des sangliers, tant qu'ils marchent ; la laie suivie de ses marcassins fait
     // plus de bruit
     if (v.espece === "sanglier" && H.sons && H.sons.jouer && t >= v.pause && v.u > 0.02 && v.u < 1 && t > (v.prochainBruit || 0)) {
-      H.sons.jouer("sanglier", 0.3 + 0.1 * v.petits);
+      H.sons.jouer("sanglier", (0.3 + 0.1 * v.petits) * 0.5);
       v.prochainBruit = t + 4400;
     }
     // arrivée au pied du pin : elle fouille quelques secondes, et la terre reste retournée
