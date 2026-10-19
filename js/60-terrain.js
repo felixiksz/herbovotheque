@@ -1147,7 +1147,8 @@
   const proj = (x, y) => [vue.ox + (x - y) * HW, vue.oy + (x + y) * QH];
   const versCase = (lx, ly) => { const u = (lx - vue.ox) / HW, w = (ly - vue.oy) / QH; return [(u + w) / 2, (w - u) / 2]; };
   function hauteurPx(p, ile, st) {
-    const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
+    // (les petites herbes un peu agrandies, pour qu'on reconnaisse leur port et leur famille)
+    const m = hauteurM(p), eff = m <= 2 ? 0.5 + m * 0.75 : 2 + (m - 2) * 0.35;
     const parMetre = ((2 * HW) / ile.caseM) * 0.55;
     const h = Math.min(6 * T, Math.max(5, eff * parMetre));
     return h * [0.12, 0.25, 0.6, 1][st];
@@ -1163,8 +1164,15 @@
   const assombrir = (hex, k) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, "0")).join("");
   // Le dessin debout d'une plante : { pied, couronne? } (la couronne des arbres à part, pour la
   // dessiner après tout le reste, en transparence). L'origine est le pied, en bas au milieu.
-  function planteDebout(p, ile, st, fleur) {
-    const h = Math.round(hauteurPx(p, ile, st)), w = Math.round(largeurPx(p, ile, st)), v = p.valeurs || {};
+  // (fin : combien de pixels du dessin par pixel de l'île ; à 2 ou 3, les feuilles et les fleurs
+  // selon la famille botanique se distinguent bien mieux. Les mesures rendues restent en pixels de l'île)
+  function planteDebout(p, ile, st, fleur, fin) {
+    fin = fin || 1;
+    const d = planteDeboutFin(p, ile, st, fleur, fin);
+    return fin === 1 ? d : Object.assign({}, d, { l: d.l / fin, h: d.h / fin, haut: d.haut / fin, fin });
+  }
+  function planteDeboutFin(p, ile, st, fleur, fin) {
+    const h = Math.round(hauteurPx(p, ile, st) * fin), w = Math.round(largeurPx(p, ile, st) * fin), v = p.valeurs || {};
     const debout = p.dessinFace ? "dessinFace" : p.dessinCote ? "dessinCote" : null;
     // (le modèle en volume n'est prêt qu'une fois ses images chargées : la clé le dit, pour redessiner)
     const volumePret = debout && st >= 2 ? !!modeleVolume(p) : false;
@@ -1616,15 +1624,17 @@
     // ce qui se dresse, du fond vers le devant
     ctx.setTransform(z, 0, 0, z, 0, 0);
     const debout = [], couronnes = [], aCueillir = [];
+    // les plantes dessinées plus finement : un pixel du dessin pour un pixel de l'écran
+    const finPlantes = Math.max(1, Math.min(3, Math.round(z)));
     vue.boites = [];
     for (const [k2, pl] of Object.entries(ile.plantes || {})) {
       const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
       if (!q) continue;
       debout.push({ prof: x + y + 1, dessin: () => {
-        const st = stade(ile, pl), d = planteDebout(q, ile, st, fleurie(q, ile, pl)), [sx, sy] = proj(x + 0.5, y + 0.5);
+        const st = stade(ile, pl), d = planteDebout(q, ile, st, fleurie(q, ile, pl), finPlantes), [sx, sy] = proj(x + 0.5, y + 0.5);
         const gx = Math.round(sx - d.l / 2), gy = Math.round(sy - d.h + 2);
-        ctx.drawImage(d.pied, gx, gy);
-        if (d.couronne) couronnes.push([d.couronne, gx, gy]);
+        ctx.drawImage(d.pied, gx, gy, d.l, d.h);
+        if (d.couronne) couronnes.push([d.couronne, gx, gy, d.l, d.h]);
         vue.boites.push({ x, y, g: gx, h: gy + d.h - 2 - d.haut, d: gx + d.l, b: gy + d.h, grande: d.haut > T * 1.2, prof: x + y });
         if (!ile.croquis && pl.eau < 20 && st > 0 && !aRecolter(q, ile, pl)) { ctx.fillStyle = "#3a8fd8"; ctx.fillRect(Math.round(sx + d.l / 2 - 2), Math.round(sy - Math.min(d.haut, T) - 3), 3, 4); }
         if (aRecolter(q, ile, pl)) aCueillir.push([sx, sy - d.haut, d.l, d.haut, x * 7 + y * 13]);
@@ -1675,7 +1685,7 @@
     // les couronnes des arbres par-dessus, un peu transparentes : on voit ce qui pousse dessous
     ctx.save();
     ctx.globalAlpha = 0.72;
-    for (const [c, gx, gy] of couronnes) ctx.drawImage(c, gx, gy);
+    for (const [c, gx, gy, l, hc] of couronnes) ctx.drawImage(c, gx, gy, l, hc);
     ctx.restore();
 
     // ce qui est prêt à cueillir : un petit panier qui sautille au-dessus de la plante, et des
@@ -1700,7 +1710,9 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       for (const v of H.ciel.lumiere(alt)) { ctx.fillStyle = "rgba(" + v.couleur + "," + v.alpha + ")"; ctx.fillRect(0, 0, toile.width, toile.height); }
     }
-    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5));
+    // (les gros pixels ont la taille des pixels des plantes : leurs feuilles et leurs fleurs, dessinées
+    // selon leur famille, restent lisibles ; avant, un gros pixel en couvrait deux ou trois)
+    if (!ctxDest) H.retro.appliquer(toile, Math.max(1, Math.round((z / finPlantes) * H.finesse())));
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
   const PANIER = ["..kkkk..", ".k....k.", "kkkkkkkk", "kAaAaAak", "kaAaAaAk", ".kAaAak.", "..kkkk.."];

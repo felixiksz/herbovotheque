@@ -130,7 +130,8 @@
   };
   const SOL_DEHORS = 518, CAGE = 84;
   // ce qu'on peint de la maison (le reste, c'est le dehors)
-  const BOITE = { x: -30, y: -272, w: LARGE + 60, h: 810 };
+  // (la boîte descend un mètre sous la maison : on voit la terre, et les vers de terre qui y creusent)
+  const BOITE = { x: -30, y: -272, w: LARGE + 60, h: 900 };
   const FAITE = { x: LARGE / 2, y: -250 }, EGOUT = { dx: 24, y: -96 }, EP_TOIT = 12;
   // le dessus du toit en chaque x (le faîte au milieu, les deux pentes qui débordent un peu)
   const toitY = (x) => {
@@ -281,7 +282,7 @@
         if (hsh(k, 11) > 0.65) continue;
         const u = (t - k * P) / 15000;
         if (u < 0 || u > 1.5) continue;
-        const sens = hsh(k, 14) < 0.5 ? -1 : 1, x0 = g0 + 60 + hsh(k, 12) * Math.max(0, g1 - g0 - 120), y0 = SOL_DEHORS + 36 + hsh(k, 13) * 26;
+        const sens = hsh(k, 14) < 0.5 ? -1 : 1, x0 = g0 + 60 + hsh(k, 12) * Math.max(0, g1 - g0 - 120), y0 = SOL_DEHORS + 40 + hsh(k, 13) * 90;
         const pos = (v) => [x0 + sens * v * 80, y0 + Math.sin(v * 6 + k) * 6 - v * 8];
         const chemin = (a, b) => { ctx.beginPath(); for (let v = Math.max(0, a), i = 0; v <= b + 1e-6; v += 0.02, i++) { const [x, y] = pos(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
         const tete = Math.min(1, u);
@@ -312,7 +313,7 @@
   // Les repères du paysage (dans le dessin) : l'horizon, la surface de la mer, le fond de l'île,
   // ses bords ; et les arbres tout autour de la maison (les grands pins des guirlandes, les cyprès,
   // les pins plus loin).
-  const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 96, fond: SOL_DEHORS + 124, ile: { g: -870, d: 1650 } };
+  const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 400, fond: SOL_DEHORS + 300, ile: { g: -870, d: 1650 } };
   const ARBRES = [
     ...[[-300, 300], [LARGE + 104, 320]].map(([x, h]) => ({ x, h, cypres: true, pres: true })),
     ...[-216, -380, -480, -620, -760, LARGE + 46, LARGE + 170, LARGE + 290, LARGE + 760, LARGE + 900].map((x) => {
@@ -573,10 +574,10 @@
         let c;
         if (prof < 2 * p) c = h < 0.2 ? "#2f6b35" : "#3f8a42";
         else if (prof < 18) c = h < 0.12 ? "#7a4520" : h < 0.45 ? "#e8714a" : h < 0.9 ? "#c96a3a" : "#9a6a3c";
-        else if (prof < 74) c = h < 0.18 ? "#4b3427" : h < 0.6 ? "#9a6a3c" : "#7a4520";
+        else if (prof < 150) c = h < 0.18 ? "#4b3427" : h < 0.6 ? "#9a6a3c" : "#7a4520";
         else {
           // la roche, en pavés gris séparés de joints sombres
-          const r = Math.floor((prof - 74) / (3 * p)), dec = r % 2 ? 2 : 0, col = Math.floor((xi + dec) / 5);
+          const r = Math.floor((prof - 150) / (3 * p)), dec = r % 2 ? 2 : 0, col = Math.floor((xi + dec) / 5);
           const joint = (j + j0) % 3 === 0 || (xi + dec) % 5 === 0;
           c = joint ? "#4b3427" : hsh(col, r) < 0.5 ? "#8a98cc" : "#c2cdec";
         }
@@ -587,7 +588,8 @@
       for (let k = 1; k <= hT; k++) pose(i, js - k, k === hT ? (hsh(xi, 33) < 0.5 ? "#9cc77a" : "#6cbd5c") : "#4aa63e");
     }
     // les cailloux dans la terre, avec leur reflet et leur ombre
-    for (let ci = Math.floor(Math.max(R.x0, IG) / 30); ci * 30 < Math.min(R.x1, ID); ci++) for (let cj = 0; cj < 3; cj++) {
+    for (let ci = Math.floor(Math.max(R.x0, IG) / 30); ci * 30 < Math.min(R.x1, ID); ci++) for (let cj = 0; cj < 6; cj++) {
+      if (hsh(ci, cj + 49) > 0.6) continue;
       if (hsh(ci, cj + 50) > 0.45) continue;
       const cx = ci * 30 + hsh(ci, cj + 51) * 30, cy = SOL_DEHORS + 24 + cj * 16 + hsh(ci, cj + 52) * 10, rr = 4 + hsh(ci, cj + 53) * 5;
       ovale(cx, cy, rr * 1.4, rr, (i, j, dx, dy) => pose(i, j, dx * dx + dy * dy > 0.7 ? "#4b3427" : dx + dy < -0.6 ? "#c2cdec" : "#8a98cc"));
@@ -1552,28 +1554,16 @@
   const POELE = { x: 90, y: 420, w: 66, h: 80, vitre: { x: 104, y: 440, w: 34, h: 34 } };
   function poeleABois(ctx, moment, eteint) {
     const M = MOMENTS[moment], { x, y, w, h, vitre } = POELE, cx = x + w / 2;
-    // le conduit
-    const cl = cx - 8, cw = 16, sommet = toitY(cx) - 34;
-    const inox = ctx.createLinearGradient(cl, 0, cl + cw, 0);
-    inox.addColorStop(0, "#8a8ea0"); inox.addColorStop(0.18, "#f4f6fa"); inox.addColorStop(0.32, "#c9ccd6");
-    inox.addColorStop(0.62, "#aeb2c0"); inox.addColorStop(0.8, "#e6e8ee"); inox.addColorStop(1, "#6e7286");
-    ctx.fillStyle = inox; ctx.fillRect(cl, sommet, cw, y - 2 - sommet);
-    // les reflets de la pièce, étirés le long du tuyau
-    ctx.save();
-    ctx.beginPath(); ctx.rect(cl, sommet, cw, y - 2 - sommet); ctx.clip();
-    ctx.globalAlpha = 0.28;
-    const refl = ctx.createLinearGradient(0, 0, 0, y);
-    refl.addColorStop(0, ENCRE); refl.addColorStop(0.35, M.murG); refl.addColorStop(0.75, M.murD); refl.addColorStop(1, M.sol);
-    ctx.fillStyle = refl; ctx.fillRect(cl + cw * 0.38, 0, cw * 0.3, y);
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = moment === "jour" ? "#d6eef7" : "#ffd23a";
-    ctx.fillRect(cl + cw * 0.72, 30, 1.5, y - 60);
-    ctx.restore();
-    // les colliers qui joignent les tronçons
-    for (const yy of [-60, 120, 330]) { ctx.fillStyle = "#9a9eb0"; ctx.fillRect(cl - 1, yy, cw + 2, 4); ctx.strokeRect(cl - 1, yy, cw + 2, 4); }
-    ctx.beginPath(); ctx.moveTo(cl, sommet); ctx.lineTo(cl, y - 2); ctx.moveTo(cl + cw, sommet); ctx.lineTo(cl + cw, y - 2); ctx.stroke();
-    // le chapeau de la cheminée, au-dessus du toit
-    bloc(ctx, cl - 5, sommet - 6, cw + 10, 7, 2, "#9a9eb0");
+    // (on ne voit pas le conduit traverser la maison : seulement une petite cheminée sur le toit)
+    {
+      const cl = cx - 11, cw = 22, bas = toitY(cx + cw / 2) + 2, sommet = toitY(cx) - 30;
+      bloc(ctx, cl, sommet, cw, bas - sommet, 2, "#c96a3a");
+      ctx.strokeStyle = "#8a4224"; ctx.lineWidth = 1.2;
+      for (let yy = sommet + 7; yy < bas - 2; yy += 7) { ctx.beginPath(); ctx.moveTo(cl + 1, yy); ctx.lineTo(cl + cw - 1, yy); ctx.stroke(); }
+      for (let yy = sommet, r = 0; yy < bas - 2; yy += 7, r++) { const xx = cl + (r % 2 ? 7 : 14); ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx, Math.min(bas, yy + 7)); ctx.stroke(); }
+      ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+      bloc(ctx, cl - 4, sommet - 6, cw + 8, 7, 2, "#7a4520");
+    }
     // la buse, puis le corps du poêle
     bloc(ctx, cx - 12, y - 6, 24, 8, 2, "#2c2a3e");
     bloc(ctx, x - 4, y, w + 8, 9, 3, "#3a3550");

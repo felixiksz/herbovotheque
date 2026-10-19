@@ -1466,7 +1466,8 @@
   function dimensionner() {
     const b = scene.boite, cw = b.clientWidth || 800, ch = b.clientHeight || 500;
     // des pixels entiers : chaque pixel du dessin fait 2 à 6 pixels d'écran
-    const k = Math.max(2, Math.floor(Math.min(cw, ch) / 190));
+    // (la taille choisie dans les réglages, de très fins à très gros)
+    const k = Math.max(1, Math.round(Math.max(2, Math.floor(Math.min(cw, ch) / 190)) * (H.finesse ? H.finesse() : 1)));
     W = Math.max(120, Math.floor(cw / k));
     Ht = Math.max(120, Math.floor(ch / k));
     scene.k = k;
