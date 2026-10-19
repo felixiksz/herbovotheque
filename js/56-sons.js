@@ -6,7 +6,11 @@
     criquets: "sons/criquets.wav", criquetsLoin: "sons/criquets-loin.wav", cigales: "sons/cigales.wav",
     sanglier: "sons/sanglier.wav", rieuse: "sons/grenouille-rieuse.mp3", alyte: "sons/alyte.mp3",
     // les ronronnements de Mémé (Kerzoven, OpenGameArt, domaine public CC0)
-    ronronDort: "sons/ronron-dort.wav", ronron: "sons/ronron.wav" };
+    ronronDort: "sons/ronron-dort.wav", ronron: "sons/ronron.wav",
+    // d'autres pieds sur le chemin (Mesi, les quatre sabots de Lóló) : les mêmes pas, décalés
+    pas2: "sons/pas.mp3", pas3: "sons/pas.mp3", pas4: "sons/pas.mp3" };
+  // (chaque marcheur a son allure : un peu plus vif, ou plus lourd, et jamais au même moment)
+  const VARIANTES = { pas2: { vitesse: 1.08, debut: 0.23 }, pas3: { vitesse: 0.84, debut: 0.41 }, pas4: { vitesse: 0.88, debut: 0.67 } };
   // les longs enregistrements de nature joués en boucle : leur fin se fond dans leur début
   const FONDUS = new Set(["rieuse", "alyte"]);
   function enBoucle(buf) {
@@ -21,7 +25,7 @@
   }
   const boucles = {};
   // la piste (voir H.PISTES) de chaque enregistrement
-  const PISTE_DE = { criquets: "nuit", criquetsLoin: "nuit", rieuse: "grenouilles", alyte: "grenouilles", ronronDort: "meme", ronron: "meme", galop: "pas", sanglier: "sangliers" };
+  const PISTE_DE = { criquets: "nuit", criquetsLoin: "nuit", rieuse: "grenouilles", alyte: "grenouilles", ronronDort: "meme", ronron: "meme", galop: "pas", sanglier: "sangliers", pas2: "pas", pas3: "pas", pas4: "pas" };
   const pisteOuverte = (nom) => H.piste(PISTE_DE[nom] || nom);
 
   const actif = () => H.local && H.local.son && document.visibilityState === "visible";
@@ -86,7 +90,9 @@
         s.connect(b.gain).connect(H.audio.sortie());
         b.gain.gain.setValueAtTime(0.0001, ctx.currentTime);
         b.gain.gain.setTargetAtTime(volume, ctx.currentTime, 0.8);
-        s.start();
+        const va = VARIANTES[nom];
+        if (va) s.playbackRate.value = va.vitesse;
+        s.start(0, va ? (va.debut * buf.duration) % buf.duration : 0);
         b.source = s;
       } catch (e) {
         console.warn("son indisponible", nom, e);

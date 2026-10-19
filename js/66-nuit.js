@@ -3418,6 +3418,14 @@
         ctx.stroke();
       }
     }
+    // les pas sur le chemin, tant qu'on marche : ƟvƟ, plus Mesi (deux pieds de plus), plus les
+    // quatre sabots de Lóló ; Mémé, elle, ne fait aucun bruit
+    const marche = !b.pause && !b.baignade, pistes = ["pas"].concat(avec("luigi") ? ["pas2"] : [], avec("lolo") ? ["pas3", "pas4"] : []);
+    const etatPas = marche ? pistes.join("+") : "";
+    if (b.sonPas !== etatPas) {
+      b.sonPas = etatPas;
+      for (const nom of ["pas", "pas2", "pas3", "pas4"]) H.sons.boucle(nom, marche && pistes.includes(nom), nom === "pas" ? 0.5 : 0.42);
+    }
     // sur téléphone, le premier plan continue sous le chemin : la garrigue, de plus en plus près
     if (bas > 0) {
       ctx.fillStyle = nuit ? "#0d1d15" : "#2a7a36";
@@ -3611,6 +3619,7 @@
     },
     quitter() {
       if (balade) cancelAnimationFrame(balade.anim);
+      for (const nom of ["pas", "pas2", "pas3", "pas4"]) H.sons.boucle(nom, false);
       H.sons.criquets(false);
       balade = null;
       H.dialogue.fermer();
