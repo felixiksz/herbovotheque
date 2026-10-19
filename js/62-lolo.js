@@ -122,28 +122,45 @@
     ]);
   }
 
-  // Mémé sort par la chatière une fois par jour, quelques heures (entre 2 et 4), à une heure qui
-  // change chaque jour mais qui est la même sur tous les appareils. Pendant ce temps, elle n'est
-  // nulle part : personne ne sait ce qu'elle fait dehors. Renvoie { depart, retour } ou null.
-  function sortieDeMeme(jour) {
-    const d = new Date(jour);
-    d.setHours(0, 0, 0, 0);
-    let h = 2166136261;
-    for (const c of "meme" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-    const a = ((h >>> 0) % 1000) / 1000, b = (((h >>> 10) >>> 0) % 1000) / 1000;
-    const depart = +d + (10 + a * 5) * 3600e3, retour = depart + (2 + b * 2) * 3600e3;
-    return { depart, retour };
-  }
+  // Mémé sort par la chatière au plus une fois par jour, quelques heures (entre 2 et 4) ; on la
+  // voit partir (ou rentrer) quand on est à la maison à ce moment-là. Pendant ce temps, elle
+  // n'est nulle part : personne ne sait ce qu'elle fait dehors. Après l'heure de son retour, elle
+  // reste encore un peu « en chemin » : si l'on est à la maison, on la voit passer la chatière.
+  // H.jeu.memeSortie : { jour, depart, retour, vuRentrer }
+  const EN_CHEMIN = 45 * 60e3;
   H.memeDehors = (t) => {
     t = t || Date.now();
-    const s = sortieDeMeme(t);
-    return t >= s.depart && t < s.retour ? s : null;
+    const s = H.jeu && H.jeu.memeSortie;
+    if (!s || t < s.depart) return null;
+    if (t < s.retour || (!s.vuRentrer && t < s.retour + EN_CHEMIN)) return s;
+    return null;
+  };
+  // elle peut rentrer : on est dans le temps du retour, et personne ne l'a encore vue
+  H.memeVaRentrer = (t) => {
+    t = t || Date.now();
+    const s = H.jeu && H.jeu.memeSortie;
+    return !!s && !s.vuRentrer && t >= s.retour && t < s.retour + EN_CHEMIN;
   };
   // rentrée depuis moins d'une heure
   H.memeRentree = (t) => {
     t = t || Date.now();
-    const s = sortieDeMeme(t);
-    return t >= s.retour && t < s.retour + 3600e3;
+    const s = H.jeu && H.jeu.memeSortie;
+    return !!s && t >= s.retour && t < s.retour + 3600e3 && !H.memeDehors(t);
+  };
+  // elle peut sortir aujourd'hui (le jour, et pas encore sortie)
+  H.memePeutSortir = () => {
+    const h = new Date().getHours(), s = H.jeu && H.jeu.memeSortie;
+    return h >= 9 && h < 18 && !H.memeDehors() && (!s || s.jour !== new Date().toDateString());
+  };
+  H.memeSort = () => {
+    const t = Date.now();
+    H.jeu.memeSortie = { jour: new Date().toDateString(), depart: t, retour: t + (2 + Math.random() * 2) * 3600e3, vuRentrer: false };
+    H.d.changer("jeu");
+  };
+  H.memeVueRentrer = () => {
+    if (!H.jeu.memeSortie) return;
+    H.jeu.memeSortie = Object.assign({}, H.jeu.memeSortie, { vuRentrer: true });
+    H.d.changer("jeu");
   };
 
   // une pluie de joie de Lóló en cours (elle arrose toutes les îles)

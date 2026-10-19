@@ -2004,7 +2004,6 @@
     vue.infoCiel.textContent = [
       H.pluieMagique && H.pluieMagique() ? "pluie de joie de Lóló" : null,
       H.jeu.lieu.nom,
-      H.heure(s.date),
       m ? m.temperature + " °C, " + m.libelle : null,
       s.saison,
       H.ciel.nomPhase(s.lune.phase),

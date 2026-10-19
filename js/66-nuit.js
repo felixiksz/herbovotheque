@@ -70,7 +70,9 @@
       H.el("div.pastilles", null, bouton("Partir en balade", () => {
         const liste = qui.map(([id]) => id).filter((id) => coches.has(id));
         H.d.majLocal((l) => (l.compagnons = liste));
-        H.aller("balade/" + (liste.length ? liste.join("+") : "solo"));
+        // à la maison, ceux qui viennent descendent d'abord jusqu'à la porte
+        if (H.maison && H.maison.balade && document.documentElement.dataset.vue === "maison") H.maison.balade(liste);
+        else H.aller("balade/" + (liste.length ? liste.join("+") : "solo"));
       })));
   }
 
@@ -1676,9 +1678,18 @@
   // place. Mesi suit ƟvƟ de près.
   const PLACES = {
     table: { niv: "bas", ovo: 300, luigi: 440 },
-    canape: { niv: "salon", ovo: 382, luigi: 480 },
+    // (Lóló et Mémé dorment sur le canapé ; ils en descendent pour la balade, ou pour sortir)
+    canape: { niv: "salon", ovo: 382, luigi: 480, lolo: 300, meme: 288 },
     lit: { niv: "grenier", ovo: 300, luigi: 340 },
-    porte: { niv: "bas", ovo: 40, luigi: 80 },
+    porte: { niv: "bas", ovo: 40, luigi: 82, lolo: 136, meme: 186 },
+    chatiere: { niv: "bas", meme: -6 },
+  };
+  // les dessins de chacun·e quand il ou elle marche (Mémé sur le dos de Lóló s'ils viennent tous les deux)
+  const ALLURE = {
+    ovo: () => ({ nom: "ovoProfil", e: 4.4, images: 4, arret: 4 }),
+    luigi: () => ({ nom: "luigiProfil", e: 4.4, images: 4, arret: 4 }),
+    lolo: (avecMeme) => ({ nom: avecMeme ? "loloBalade" : "loloSeule", e: 3.5, images: 4, arret: 0 }),
+    meme: () => ({ nom: "memePas", e: 3.5, images: 2, arret: 0 }),
   };
   const ETAGES = ["bas", "salon", "grenier"], VITESSE = 0.11, DUREE_ETAGE = 2600;
   let place = "table", trajet = null, placeDepuis = 0;
@@ -1703,6 +1714,29 @@
     trajet = { t0: performance.now(), vers, ensuite, gens: ["ovo", "luigi"].map((qui, k) => ({ qui, retard: k * 450, segs: segments(qui, de, vers) })) };
     trajet.fin = Math.max(...trajet.gens.map((g) => g.retard + g.segs.reduce((n, x) => n + x.d, 0)));
   }
+  const duree = (g) => g.retard + g.segs.reduce((n, x) => n + x.d, 0);
+  // La balade : ƟvƟ choisit d'abord avec qui partir (ou seul·e) ; ceux qui viennent descendent
+  // jusqu'à la porte, et la balade commence quand tout le monde est là. Mémé, si elle vient avec
+  // Lóló, voyage sur son dos.
+  function partirEnBalade(liste) {
+    if (trajet) return;
+    const lolo = liste.includes("lolo"), avecMeme = liste.includes("meme");
+    const marcheurs = ["ovo"].concat(liste.filter((q) => q === "luigi" || q === "lolo" || (q === "meme" && !lolo)));
+    const gens = marcheurs.map((qui, k) => ({ qui, retard: k * 500, allure: ALLURE[qui](avecMeme), segs: segments(qui, qui === "lolo" || qui === "meme" ? "canape" : place, "porte") }));
+    trajet = {
+      t0: performance.now(), vers: "porte", gens, balade: liste,
+      // ceux qui ne sont plus à leur place (Mémé est partie sur le dos de Lóló)
+      partis: new Set(marcheurs.concat(avecMeme ? ["meme"] : [])),
+      ensuite: () => { H.d.majLocal((l) => (l.compagnons = liste)); H.aller("balade/" + (liste.length ? liste.join("+") : "solo")); },
+    };
+    trajet.fin = Math.max(...gens.map(duree)) + 300;
+  }
+  // Mémé qui sort par la chatière, ou qui rentre et remonte se coucher sur le canapé
+  let memeVa = null, entreeMaison = 0, memeEssai = 0, fermerBalade = null;
+  function memeTraverse(sortir) {
+    const g = { qui: "meme", retard: 0, allure: ALLURE.meme(), segs: sortir ? segments("meme", "canape", "chatiere") : segments("meme", "chatiere", "canape") };
+    memeVa = { t0: performance.now(), sortir, gens: [g], fin: duree(g) };
+  }
   function dansSeg(sg, u) {
     if (sg.type === "marche") return { x: sg.x0 + (sg.x1 - sg.x0) * u, y: sg.y, gauche: sg.x1 < sg.x0, marche: u < 1 };
     const v = sg.monte ? u : 1 - u, a = 0.5 + v * 13 * 0.68, R = ESCALIER.r * 0.8;
@@ -1719,7 +1753,7 @@
     }
     return Object.assign(dansSeg(g.segs[g.segs.length - 1], 1), { marche: false });
   }
-  H.maison = { canape: allerSurLeCanape };
+  H.maison = { canape: allerSurLeCanape, balade: (liste) => { if (fermerBalade) fermerBalade(); fermerBalade = null; partirEnBalade(liste); } };
   function airNanana() {
     if (!H.local || !H.local.son) return;
     const ctx = H.audio.contexte();
@@ -1799,7 +1833,7 @@
           ? H.histoires.auHasard(["Mrrrou. (Mémé est rentrée de sa vadrouille, une brindille de thym dans les poils, l’air très contente d’elle.)", "Rrr… (Elle sent le dehors et la terre. Elle ne dira rien de ce qu’elle a fait.)"])
           : H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que le canapé vibre.)"]) }]);
       } },
-      { id: "lolo", x: 246, y: 150, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
+      { id: "lolo", x: 246, y: 150, w: 116, h: 54, nom: "Parler avec Lóló", agir: async () => {
         // le premier matin de la journée, on lui demande seulement s'il a bien dormi
         if (H.lolo.leMatin()) {
           const d = await H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Bonjour !", choix: [{ valeur: "dormi", libelle: "Tu as bien dormi ?" }] }]);
@@ -1826,7 +1860,7 @@
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
       { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "bois", x: -92, y: 430, w: 78, h: 80, nom: "Prendre du bois sec", agir: () => cheminee.prendreBois() },
-      { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: () => partir("porte", fenetreBalade) },
+      { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: () => !trajet && fenetreBalade() },
     ];
     return zones;
   }
@@ -2087,6 +2121,8 @@
     const zones = zonesMaison(nuit);
     let decor = null, calque = null, M = null, vue = null, cle = "", survol = null, derniere = 0;
     trajet = null;
+    memeVa = null;
+    entreeMaison = performance.now();
     place = canapeJusqua > performance.now() ? "canape" : "table";
     const zoneSous = (e) => {
       if (!vue) return null;
@@ -2159,14 +2195,30 @@
       ECL = { k: decor.k, L: decor.L };
       // en route d'une place à l'autre (dans l'escalier, ou sur un étage) ; on les dessine par-dessus
       // le reste, pour qu'ils passent devant Lóló et le canapé
-      let enRoute = false, marcheurs = [];
+      let enRoute = false, marcheurs = [], partis = new Set();
       if (trajet) {
         const dt = t - trajet.t0;
-        if (dt >= trajet.fin) { place = trajet.vers; placeDepuis = t; const e = trajet.ensuite; trajet = null; if (e) e(); }
+        if (dt >= trajet.fin && !trajet.balade) { place = trajet.vers; placeDepuis = t; const e = trajet.ensuite; trajet = null; if (e) e(); }
         else {
+          // (la balade : tout le monde attend devant la porte, puis on part)
+          if (trajet.balade && dt >= trajet.fin && !trajet.lance) { trajet.lance = true; setTimeout(trajet.ensuite, 0); }
           enRoute = true;
-          marcheurs = trajet.gens.map((g) => [g.qui, positionSur(g, dt)]).filter((m) => m[1]);
+          partis = trajet.partis || new Set(trajet.gens.map((g) => g.qui));
+          marcheurs = trajet.gens.map((g) => [g, positionSur(g, Math.min(dt, trajet.fin))]).filter((m) => m[1]);
         }
+      }
+      // Mémé passe la chatière (pour sortir, ou en rentrant)
+      if (!memeVa && !trajet && !H.$(".dialogue")) {
+        if (H.memeVaRentrer && H.memeVaRentrer()) { H.memeVueRentrer(); memeTraverse(false); }
+        else if (H.memePeutSortir && H.memePeutSortir() && t - entreeMaison > 30000 && t - memeEssai > 10000) {
+          memeEssai = t;
+          if (Math.random() < 0.08) { H.memeSort(); memeTraverse(true); }
+        }
+      }
+      if (memeVa) {
+        const dt = t - memeVa.t0;
+        if (dt >= memeVa.fin) { if (H.bruit) H.bruit("ouvre"); memeVa = null; }
+        else { partis.add("meme"); marcheurs.push([memeVa.gens[0], positionSur(memeVa.gens[0], dt)]); }
       }
       // la musique finie, on redescend à la table ; devant la porte, si on n'est pas parti, on revient
       if (!trajet && place === "canape" && canapeJusqua < t) partir("table");
@@ -2175,24 +2227,24 @@
         const pl = PLACES[place];
         for (const qui of ["ovo", "luigi"]) H.pixel.dessiner(cc, qui + "Profil", pl[qui], NIV[pl.niv].sol, 4.4, 4, place === "porte");
       }
-      const surCanape = !enRoute && place === "canape";
+      const surCanape = !enRoute && place === "canape", ici = (qui) => !partis.has(qui);
       cc.save();
       cc.translate(DX + CANAPE_T.x, CANAPE_T.y);
-      if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
-      if (!H.memeDehors()) memeEnBoule(cc, 168, 203, t);
-      if (surCanape) {
+      if (!farce && ici("lolo")) loloCouche(cc, 172, 200, t, loloRaconte);
+      if (!H.memeDehors() && ici("meme")) memeEnBoule(cc, 168, 203, t);
+      if (place === "canape" && (surCanape || ici("luigi"))) {
         // sur le canapé, face à face, les jambes qui se balancent au-dessus du tapis
-        assis(cc, "ovo", 240, 1, t, 2, loloRaconte, 210);
-        assis(cc, "luigi", 362, -1, t, 4, false, 210);
+        if (ici("ovo")) assis(cc, "ovo", 240, 1, t, 2, loloRaconte, 210);
+        if (ici("luigi")) assis(cc, "luigi", 362, -1, t, 4, false, 210);
         // la tête de Mesi sur le canapé (dos 362, siège plus bas de 36)
         if (farce && farce.id === "tete") dessinerFarce(cc, t, { x: 340, y: 120 });
       }
       cc.restore();
       cc.save();
       cc.translate(TABLE_T.x, TABLE_T.y);
-      if (!enRoute && place === "table") {
-        assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
-        assis(cc, "luigi", 626, -1, t, 4);
+      if (place === "table") {
+        if (ici("ovo")) assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
+        if (ici("luigi")) assis(cc, "luigi", 626, -1, t, 4);
       }
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;
@@ -2201,7 +2253,10 @@
       // caché sous la table du goûter
       if (farce && farce.id === "cache") dessinerFarce(cc, t);
       cc.restore();
-      for (const [qui, ps] of marcheurs) H.pixel.dessiner(cc, qui + "Profil", ps.x, ps.y, 4.4, ps.marche ? Math.floor(t / 140) % 4 : 4, ps.gauche);
+      for (const [g, ps] of marcheurs) {
+        const a = g.allure || ALLURE[g.qui]();
+        H.pixel.dessiner(cc, a.nom, ps.x, ps.y, a.e, ps.marche ? Math.floor(t / (a.images === 2 ? 180 : 140)) % a.images : a.arret, ps.gauche);
+      }
       // la fausse plante, au rez-de-chaussée, entre le poêle et la table (là où il y avait la porte)
       if (farce && farce.id === "plante") { cc.save(); cc.translate(226 - 338, NIV.bas.sol - 332); dessinerFarce(cc, t); cc.restore(); }
       ECL = null;
@@ -2290,7 +2345,7 @@
   function fenetreBalade() {
     let fermer;
     const corps = H.el("div", null, H.el("h2", null, "Faire une balade"), choixCompagnons());
-    fermer = H.fenetre(corps, { classe: "menu-scene" });
+    fermer = fermerBalade = H.fenetre(corps, { classe: "menu-scene" });
     return fermer;
   }
   // --- la maison en relief (isométrique) ----------------------------------------------------

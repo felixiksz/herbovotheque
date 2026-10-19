@@ -169,16 +169,6 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .carte-fiche.reduite .barre-carte-fiche { border-bottom: 0; cursor: pointer; }
 .carte-fiche .fiche-nav { display: none; }
 
-/* le portrait dessiné à main levée */
-.cadre-portrait { position: relative; width: min(100%, 52vh * 0.8, 440px); aspect-ratio: 4 / 5; margin: 0 auto; border: 1.5px solid var(--encre); box-shadow: 4px 4px 0 rgba(35, 33, 74, 0.5); }
-.toile-portrait, .calque-portrait { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.toile-portrait { touch-action: none; cursor: crosshair; }
-.calque-portrait { object-fit: cover; opacity: 0.3; pointer-events: none; z-index: 1; }
-.editeur-portrait .dessin-couleurs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-.couleur-libre { width: 30px; height: 24px; padding: 0; border: 1px solid var(--encre); background: none; cursor: pointer; }
-.taille-trait { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; }
-.taille-trait input { width: 110px; accent-color: var(--fluo); padding: 0; }
-
 /* rubrique en liste de petites phrases */
 .liste-fiche { margin: 0; padding-left: 1.2em; }
 .liste-fiche li { margin: 2px 0; }
@@ -187,4 +177,3 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .lignes-liste input { flex: 1; }
 .suggestions-liste .pastille-valeur { cursor: pointer; font: inherit; font-size: 0.9rem; }
 .fiche-illus img.portrait-botanique { image-rendering: pixelated; border: 1px solid var(--filet); }
-.calque-portrait.pixel { image-rendering: pixelated; object-fit: contain; }

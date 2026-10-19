@@ -395,8 +395,7 @@
           (p.valeurs || {}).nomsCommuns ? H.el("p.discret.fiche-communs", null, p.valeurs.nomsCommuns) : null,
           H.el("div.fiche-outils", null,
             H.el("button.bouton.petit", { type: "button", onclick: () => renommer(p) }, "Renommer"),
-            H.el("button.bouton.petit", { type: "button", onclick: () => ajouterPhoto(p) }, p.photo ? "Changer la photo" : "Ajouter une photo"),
-            H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPortrait(p.id, recharger) }, "Dessiner sa photo"),
+            H.el("button.bouton.petit", { type: "button", onclick: () => ajouterPhoto(p) }, p.photo ? "Changer la photo" : "Ajouter une photo ou un dessin"),
             p.photo ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { H.d.majPlante(p.id, (x) => delete x.photo); recharger(); } }, "Retirer la photo") : null,
             H.el("a.bouton.petit", { href: "#cartes/plante/" + encodeURIComponent(p.id) }, "Réviser cette plante")
           )

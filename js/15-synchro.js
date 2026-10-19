@@ -150,6 +150,13 @@
     r.labo = labo.labo;
     r.laboModifieLe = labo.laboModifieLe;
     r.pluieMagique = Math.max(local.pluieMagique || 0, distant.pluieMagique || 0);
+    const rep = plusRecent(local, distant, "repetitionModifieLe");
+    r.repetition = rep.repetition;
+    r.seuilReussite = rep.seuilReussite;
+    r.repetitionModifieLe = rep.repetitionModifieLe;
+    // la sortie de Mémé : la plus récente (et « on l'a vue rentrer » dès qu'un appareil l'a vue)
+    const sl = local.memeSortie, sd = distant.memeSortie;
+    r.memeSortie = !sl ? sd : !sd ? sl : sd.depart > sl.depart ? sd : sd.depart < sl.depart ? sl : Object.assign({}, sl, { vuRentrer: sl.vuRentrer || sd.vuRentrer });
     r.modifieLe = Math.max(local.modifieLe || 0, distant.modifieLe || 0);
     return r;
   }

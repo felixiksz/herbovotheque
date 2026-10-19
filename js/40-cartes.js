@@ -351,6 +351,7 @@
                   if (v === defaut) delete H.jeu.repetition[cle];
                   else H.jeu.repetition[cle] = v;
                 }
+                H.jeu.repetitionModifieLe = H.maintenant();
                 H.d.changer("jeu");
                 dessiner();
               },
@@ -363,6 +364,7 @@
             if (!confirm("Revenir à tous les réglages d’origine des flashcartes ?")) return;
             delete H.jeu.repetition;
             delete H.jeu.seuilReussite;
+            H.jeu.repetitionModifieLe = H.maintenant();
             H.d.changer("jeu");
             dessiner();
           },
