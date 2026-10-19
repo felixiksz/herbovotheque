@@ -178,13 +178,14 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .suggestions-liste .pastille-valeur { cursor: pointer; font: inherit; font-size: 0.9rem; }
 .fiche-illus img.portrait-botanique { image-rendering: pixelated; border: 1px solid var(--filet); }
 
-/* les icônes de la fiche : le crayon sur la photo, le crayon gris après le nom, le cerveau */
+/* les boutons de la fiche : une icône au trait et un petit mot, dans une pilule fine et discrète */
 .fiche-illus { position: relative; }
-.icone-fiche { display: block; image-rendering: pixelated; }
-.crayon-photo { position: absolute; right: 6px; bottom: 6px; padding: 5px; background: var(--papier); border: 1.5px solid var(--encre); border-radius: 50%; cursor: pointer; line-height: 0; box-shadow: 2px 2px 0 rgba(35, 33, 74, 0.5); }
-.crayon-photo:hover { background: var(--fluo); }
-.crayon-nom { display: inline-block; vertical-align: middle; margin-left: 10px; padding: 2px; background: none; border: 0; cursor: pointer; opacity: 0.55; line-height: 0; }
-.crayon-nom:hover { opacity: 1; }
-.icone-reviser { display: inline-block; padding: 4px; border: 1.5px solid var(--encre); border-radius: 8px; line-height: 0; }
-.icone-reviser:hover { background: var(--fluo); }
+.icone-trait { display: inline-flex; line-height: 0; }
+.icone-trait svg { width: 18px; height: 18px; }
+.bouton-trait { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 7px; background: none; border: 1px solid rgba(35, 33, 74, 0.18); border-radius: 999px; color: #6b6985; font: 0.85rem/1 var(--texte); text-decoration: none; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.bouton-trait:hover, .bouton-trait:focus-visible { color: var(--encre); border-color: var(--encre); outline: none; }
+.crayon-photo { position: absolute; right: 8px; bottom: 8px; background: rgba(246, 241, 228, 0.88); }
+.crayon-nom { display: inline-flex; vertical-align: middle; margin-left: 10px; padding: 2px; background: none; border: 0; cursor: pointer; color: #a3a1b8; line-height: 0; }
+.crayon-nom:hover { color: var(--encre); }
+.crayon-nom .icone-trait svg { width: 20px; height: 20px; }
 .menu-photo .pastilles { flex-direction: column; align-items: stretch; }

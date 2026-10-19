@@ -19,11 +19,11 @@
     accord: "Bon pour accord — date et signature, précédées de la mention « Lu et approuvé » :",
     pied: "",
     formatDevis: "D-{AAAA}-{N3}", formatFacture: "F-{AAAA}-{N3}", compteurs: {},
-    modele: "classique", couleur: "#2f6b35", police: "serif", logo: null, logoPlace: "gauche",
+    modele: "fenetre", couleur: "#2f6b35", police: "serif", logo: null, logoPlace: "gauche",
     colonnes: { unite: true, tva: true, remise: false, detail: true },
     titreDevis: "Devis", titreFacture: "Facture",
   };
-  const MODELES = [["classique", "Classique", "sobre, un filet de couleur, les totaux encadrés"], ["herbier", "Herbier", "comme une planche d’herbier : un cadre fin, le titre manuscrit, une étiquette pour le client"], ["moderne", "Moderne", "un grand bandeau de couleur en haut, les lignes alternées"]];
+  const MODELES = [["fenetre", "Fenêtre (noir et blanc)", "le cadre des fenêtres du jeu, en noir et blanc, typographie sobre : prêt pour l’imprimante"], ["classique", "Classique", "sobre, un filet de couleur, les totaux encadrés"], ["herbier", "Herbier", "comme une planche d’herbier : un cadre fin, le titre manuscrit, une étiquette pour le client"], ["moderne", "Moderne", "un grand bandeau de couleur en haut, les lignes alternées"]];
   const POLICES = [["serif", "Caudex (avec empattements)", "Caudex, Georgia, serif"], ["sans", "Sans empattements", "'Helvetica Neue', Arial, sans-serif"], ["manuscrite", "Titres manuscrits (Beth Ellen)", "Caudex, Georgia, serif"], ["machine", "Machine à écrire", "'Courier New', monospace"]];
   const STATUTS = { devis: ["Brouillon", "Envoyé", "Accepté", "Refusé"], facture: ["Brouillon", "Envoyée", "Payée", "En retard"] };
 
@@ -81,8 +81,8 @@
   function pageImprimable(doc) {
     const e = ent(), c = coll("clients").find((x) => x.id === doc.client) || {}, T = totaux(doc), col = e.colonnes;
     const facture = doc.type === "facture", modele = doc.modele || e.modele, couleur = e.couleur || "#2f6b35";
-    const police = (POLICES.find((p) => p[0] === e.police) || POLICES[0])[2];
-    const titreF = e.police === "manuscrite" || modele === "herbier" ? "'Beth Ellen', cursive" : police;
+    const police = modele === "fenetre" ? "'Helvetica Neue', Helvetica, Arial, sans-serif" : (POLICES.find((p) => p[0] === e.police) || POLICES[0])[2];
+    const titreF = modele === "fenetre" ? police : e.police === "manuscrite" || modele === "herbier" ? "'Beth Ellen', cursive" : police;
     const base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
     const tva = !e.franchiseTVA && col.tva;
     const tetes = ["Désignation"].concat(col.unite ? ["Qté", "Unité"] : ["Qté"], ["Prix unit. HT"], col.remise ? ["Remise"] : [], tva ? ["TVA"] : [], ["Total HT"]);
@@ -132,6 +132,15 @@
       ${modele === "herbier" ? `body { padding: 6mm; } .cadre { border: 1px solid ${couleur}; padding: 8mm; min-height: 250mm; position: relative; }
         .bloc-client { background: #f3ead8; border: 1px solid #8a6a3c; border-radius: 0; box-shadow: 2px 2px 0 #8a6a3c55; }
         .lignes th { border-bottom: 1px solid ${couleur}; } .totaux .fort td { border-top: 1px solid ${couleur}; }` : ""}
+      ${modele === "fenetre" ? `body { color: #000; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9.5pt; }
+        .cadre-fenetre { border: 1.5px solid #000; box-shadow: 3px 3px 0 #000; }
+        .titre-fenetre { border-bottom: 1.5px solid #000; padding: 4px 10px; text-align: center; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .08em; }
+        .dedans { padding: 12px 14px 16px; }
+        h1 { font: 700 20pt/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #000; margin-top: 6px; }
+        .bloc-client { border: 1px solid #000; border-radius: 0; }
+        .lignes th { color: #000; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; font-size: 7.5pt; }
+        .lignes td { border-bottom: .5px solid #000; } .lignes .titre td { color: #000; text-transform: uppercase; letter-spacing: .04em; font-size: 8.5pt; }
+        .totaux .fort td { border-top: 1.5px solid #000; } .accord { border: 1px dashed #000; }` : ""}
       ${modele === "moderne" ? `.bandeau { background: ${couleur}; color: #fff; margin: -16mm -14mm 14px; padding: 14mm 14mm 10mm; }
         .bandeau h1 { color: #fff; margin-top: 0; } .bandeau .emetteur, .bandeau .num { color: #fff; }
         .lignes th { background: ${couleur}; color: #fff; border: 0; } .lignes tr.alt td { background: ${couleur}11; }
@@ -148,7 +157,9 @@
       '<div class="mentions">' + [e.franchiseTVA ? e.mentionTVA : "", doc.notes, facture ? e.conditions : "", facture && e.delaiPaiement ? "Paiement à " + e.delaiPaiement + " jours." : "", facture ? e.penalites : "", e.assurance, e.iban ? "IBAN " + e.iban + (e.bic ? " · BIC " + e.bic : "") + (e.banque ? " · " + e.banque : "") : ""].filter(Boolean).map((x) => "<p>" + echapper(x).replace(/\n/g, "<br>") + "</p>").join("") + "</div>" +
       (!facture && e.accord ? '<div class="accord">' + echapper(e.accord) + "</div>" : "") +
       '<div class="pied">' + [legal, echapper(e.pied)].filter(Boolean).join("<br>") + "</div>";
-    return "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>" + echapper((facture ? e.titreFacture : e.titreDevis) + " " + doc.numero) + "</title><style>" + css + "</style></head><body>" + (modele === "herbier" ? '<div class="cadre">' + corps + "</div>" : corps) + "</body></html>";
+    const habit = modele === "herbier" ? '<div class="cadre">' + corps + "</div>"
+      : modele === "fenetre" ? '<div class="cadre-fenetre"><div class="titre-fenetre">' + echapper((facture ? e.titreFacture : e.titreDevis) + " · " + (e.nom || "")) + '</div><div class="dedans">' + corps + "</div></div>" : corps;
+    return "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>" + echapper((facture ? e.titreFacture : e.titreDevis) + " " + doc.numero) + "</title><style>" + css + "</style></head><body>" + habit + "</body></html>";
   }
   function imprimer(doc) {
     const f = H.el("iframe", { style: { position: "fixed", width: "0", height: "0", border: "0", right: "0", bottom: "0" }, "aria-hidden": "true" });

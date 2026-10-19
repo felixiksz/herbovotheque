@@ -6,10 +6,10 @@
   const H = window.H = window.H || {};
 
   const STYLES = [
+    ["pixel", "Fenêtre (noir et blanc)", "pour les clients : la barre du haut et le cadre des fenêtres du jeu, en noir et blanc, dans une typographie sobre"],
     ["classique", "Classique", "sobre, un filet de couleur sous le titre, le tableau aéré"],
     ["herbier", "Herbier", "un cadre fin, le titre manuscrit, une étiquette kraft dans le coin, comme une planche d’herbier"],
     ["carnet", "Carnet de terrain", "du papier ligné avec sa marge rouge, comme un carnet de jardinier"],
-    ["pixel", "Pixel", "la barre jaune et les fenêtres du jeu, les titres en lettres de console"],
     ["moderne", "Moderne", "un bandeau de couleur pleine, les lignes alternées"],
   ];
   const echapper = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -58,7 +58,7 @@
     opts = opts || {};
     const base = opts.base || location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
     const large = Math.max(0, ...(doc.sections || []).map((s) => (s.colonnes || []).length)) > 7;
-    const couleur = opts.couleur || ({ classique: "#2f6b35", herbier: "#4b3427", carnet: "#3d5ee8", pixel: "#23214a", moderne: "#c93f6e" })[style] || "#2f6b35";
+    const couleur = opts.couleur || ({ classique: "#2f6b35", herbier: "#4b3427", carnet: "#3d5ee8", pixel: "#000000", moderne: "#c93f6e" })[style] || "#2f6b35";
     const corps = (doc.sections || []).map((s) =>
       "<section>" + (s.titre ? "<h2>" + echapper(s.titre) + "</h2>" : "") +
       (s.paragraphes || []).map((p) => "<p>" + echapper(propre(p)).replace(/\n/g, "<br>") + "</p>").join("") +
@@ -102,14 +102,18 @@
         h1 { font: italic 700 22pt Caudex, serif; color: ${couleur}; } h2 { font-style: italic; }
         th { color: ${couleur}; font-style: italic; border-bottom: 1px solid ${couleur}; } td { line-height: 1.5; }
         tr.alt td { background: #fffdf699; }`,
-      pixel: `body { font: 13pt/1.25 VT323, monospace; }
-        .barre { background: #f6ee55; border: 2px solid #23214a; padding: 4px 10px; margin-bottom: 10px; display: flex; justify-content: space-between; font-size: 13pt; }
-        .fenetre { border: 2px solid #23214a; box-shadow: 4px 4px 0 #23214a; }
-        .titre-fenetre { border-bottom: 2px solid #23214a; padding: 2px 10px; text-align: center; background: #23214a0f; }
-        .contenu { padding: 8px 12px 12px; }
-        h1 { font: 400 26pt/1 VT323, monospace; color: #23214a; } h2 { font: 400 17pt VT323, monospace; color: #3d5ee8; }
-        th { font: 400 13pt VT323, monospace; background: #23214a; color: #f3f0dc; } td { border-bottom: 1px solid #23214a33; }
-        tr.alt td { background: #f6ee5522; }`,
+      // (prêt pour une imprimante noir et blanc : que du noir sur blanc, des filets, pas d'aplats)
+      pixel: `body { color: #000; font: 9.5pt/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .barre { border: 1.5px solid #000; padding: 5px 10px; margin-bottom: 10px; display: flex; justify-content: space-between; font-size: 9pt; letter-spacing: .02em; }
+        .barre span:first-child { font-weight: 700; }
+        .fenetre { border: 1.5px solid #000; box-shadow: 3px 3px 0 #000; }
+        .titre-fenetre { border-bottom: 1.5px solid #000; padding: 4px 10px; text-align: center; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .08em; }
+        .contenu { padding: 10px 14px 14px; }
+        h1 { font: 700 20pt/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #000; } .sous { color: #000; opacity: .8; }
+        h2 { font: 700 10.5pt 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #000; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #000; padding-bottom: 2px; }
+        th { font-weight: 700; color: #000; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; text-transform: uppercase; letter-spacing: .04em; font-size: 7.5pt; }
+        td { border-bottom: .5px solid #000; } td.premier { font-weight: 600; }
+        .pied { opacity: 1; }`,
       moderne: `.bandeau { background: ${couleur}; color: #fff; margin: -15mm -14mm 12px; padding: 14mm 14mm 9mm; }
         .bandeau h1 { font: 700 24pt/1.1 'Helvetica Neue', Arial, sans-serif; color: #fff; } .bandeau .sous { color: #fff; opacity: .9; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; } h2 { font-family: 'Helvetica Neue', Arial, sans-serif; text-transform: uppercase; letter-spacing: .05em; font-size: 10.5pt; }
@@ -139,7 +143,7 @@
   function exporter(doc, opts) {
     opts = opts || {};
     const nom = (doc.nomFichier || (H.slug ? H.slug(doc.titre) : "export"));
-    let style = (H.local && H.local.stylePdf) || "classique";
+    let style = (H.local && H.local.stylePdf) || "pixel";
     const apercu = H.el("iframe.apercu-export", { title: "Aperçu du PDF" });
     const montrer = () => { apercu.contentDocument.open(); apercu.contentDocument.write(pagePdf(doc, style)); apercu.contentDocument.close(); };
     const styles = H.el("div.pastilles", null, STYLES.map(([id, n, aide]) => H.el("button.bouton.petit" + (id === style ? ".actif" : ""), {
