@@ -346,11 +346,24 @@ label { font-size: 0.95rem; }
 :root[data-bureau] #menu { gap: 2px 6px; }
 :root[data-bureau] #menu a { font: 1.3rem/1.15 var(--menu-police); color: #23214a; border-radius: 0; padding: 0 6px; }
 :root[data-bureau] #menu a:hover, :root[data-bureau] #menu a:focus-visible, :root[data-bureau] #menu a[aria-current="page"] { background: var(--bleu-choix); color: #fff; outline: none; }
-:root[data-bureau] #barre-ressources { color: #23214a; }
+:root[data-bureau] #barre-ressources { color: #23214a; flex-basis: auto; margin-left: auto; }
 :root[data-bureau] #barre-ressources * { color: inherit; }
 .heure-entete { display: none; }
-:root[data-bureau] .heure-entete { display: block; margin-left: auto; font: 1.3rem/1.15 var(--menu-police); color: #23214a; white-space: nowrap; }
-@media (max-width: 640px) { :root[data-bureau] .heure-entete { display: none; } }
+:root[data-bureau] .heure-entete { display: block; font: 1.3rem/1.15 var(--menu-police); color: #23214a; white-space: nowrap; }
+@media (max-width: 640px) {
+  :root[data-bureau] .heure-entete { display: none; }
+  /* sur téléphone, les ressources à côté du titre, au-dessus du menu */
+  :root[data-bureau] #barre-ressources { flex: 1 1 0; min-width: 0; }
+}
+/* le menu, les ressources et la date sur une seule ligne ; les ressources défilent s'il manque de la place */
+@media (min-width: 641px) {
+  :root[data-bureau] #entete { flex-wrap: nowrap; }
+  :root[data-bureau] #menu { flex: 0 0 auto; flex-wrap: nowrap; }
+  :root[data-bureau] #menu a { white-space: nowrap; }
+  :root[data-bureau] #barre-ressources { flex: 0 1 auto; min-width: 0; margin-left: auto; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  :root[data-bureau] .res { flex: 0 0 auto; }
+  :root[data-bureau] .heure-entete { flex: 0 0 auto; }
+}
 
 /* le bureau : les icônes à gauche, la fenêtre à droite */
 :root[data-bureau="fenetre"] #vue { max-width: 1120px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -463,3 +476,4 @@ label { font-size: 0.95rem; }
 /* pendant le chargement : un fond uni, sans rien d'autre */
 html.chargement body { background: #1b1d4a; }
 html.chargement #ciel { display: none; }
+.pistes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px; margin-top: 6px; }

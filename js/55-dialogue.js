@@ -188,15 +188,18 @@
         let n = 0;
         clearInterval(minuteur);
         // Mémé ne parle pas : elle ronronne, un petit son à chaque lettre, bien régulier
-        const meme = r.qui === "meme";
+        const meme = r.qui === "meme", pas = meme ? 45 : 32, debut = performance.now();
+        // les lettres suivent l'horloge, pas le minuteur : sur un appareil qui peine, le minuteur
+        // prend du retard, et la bulle mettait très longtemps à s'écrire en entier
         minuteur = setInterval(() => {
-          n++;
+          const avant = n;
+          n = Math.min(courant.length, Math.max(n + 1, Math.floor((performance.now() - debut) / pas) + 1));
           texte.textContent = courant.slice(0, n);
           const lettre = courant[n - 1] || "";
           if (meme) ronron(voix, n);
-          else if (/[a-zàâäéèêëîïôöùûüÿœ]/i.test(lettre) && n % 2 === 0) bip(voix, lettre);
+          else if (/[a-zàâäéèêëîïôöùûüÿœ]/i.test(lettre) && (n % 2 === 0 || n - avant > 1)) bip(voix, lettre);
           if (n >= courant.length) terminer();
-        }, meme ? 45 : 32);
+        }, pas);
       }
       function terminer() {
         clearInterval(minuteur);

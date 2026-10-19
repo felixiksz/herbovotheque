@@ -235,7 +235,7 @@
       );
       resume = H.el("p.discret.resume");
       const heure = H.el("span.heure-bureau");
-      const majHeure = () => (heure.textContent = new Date().toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" }));
+      const majHeure = () => (heure.textContent = new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }));
       majHeure();
       zoneDossiers = H.el("nav.dossiers-bureau", { "aria-label": "Étagères" });
       titreFenetre = H.el("span");

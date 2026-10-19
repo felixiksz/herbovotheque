@@ -137,6 +137,49 @@
     );
   }
 
+  // Pour un appareil qui peine (ou un moment plus calme) : moins d'images par seconde, et des
+  // pistes de bruitage qu'on coupe une par une. Gardé sur chaque appareil.
+  function blocLeger() {
+    const anim = H.local.animations || "";
+    return H.el("section.reglage", null,
+      H.el("h2", null, "Jeu léger"),
+      H.el("p.discret", null, "Si le jeu rame, si les bulles mettent du temps à s’écrire ou si l’appareil chauffe, ralentis les animations : la ferme, la maison, les îles et la balade se redessinent moins souvent."),
+      H.el("h3", null, "Les animations"),
+      H.el("div.pastilles", null,
+        [["", "Fluides"], ["ralenties", "Ralenties"], ["immobiles", "Presque immobiles"]].map(([v, t]) =>
+          H.el("button.bouton.petit" + (anim === v ? ".actif" : ""), {
+            type: "button",
+            "aria-pressed": String(anim === v),
+            async onclick() {
+              await H.d.majLocal((l) => { if (v) l.animations = v; else delete l.animations; });
+              H.router();
+            },
+          }, t)
+        )
+      ),
+      H.el("h3", null, "Les pistes de bruitage"),
+      H.el("p.discret", null, "Décoche celles que tu ne veux plus entendre."),
+      H.el("div.pistes", null,
+        H.PISTES.map(([id, nom]) => H.el("label.case", null,
+          H.el("input", {
+            type: "checkbox",
+            checked: H.piste(id),
+            async onchange(e) {
+              const oui = e.target.checked;
+              await H.d.majLocal((l) => {
+                const coupees = (l.pistesCoupees || []).filter((x) => x !== id);
+                if (!oui) coupees.push(id);
+                if (coupees.length) l.pistesCoupees = coupees;
+                else delete l.pistesCoupees;
+              });
+              if (H.sons && H.sons.majPistes) H.sons.majPistes();
+            },
+          }),
+          " " + nom))
+      )
+    );
+  }
+
   function blocSynchro() {
     const etat = H.el("p.discret");
     const majEtat = () => {
@@ -459,7 +502,7 @@
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
       // comme les préférences d'un vieux Mac : la liste des sections à gauche
-      const blocs = [blocLieu(), blocTheme(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
+      const blocs = [blocLieu(), blocTheme(), blocLeger(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
       c.appendChild(H.bureau.onglets(blocs.map((b) => ({ nom: b.querySelector("h2").textContent, el: b })), { cle: "reglages", lateral: true }));
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },

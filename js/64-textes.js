@@ -1,5 +1,5 @@
 // Les textes du jeu, à relire et corriger directement dans le jeu : histoires de Lóló et de
-// Mesi, compliments, astuces, répliques de Mémé. Chaque texte corrigé est gardé dans la partie
+// Mesi, astuces, répliques de Mémé. Chaque texte corrigé est gardé dans la partie
 // (et synchronisé) ; « Revenir au texte d'origine » efface la correction.
 (function () {
   const H = window.H;
@@ -8,10 +8,8 @@
 
   // la liste des textes modifiables ; les valeurs d'origine viennent des modules du jeu
   const SECTIONS = [
-    { cle: "complimentsMesi", nom: "Les compliments de Mesi pour ƟvƟ", type: "liste", qui: "luigi", defaut: () => H.histoires.DEFAUTS.complimentsMesi, aide: "Un compliment par ligne." },
     { cle: "histoiresMesi", nom: "Les douceurs de Mesi", type: "histoires", qui: "luigi", defaut: () => H.histoires.DEFAUTS.histoiresMesi },
     { cle: "histoiresLolo", nom: "Les drames de Lóló", type: "histoires", qui: "lolo", defaut: () => H.histoires.DEFAUTS.histoiresLolo },
-    { cle: "complimentsLolo", nom: "Les compliments d’ƟvƟ pour Lóló", type: "liste", qui: "ovo", defaut: () => H.lolo.DEFAUTS.complimentsLolo, aide: "Un compliment par ligne. Trois compliments en 24 heures, et Lóló fait pleuvoir sur les jardins." },
     { cle: "astucesLolo", nom: "Les astuces de Lóló", type: "liste", qui: "lolo", defaut: () => H.lolo.DEFAUTS.astucesLolo, aide: "Une astuce par ligne." },
     { cle: "memeLolo", nom: "Ce que fait Mémé", type: "liste", qui: "meme", defaut: () => H.lolo.DEFAUTS.memeLolo, aide: "Une réplique par ligne." },
   ];
@@ -145,7 +143,7 @@
       }
       c.appendChild(H.el("div.herbo-tete", null,
         H.el("h1", null, "Les textes du jeu"),
-        H.el("p.discret", null, "Relis et corrige les histoires, les compliments et les répliques. Chaque correction est enregistrée dès que tu cliques ailleurs, et partagée par la synchronisation. Le bouton « Écouter » les fait lire comme dans le jeu.")
+        H.el("p.discret", null, "Relis et corrige les histoires et les répliques. Chaque correction est enregistrée dès que tu cliques ailleurs, et partagée par la synchronisation. Le bouton « Écouter » les fait lire comme dans le jeu.")
       ));
       const sommaire = H.el("nav.pastilles");
       c.appendChild(sommaire);

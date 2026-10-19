@@ -122,16 +122,16 @@
     return H.el("div.onglets-vue" + (opts.lateral ? ".lateral" : ""), null, H.el("div.rangee-onglets", { role: "tablist" }, boutons), panneau);
   }
 
-  // l'heure dans la barre de menus
+  // la date dans la barre de menus (sans l'heure)
   function heure() {
     let h = H.$("#heure-entete");
     if (!h) {
       h = H.el("span#heure-entete.heure-entete");
       H.$("#entete").appendChild(h);
     }
-    h.textContent = new Date().toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+    h.textContent = new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
   }
-  setInterval(() => document.documentElement.dataset.bureau && heure(), 20e3);
+  setInterval(() => document.documentElement.dataset.bureau && heure(), 60e3);
 
   H.bureau = {
     mode,

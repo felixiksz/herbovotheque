@@ -9,7 +9,7 @@ Une herbothèque (des bocaux sur des étagères, une fiche page d’herbier par 
 - `index.html` : la page unique. Les fichiers `css/` et `js/` sont numérotés dans l’ordre de chargement, avec un `?v=` à changer à chaque modification (`python tools/version.py` le fait partout, y compris dans `sw.js`).
 - `data/base.enc` : les fiches plantes, **chiffrées** (mot de passe demandé au premier lancement). Les fiches d’origine ne doivent jamais être publiées en clair.
 - `prive/` : les fiches en clair et les messages personnels, jamais envoyés sur GitHub (dans `.gitignore`).
-- `fonts/` : Beth Ellen (titres, étiquettes), Kumar One (terrain), Caudex (texte), Suez One (boutons), VT323 (menus des scènes), sous licence OFL. J’ai ajouté le caractère Ɵ (un O avec un point au milieu, comme des yeux) dans Beth Ellen et Kumar One (`tools/polices.py`).
+- `fonts/` : Beth Ellen (titres, étiquettes), Kumar One (terrain), Caudex (texte), Suez One (boutons), VT323 (menus des scènes), sous licence OFL. J’ai ajouté le caractère Ɵ (un O avec un point au milieu, comme des yeux) dans Beth Ellen et Kumar One (`tools/polices.py`), et les voyelles du pinyin (ǎ, ǚ…) dans toutes les polices, faites avec leurs propres accents (`python tools/pinyin.py`, après `polices.py`).
 - `sw.js` : le jeu marche hors connexion.
 
 ## Refaire les fiches chiffrées
@@ -38,10 +38,10 @@ python tools/version.py
 - Ciel, saisons et météo du lieu choisi (Marseille par défaut, modifiable en voyage) ; la météo vient d’Open-Meteo, sans clé.
 - Flashcartes : raté / difficile / bien / facile ; une carte vue au moins 3 fois sous le seuil de réussite (80 % par défaut) devient « fragile » et revient plus souvent. Chaque catégorie rapporte la ressource choisie dans « Ce que rapportent les cartes ». Après 40 cartes, pause de deux heures (une crêpe au chocolat fondu permet de repartir tout de suite).
 - Terrain : îles de jeu (pousse en temps réel, ressources) ou croquis de projet (à l’échelle, sans ressources, export de la liste des plantes et de l’image). Rien ne meurt : une plante mal placée pousse lentement et dit pourquoi.
-- Lóló (une fois son île découverte) : on l’appelle pour des astuces du jeu et les plantes en fleurs, à récolter et à semer du moment ; au village, on la touche pour lui parler. Trois compliments dans la journée, et elle fait tomber une pluie de joie (dix minutes, arrose toutes les îles).
+- Lóló (une fois son île découverte) : on l’appelle pour des astuces du jeu et les plantes en fleurs, à récolter et à semer du moment ; au village, on la touche pour lui parler.
 - La pluie (roll) boucle sans couture : le jeu retire les silences du début et de la fin et fond le raccord.
 - Mesi : on l’appelle (avec le miaou) et on lui pose des questions sur les plantes de l’île ; de temps en temps il appelle au loin, et ƟvƟ choisit de lui parler ou de lui faire un câlin et des bisous.
-- Réglages : volume de la musique, des bruitages, de la pluie et du babillage (gardé sur chaque appareil).
+- Réglages : volume de la musique, des bruitages, de la pluie et du babillage (gardé sur chaque appareil). « Jeu léger » : animations fluides, ralenties ou presque immobiles (moins d’images par seconde), et chaque piste de bruitage se coupe à part. Quand on change de fenêtre, la sortie audio se met en veille (sinon les enceintes grésillaient sur Android).
 - Stock : chaque préparation d’une fiche peut être pleine, à moitié, presque vide ou vide ; le bocal se vide à l’écran, un filtre de l’herbothèque montre ceux à remplir, et Lóló dit quand c’est la saison d’aller en cueillir.
 - Lóló au galop : on entend d’abord le bruit, puis elle entre et s’arrête quand le son s’arrête.
 - Chaque plante peut avoir son propre dessin sur la carte (fiche ou panneau de la plante sur l’île).
@@ -52,7 +52,7 @@ python tools/version.py
 - Boîte aux lettres : ƟvƟ et Mesi s’écrivent ; une lettre peut être programmée pour une date ; le drapeau rose se lève quand une lettre attend.
 - Accès : chaque personne a son propre jeton à accès fin. La liste des accès (`data/acces.enc` sur la branche `sauvegardes`, chiffrée) ne garde que l’empreinte de chaque jeton, avec un nom et un rôle : la partie d’ƟvƟ ; l’appareil de Mesi, qui n’échange que les lettres et les textes et gère les accès dans les Réglages ; ou une partie d’essai à part (`data/essais/…`), invisible pour ƟvƟ. Le tout premier jeton relié devient celui de Mesi. « Les textes du jeu » (`#textes`) n’est ouvert que sur l’appareil de Mesi.
 - Chez ƟvƟ et Mesi : Mesi prépare une crêpe au chocolat fondu quand il en reste dans les ressources.
-- Nuit calme (22 h – 6 h) : flashcartes, terrain et serre dorment ; balades (avec Mesi, Lóló et Mémé, ou seul·e) et histoires (drames de Lóló, douceurs et compliments de Mesi, dans `js/63-histoires.js`, corrigeables depuis « Les textes du jeu ») ; cabane de lecture à la bougie, avec la pluie sur le toit.
+- Nuit calme (22 h – 6 h) : flashcartes, terrain et serre dorment ; balades (avec Mesi, Lóló et Mémé, ou seul·e) et histoires (drames de Lóló, douceurs de Mesi, dans `js/63-histoires.js`, corrigeables depuis « Les textes du jeu ») ; cabane de lecture à la bougie, avec la pluie sur le toit.
 - Serre : semis en pots (une graine), levée en 8 h, 4 h au bon mois de semis ; les bébés plantes se repiquent sur les îles (une pelletée de terre, peu d’énergie, et elles démarrent jeunes) ; les frileuses peuvent rester dans la serre.
 - L’île de Lóló et Mémé apparaît le 24 février : un chemin en forme de cœur, un bassin au milieu (papyrus, nénuphars, grenouilles, canards, libellules), des papillons, beaucoup de romarin et de thym. Sur cette île, on demande à Mesi comment on dit en hongrois : il·elle propose un tour ensemble, ƟvƟ marche jusqu’à une plante ou une bête et la montre du doigt (`js/61-hongrois.js`). On peut emmener des canards, grenouilles, papillons et libellules sur ses propres îles. Lóló et Mémé sont là dès le début ; seule leur île attend le 24 février. Pour tout voir avant sur un appareil (tests) : l’adresse `#surprises`, ou la case de la rubrique « Mesi » des Réglages.
 

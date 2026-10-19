@@ -30,9 +30,28 @@
       fin.gain.value = 0.9;
       entree.connect(coupeBas).connect(limiteur).connect(fin).connect(ctx.destination);
     }
-    if (ctx.state === "suspended") ctx.resume();
+    if (ctx.state === "suspended" && !endormi) ctx.resume();
     return ctx;
   }
+  // Quand on change de fenêtre, Android ralentit la page mais laisse la sortie audio ouverte :
+  // le son, mal nourri, grésille dans les enceintes. On l'éteint en douceur puis on met la sortie
+  // en veille, et on la réveille au retour.
+  let endormi = false, veille = null;
+  document.addEventListener("visibilitychange", () => {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    entree.gain.cancelScheduledValues(t);
+    clearTimeout(veille);
+    if (document.visibilityState === "hidden") {
+      endormi = true;
+      entree.gain.setTargetAtTime(0, t, 0.04);
+      veille = setTimeout(() => endormi && ctx.suspend().catch(() => {}), 250);
+    } else {
+      endormi = false;
+      ctx.resume().catch(() => {});
+      entree.gain.setTargetAtTime(1, ctx.currentTime, 0.08);
+    }
+  });
   H.audio = {
     contexte,
     sortie: () => (contexte(), entree),

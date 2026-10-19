@@ -1,4 +1,4 @@
-// La maison d'ƟvƟ et Mesi (balades, histoires, compliments), la balade le long des calanques,
+// La maison d'ƟvƟ et Mesi (balades, histoires), la balade le long des calanques,
 // la cabane de lecture à la bougie (on y entend la pluie) et l'écran du soir :
 // de 22 h à 6 h, les flashcartes et le terrain dorment, pour ne pas trop stimuler le cerveau.
 (function () {
@@ -42,20 +42,6 @@
       ? { qui: "lolo", texte: "Installe-toi bien. Ce soir : « " + histoire.titre + " »." }
       : { qui: "luigi", texte: "J’ai une petite histoire pour toi : « " + histoire.titre + " »." };
     await H.dialogue.dire([intro].concat(histoire.lignes));
-  }
-
-  async function complimentMesi() {
-    const vus = H.local.complimentsVus || [];
-    let restants = histoires().COMPLIMENTS.filter((c) => !vus.includes(c));
-    if (!restants.length) restants = histoires().COMPLIMENTS;
-    const c = histoires().auHasard(restants);
-    H.d.majLocal((l) => (l.complimentsVus = (l.complimentsVus || []).concat(c).slice(-12)));
-    await H.dialogue.dire([{ qui: "luigi", texte: c }]);
-    // après celui-là, on chante ensemble
-    if (/^Le monde a de la chance de t’avoir/.test(c)) {
-      airNanana();
-      await H.dialogue.dire([{ qui: "duo", texte: "Ta-ta-tata !" }]);
-    }
   }
 
   // Mesi prépare une crêpe au chocolat fondu (s'il en reste dans les ressources)
@@ -1767,8 +1753,7 @@
   // (et seulement si ƟvƟ a vraiment fait quelque chose aujourd'hui)
   const peutRaconter = () => new Date().getHours() >= 17 && H.local.journeeRacontee !== new Date().toDateString() && !!(H.journal && H.journal.recit().length);
   async function soireeOvo() {
-    const q = await H.dialogue.dire([{ qui: "luigi", texte: "Alors, c’était comment, ta journée ?", choix: [{ valeur: "raconter", libelle: "Raconter ma journée" }, { valeur: "compliment", libelle: "Un compliment, plutôt" }, { valeur: null, libelle: "Plus tard" }] }]);
-    if (q === "compliment") return complimentMesi();
+    const q = await H.dialogue.dire([{ qui: "luigi", texte: "Alors, c’était comment, ta journée ?", choix: [{ valeur: "raconter", libelle: "Raconter ma journée" }, { valeur: null, libelle: "Plus tard" }] }]);
     if (q !== "raconter") return;
     H.d.majLocal((l) => (l.journeeRacontee = new Date().toDateString()));
     const lignes = H.journal ? H.journal.recit() : [];
@@ -1819,8 +1804,8 @@
       { id: "enceintes", x: 172, y: 124, w: 34, h: 128, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
       { id: "enceinte", x: 518, y: 164, w: 34, h: 88, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
       { id: "canape", x: 364, y: 144, w: 150, h: 96, nom: "Une douceur de Mesi", agir: () => raconter("luigi") },
-      // le soir, c'est à Mesi qu'ƟvƟ raconte sa journée (une fois par soir) ; sinon, un compliment
-      { id: "mesi", x: 572 + TABLE_T.x, y: 160 + TABLE_T.y, w: 66, h: 136, get nom() { return peutRaconter() ? "Raconter ma journée à Mesi" : "Un compliment de Mesi"; }, agir: () => (peutRaconter() ? soireeOvo() : complimentMesi()) },
+      // le soir, c'est à Mesi qu'ƟvƟ raconte sa journée (une fois par soir)
+      { id: "mesi", x: 572 + TABLE_T.x, y: 160 + TABLE_T.y, w: 66, h: 136, get nom() { return peutRaconter() ? "Raconter ma journée à Mesi" : "Mesi"; }, agir: () => (peutRaconter() ? soireeOvo() : H.dialogue.dire([{ qui: "luigi", texte: "Ce soir, tu me raconteras ta journée ?" }])) },
       { id: "ovo", x: 428 + TABLE_T.x, y: 160 + TABLE_T.y, w: 72, h: 136, nom: "Chanter notre chanson", agir: () => chanson() },
       { id: "table", x: 500 + TABLE_T.x, y: 196 + TABLE_T.y, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
@@ -2119,7 +2104,7 @@
     function image(t) {
       if (!document.body.contains(toile)) return;
       requestAnimationFrame(image);
-      if (t - derniere < 66) return;
+      if (t - derniere < H.cadence(66)) return;
       derniere = t;
       const v = vueMaison(toile), moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
@@ -2603,7 +2588,7 @@
     function image(t) {
       if (!document.body.contains(toile)) return;
       requestAnimationFrame(image);
-      if (t - derniere < 66) return;
+      if (t - derniere < H.cadence(66)) return;
       derniere = t;
       const moment = dodo ? "nuit" : momentMaison();
       if (cle !== moment + (dodo ? "d" : "")) { cle = moment + (dodo ? "d" : ""); decor = decorIso(moment, dodo); }
@@ -2933,11 +2918,11 @@
     const S = b.s, { ctx, dpr, w, h } = S;
     const t = performance.now();
     // sur téléphone, une image sur deux suffit : le filtre en gros pixels coûte cher
-    if (TELEPHONE && S.derniere && t - S.derniere < 30) {
+    if (S.derniere && t - S.derniere < H.cadence(TELEPHONE ? 30 : 0)) {
       b.anim = requestAnimationFrame(dessinerBalade);
       return;
     }
-    const dt = Math.min(0.1, (t - S.derniere) / 1000);
+    const dt = Math.min(Math.max(0.1, H.cadence(0) * 0.0015), (t - S.derniere) / 1000);
     S.derniere = t;
     if (!b.pause) S.decalage += dt * 40;
     const avance = S.decalage;
@@ -3264,7 +3249,6 @@
     if (!balade) return;
     if (avec("luigi")) {
       await raconter("luigi");
-      if (balade) await complimentMesi();
     }
     if (balade && avec("lolo")) await raconter("lolo");
     if (balade && !avec("luigi") && !avec("lolo")) await H.dialogue.dire(histoires().pensees());
@@ -3504,7 +3488,7 @@
     function image(t) {
       if (!document.body.contains(toile)) return;
       requestAnimationFrame(image);
-      if (t - derniere < 66) return;
+      if (t - derniere < H.cadence(66)) return;
       derniere = t;
       const v = vueMaison(toile), cleD = [v.W, v.Hc, v.K, v.taille, fenetresOuvertes()].join("|");
       if (cle !== cleD) {

@@ -1,5 +1,5 @@
 // Les histoires du soir : les drames absurdes de Lóló (pleins de rebondissements),
-// les douceurs de Mesi et ses compliments pour ƟvƟ, les pensées d'une balade en solo.
+// les douceurs de Mesi pour ƟvƟ, les pensées d'une balade en solo.
 (function () {
   const H = window.H;
   const L = (texte) => ({ qui: "lolo", texte });
@@ -97,27 +97,6 @@
     ] },
   ];
 
-  // Les compliments de Mesi pour ƟvƟ
-  const COMPLIMENTS = [
-    "Tu sais ce que je préfère dans ce jardin ? Toi, quand tu rigoles.",
-    "T’as un cerveau magnifique : tu retiens le nom latin de chaque plante comme si de rien n’était.",
-    "Quand t’arrives quelque part, c’est comme si le soleil se levait une deuxième fois.",
-    "Ta générosité ferait fleurir un caillou.",
-    "T’es trop une tronche !",
-    "Les jardins que tu dessines rendent les gens heureux. Je trouve ça immense.",
-    "Le monde a de la chance de t’avoir.",
-    "Même tes lunettes rondes ont l’air fières d’être sur ton nez.",
-    "T’es comme une sorte de soleil, BB. Même les tournesols se tournent vers ton visage, avec tes beaux cils.",
-    "Je t’aime très très fort !",
-    "Tu es la personne la plus curieuse et passionnée que je connaisse.",
-    "Ta rigolade, c’est mon bruitage préféré de la ferme.",
-    "Tu prends soin des plantes, des gens, et même de Mémé. Tu prends soin de tout.",
-    "T’as peur de rien, et ça me donne du courage à moi aussi.",
-    "Ta salopette a toujours une tache de terre, et c’est la plus jolie tache du monde.",
-    "Si tu étais une plante, tu serais un tournesol : grand, lumineux et généreux en graines.",
-    "Je suis tellement fier·e de toi, de tout ce que tu as construit.",
-  ];
-
   // Balade en solo : de petites pensées sur ce qu'on voit et entend
   function pensees() {
     const s = H.ciel.etat();
@@ -154,10 +133,7 @@
     get LUIGI() {
       return T("histoiresMesi", LUIGI);
     },
-    get COMPLIMENTS() {
-      return T("complimentsMesi", COMPLIMENTS);
-    },
-    DEFAUTS: { histoiresLolo: LOLO, histoiresMesi: LUIGI, complimentsMesi: COMPLIMENTS },
+    DEFAUTS: { histoiresLolo: LOLO, histoiresMesi: LUIGI },
     pensees,
     auHasard,
   };

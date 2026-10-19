@@ -224,7 +224,7 @@
       let avant = 0;
       const tour = (t) => {
         if (!continuer()) return;
-        if (t - avant > 110) { avant = t; c.drawImage(fond, 0, 0); S.animer(c, t); }
+        if (t - avant > H.cadence(110)) { avant = t; c.drawImage(fond, 0, 0); S.animer(c, t); }
         anim = requestAnimationFrame(tour);
       };
       anim = requestAnimationFrame(tour);

@@ -42,16 +42,6 @@
     "Mrrrrrou… rrrrrrrr…",
   ];
 
-  const COMPLIMENTS = [
-    "Tu as la plus jolie étoile du monde !",
-    "Ta crinière brille comme du miel au soleil.",
-    "Tu galopes plus vite que le mistral !",
-    "Mémé a bien de la chance de dormir sur toi.",
-    "Tu sens bon le foin et la lavande.",
-    "Tes sabots font la plus jolie musique.",
-    "Tu es le plus doux des chevaux.",
-    "Tes yeux pétillent comme la mer aux calanques.",
-  ];
   // Les blagues de Lóló (seulement à la maison, jamais dehors), ce sont des farces : il se cache, il fait semblant d'être une plante, il
   // s'assoit sur la tête de quelqu'un. Chaque farce a deux temps : on ne se doute de rien, puis
   // Lóló se montre. ƟvƟ et Mesi disent alors d'une seule voix « Sacré Lóló ! ».
@@ -69,12 +59,10 @@
       [["lolo", "Hiii ! Je suis un chapeau !"]],
     ] },
   ];
-  const DUREE_PLUIE = 10 * 60e3;
   // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
   const T = (cle, defaut) => (H.textes ? H.textes.valeur(cle, defaut) : defaut);
   const astuces = () => T("astucesLolo", ASTUCES);
   const repliquesMeme = () => T("memeLolo", MEME);
-  const compliments = () => T("complimentsLolo", COMPLIMENTS);
   // Et quelques vraies blagues, ses préférées
   const BLAGUES = [
     { id: "toctoc", lignes: [["lolo", "Toc toc !"], ["ovo", "Qui est là ?"], ["lolo", "Lóló."], ["ovo", "Lóló qui ?"], ["lolo", "Lóló… euh… j’ai oublié la suite ! Hiii !"]] },
@@ -134,53 +122,8 @@
     ]);
   }
 
-  // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins.
+  // une pluie de joie de Lóló en cours (elle arrose toutes les îles)
   H.pluieMagique = () => !!(H.jeu && H.jeu.pluieMagique && H.jeu.pluieMagique > H.maintenant());
-
-  function faireTomberLaPluie() {
-    const t = H.maintenant();
-    H.jeu.pluieMagique = t + DUREE_PLUIE;
-    // la pluie arrose toutes les plantes de toutes les îles de jeu
-    for (const ile of Object.values(H.jeu.iles || {})) {
-      if (!ile || ile.supprime || ile.croquis) continue;
-      for (const pl of Object.values(ile.plantes || {})) pl.eau = 100;
-      ile.modifieLe = t;
-    }
-    H.d.changer("jeu");
-    H.emettre("meteo", H.ciel.meteo);
-  }
-
-  async function complimenter() {
-    const melange = compliments().slice().sort(() => Math.random() - 0.5).slice(0, 3);
-    const choix = await H.dialogue.dire([{
-      qui: "ovo",
-      texte: "Hmm… qu’est-ce que je pourrais lui dire de gentil ?",
-      choix: melange.map((c) => ({ valeur: c, libelle: c })),
-    }]);
-    if (!choix) return;
-    const c = H.jeu.complimentsLolo || { n: 0, le: 0 };
-    if (H.maintenant() - c.le > 24 * 3600e3) c.n = 0;
-    c.n++;
-    c.le = H.maintenant();
-    H.jeu.complimentsLolo = c;
-    H.d.changer("jeu");
-    if (c.n === 1) {
-      await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Hiii… merci ! Tu me fais rougir jusqu’aux oreilles." }]);
-    } else if (c.n === 2) {
-      await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Oh là là, encore ? Mon cœur fait des galops !" }]);
-    } else {
-      c.n = 0;
-      await H.dialogue.dire([
-        { qui: "ovo", texte: choix },
-        { qui: "lolo", texte: "Hiii ! Tu me rends tellement heureux que… regarde le ciel !" },
-      ]);
-      faireTomberLaPluie();
-      await H.dialogue.dire([
-        { qui: "meme", texte: "Rrrrrrrr… (Mémé sent les premières gouttes, ouvre un œil, et se rendort.)" },
-        { qui: "lolo", texte: "Voilà : une pluie de joie pour tous tes jardins ! Ça arrose tout, pendant dix minutes." },
-      ]);
-    }
-  }
 
   function plantesDuMois(champ, ile) {
     const mois = new Date().getMonth() + 1;
@@ -249,15 +192,9 @@
         { valeur: "fleurs", libelle: "Qu’est-ce qui fleurit ?" },
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
-        { valeur: "compliment", libelle: "Lui faire un compliment" },
         { valeur: null, libelle: "Merci Lóló !" },
       ]);
       if (!q) break;
-      if (q === "compliment") {
-        await complimenter();
-        intro = "Autre chose ?";
-        continue;
-      }
       let repliques = [];
       if (q === "astuce") {
         if (dejaDites.length >= astuces().length) dejaDites = [];
@@ -280,7 +217,7 @@
   // Lóló et Mémé sont là dès le début ; seule leur île apparaît le 24 février.
   const disponible = () => true;
 
-  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
+  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME } };
 })();
 
 // Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,

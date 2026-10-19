@@ -20,6 +20,9 @@
     return out;
   }
   const boucles = {};
+  // la piste (voir H.PISTES) de chaque enregistrement
+  const PISTE_DE = { criquets: "nuit", criquetsLoin: "nuit", rieuse: "grenouilles", alyte: "grenouilles", ronronDort: "meme", ronron: "meme", galop: "pas", sanglier: "sangliers" };
+  const pisteOuverte = (nom) => H.piste(PISTE_DE[nom] || nom);
 
   const actif = () => H.local && H.local.son && document.visibilityState === "visible";
 
@@ -67,7 +70,7 @@
 
   async function boucleContinue(nom, allume, volume) {
     let b = boucles[nom];
-    if (allume && actif()) {
+    if (allume && actif() && pisteOuverte(nom)) {
       if (!contexte()) return;
       if (!b) b = boucles[nom] = {};
       if (!b.gain) b.gain = ctx.createGain();
@@ -194,7 +197,7 @@
     // un son joué une fois
     caresseMeme: () => caresseMeme(),
     jouer(nom, volume) {
-      if (!actif()) return null;
+      if (!actif() || !pisteOuverte(nom)) return null;
       return jouerUrl(FICHIERS[nom], (volume == null ? 0.6 : volume) * H.volume("bruitages"));
     },
     // un son d'une adresse (le miaou enregistré dans les réglages, par exemple)
@@ -414,7 +417,7 @@
     return true;
   }
   function goeland() {
-    if (!actif() || !contexte()) return;
+    if (!actif() || !H.piste("goelands") || !contexte()) return;
     goelandEnregistre(0.42).then((ok) => {
       if (!ok) return goelandSynthese();
       // parfois, un autre goéland répond, un peu plus loin
@@ -437,7 +440,7 @@
   // oiseaux du jardin qu'on entend par la baie le jour (mieux quand elle est grande ouverte)
   let crepite = null;
   function craquement() {
-    if (!actif() || Math.random() > 0.4) return;
+    if (!actif() || !H.piste("feu") || Math.random() > 0.4) return;
     const t = ctx.currentTime, src = souffle(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     f.type = "bandpass"; f.frequency.value = 900 + Math.random() * 3200; f.Q.value = 1.2;
     const v = (Math.random() < 0.12 ? 0.3 : 0.09) * H.volume("bruitages");
@@ -473,7 +476,7 @@
     o.stop(t + d + 0.02);
   }
   function oiseau() {
-    if (!actif() || !contexte()) return;
+    if (!actif() || !H.piste("oiseaux") || !contexte()) return;
     const vol = 0.05 * H.volume("bruitages") * sourdine(), pan = hasard(-0.7, 0.7);
     let t = ctx.currentTime + 0.05;
     const espece = Math.random();
@@ -592,7 +595,7 @@
   }
   // pan : de -1 (à gauche) à 1 (à droite) ; loin : de 0 à 1
   function poule(pan, loin) {
-    if (!actif() || !contexte()) return;
+    if (!actif() || !H.piste("poules") || !contexte()) return;
     const v = 0.05 * H.volume("bruitages") * (1 - 0.6 * (loin || 0)), f = 520 + Math.random() * 160;
     let t = ctx.currentTime + 0.05;
     const n = 2 + Math.floor(Math.random() * 3);
@@ -628,11 +631,13 @@
     o.stop(t + d + 0.3);
   }
   function hibou() {
+    if (!H.piste("nuit")) return;
     const t = ctx.currentTime + 0.05, pan = Math.random() * 1.6 - 0.8, v = 0.05 * H.volume("bruitages") * (0.6 + Math.random() * 0.4);
     noteHibou(t, 330, 0.32, v, pan);
     noteHibou(t + 0.55, 300, 0.42, v * 0.9, pan);
   }
   function chouette() {
+    if (!H.piste("nuit")) return;
     const t = ctx.currentTime + 0.05, pan = Math.random() * 1.6 - 0.8, v = 0.045 * H.volume("bruitages") * (0.6 + Math.random() * 0.4);
     noteHibou(t, 520, 0.6, v, pan);
     noteHibou(t + 2.6, 540, 0.14, v * 0.8, pan);
@@ -693,6 +698,12 @@
   // en entrant dans la maison ou en en sortant, les bruits du dehors baissent ou remontent
   window.addEventListener("hashchange", () => setTimeout(() => { grenouilles(); pluie(); }, 90));
   H.sons.majVolumes = () => { majNuit(); majCigales(); pluie(); grenouilles(); };
+  // une piste coupée ou rallumée dans les réglages
+  H.sons.majPistes = () => {
+    for (const nom of Object.keys(boucles)) if (!pisteOuverte(nom)) boucleContinue(nom, false);
+    H.sons.majVolumes();
+    majRonron();
+  };
   // dans les réglages : faire entendre la pluie quelques secondes, même s'il fait beau
   let finApercu = null;
   H.sons.apercuPluie = function () {

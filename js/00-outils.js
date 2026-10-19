@@ -247,6 +247,15 @@ window.H = window.H || {};
     return d ? d[2] : 1;
   };
 
+  // Les pistes de bruitage, qu'on peut couper une par une (pour un jeu plus léger ou plus calme).
+  H.PISTES = [["oiseaux", "Oiseaux du jardin"], ["nuit", "Criquets, hiboux et chouettes la nuit"], ["cigales", "Cigales"], ["goelands", "Goélands"],
+    ["grenouilles", "Grenouilles du bassin"], ["poules", "Poules"], ["meme", "Ronron de Mémé"], ["feu", "Feu dans le poêle"], ["pas", "Pas et galop"],
+    ["sangliers", "Sangliers"], ["pluie", "Pluie"]];
+  H.piste = (id) => !(H.local && H.local.pistesCoupees && H.local.pistesCoupees.includes(id));
+  // Les animations : « fluides », « ralenties » ou « presque immobiles » (moins d'images par
+  // seconde, pour un appareil qui peine). Renvoie l'écart minimal entre deux images.
+  H.cadence = (ms) => Math.max(ms, { ralenties: 100, immobiles: 400 }[(H.local && H.local.animations) || ""] || 0);
+
   // Petit bus d'évènements entre modules.
   const ecouteurs = {};
   H.sur = (nom, fn) => (ecouteurs[nom] = ecouteurs[nom] || []).push(fn);

@@ -152,7 +152,7 @@
 
   // --- le message du matin ------------------------------------------------------------------
   // Le premier matin de la journée, Mesi écrit : « Jó reggelt! », puis « JQTBD? ». ƟvƟ répond
-  // « JR BB! », puis O ou PT :(, et lui demande à son tour « JQTBD? ». Mesi répond O!!:) ou N :(
+  // « JR BB! », puis O ou N, et lui demande à son tour « JQTBD? ». Mesi répond O!!:) ou N :(
   // (sa vraie réponse, si elle l'a donnée ce matin sur son appareil ; sinon, la plus probable).
   // Sur l'appareil de Mesi, c'est elle qui écrit, et qui choisit sa réponse.
   const jour = () => { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
@@ -176,7 +176,7 @@
     }
     const a = await H.dialogue.dire([{ brut: true, qui: "luigi", texte: "Jó reggelt!" }, { brut: true, qui: "luigi", texte: "JQTBD?", choix: [{ valeur: "jr", libelle: "JR BB!" }] }]);
     if (!a) return;
-    const r = await H.dialogue.dire([{ brut: true, qui: "ovo", texte: "JR BB!", choix: [{ valeur: "O", libelle: "O" }, { valeur: "PT :(", libelle: "PT :(" }] }]);
+    const r = await H.dialogue.dire([{ brut: true, qui: "ovo", texte: "JR BB!", choix: [{ valeur: "O", libelle: "O" }, { valeur: "N", libelle: "N" }] }]);
     if (!r) return;
     noterMatin("ovo", r);
     const m = reponseDe("mesi") || (Math.random() < 0.8 ? "O!!:)" : "N :(");

@@ -1235,6 +1235,10 @@
         }
         return res;
       }
+      if (cycle === "Arbuste" && hm < 1.3 && ["Lamiaceae", "Verbenaceae", "Hypericaceae", "Asteraceae"].includes(v.famille)) {
+        plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol }, fleur && st === 3, st, r, saison, p.id, true);
+        return res;
+      }
       if (cycle === "Arbuste") {
         // (un arbuste à feuilles caduques montre ses rameaux quand il se dégarnit)
         if (saison && saison.densite < 0.95) for (let k = 0; k < 7; k++) { const a = -Math.PI / 2 + (k - 3) * 0.32; for (let s = 0; s < h * 0.85; s += 1) R(g, cx + Math.cos(a) * s * 0.6, sol - Math.sin(-a) * s, 1, 1, s < h * 0.4 ? "#7a4520" : "#9a6a3c"); }
@@ -1257,17 +1261,149 @@
         if (fleur && (!saison || saison.densite >= 1)) for (let y = 4; y < h; y += 7) R(g, cx + 2, sol - y, 1, 1, fleurCol);
         return res;
       }
-      // les herbes : une touffe de tiges, des feuilles le long, et les fleurs au sommet
-      R(g, cx - w * 0.3, sol - 2, w * 0.6, 2, sombre);
-      const n = Math.max(3, Math.min(10, Math.round(w / 3)));
-      for (let k = 0; k < n; k++) {
-        const x = cx + Math.round((k / Math.max(1, n - 1) - 0.5) * w * 0.8), hh = Math.round(h * (0.6 + r() * 0.4));
-        for (let y = 0; y < hh; y++) { R(g, x, sol - y, 1, 1, y < hh * 0.3 ? sombre : feuille); if (y > 1 && y % 3 === 0) R(g, x + (y % 6 ? 1 : -1), sol - y, 1, 1, clair); }
-        if (fleur && st === 3) { R(g, x - 1, sol - hh - 1, 2, 2, fleurCol); R(g, x, sol - hh - 2, 1, 1, assombrir(fleurCol, 0.8)); }
-      }
+      // les herbes : dessinées selon leur famille botanique (voir plantePortrait)
+      plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol }, fleur && st === 3, st, r, saison, p.id);
       return res;
     });
   }
+
+  // --- le port botanique des herbes -----------------------------------------------------------
+  // Chaque famille a sa façon précise de porter ses feuilles et ses fleurs : chez les Lamiacées,
+  // les feuilles sont opposées deux à deux et chaque paire est tournée d'un quart de tour par
+  // rapport à la précédente (vues de côté : une paire bien étalée, puis une paire vue de face,
+  // raccourcie) ; chez les Rubiacées, elles sont en verticilles ; chez les Astéracées, alternes en
+  // spirale (on les voit de longueurs différentes, un coup à gauche, un coup à droite, devant ou
+  // derrière la tige) ; chez les Poacées, alternes sur deux rangs ; chez d'autres, en rosette au
+  // pied. Les fleurs aussi : en verticilles étagés, en épi, en capitules, en ombelles, en grappes…
+  const PORTS = {
+    Lamiaceae: ["opposees", "verticilles"], Urticaceae: ["opposees", "chatons"], Verbenaceae: ["opposees", "epi"], Hypericaceae: ["opposees", "cyme"],
+    Caprifoliaceae: ["opposees", "corymbe"], Gentianaceae: ["opposees", "cyme"], Apocynaceae: ["opposees", "solitaire"], Pedaliaceae: ["opposees", "solitaire"],
+    Rubiaceae: ["verticillees", "cyme"],
+    Asteraceae: ["alternes", "capitule"], Rosaceae: ["alternes", "cyme"], Fabaceae: ["composees", "grappe"], Solanaceae: ["alternes", "cyme"],
+    Malvaceae: ["alternes", "solitaire"], Boraginaceae: ["alternes", "scorpioide"], Polygonaceae: ["alternes", "epi"], Linaceae: ["alternes", "solitaire"],
+    Onagraceae: ["alternes", "grappe"], Brassicaceae: ["rosetteTige", "grappe"], Scrophulariaceae: ["rosetteTige", "epi"], Papaveraceae: ["rosette", "solitaireHaut"],
+    Apiaceae: ["engainantes", "ombelle"], Araliaceae: ["alternes", "ombelle"], Melanthiaceae: ["alternes", "grappe"],
+    Plantaginaceae: ["rosette", "epiHaut"], Primulaceae: ["rosette", "ombelleHaut"], Violaceae: ["rosette", "solitaire"], Asphodelaceae: ["rosetteEpaisse", "grappeHaut"],
+    Amaryllidaceae: ["lineaires", "ombelleHaut"], Iridaceae: ["eventail", "solitaireHaut"], Zingiberaceae: ["distiques", "aucune"], Poaceae: ["graminee", "panicule"],
+    Equisetaceae: ["prele", "aucune"], Tropaeolaceae: ["peltees", "solitaire"],
+  };
+  function plantePortrait(g, cx, sol, w, h, famille, C, fleurit, st, r, saison, graine, buisson) {
+    const [port, inflo] = PORTS[famille] || ["alternes", "cyme"];
+    const P = (gg, x, y, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), 1, 1); };
+    const tigeC = C.sombre, coeur = "#f2c94c";
+    // les feuilles sur une toile à part (pour les couleurs de la saison)
+    const fe = document.createElement("canvas"); fe.width = g.canvas.width; fe.height = g.canvas.height;
+    const gf = fe.getContext("2d");
+    // une feuille : partant de (x, y), dans la direction a, longue de l ; le bord du dessus clair
+    const feuilleA = (x, y, a, l, larg, devant) => {
+      for (let s = 0; s <= l; s += 0.6) {
+        const u = s / Math.max(1, l), e = Math.sin(u * Math.PI) * (larg || 1);
+        const px = x + Math.cos(a) * s, py = y + Math.sin(a) * s;
+        P(gf, px, py, devant === false ? C.sombre : C.feuille);
+        if (e > 0.6) { P(gf, px - Math.sin(a) * e * 0.8, py + Math.cos(a) * e * 0.8, C.sombre); P(gf, px + Math.sin(a) * e * 0.8, py - Math.cos(a) * e * 0.8, devant === false ? C.feuille : C.clair); }
+      }
+    };
+    const tige = (x0, y0, x1, y1, col) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let k = 0; k <= n; k++) P(g, x0 + ((x1 - x0) * k) / n, y0 + ((y1 - y0) * k) / n, col || tigeC); };
+    const petiteFleur = (x, y, col) => { P(g, x, y, col || C.fleurCol); };
+    const grandeFleur = (x, y, col) => { col = col || C.fleurCol; P(g, x - 1, y, col); P(g, x + 1, y, col); P(g, x, y - 1, col); P(g, x, y + 1, col); P(g, x, y, coeur); };
+    const capitule = (x, y) => { P(g, x - 1, y, C.fleurCol); P(g, x + 1, y, C.fleurCol); P(g, x, y - 1, C.fleurCol); P(g, x, y, "#c99a3a"); };
+    const L = Math.max(1, Math.min(6, w * 0.22)), jeune = st < 3;
+    // les fleurs, selon l'inflorescence, au bout d'une tige (x, y), qui monte depuis (xb, yb)
+    const fleurs = (x, y, xb, yb) => {
+      if (!fleurit) return;
+      const hauteur = Math.abs(yb - y);
+      switch (inflo) {
+        case "verticilles": for (let k = 0; k < 4; k++) { const yy = y + k * 2.5; if (yy > yb) break; P(g, x - 1, yy, C.fleurCol); P(g, x + 1, yy, C.fleurCol); P(g, x, yy - 1, C.fleurCol); } break;
+        case "epi": case "epiHaut": for (let k = 0; k < Math.min(7, hauteur * 0.35); k++) { P(g, x, y + k, C.fleurCol); if (k % 2) P(g, x + (k % 4 ? 1 : -1), y + k, C.fleurCol); } break;
+        case "capitule": capitule(x, y); break;
+        case "ombelle": case "ombelleHaut": for (let k = -3; k <= 3; k++) { tige(x, y + 2, x + k, y, tigeC); P(g, x + k, y - 1, C.fleurCol); } break;
+        case "grappe": case "grappeHaut": for (let k = 0; k < 6; k++) { const yy = y + k * 1.8; if (yy > yb) break; P(g, x + (k % 2 ? 1 : -1), yy, C.fleurCol); } P(g, x, y - 1, C.fleurCol); break;
+        case "cyme": case "corymbe": for (let k = -2; k <= 2; k++) petiteFleur(x + k, y - (Math.abs(k) < 2 ? 1 : 0)); break;
+        case "solitaire": case "solitaireHaut": grandeFleur(x, y - 1); break;
+        case "scorpioide": for (let k = 0; k < 5; k++) petiteFleur(x + Math.cos(k * 0.9) * 2, y - Math.sin(k * 0.9) * 2); break;
+        case "panicule": for (let k = 0; k < 6; k++) P(g, x + (k - 2.5) * 0.9, y + Math.abs(k - 2.5) * 0.8, "#d8c27a"); break;
+        case "chatons": for (let k = 2; k < hauteur * 0.6; k += 3) { P(g, x - 1, y + k, "#9cc77a"); P(g, x + 1, y + k + 1, "#9cc77a"); } break;
+      }
+    };
+    // une tige feuillée qui monte de (x0, sol) à (x1, haut), avec ses nœuds et ses feuilles
+    const tigeFeuillee = (x0, x1, haut, graineT) => {
+      tige(x0, sol, x1, sol - haut);
+      const entre = Math.max(2, Math.round(haut / (jeune ? 3 : 5 + Math.min(4, haut / 12))));
+      let k = 0;
+      for (let y = entre * 0.8; y < haut * (fleurit ? 0.82 : 0.95); y += entre * (1 - y / haut * 0.25), k++) {
+        const u = y / haut, x = x0 + (x1 - x0) * u, yy = sol - y, l = L * (1 - u * 0.5);
+        if (port === "opposees") {
+          // deux à deux, chaque paire tournée d'un quart de tour : étalée, puis vue de face
+          if (k % 2 === 0) { feuilleA(x, yy, -Math.PI + 0.45, l, 0.9, true); feuilleA(x, yy, -0.45, l, 0.9, true); }
+          else { feuilleA(x, yy, -Math.PI / 2 - 0.25, l * 0.5, 0.7, true); P(gf, x + 1, yy - 1, C.sombre); }
+        } else if (port === "verticillees") {
+          for (const a of [-Math.PI + 0.25, -0.25, -Math.PI + 0.8, -0.8]) feuilleA(x, yy, a, l * (Math.abs(Math.cos(a)) > 0.9 ? 1 : 0.6), 0.5, Math.cos(a) * 0 === 0);
+        } else if (port === "distiques" || port === "graminee") {
+          const cote = k % 2 ? -1 : 1;
+          feuilleA(x, yy, cote > 0 ? -0.35 : -Math.PI + 0.35, l * (port === "graminee" ? 1.8 : 1.6), port === "graminee" ? 0.4 : 1.4, true);
+        } else if (port === "composees") {
+          // une feuille composée de petites folioles, une fois à gauche, une fois à droite
+          const cote = k % 2 ? -1 : 1, a = cote > 0 ? -0.5 : -Math.PI + 0.5;
+          for (let q = 1; q <= l + 1; q += 1.3) { const px = x + Math.cos(a) * q, py = yy + Math.sin(a) * q; P(gf, px, py - 1, C.feuille); P(gf, px, py + 1, C.clair); }
+        } else if (port === "engainantes") {
+          const cote = k % 2 ? -1 : 1, a = cote > 0 ? -0.6 : -Math.PI + 0.6;
+          P(gf, x + cote, yy, C.clair);
+          for (let q = 2; q <= l + 2; q += 1.2) { const px = x + Math.cos(a) * q, py = yy + Math.sin(a) * q; P(gf, px, py, C.feuille); P(gf, px + (q % 2 ? 1 : 0), py - 1, C.clair); }
+        } else {
+          // alternes en spirale (2/5) : 144° d'une feuille à l'autre, vues de côté
+          const th = (k * 144 + hsh(graineT, 3) * 360) * Math.PI / 180, proj = Math.cos(th), devant = Math.sin(th) > 0;
+          feuilleA(x, yy, proj > 0 ? -0.5 : -Math.PI + 0.5, Math.max(1, l * (0.35 + 0.65 * Math.abs(proj))), port === "peltees" ? 1.6 : 1, devant);
+        }
+      }
+      fleurs(x1, sol - haut, x0, sol);
+    };
+    const rosette = (rx, ry, epaisse) => {
+      const n = epaisse ? 7 : 9;
+      for (let k = 0; k < n; k++) {
+        const a = -Math.PI + (k / (n - 1)) * Math.PI, l = rx * (0.7 + hsh(graine.length + k, 9) * 0.3);
+        feuilleA(cx, sol - 1, a * 0.85 - Math.PI * 0.075, epaisse ? l * 0.8 : l, epaisse ? 1.6 : 1.1, k % 2 === 0);
+      }
+    };
+    // le port de chaque famille
+    const nTiges = buisson ? Math.max(4, Math.min(9, Math.round(w / 2.2))) : Math.max(1, Math.min(6, Math.round(w / 4)));
+    if (port === "prele") {
+      for (let k = 0; k < nTiges; k++) {
+        const x = cx + (k - (nTiges - 1) / 2) * 2.5, hh = h * (0.7 + hsh(k, 7) * 0.3);
+        tige(x, sol, x, sol - hh, C.feuille);
+        for (let y = 3; y < hh; y += 3) { P(g, x, sol - y, "#2c2a3e"); for (const s of [-1, 1]) for (let q = 1; q <= Math.max(1, L * (1 - y / hh)); q++) P(gf, x + s * q, sol - y + q * 0.6, C.feuille); }
+      }
+    } else if (port === "rosette" || port === "rosetteEpaisse" || port === "lineaires" || port === "eventail") {
+      if (port === "lineaires") for (let k = 0; k < 7; k++) feuilleA(cx + (k - 3) * 0.6, sol, -Math.PI / 2 + (k - 3) * 0.16, h * 0.55, 0.3, true);
+      else if (port === "eventail") for (let k = 0; k < 6; k++) feuilleA(cx + (k - 2.5) * 0.8, sol, -Math.PI / 2 + (k - 2.5) * 0.12, h * (0.5 + 0.1 * (3 - Math.abs(k - 2.5))), 0.9, true);
+      else rosette(Math.max(2, w * 0.45), 2, port === "rosetteEpaisse");
+      // les hampes florales, nues, qui montent du milieu
+      if (!jeune) {
+        const n = port === "rosette" ? Math.max(1, Math.min(4, Math.round(w / 5))) : 1;
+        for (let k = 0; k < n; k++) { const x = cx + (k - (n - 1) / 2) * 3, hh = h * (0.75 + hsh(k, 11) * 0.25); tige(x, sol - 1, x + (k - (n - 1) / 2), sol - hh); fleurs(x + (k - (n - 1) / 2), sol - hh, x, sol); }
+      }
+    } else if (port === "rosetteTige") {
+      rosette(Math.max(2, w * 0.45), 2);
+      tigeFeuillee(cx, cx, h * 0.95, 1);
+    } else if (inflo === "capitule" && !jeune && !buisson) {
+      // les Astéracées : une tige qui se ramifie en haut, chaque rameau terminé par un capitule
+      tigeFeuillee(cx, cx, h * 0.62, 1);
+      const nb = Math.max(2, Math.min(6, Math.round(w / 3)));
+      for (let k = 0; k < nb; k++) {
+        const u = nb === 1 ? 0 : k / (nb - 1) - 0.5, x = cx + u * w * 0.8, hh = h * (0.85 + (0.5 - Math.abs(u)) * 0.3);
+        tige(cx, sol - h * 0.6, x, sol - hh);
+        if (k % 2) feuilleA(cx + u * w * 0.4, sol - h * 0.72, u > 0 ? -0.4 : -Math.PI + 0.4, L * 0.6, 0.8, true);
+        fleurs(x, sol - hh, cx, sol - h * 0.6);
+      }
+    } else {
+      for (let k = 0; k < nTiges; k++) {
+        const u = nTiges === 1 ? 0 : k / (nTiges - 1) - 0.5, x0 = cx + u * w * (buisson ? 0.35 : 0.5), x1 = cx + u * w * (buisson ? 0.85 : 0.7);
+        tigeFeuillee(x0, x1, h * (0.75 + (0.5 - Math.abs(u)) * 0.5) * (0.92 + hsh(k, graine.length) * 0.16), k + 1);
+      }
+    }
+    if (typeof appliquerSaison === "function") appliquerSaison(fe, saison, graine);
+    g.drawImage(fe, 0, 0);
+  }
+  const hsh = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
 
   // des branches nues dans la couronne : elles partent du haut du tronc et se divisent en montant
   function branchesNues(gc, x0, y0, rx, haut, r) {
@@ -2663,7 +2799,7 @@
       if (vue.ile.secrete || (vue.ile.animaux && vue.ile.animaux.length)) bouge = true;
       // la lumière du ciel (aube, couchant, nuit) suit l'heure, comme à la ferme
       if (t - (vue.dernierDessin || 0) > 2000) bouge = true;
-      if (bouge || !vue.dessineUneFois) {
+      if ((bouge && t - (vue.dernierDessin || 0) >= H.cadence(0)) || !vue.dessineUneFois) {
         dessiner();
         vue.dessineUneFois = true;
         vue.dernierDessin = t;

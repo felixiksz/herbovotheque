@@ -979,10 +979,11 @@
 
   // La caméra ne descend jamais au point de cacher tout le ciel : sur un écran en hauteur (un
   // téléphone), le haut de la ferme reste sous une bande de ciel, assez haute pour que le soleil
-  // et la lune passent sous les boutons.
+  // et la lune passent sous les boutons. Sur un écran en largeur (une tablette couchée), le bas de
+  // la ferme passe avant le ciel : le ponton doit toujours rester visible et cliquable.
   function hautCamera(y) {
     const cache = zoneBoutons(), bande = (cache ? cache.b : 0) + 26;
-    return Math.min(y, OY - 50 - bande);
+    return Math.min(y, Math.max(OY - 50 - bande, OY + 226 - Ht));
   }
   // la place des boutons du haut (Aménager, Les îles, Réglages), dans les coordonnées du dessin
   function zoneBoutons() {
@@ -1739,7 +1740,7 @@
         scene.reste -= PAS;
         n++;
         const dernier = scene.reste < PAS || n === 6;
-        const dessine = dernier && t - (scene.dernierDessin || 0) >= ENTRE_DEUX_DESSINS - 2;
+        const dessine = dernier && t - (scene.dernierDessin || 0) >= H.cadence(ENTRE_DEUX_DESSINS) - 2;
         dessiner(t, !dessine);
         if (dessine) scene.dernierDessin = t;
       }
@@ -1907,7 +1908,6 @@
       scene.surGoeland = () => scene && (scene.goelands = performance.now());
       H.sur("goeland", scene.surGoeland);
       boucle();
-      bonjourDuMatin();
     },
     quitter() {
       // (les grenouilles du bassin s'entendent encore depuis la maison)
@@ -1919,18 +1919,4 @@
       scene = null;
     },
   };
-
-  // Le matin, à la première visite de la journée, Mesi et ƟvƟ se disent bonjour comme d'habitude :
-  // « Jó reggelt ! » ou « BMBB ! » (bon matin BB), et « JSQTBD ? » (j'espère que t'as bien dormi) ;
-  // ƟvƟ répond « BM BB! O! ET? TBD? » (bon matin BB ! oui ! et toi ? t'as bien dormi ?)
-  function bonjourDuMatin() {
-    const h = new Date().getHours(), jour = new Date().toDateString();
-    if (h < 5 || h >= 12 || H.local.bonjourMesi === jour) return;
-    H.d.majLocal((l) => (l.bonjourMesi = jour));
-    const salut = () => (Math.random() < 0.5 ? "Jó reggelt !" : "BMBB !");
-    setTimeout(() => H.dialogue.dire([
-      { qui: "luigi", texte: salut() + " JSQTBD ?" },
-      { qui: "ovo", texte: "BM BB! O! ET? TBD?" },
-    ]), 1200);
-  }
 })();
