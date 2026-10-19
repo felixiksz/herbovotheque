@@ -12,21 +12,23 @@
 
   // --- une histoire racontée dans les bulles ------------------------------------------
   let loloRaconte = false;
-  async function raconter(qui) {
+  // (sansMeme : Mémé n'est pas là, ni à la balade ni à la maison : ses répliques sont retirées)
+  async function raconter(qui, sansMeme) {
+    if (sansMeme == null) sansMeme = !!(H.memeDehors && H.memeDehors());
     if (qui === "lolo") {
       loloRaconte = true;
       try {
-        return await raconterHistoire(qui);
+        return await raconterHistoire(qui, sansMeme);
       } finally {
         loloRaconte = false;
       }
     }
-    return raconterHistoire(qui);
+    return raconterHistoire(qui, sansMeme);
   }
   async function blagueLolo() {
     await H.lolo.blague({ etape: (id, i) => (farce = id ? { id, etape: i } : null), raconte: (oui) => (loloRaconte = oui) });
   }
-  async function raconterHistoire(qui) {
+  async function raconterHistoire(qui, sansMeme) {
     const h = histoires();
     const liste = qui === "lolo" ? h.LOLO : h.LUIGI;
     const vues = (H.local.histoiresLues || {})[qui] || [];
@@ -41,7 +43,7 @@
     const intro = qui === "lolo"
       ? { qui: "lolo", texte: "Installe-toi bien. Ce soir : « " + histoire.titre + " »." }
       : { qui: "luigi", texte: "J’ai une petite histoire pour toi : « " + histoire.titre + " »." };
-    await H.dialogue.dire([intro].concat(histoire.lignes));
+    await H.dialogue.dire([intro].concat(sansMeme ? histoire.lignes.filter((l) => l.qui !== "meme") : histoire.lignes));
   }
 
   // Mesi prépare une crêpe au chocolat fondu (s'il en reste dans les ressources)
@@ -3755,9 +3757,9 @@
     await direUneFois(intro);
     if (!balade) return;
     if (avec("luigi")) {
-      await raconter("luigi");
+      await raconter("luigi", !avec("meme"));
     }
-    if (balade && avec("lolo")) await raconter("lolo");
+    if (balade && avec("lolo")) await raconter("lolo", !avec("meme"));
     if (balade && !avec("luigi") && !avec("lolo")) {
       // (quand ƟvƟ s'assoit un moment, on s'arrête : on la voit de dos, assis·e sur une pierre,
       // face à la mer, le temps de la pensée)
