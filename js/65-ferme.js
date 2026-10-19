@@ -1115,9 +1115,13 @@
   const MARCASSIN = ["..RRRR.R.", ".ReeeeRNR", "RRRRRRRRe", ".ReeeeRR.", "..n.n.n.n"];
   const MARCASSIN_PAS = MARCASSIN.slice(0, 4).concat([".n..n.n.."]);
   const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#3e2210", N: "#1b1414", k: "#2a1d1b", b: "#6b5442", B: "#8a7258", e: "#c9b090", s: "#b8a090", r: "#b9834f", R: "#7a4520", p: "#8a98cc" };
+  // la nuit, les bêtes ne sont pas éclairées comme en plein jour : leurs couleurs s'assombrissent
+  // et bleuissent avant même la lumière de la lune (sinon le renard luisait comme une lanterne)
+  const sombresNuit = {};
+  const couleurNuit = (hex) => !nuit ? hex : sombresNuit[hex] || (sombresNuit[hex] = "#" + [[1, 0.55], [3, 0.6], [5, 0.85]].map(([o, k]) => Math.round(parseInt(hex.slice(o, o + 2), 16) * k).toString(16).padStart(2, "0")).join(""));
   function dessinBete(c, x, y, g, gauche) {
     const L = g[0].length;
-    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BETES[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, PAL_BETES[ch]); }));
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BETES[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, couleurNuit(PAL_BETES[ch])); }));
   }
   // une traversée de l'île, en contournant les maisons
   function nouveauVisiteur() {
@@ -1245,7 +1249,7 @@
   const PAL_BASSIN = { g: "#4aa63e", G: "#2f6b35", e: "#1b1d4a", K: "#4b3427", k: "#9a6a3c", s: "#d9a07a", b: "#2a1d1b" };
   function dessinGrille(c, x, y, g, gauche) {
     const L = g[0].length;
-    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BASSIN[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, PAL_BASSIN[ch]); }));
+    g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BASSIN[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, couleurNuit(PAL_BASSIN[ch])); }));
   }
   const casesBassin = () => elementsIso().filter((e) => e.sol === "bassin");
   // les cases au bord du bassin (à côté de l'eau, mais pas dans l'eau)

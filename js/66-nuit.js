@@ -309,10 +309,14 @@
         if (u >= 0 && u <= 1.2) {
           const sens = hsh(k, 33) < 0.5 ? 1 : -1, g0 = Math.max(R.x0, PAYS.ile.g) - 60, g1 = Math.min(R.x1, PAYS.ile.d) + 60;
           const xA = sens > 0 ? g0 : g1, xB = sens > 0 ? g1 : g0, y = SOL_DEHORS + 8 + hsh(k, 34) * 10, s = p * 3, pas = Math.floor(t / 150) % 2;
+          // (dans la nuit : leurs couleurs passent à la lumière de la lune, sombres et bleutées, comme
+          // le reste du dehors ; seuls les yeux et le groin gardent un peu de clarté)
+          const nuitDe = nuitBetes || (nuitBetes = {});
+          const lune = (hex) => nuitDe[hex] || (nuitDe[hex] = "#" + [[1, 0.3, 0], [3, 0.36, 6], [5, 0.62, 26]].map(([o, k, plus]) => Math.min(255, Math.round(parseInt(hex.slice(o, o + 2), 16) * k + plus)).toString(16).padStart(2, "0")).join(""));
           // (dessinées de profil, la tête à droite : on les retourne quand elles vont à gauche)
           const bete = (grille, pal, x) => {
             const L = grille[0].length;
-            grille.forEach((l, j) => [...l].forEach((ch, i) => { const c = pal[ch]; if (!c) return; const ii = sens < 0 ? L - 1 - i : i; ctx.fillStyle = c; ctx.fillRect(Math.round(x + (ii - L / 2) * s), Math.round(y + (j - grille.length) * s), Math.ceil(s), Math.ceil(s)); }));
+            grille.forEach((l, j) => [...l].forEach((ch, i) => { const c0 = pal[ch]; if (!c0) return; const c = lune(c0); const ii = sens < 0 ? L - 1 - i : i; ctx.fillStyle = c; ctx.fillRect(Math.round(x + (ii - L / 2) * s), Math.round(y + (j - grille.length) * s), Math.ceil(s), Math.ceil(s)); }));
           };
           const x = xA + (xB - xA) * u;
           if (esp === "renard") bete(pas ? B.RENARD_PAS : B.RENARD, B.PAL_BETES, x);
@@ -361,7 +365,7 @@
   const bruit1 = (x, g) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return hsh(i, g) * (1 - u) + hsh(i + 1, g) * u; };
   // ce que le soir et la nuit font aux couleurs du jour (les ampoules des guirlandes restent chaudes)
   const TEINTE = { soir: { m: [0.66, 0.5, 0.72], a: [26, 8, 40] }, nuit: { m: [0.26, 0.3, 0.55], a: [10, 10, 26] } };
-  let cachePaysage = { cle: "" }, decorGarde = { cle: "" };
+  let cachePaysage = { cle: "" }, decorGarde = { cle: "" }, nuitBetes = null;
   // les guirlandes dehors s'allument le soir, sauf si on les a éteintes (le même interrupteur
   // pour la ferme et pour la maison)
   const guirlandesAllumees = () => !(H.local && H.local.guirlandesEteintes);
