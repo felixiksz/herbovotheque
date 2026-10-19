@@ -2938,7 +2938,9 @@
   // grain de risographie. De jour, le calcaire blanc, la mer turquoise et les pins parasols ;
   // de nuit, des collines sombres sous un ciel violet et la vraie lune.
   function scene(toile, compagnons) {
-    const ctx = toile.getContext("2d");
+    // (on peint chaque image hors de l'écran, on la passe en gros pixels, puis on la pose d'un
+    // seul coup sur la toile visible : sur tablette, l'écran ne montre jamais une image à moitié faite)
+    const ecran = document.createElement("canvas"), ctx = ecran.getContext("2d"), visible = toile.getContext("2d");
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     const w = toile.clientWidth || 600;
     const h = window.innerWidth < 640 ? 300 : 360;
@@ -2950,6 +2952,7 @@
     toile.width = Math.round(w * dpr);
     toile.height = Math.round(Htot * dpr);
     toile.style.height = Htot + "px";
+    ecran.width = toile.width; ecran.height = toile.height;
     const nuit = H.ciel.etat().soleil.alt < -4;
     const rEt = H.alea("etoiles-balade");
     const etoiles = Array.from({ length: 70 + Math.round(haut / 3) }, () => [rEt() * w, rEt() * rEt() * (h * 0.5 + haut) - haut, rEt() * 0.6 + 0.35]);
@@ -2971,7 +2974,7 @@
       }
     }
     return {
-      ctx, dpr, w, h, haut, bas, Htot, nuit, etoiles, arbres, devant, grain,
+      ctx, ecran, visible, dpr, w, h, haut, bas, Htot, nuit, etoiles, arbres, devant, grain,
       couvert: H.ciel.couvert(nuit),
       profils: { falaises: tirage("falaises", 24), rochers: tirage("rochers", 24), collines: tirage("collines", 24), collines2: tirage("collines2", 24), nuages: tirage("nuages", 12) },
       decalage: 0, compagnons, derniere: performance.now(),
@@ -3418,7 +3421,9 @@
       }
     }
     // la trame des gros pixels glisse avec le chemin, sous la ligne du rivage
-    H.retro.appliquer(b.toile, H.retro.taillePour(3), 0.7, { x: avance * (b.toile.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) });
+    H.retro.appliquer(S.ecran, H.retro.taillePour(3), 0.7, { x: avance * (b.toile.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) });
+    S.visible.setTransform(1, 0, 0, 1, 0, 0);
+    S.visible.drawImage(S.ecran, 0, 0);
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 
@@ -3530,7 +3535,7 @@
   async function deroulerBalade(compagnons) {
     const avec = (q) => compagnons.includes(q);
     const intro = [];
-    if (avec("luigi")) intro.push({ qui: "luigi", texte: "On va voir la mer ? Prends ma main, le chemin est un peu caillouteux." });
+    if (avec("luigi")) intro.push({ qui: "luigi", texte: "On va voir la mer ?" });
     if (avec("lolo")) intro.push({ qui: "lolo", texte: "Hiii ! Une balade ! On marche côte à côte, au pas, tranquilles." });
     if (avec("meme") && avec("lolo")) intro.push({ qui: "meme", texte: "Mrrr… (Mémé se réveille, s’étire et se met debout sur le dos de Lóló : elle voyage sans même avoir à bouger.)" });
     else if (avec("meme")) intro.push({ qui: "meme", texte: "Mrrrou ! (Mémé trottine devant, la queue en l’air, les yeux toujours fermés. Elle connaît le chemin par cœur.)" });

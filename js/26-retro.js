@@ -57,7 +57,7 @@
   // une trame légère (matrice de Bayer 4 × 4) : les aplats restent francs, les dégradés vibrent un peu
   const TRAME = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v / 16 - 0.47) * 9);
 
-  let petit = null, pc = null;
+  const petites = new Map();
   // taille : la taille d'un gros pixel, en pixels de la toile ; trame : de 0 (aplats francs,
   // dégradés en paliers) à 1 (la trame habituelle)
   // defile : { x, depuis } fait glisser la trame avec le décor, sous la ligne « depuis » (de 0 à 1),
@@ -68,14 +68,18 @@
     const W = toile.width, Hh = toile.height;
     if (!W || !Hh) return;
     const sw = Math.max(1, Math.ceil(W / taille)), sh = Math.max(1, Math.ceil(Hh / taille));
-    if (!petit) {
-      petit = document.createElement("canvas");
-      pc = petit.getContext("2d", { willReadFrequently: true });
+    // (une petite toile de travail par taille : deux scènes qui se succèdent ne la redimensionnent
+    // plus à chaque image, ce qui faisait clignoter certaines tablettes)
+    const cleP = sw + "x" + sh;
+    let tp = petites.get(cleP);
+    if (!tp) {
+      if (petites.size > 6) petites.clear();
+      const c = document.createElement("canvas");
+      c.width = sw; c.height = sh;
+      tp = { c, g: c.getContext("2d", { willReadFrequently: true }) };
+      petites.set(cleP, tp);
     }
-    if (petit.width !== sw || petit.height !== sh) {
-      petit.width = sw;
-      petit.height = sh;
-    }
+    const petit = tp.c, pc = tp.g;
     // chaque gros pixel prend une couleur franche (pas de mélange flou sur les contours)
     pc.imageSmoothingEnabled = false;
     pc.clearRect(0, 0, sw, sh);
