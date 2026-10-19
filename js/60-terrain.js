@@ -1218,6 +1218,14 @@
         for (let k = 0; k < (rx + ry) / 2; k++) { const a2 = r() * Math.PI * 2; R(gg, x0 + Math.round(Math.cos(a2) * (rx + 1)), y0 + Math.round(Math.sin(a2) * (ry + 1)), 1, 1, r() < 0.5 ? feuille : sombre); }
       };
       const cycle = v.cycle, hm = hauteurM(p);
+      // les arbres et les arbustes, dessinés selon leur famille dès qu'on a assez de pixels pour ça
+      if (h >= 20 && dessinLigneux(p)) {
+        const fe = toile(L, Hh), gf = fe.getContext("2d");
+        ligneux(p, v, g, gf, cx, sol, w, h, { feuille, sombre, clair, tresSombre, fleurCol }, fleur && st >= 2, r, saison);
+        appliquerSaison(fe, saison, p.id);
+        if (cycle === "Arbre") res.couronne = fe; else g.drawImage(fe, 0, 0);
+        return res;
+      }
       if (cycle === "Arbre" || (cycle === "Arbuste" && hm >= 2.5)) {
         // le tronc, puis la couronne sur une toile à part
         const tw = Math.max(2, Math.round(w * 0.09)), ht = Math.round(h * 0.42);
@@ -1273,6 +1281,238 @@
       plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol }, fleur && st === 3, st, r, saison, p.id);
       return res;
     });
+  }
+
+  // --- les arbres et les arbustes, selon leur famille -------------------------------------------
+  // Pas une boule : chaque famille a son architecture (un tronc et des charpentières qui se
+  // divisent, plusieurs tiges qui partent du pied, des tiges dressées, des cannes arquées, un
+  // coussin bas, des étages de conifère, une colonne), sa forme de feuille (aiguilles, écailles,
+  // feuilles composées pennées ou palmées, lobées, en éventail, lancéolées, dentées…) et ses
+  // fleurs ou ses fruits (chatons, cônes, chandelles, corymbes, figues, noix, oranges…).
+  // (les petits sous-arbrisseaux, thym, lavande, hysope…, gardent le dessin des herbes de leur famille)
+  const dessinLigneux = (p) => { const v = p.valeurs || {}; return (v.cycle === "Arbre" || v.cycle === "Arbuste") && !(v.cycle === "Arbuste" && hauteurM(p) < 1.3 && ["Lamiaceae", "Verbenaceae", "Hypericaceae", "Asteraceae"].includes(v.famille)); };
+  const BOIS = {
+    Pinaceae: ["cone", "aiguilles", "cones"], Cupressaceae: ["colonne", "ecailles", "baies"],
+    Lamiaceae: ["dresse", "lineaires", "verticilles"], Verbenaceae: ["dresse", "lanceolees", "epis"],
+    Rosaceae: ["arque", "dentees", "cinq"], Ericaceae: ["coussin", "petites", "clochettes"],
+    Betulaceae: ["ovale", "dentees", "chatons"], Salicaceae: ["pleureur", "lanceolees", "chatons"],
+    Fagaceae: ["rond", "dentees", "bogues"], Juglandaceae: ["etale", "pennees", "noix"],
+    Oleaceae: ["etale", "argent", "olives"], Moraceae: ["etale", "lobees", "figues"],
+    Myrtaceae: ["ovale", "lanceolees", "etamines"], Lauraceae: ["ovale", "lanceolees", "jaunes"],
+    Hippocastanaceae: ["rond", "palmees", "chandelles"], Malvaceae: ["ovale", "cordees", "bractees"],
+    Rutaceae: ["boule", "ovales", "oranges"], Ginkgoaceae: ["ovale", "eventail", null],
+    Anacardiaceae: ["boule", "pennees", "baiesRouges"], Adoxaceae: ["multitige", "pennees", "corymbes"],
+    Cornaceae: ["multitige", "ovales", "corymbes"], Grossulariaceae: ["multitige", "lobees", "grappes"],
+    Araliaceae: ["multitige", "palmees", "ombelles"], Asparagaceae: ["touffe", "cladodes", "baiesRouges"],
+    Theaceae: ["boule", "ovales", "cinq"],
+  };
+  // les espèces qui ne ressemblent pas au reste de leur famille
+  const BOIS_ESPECES = [
+    [/^pin /i, { forme: "pin" }], [/c[eè]dre/i, { forme: "etages" }], [/sapin/i, { forme: "cone" }],
+    [/bouleau/i, { forme: "pleureur", ecorce: "blanche" }], [/aulne/i, { forme: "ovale" }], [/noisetier/i, { forme: "multitige" }],
+    [/genevrier|genévrier/i, { forme: "colonne", repro: "baies" }], [/amandier/i, { forme: "etale", repro: "cinq", fleur: "#f6cfe0" }],
+    [/aub[eé]pine/i, { forme: "boule", repro: "corymbes" }], [/eucalyptus/i, { forme: "ovale", ecorce: "claire", feuille: "argent" }],
+    [/fr[eê]ne/i, { forme: "ovale", feuille: "pennees", repro: null }], [/figuier/i, { ecorce: "lisse" }], [/m[uû]rier/i, { forme: "boule", feuille: "cordees", repro: "mures" }],
+    [/giroflier/i, { forme: "cone", feuille: "lanceolees", repro: "jaunes" }], [/cannelier/i, { forme: "ovale" }],
+    [/ch[aâ]taignier/i, { forme: "rond", feuille: "lanceolees" }], [/myrte\b/i, { forme: "boule", feuille: "petites" }],
+    [/olivier/i, { ecorce: "noueuse" }], [/saule/i, { forme: "pleureur" }],
+  ];
+  const ECORCES = { brune: ["#7a4520", "#9a6a3c", "#4b3427"], blanche: ["#f3f0dc", "#ffffff", "#23214a"], claire: ["#d9c29a", "#efe0bc", "#9a7a52"], lisse: ["#8f8cb8", "#b4b2d6", "#5a5888"], noueuse: ["#6b5a3a", "#8f7a50", "#3e3324"] };
+  function ligneux(p, v, g, gf, cx, sol, w, h, C, fleurit, r, saison) {
+    let [forme, feuille, repro] = BOIS[v.famille] || ["ovale", "ovales", null];
+    let ecorce = "brune", fleurCol = C.fleurCol;
+    for (const [motif, o] of BOIS_ESPECES) if (motif.test(p.nom || "")) {
+      if (o.forme) forme = o.forme; if (o.feuille) feuille = o.feuille; if ("repro" in o) repro = o.repro; if (o.ecorce) ecorce = o.ecorce; if (o.fleur) fleurCol = o.fleur;
+      break;
+    }
+    if (v.cycle === "Arbuste" && ["rond", "etale", "ovale", "boule", "pleureur"].includes(forme) && hauteurM(p) < 4) forme = forme === "pleureur" ? "multitige" : forme === "boule" ? "boule" : "multitige";
+    const [eB, eC, eS] = ECORCES[ecorce] || ECORCES.brune;
+    const P = (gg, x, y, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), 1, 1); };
+    const trait = (gg, x0, y0, x1, y1, ep, col, colC) => {
+      const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+      for (let s = 0; s <= n; s++) {
+        const x = x0 + ((x1 - x0) * s) / n, y = y0 + ((y1 - y0) * s) / n;
+        for (let e = 0; e < ep; e++) P(gg, x - Math.floor(ep / 2) + e, y, e === 0 && colC && ep > 1 ? colC : e === ep - 1 && ep > 2 ? eS : col);
+      }
+    };
+    // le centre de la couronne, pour éclairer chaque feuille en haut à gauche
+    let ccx = cx, ccy = sol - h / 2, crx = w / 2, cry = h / 2;
+    const ton = (x, y, k) => { const l = (-(x - ccx) / (crx + 1) - (y - ccy) / (cry + 1)) * 0.6 + (r() - 0.5) * 0.7 + (k || 0); return l > 0.55 ? C.clair : l < -0.6 ? C.tresSombre : l < -0.15 ? C.sombre : C.feuille; };
+    const argent = (c) => c === C.clair ? "#a9c8b4" : c === C.feuille ? "#7ea48c" : c === C.sombre ? "#4f7a66" : "#35584c";
+    // une feuille (ou une petite grappe d'aiguilles) posée en x, y ; a : la direction du rameau
+    function poserFeuille(x, y, a) {
+      const c = ton(x, y), cs = (k) => (feuille === "argent" ? argent(k) : k);
+      switch (feuille) {
+        case "aiguilles": for (let k = -2; k <= 2; k++) { const b = a + k * 0.38; for (let s = 1; s <= 3; s++) P(gf, x + Math.cos(b) * s, y + Math.sin(b) * s, s === 3 ? ton(x, y, 0.4) : c); } break;
+        case "ecailles": for (let k = 0; k < 6; k++) P(gf, x + Math.round((r() - 0.5) * 3), y + Math.round((r() - 0.5) * 3), k < 2 ? ton(x, y, 0.5) : c); break;
+        case "lineaires": for (const s of [-1, 1]) { const b = a + s * 0.75; P(gf, x + Math.cos(b), y + Math.sin(b), c); P(gf, x + Math.cos(b) * 2, y + Math.sin(b) * 2, s < 0 ? C.clair : c); } break;
+        case "petites": P(gf, x, y, c); P(gf, x + 1, y, ton(x, y)); P(gf, x, y + 1, C.sombre); break;
+        case "cladodes": P(gf, x, y, c); P(gf, x + Math.cos(a + 0.6) * 1.5, y + Math.sin(a + 0.6) * 1.5, c); break;
+        case "eventail": for (let k = -1; k <= 1; k++) { P(gf, x + k, y - 2, ton(x, y, 0.3)); P(gf, x + k, y - 1, c); } P(gf, x, y, C.sombre); break;
+        case "palmees": for (let k = -2; k <= 2; k++) { const b = Math.PI / 2 + k * 0.62; for (let s = 1; s <= 3; s++) P(gf, x + Math.cos(b) * s, y + Math.sin(b) * s * 0.8, s === 1 ? C.sombre : k < 0 ? ton(x, y, 0.3) : c); } break;
+        case "pennees": {
+          const b = a + (r() - 0.5) * 0.6, n = 4;
+          for (let s = 0; s <= n * 1.6; s++) P(gf, x + Math.cos(b) * s, y + Math.sin(b) * s, C.sombre);
+          for (let k = 1; k <= n; k++) for (const sg of [-1, 1]) { const px = x + Math.cos(b) * k * 1.6, py = y + Math.sin(b) * k * 1.6, bb = b + sg * 1.2; P(gf, px + Math.cos(bb), py + Math.sin(bb), sg < 0 ? ton(px, py, 0.3) : c); P(gf, px + Math.cos(bb) * 2, py + Math.sin(bb) * 2, c); }
+          break;
+        }
+        case "lobees": for (let yy = -2; yy <= 2; yy++) for (let xx = -2; xx <= 2; xx++) { if (Math.abs(xx) + Math.abs(yy) > 3 || (yy === -1 && Math.abs(xx) === 1) || (yy === 1 && Math.abs(xx) === 2)) continue; P(gf, x + xx, y + yy, xx + yy < -1 ? ton(x, y, 0.4) : xx + yy > 1 ? C.sombre : c); } break;
+        case "cordees": for (let yy = -1; yy <= 1; yy++) for (let xx = -1; xx <= 1; xx++) { if (yy === -1 && xx === 0) continue; P(gf, x + xx, y + yy, xx + yy < 0 ? ton(x, y, 0.4) : c); } P(gf, x, y + 2, C.sombre); break;
+        case "dentees": for (let yy = -1; yy <= 1; yy++) for (let xx = -1; xx <= 1; xx++) { if (r() < 0.18 && (xx || yy)) continue; P(gf, x + xx, y + yy, xx + yy < 0 ? ton(x, y, 0.4) : xx + yy > 0 ? C.sombre : c); } break;
+        case "lanceolees": case "argent": {
+          const b = a + (r() < 0.5 ? -1 : 1) * (0.5 + r() * 0.5) + 0.5;
+          for (let s = 0; s < 5; s++) { const px = x + Math.cos(b) * s, py = y + Math.sin(b) * s; P(gf, px, py, cs(s < 2 ? ton(x, y, 0.3) : c)); if (s === 2) P(gf, px, py + 1, cs(C.sombre)); }
+          break;
+        }
+        default: for (let yy = 0; yy <= 1; yy++) for (let xx = -1; xx <= 1; xx++) P(gf, x + xx, y + yy, yy === 0 && xx < 1 ? ton(x, y, 0.4) : c);
+      }
+    }
+    // une fleur ou un fruit, au bout d'un rameau
+    function poserRepro(x, y) {
+      switch (repro) {
+        case "chatons": for (let s = 1; s <= 3; s++) P(gf, x, y + s, s === 3 ? "#9a7a3a" : "#d9c26a"); break;
+        case "cones": P(gf, x, y, "#7a4520"); P(gf, x + 1, y, "#9a6a3c"); P(gf, x, y + 1, "#4b3427"); P(gf, x + 1, y + 1, "#7a4520"); break;
+        case "baies": P(gf, x, y, "#3d4a8a"); P(gf, x + 1, y + 1, "#5a6ab8"); break;
+        case "baiesRouges": P(gf, x, y, "#c93f4e"); P(gf, x + 1, y, "#e9606a"); break;
+        case "mures": P(gf, x, y, "#3a1a3a"); P(gf, x, y + 1, "#5a2a5a"); break;
+        case "cinq": P(gf, x, y, "#f2c94c"); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) P(gf, x + dx, y + dy, fleurCol); break;
+        case "corymbes": for (let k = -2; k <= 2; k++) { P(gf, x + k, y - 1 + Math.abs(k) * 0.3, "#fbf6e0"); if (Math.abs(k) < 2) P(gf, x + k, y - 2, "#ffffff"); } break;
+        case "chandelles": for (let s = 0; s < 4; s++) { P(gf, x, y - s, s === 1 ? "#f08a9b" : "#fbf6e0"); if (s < 2) P(gf, x + 1, y - s, "#f3ead0"); } break;
+        case "clochettes": P(gf, x, y + 1, "#f3c6d6"); P(gf, x + 1, y + 2, "#e9a6be"); break;
+        case "figues": P(gf, x, y, "#6a4a8a"); P(gf, x, y + 1, "#4a3270"); break;
+        case "olives": P(gf, x, y + 1, "#3a3a5a"); break;
+        case "noix": P(gf, x, y, "#7aa64a"); P(gf, x + 1, y, "#9cc77a"); P(gf, x, y + 1, "#4f7a3a"); break;
+        case "oranges": P(gf, x, y, "#f5a742"); P(gf, x + 1, y, "#ffc76a"); P(gf, x, y + 1, "#d9822a"); P(gf, x + 1, y + 1, "#f5a742"); break;
+        case "bogues": P(gf, x, y, "#c9d96a"); P(gf, x + 1, y, "#a8b84a"); P(gf, x, y - 1, "#e3ea8a"); break;
+        case "etamines": for (const [dx, dy] of [[0, 0], [-1, 0], [1, 0], [0, -1]]) P(gf, x + dx, y + dy, dx || dy ? "#fbf6e0" : "#f2c94c"); break;
+        case "jaunes": P(gf, x, y, "#f2d94c"); P(gf, x + 1, y + 1, "#e9c23a"); break;
+        case "bractees": P(gf, x, y + 1, "#e3ea9a"); P(gf, x + 1, y + 2, "#f2e98a"); break;
+        case "grappes": for (let s = 1; s <= 3; s++) P(gf, x + (s % 2), y + s, "#3a2a5a"); break;
+        case "ombelles": for (let k = -1; k <= 1; k++) P(gf, x + k, y - 1, "#3a2a5a"); P(gf, x, y - 2, "#5a4a8a"); break;
+        case "verticilles": case "epis": P(gf, x, y, fleurCol); P(gf, x + 1, y - 1, fleurCol); break;
+        default: P(gf, x, y, fleurCol);
+      }
+    }
+    const pointes = [], long = [];
+    // Les rameaux ne partent pas tous du même point : ils s'insèrent le long de leur axe, à des
+    // hauteurs différentes, un d'un côté puis un de l'autre (feuilles alternes : la plupart des
+    // familles), ou deux par deux face à face (feuilles opposées : frêne, olivier, marronnier,
+    // sureau, cornouiller, romarin…) ; l'axe, lui, continue au-delà.
+    const opposees = ["Oleaceae", "Hippocastanaceae", "Adoxaceae", "Cornaceae", "Lamiaceae", "Verbenaceae", "Caprifoliaceae"].includes(v.famille);
+    function branche(x, y, a, l, ep, n, ecart) {
+      let x1 = x + Math.cos(a) * l, y1 = y + Math.sin(a) * l;
+      // (on reste dans la couronne)
+      const d = ((x1 - ccx) / (crx + 0.5)) ** 2 + ((y1 - ccy) / (cry + 0.5)) ** 2;
+      if (d > 1) { const k = (0.78 + r() * 0.22) / Math.sqrt(d); x1 = ccx + (x1 - ccx) * k; y1 = ccy + (y1 - ccy) * k; }
+      trait(g, x, y, x1, y1, Math.max(1, Math.round(ep)), eB, eC);
+      if (n <= 0) { pointes.push([x1, y1, a]); long.push([x, y, x1, y1, a]); return; }
+      if (n <= 1) long.push([x, y, x1, y1, a]);
+      let cote = r() < 0.5 ? -1 : 1;
+      for (const t of opposees ? [0.4, 0.72] : [0.3, 0.52, 0.74]) {
+        const bx = x + (x1 - x) * (t + (r() - 0.5) * 0.08), by = y + (y1 - y) * (t + (r() - 0.5) * 0.08);
+        for (const sd of opposees ? [-1, 1] : [cote]) branche(bx, by, a + sd * ecart * (0.85 + r() * 0.35), l * (0.5 + 0.2 * (1 - t)) * (0.85 + r() * 0.3), Math.max(1, ep * 0.55), n - 1, ecart * 0.9);
+        cote = -cote;
+      }
+      branche(x1, y1, a + (r() - 0.5) * 0.3, l * (0.5 + r() * 0.15), Math.max(1, ep * 0.7), n - 1, ecart * 0.9);
+    }
+    const tronc = (ht, ep) => {
+      for (let y = 0; y < ht; y++) { const dx = forme === "pin" || ecorce === "noueuse" ? Math.round(Math.sin(y / 9) * 1.2) : 0; trait(g, cx - ep / 2 + dx, sol - y, cx + ep / 2 - 1 + dx, sol - y, 1, eB); P(g, cx - ep / 2 + dx, sol - y, eC); P(g, cx + ep / 2 - 1 + dx, sol - y, eS); }
+      // l'écorce : les marques du bouleau, les fissures des autres
+      for (let y = 2; y < ht; y += ecorce === "blanche" ? 4 : 3) P(g, cx - ep / 2 + 1 + Math.floor(r() * Math.max(1, ep - 2)), sol - y, eS);
+      trait(g, cx - ep / 2 - 1, sol, cx + ep / 2, sol, 1, eS);
+    };
+    const n = Math.max(2, Math.min(4, Math.round(Math.log2(h / 6))));
+    const ep0 = Math.max(2, Math.round(w * 0.08));
+    if (["rond", "etale", "ovale", "boule", "pleureur", "pin"].includes(forme)) {
+      const fr = { rond: 0.38, etale: 0.36, ovale: 0.3, boule: 0.22, pleureur: 0.3, pin: 0.62 }[forme], ht = Math.round(h * fr);
+      cry = (h - ht) / 2 + 1; ccy = sol - ht - cry + 2; crx = w / 2;
+      if (forme === "ovale") crx = w * 0.42;
+      if (forme === "pin") { cry = (h - ht) * 0.45; ccy = sol - h + cry; }
+      tronc(ht, ep0);
+      const nn = Math.min(3, n), ecart = { rond: 0.8, etale: 0.95, ovale: 0.55, boule: 0.9, pleureur: 0.75, pin: 1.2 }[forme];
+      if (forme === "etale" || forme === "boule") {
+        // le tronc se divise bas en deux ou trois grosses charpentières, à des hauteurs un peu différentes
+        const k = 2 + (r() < 0.5 ? 1 : 0);
+        for (let i = 0; i < k; i++) {
+          const u = k > 1 ? i / (k - 1) - 0.5 : 0, y0 = sol - ht + 1 - Math.round(i * (h - ht) * 0.08);
+          trait(g, cx, sol - ht + 1, cx, y0, Math.max(1, Math.round(ep0 * 0.8)), eB, eC);
+          branche(cx, y0, -Math.PI / 2 + u * (forme === "etale" ? 1.5 : 1.2) + (r() - 0.5) * 0.15, (h - ht) * 0.62, ep0 * 0.75, nn, ecart * 0.8);
+        }
+      } else {
+        // un axe qui monte presque jusqu'en haut, et les branches insérées tout le long
+        branche(cx, sol - ht + 1, -Math.PI / 2 + (r() - 0.5) * 0.1, (h - ht) * (forme === "pin" ? 0.7 : 0.82), ep0 * 0.8, nn, ecart);
+      }
+    } else if (forme === "multitige" || forme === "dresse" || forme === "touffe") {
+      const k = forme === "dresse" ? Math.max(9, Math.round(w / 2.5)) : forme === "touffe" ? Math.max(10, Math.round(w / 2.2)) : Math.max(4, Math.round(w / 7));
+      ccy = sol - h / 2; cry = h / 2; crx = w / 2;
+      for (let i = 0; i < k; i++) {
+        const u = k > 1 ? i / (k - 1) - 0.5 : 0, a = -Math.PI / 2 + u * (forme === "multitige" ? 1.1 : 0.8) + (r() - 0.5) * 0.15;
+        const l = h * (forme === "multitige" ? 0.55 : 0.9) * (0.75 + r() * 0.3) * (1 - Math.abs(u) * 0.35);
+        if (forme === "multitige") branche(cx + u * 4, sol, a, l, Math.max(1, ep0 * 0.6), Math.max(1, n - 1), 0.5);
+        else {
+          // une tige droite, à peine courbée, couverte de feuilles du pied jusqu'au bout
+          let x = cx + u * 3, y = sol, aa = a;
+          for (let s = 0; s < l; s++) { P(g, x, y, s < l * 0.3 ? eB : C.sombre); if (s > l * 0.15 && s % 2 === 0) long.push([x, y, x, y, aa]); x += Math.cos(aa); y += Math.sin(aa); aa += u * 0.004; }
+          pointes.push([x, y, aa]);
+        }
+      }
+    } else if (forme === "arque") {
+      // des cannes qui montent puis s'arquent vers l'extérieur, la pointe vers le bas
+      const k = Math.max(8, Math.round(w / 3.5));
+      ccy = sol - h / 2; cry = h / 2; crx = w / 2;
+      for (let i = 0; i < k; i++) {
+        const u = i / (k - 1) - 0.5, s0 = u < 0 ? -1 : 1, l = h * (1.05 + r() * 0.35);
+        let x = cx + u * 4, y = sol, aa = -Math.PI / 2 + u * 0.5;
+        for (let s = 0; s < l; s++) { P(g, x, y, s < l * 0.25 ? eB : "#8a3a3a"); if (s > l * 0.2 && s % 2 === 0) long.push([x, y, x, y, aa]); x += Math.cos(aa); y += Math.sin(aa); aa += s0 * (1.9 / l) * (0.7 + Math.abs(u)); if (s > 4 && (y > sol - 2 || Math.abs(x - cx) > w / 2)) break; }
+        pointes.push([x, y, aa]);
+      }
+    } else if (forme === "coussin") {
+      // un coussin bas et serré : de courts rameaux qui partent du pied
+      ccy = sol; cry = Math.min(h, w * 0.7); crx = w / 2;
+      const k = Math.max(9, Math.round(w / 2.5));
+      for (let i = 0; i < k; i++) { const u = i / (k - 1) - 0.5, a = -Math.PI / 2 + u * 2.6; branche(cx + u * 3, sol, a, cry * (0.6 + r() * 0.3), 1, 2, 0.6); }
+    } else {
+      // les conifères : un tronc jusqu'à la pointe, des étages de branches de plus en plus courts
+      // (en cône pour le sapin, en plateaux larges pour le cèdre, serrés en colonne pour le cyprès)
+      const colonne = forme === "colonne", etages = forme === "etages";
+      ccy = sol - h / 2; cry = h / 2; crx = w / 2;
+      const base = Math.round(h * (colonne ? 0.06 : etages ? 0.25 : 0.12));
+      tronc(h - 2, Math.max(2, Math.round(ep0 * (colonne ? 0.7 : 1))));
+      const pas = colonne ? 2 : etages ? Math.max(4, Math.round(h / 7)) : Math.max(3, Math.round(h / 12));
+      for (let y = base; y < h - 2; y += pas) {
+        const u = (y - base) / Math.max(1, h - base), lg = (colonne ? w * 0.42 * Math.sin(Math.PI * Math.min(1, 0.15 + u * 0.95)) : etages ? (w / 2) * (1 - u * 0.75) : (w / 2) * (1 - u) + 1) * (0.85 + r() * 0.3);
+        for (const s0 of [-1, 1]) {
+          const a = colonne ? -Math.PI / 2 + s0 * 0.35 : s0 > 0 ? (etages ? -0.05 : 0.18) : Math.PI - (etages ? -0.05 : 0.18), l = colonne ? lg / Math.sin(0.35) * 0.6 : lg;
+          const x1 = cx + Math.cos(a) * l, y1 = sol - y + Math.sin(a) * l;
+          trait(g, cx, sol - y, x1, y1, 1, eB);
+          for (let t = 0.15; t <= 1; t += colonne ? 0.2 : 0.1) {
+            const fx = cx + (x1 - cx) * t, fy = sol - y + (y1 - (sol - y)) * t;
+            long.push([cx, sol - y, fx, fy, colonne ? -Math.PI / 2 : etages ? Math.PI / 2 : a + s0 * 0.9]);
+            // (les plateaux du cèdre et du sapin ont de l'épaisseur : des aiguilles aussi au-dessus)
+            if (!colonne) long.push([fx, fy - 2, fx, fy - 2, -Math.PI / 2 + s0 * 0.4]);
+          }
+          pointes.push([x1, y1, a]);
+        }
+      }
+      pointes.push([cx, sol - h + 1, -Math.PI / 2]);
+    }
+    // les feuilles : le long des derniers rameaux et en touffe à leur bout ; les fleurs ou les fruits
+    // au bout des rameaux (sur la moitié haute pour les tiges dressées)
+    const dens = saison ? saison.densite : 1;
+    for (const [x0, y0, x1, y1, a] of long) {
+      if (r() > Math.max(0.15, dens)) continue;
+      const ll = Math.hypot(x1 - x0, y1 - y0), m = Math.max(1, Math.floor(ll / (["petites", "ecailles", "lineaires", "aiguilles"].includes(feuille) ? 1.5 : 3)));
+      for (let k = 0; k <= m; k++) { const t = ll ? k / m : 1; poserFeuille(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, a); }
+    }
+    for (const [x, y, a] of pointes) {
+      if (r() > Math.max(0.15, dens)) continue;
+      for (let k = 0; k < 3; k++) poserFeuille(x + (r() - 0.5) * 3, y + (r() - 0.5) * 3, a + (r() - 0.5));
+      if (forme === "pleureur") { let px = x, py = y; for (let s = 0; s < h * 0.22 && py < sol - 3; s += 2) { py += 2; px += Math.cos(a) * 0.3; poserFeuille(px, py, Math.PI / 2); } }
+    }
+    if (fleurit && repro && dens >= 0.6) {
+      const ok = ["verticilles", "epis"].includes(repro) ? long.filter(([, y]) => y < sol - h * 0.5) : pointes;
+      for (const [x, y] of ok) if (r() < (ok === pointes ? 0.7 : 0.35)) poserRepro(x + (r() - 0.5) * 2, y + (r() - 0.5) * 2);
+    }
   }
 
   // --- le port botanique des herbes -----------------------------------------------------------
@@ -2988,7 +3228,9 @@
     const cle = p.id + "|" + ((p.valeurs || {}).famille || "") + "|" + ((p.valeurs || {}).cycle || "") + "|" + (p.dessinFace || p.dessinCote || "").length;
     if (portraits.has(cle)) return portraits.get(cle);
     const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
-    const d = planteDebout(p, { caseM: Math.max(0.02, (eff * 2 * HW * 0.55) / 62) }, 3, true);
+    // (les arbres et les arbustes en deux fois plus de pixels : on y lit les rameaux et la forme des feuilles)
+    const fin = dessinLigneux(p) ? 2 : 1;
+    const d0 = planteDebout(p, { caseM: Math.max(0.02, (eff * 2 * HW * 0.55) / 62) }, 3, true, fin), d = Object.assign({}, d0, { l: d0.pied.width, h: d0.pied.height });
     const L = 300, Hh = 360, k = Math.max(1, Math.floor(Math.min((L * 0.8) / d.l, (Hh * 0.82) / d.h)));
     const c = document.createElement("canvas");
     c.width = L; c.height = Hh;

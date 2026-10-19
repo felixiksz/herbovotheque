@@ -11,7 +11,7 @@
 .bouton-pixel { font: 1.3rem/1 var(--menu-police); background: #f3ee6a; color: #23214a; border: 2px solid #23214a; border-radius: 0; padding: 5px 12px 6px; box-shadow: 3px 3px 0 #23214a; cursor: pointer; }
 .bouton-pixel:hover { background: #fff7a0; }
 .bouton-pixel:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #23214a; }
-.aide-pixel { margin: 0; flex: 1 1 260px; font: 1.15rem/1.2 var(--menu-police); color: #6b6578; }
+.aide-pixel { margin: 0; flex: 1 1 260px; font: 1.15rem/1.2 var(--menu-police); color: var(--encre-douce); }
 .archipel { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-top: 10px; }
 .carte-ile {
   display: flex; flex-direction: column; text-decoration: none; color: #23214a;
@@ -20,7 +20,7 @@
 .carte-ile .miniature-ile { width: 100%; height: auto; display: block; image-rendering: pixelated; border-bottom: 2px solid #23214a; }
 .infos-ile { display: grid; gap: 2px; padding: 6px 8px 8px; }
 .carte-ile .nom-ile { font: 1.35rem/1.05 var(--menu-police); }
-.mesures-ile { font: 1.05rem/1.1 var(--menu-police); color: #6b6578; }
+.mesures-ile { font: 1.05rem/1.1 var(--menu-police); color: var(--encre-douce); }
 .sorte-ile { justify-self: start; margin-top: 3px; font: 0.95rem/1 var(--menu-police); padding: 2px 5px; border: 1.5px solid #23214a; background: #9cc77a; }
 .sorte-ile.croquis { background: #e9e3cd; }
 a.carte-ile:hover, a.carte-ile:focus-visible { background: #f3ee6a; }

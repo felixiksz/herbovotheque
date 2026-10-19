@@ -1353,6 +1353,26 @@
     ctx.save();
     ctx.beginPath(); ctx.moveTo(0, NIV.grenier.plancher); ctx.lineTo(0, toitY(0)); ctx.lineTo(FAITE.x, FAITE.y); ctx.lineTo(LARGE, toitY(LARGE)); ctx.lineTo(LARGE, NIV.grenier.plancher); ctx.closePath(); ctx.clip();
     ctx.fillStyle = "#26406a"; ctx.fillRect(0, BOITE.y, LARGE, NIV.grenier.plancher - BOITE.y);
+    // le dessous du toit (le rampant), vu en fuite au-dessus du lit : un lambris, des chevrons
+    // parallèles aux côtés du velux et une panne en bas qui suit la pente. C'est lui qui explique
+    // qu'on voie le velux de biais : il est posé entre deux chevrons, dans ce plafond penché.
+    const RAMP = 64;
+    bande(EP_TOIT - 2, RAMP); ctx.fillStyle = "#a8774c"; ctx.fill();
+    ctx.strokeStyle = "#8a5c38"; ctx.lineWidth = 1;
+    for (let d = EP_TOIT + 8; d < RAMP; d += 9) { ctx.beginPath(); ctx.moveTo(-EGOUT.dx, toitY(-EGOUT.dx) + d); pente(d); ctx.stroke(); }
+    const xs = [];
+    for (let x = 10; x < LARGE; x += 44) if (x < VELUX.x0 - 22 || x > VELUX.x1 + 22) xs.push(x);
+    xs.push(VELUX.x0 - 13, VELUX.x1 + 13);
+    for (const x of xs) {
+      if (Math.abs(x - FAITE.x) < 6) continue;
+      const y0 = (u) => toitY(u) + EP_TOIT - 2, y1 = (u) => toitY(u) + RAMP + 2;
+      ctx.beginPath(); ctx.moveTo(x - 4, y0(x - 4)); ctx.lineTo(x + 4, y0(x + 4)); ctx.lineTo(x + 4, y1(x + 4)); ctx.lineTo(x - 4, y1(x - 4)); ctx.closePath();
+      ctx.fillStyle = "#7a4f32"; ctx.fill(); ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.strokeStyle = "#c49a6c"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 2, y0(x - 2) + 2); ctx.lineTo(x - 2, y1(x - 2) - 2); ctx.stroke();
+    }
+    bande(RAMP, RAMP + 8); ctx.fillStyle = "#7a4f32"; ctx.fill(); ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.strokeStyle = "#c49a6c"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-EGOUT.dx, toitY(-EGOUT.dx) + RAMP + 2); pente(RAMP + 2); ctx.stroke();
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
     // l'ombre sous les pentes, de plus en plus douce
     for (let i = 0; i < 4; i++) { ctx.fillStyle = "rgba(15,13,58,0.13)"; bande(EP_TOIT - 2, EP_TOIT + 12 + i * 10); ctx.fill(); }
     ctx.restore();

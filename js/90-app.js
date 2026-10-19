@@ -183,6 +183,8 @@
 
   if ("serviceWorker" in navigator && location.protocol === "https:") {
     navigator.serviceWorker.register("sw.js").catch((e) => console.warn(e));
+    // (un clic sur une notification de rappel : aller à la bonne page)
+    navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.aller) location.hash = e.data.aller; });
   }
 
   // Tant qu'on ne sait pas s'il faut demander le mot de passe, on ne montre rien (un fond uni) :

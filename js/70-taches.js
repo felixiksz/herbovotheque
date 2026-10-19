@@ -6,6 +6,8 @@
 (function () {
   const H = window.H;
   const JOUR = 864e5;
+  // les rappels : combien de minutes avant l'heure de la tâche (9 h si elle n'a pas d'heure)
+  const RAPPELS = [["", "Pas de rappel"], ["0", "À l’heure"], ["15", "15 min avant"], ["60", "1 h avant"], ["1440", "La veille"]];
   const REPETITIONS = [["", "Une seule fois"], ["7", "Chaque semaine"], ["14", "Toutes les deux semaines"], ["mois", "Chaque mois"], ["365", "Chaque année"]];
 
   const taches = () => Object.values(H.jeu.taches || {}).filter((t) => !t.supprime);
@@ -83,6 +85,8 @@
     t = t ? Object.assign({}, t) : { id: H.uid("tache"), titre: "", creeLe: H.maintenant() };
     const titre = H.el("input", { type: "text", value: t.titre || "", placeholder: "Arroser les semis, tailler la lavande, envoyer le devis…", required: true });
     const date = H.el("input", { type: "date", value: t.echeance ? new Date(t.echeance - new Date(t.echeance).getTimezoneOffset() * 6e4).toISOString().slice(0, 10) : "" });
+    const heure = H.el("input", { type: "time", value: t.heure || "" });
+    const rappel = H.el("select", null, RAPPELS.map(([v, n]) => H.el("option", { value: v, selected: (t.rappel == null ? "" : String(t.rappel)) === v }, n)));
     const rep = H.el("select", null, REPETITIONS.map(([v, n]) => H.el("option", { value: v, selected: (t.repetition || "") === v }, n)));
     const ile = H.el("select", null, H.el("option", { value: "" }, "Aucun jardin"), iles().map((i) => H.el("option", { value: i.id, selected: t.ile === i.id }, i.nom)));
     let plante = t.plante || null;
@@ -97,7 +101,8 @@
       onsubmit(e) {
         e.preventDefault();
         if (!titre.value.trim()) return;
-        Object.assign(t, { titre: titre.value.trim(), echeance: date.value ? debutJour(date.value + "T12:00") : null, repetition: rep.value, ile: ile.value || null, plante, notes: notes.value.trim() });
+        Object.assign(t, { titre: titre.value.trim(), echeance: date.value ? debutJour(date.value + "T12:00") : null, heure: heure.value || null, rappel: date.value && rappel.value !== "" ? +rappel.value : null, repetition: rep.value, ile: ile.value || null, plante, notes: notes.value.trim() });
+        if (t.rappel != null) demanderPermission();
         enregistrer(t);
         fermer();
         dessiner();
@@ -105,7 +110,8 @@
     },
       H.el("h2", null, nouvelle ? "Nouvelle tâche" : "Modifier la tâche"),
       H.el("label", null, "La tâche", titre),
-      H.el("div.ligne-option", null, H.el("label", null, "Pour le ", date), H.el("label", null, "Revient ", rep)),
+      H.el("div.ligne-option", null, H.el("label", null, "Pour le ", date), H.el("label", null, "à ", heure), H.el("label", null, "Revient ", rep)),
+      H.el("div.ligne-option", null, H.el("label", null, "Me prévenir ", rappel), H.el("small.discret", null, "une notification, quand le jeu est ouvert (ou à son ouverture)")),
       H.el("div.ligne-option", null, H.el("label", null, "Jardin ", ile), H.el("span", null, "Plante ", choixPlante)),
       H.el("label", null, "Notes", notes),
       H.el("div.boutons-bas", null,
@@ -123,7 +129,7 @@
         H.el("input", { type: "checkbox", checked: !!t.fait, onchange: () => { cocher(t); dessiner(); } }),
         H.el("span.titre-tache", null, t.titre)),
       H.el("span.infos-tache.discret", null,
-        [t.echeance ? dateCourte(t.echeance) : null, t.repetition ? "↻ " + (REPETITIONS.find((r) => r[0] === t.repetition) || [0, ""])[1].toLowerCase() : null, t.ile ? nomIle(t.ile) : null].filter(Boolean).join(" · "),
+        [t.echeance ? dateCourte(t.echeance) + (t.heure ? " à " + t.heure.replace(":", " h ") : "") : null, t.rappel != null && t.echeance ? "rappel " + (RAPPELS.find((r) => r[0] === String(t.rappel)) || [0, ""])[1].toLowerCase() : null, t.repetition ? "↻ " + (REPETITIONS.find((r) => r[0] === t.repetition) || [0, ""])[1].toLowerCase() : null, t.ile ? nomIle(t.ile) : null].filter(Boolean).join(" · "),
         p ? H.el("a", { href: "#fiche/" + encodeURIComponent(p.id) }, " · " + p.nom) : null),
       H.boutonCrayon(() => formulaire(t), "Modifier la tâche")
     );
@@ -174,6 +180,42 @@
         }, "+ " + x.titre + (filtreIle ? "" : " (" + nomIle(x.ile) + ")"))))) : null,
     ].filter(Boolean));
   }
+
+  // --- les rappels : une notification au bon moment, tant que le jeu est ouvert ; à l'ouverture,
+  // celles qui sont passées entre-temps (une seule fois chacune, sur chaque appareil)
+  function demanderPermission() {
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+  }
+  const momentRappel = (t) => t.echeance + (t.heure ? (+t.heure.slice(0, 2) * 60 + +t.heure.slice(3, 5)) : 9 * 60) * 6e4 - (t.rappel || 0) * 6e4;
+  async function notifier(titre, corps) {
+    H.toast(titre + (corps ? " — " + corps : ""), 6000);
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const opts = { body: corps || "", icon: "icones/icone-192.png", tag: "rappel-" + titre, data: { hash: "#taches" } };
+    try {
+      const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration());
+      if (reg) return reg.showNotification(titre, opts);
+      new Notification(titre, opts);
+    } catch (e) { /* pas de notification sur cet appareil */ }
+  }
+  function verifierRappels() {
+    if (!H.jeu || !H.local) return;
+    const vus = H.local.rappelsVus || {}, maintenant = Date.now(), aMontrer = [];
+    for (const t of taches()) {
+      if (t.fait || t.rappel == null || !t.echeance) continue;
+      const cle = t.id + ":" + t.echeance + ":" + (t.heure || "") + ":" + t.rappel, m = momentRappel(t);
+      if (m <= maintenant && !vus[cle] && maintenant - m < 7 * JOUR) aMontrer.push([cle, t]);
+    }
+    if (!aMontrer.length) return;
+    H.d.majLocal((l) => { l.rappelsVus = Object.assign({}, l.rappelsVus); for (const [cle] of aMontrer) l.rappelsVus[cle] = maintenant; });
+    if (aMontrer.length > 3) return notifier(aMontrer.length + " tâches à faire", aMontrer.map(([, t]) => t.titre).join(", "));
+    for (const [, t] of aMontrer) {
+      const quand = t.heure ? "à " + t.heure.replace(":", " h ") : "";
+      const jour = debutJour(t.echeance) === debutJour(maintenant) ? "aujourd’hui" : t.echeance < debutJour(maintenant) ? "en retard" : "demain";
+      notifier(t.titre, [jour, quand, t.ile ? nomIle(t.ile) : ""].filter(Boolean).join(" ").trim());
+    }
+  }
+  setTimeout(verifierRappels, 4000);
+  setInterval(verifierRappels, 30e3);
 
   H.taches = { aFaire: () => taches().filter((t) => !t.fait && t.echeance && t.echeance < debutJour(Date.now()) + JOUR).length };
   H.vues.taches = {

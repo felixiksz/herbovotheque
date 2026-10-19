@@ -73,9 +73,9 @@
       @font-face { font-family: "VT323"; src: url("${base}fonts/vt323.woff2") format("woff2"); }
       @font-face { font-family: "VT323"; src: url("${base}fonts/vt323-ext.woff2") format("woff2"); unicode-range: U+0100-024F, U+1E00-1E9F; }`;
     const communs = `
-      @page { size: A4; margin: 15mm 14mm 16mm; }
+      @page { size: A4; margin: 20mm 18mm 20mm; }
       * { box-sizing: border-box; }
-      body { margin: 0; color: #23214a; font: 10pt/1.45 Caudex, Georgia, serif; }
+      body { margin: 0; color: #23214a; font: 10pt/1.45 Caudex, Georgia, serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       h1 { margin: 0 0 2px; } .sous { margin: 0 0 14px; opacity: .75; }
       h2 { font-size: 12pt; margin: 16px 0 6px; color: ${couleur}; }
       table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
@@ -90,7 +90,7 @@
       classique: `h1 { font-size: 22pt; color: ${couleur}; border-bottom: 1.5px solid ${couleur}; padding-bottom: 4px; }
         th { text-transform: uppercase; letter-spacing: .04em; color: ${couleur}; border-bottom: 1.5px solid ${couleur}; }
         td { border-bottom: 1px solid #23214a1f; }`,
-      herbier: `body { background: #fbf6e9; } .page { border: 1px solid ${couleur}; padding: 10mm 9mm; min-height: 262mm; position: relative; }
+      herbier: `body { background: #fbf6e9; } .page { border: 1px solid ${couleur}; padding: 10mm 9mm; min-height: 240mm; position: relative; }
         h1 { font: 400 30pt/1.1 "Beth Ellen", cursive; color: #23214a; }
         .etiquette { position: absolute; right: 8mm; bottom: 8mm; width: 62mm; padding: 8px 10px; background: #e3cfa6; border: 1px solid #8a6a3c; font-size: 8.5pt; box-shadow: 2px 2px 0 #8a6a3c66; }
         .etiquette strong { font: 400 13pt "Beth Ellen", cursive; display: block; }
@@ -114,7 +114,7 @@
         th { font-weight: 700; color: #000; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; text-transform: uppercase; letter-spacing: .04em; font-size: 7.5pt; }
         td { border-bottom: .5px solid #000; } td.premier { font-weight: 600; }
         .pied { opacity: 1; }`,
-      moderne: `.bandeau { background: ${couleur}; color: #fff; margin: -15mm -14mm 12px; padding: 14mm 14mm 9mm; }
+      moderne: `.bandeau { background: ${couleur}; color: #fff; margin: 0 0 12px; padding: 8mm 9mm 7mm; }
         .bandeau h1 { font: 700 24pt/1.1 'Helvetica Neue', Arial, sans-serif; color: #fff; } .bandeau .sous { color: #fff; opacity: .9; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; } h2 { font-family: 'Helvetica Neue', Arial, sans-serif; text-transform: uppercase; letter-spacing: .05em; font-size: 10.5pt; }
         th { background: ${couleur}; color: #fff; } tr.alt td { background: ${couleur}12; }`,

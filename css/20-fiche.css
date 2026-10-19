@@ -182,9 +182,10 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .fiche-illus { position: relative; }
 .icone-trait { display: inline-flex; line-height: 0; }
 .icone-trait svg { width: 18px; height: 18px; }
-.bouton-trait { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 7px; background: none; border: 1px solid rgba(35, 33, 74, 0.18); border-radius: 999px; color: #6b6985; font: 0.85rem/1 var(--texte); text-decoration: none; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.bouton-trait { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 7px; background: none; border: 1px solid color-mix(in srgb, var(--encre) 22%, transparent); border-radius: 999px; color: var(--encre-douce); font: 0.85rem/1 var(--texte); text-decoration: none; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
 .bouton-trait:hover, .bouton-trait:focus-visible { color: var(--encre); border-color: var(--encre); outline: none; }
-.crayon-photo { position: absolute; right: 8px; bottom: 8px; background: rgba(246, 241, 228, 0.88); }
+.crayon-photo { position: absolute; right: 8px; bottom: 8px; background: rgba(246, 241, 228, 0.88); color: #4a4870; border-color: rgba(35, 33, 74, 0.18); }
+.crayon-photo:hover, .crayon-photo:focus-visible { color: #23214a; border-color: #23214a; }
 .crayon-nom { display: inline-flex; vertical-align: middle; margin-left: 10px; padding: 2px; background: none; border: 0; cursor: pointer; color: #a3a1b8; line-height: 0; }
 .crayon-nom:hover { color: var(--encre); }
 .crayon-nom .icone-trait svg { width: 20px; height: 20px; }
