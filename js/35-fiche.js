@@ -92,6 +92,8 @@
             return q ? H.el("a.pastille-valeur.lien", { href: "#fiche/" + encodeURIComponent(id) }, q.nom) : null;
           })
         );
+      case "liste":
+        return H.el("ul.liste-fiche", null, [].concat(v).map((x) => H.el("li", { html: H.texteRiche(String(x)).replace(/^<p>|<\/p>$/g, "") })));
       default:
         return H.el("p", { html: H.texteRiche(String(v)).replace(/^<p>|<\/p>$/g, "") });
     }
@@ -193,6 +195,29 @@
         boite.valeur = () => ids;
         return boite;
       }
+      case "liste": {
+        // une petite phrase par ligne, et des débuts de phrase à toucher pour aller plus vite
+        const lignes = [].concat(v || []);
+        const zone = H.el("div.editeur-liste");
+        const champs = H.el("div.lignes-liste");
+        const ajouterLigne = (texte) => {
+          const i = H.el("input", { type: "text", value: texte || "", placeholder: "attire…, repousse…, nourrit…" });
+          const ligne = H.el("div.ligne-option", null, i, H.el("button.bouton.petit.discret-bouton", { type: "button", "aria-label": "Retirer", onclick: () => ligne.remove() }, "×"));
+          champs.appendChild(ligne);
+          return i;
+        };
+        lignes.forEach((l) => ajouterLigne(l));
+        if (!lignes.length) ajouterLigne("");
+        zone.append(
+          champs,
+          H.el("button.bouton.petit", { type: "button", onclick: () => ajouterLigne("").focus() }, "Ajouter une ligne"),
+          champ.suggestions && champ.suggestions.length ? H.el("div.pastilles.suggestions-liste", null,
+            H.el("span.discret", null, "Idées : "),
+            champ.suggestions.map((t) => H.el("button.pastille-valeur", { type: "button", onclick: () => ajouterLigne(t).focus() }, t))) : null
+        );
+        zone.valeur = () => [...champs.querySelectorAll("input")].map((i) => i.value.trim()).filter(Boolean);
+        return zone;
+      }
       default: {
         const i = H.el("input", { type: "text", value: v || "" });
         i.valeur = () => i.value.trim();
@@ -201,8 +226,17 @@
     }
   }
 
+  // Les bonnes et les mauvaises voisines vont dans les deux sens : la fiche montre aussi les plantes
+  // qui l'ont notée, et une voisine ajoutée ou retirée l'est aussi sur la fiche de l'autre.
+  const RECIPROQUES = ["bonnesVoisines", "mauvaisesVoisines"];
+  const reciproque = (champ) => champ.type === "plantes" && (champ.reciproque || RECIPROQUES.includes(champ.id));
   function rubrique(p, champ) {
-    const v = (p.valeurs || {})[champ.id];
+    let v = (p.valeurs || {})[champ.id];
+    if (reciproque(champ)) {
+      const autres = H.d.plantes().filter((q) => q.id !== p.id && [].concat((q.valeurs || {})[champ.id] || []).includes(p.id)).map((q) => q.id);
+      const tout = [...new Set([].concat(v || [], autres))];
+      v = tout.length ? tout : v;
+    }
     const aVerif = H.d.aVerifier(p, champ.id);
     const bloc = H.el("div.rubrique" + (aVerif ? ".a-verifier" : ""), { "data-champ": champ.id });
     const titre = H.el("h3", null, champ.nom);
@@ -228,12 +262,28 @@
             type: "button",
             onclick() {
               const nv = champValeur.valeur();
+              const avant = [].concat(v || []);
               H.d.majPlante(p.id, (x) => {
                 x.valeurs = x.valeurs || {};
                 if (vide(nv)) delete x.valeurs[champ.id];
                 else x.valeurs[champ.id] = nv;
                 x.aVerifier = (x.aVerifier || []).filter((c) => c !== champ.id);
               });
+              // une compagne ajoutée ou retirée l'est aussi sur la fiche de l'autre plante
+              if (reciproque(champ)) {
+                const apres = [].concat(nv || []);
+                for (const id of new Set(avant.concat(apres))) {
+                  const garde = apres.includes(id);
+                  if (garde === avant.includes(id) || !H.d.plante(id)) continue;
+                  H.d.majPlante(id, (x) => {
+                    x.valeurs = x.valeurs || {};
+                    const l = [].concat(x.valeurs[champ.id] || []).filter((y) => y !== p.id);
+                    if (garde) l.push(p.id);
+                    if (l.length) x.valeurs[champ.id] = l;
+                    else delete x.valeurs[champ.id];
+                  });
+                }
+              }
               H.toast("Rubrique enregistrée");
               recharger();
             },
@@ -250,7 +300,9 @@
   function enTete(p) {
     const illus = p.photo
       ? H.el("figure.photo-lofi", null, H.el("img", { src: p.photo.src, alt: "Photo " + H.duNom(p) }), H.el("span.date-photo", null, p.photo.date || ""))
-      : H.el("img.planche-illus", { src: planche(p), alt: "" });
+      : H.terrain && H.terrain.portrait
+        ? H.el("img.planche-illus.portrait-botanique", { src: H.terrain.portrait(p), alt: "Dessin botanique " + H.duNom(p) })
+        : H.el("img.planche-illus", { src: planche(p), alt: "" });
 
     const preps = H.el("div.pastilles.preps");
     for (const prep of H.d.preparations()) {
@@ -344,6 +396,7 @@
           H.el("div.fiche-outils", null,
             H.el("button.bouton.petit", { type: "button", onclick: () => renommer(p) }, "Renommer"),
             H.el("button.bouton.petit", { type: "button", onclick: () => ajouterPhoto(p) }, p.photo ? "Changer la photo" : "Ajouter une photo"),
+            H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPortrait(p.id, recharger) }, "Dessiner sa photo"),
             p.photo ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { H.d.majPlante(p.id, (x) => delete x.photo); recharger(); } }, "Retirer la photo") : null,
             H.el("a.bouton.petit", { href: "#cartes/plante/" + encodeURIComponent(p.id) }, "Réviser cette plante")
           )

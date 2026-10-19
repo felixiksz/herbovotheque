@@ -26,9 +26,10 @@
     return prep ? prep.forme : "bocal";
   }
 
+  // (les rubriques « Autres plantes » gardent des identifiants : on cherche dans leurs noms)
   function texteDe(v) {
     if (v == null) return "";
-    if (Array.isArray(v)) return v.join(" ");
+    if (Array.isArray(v)) return v.map((x) => { const q = typeof x === "string" && H.d.plante(x); return q ? q.nom + " " + (q.latin || "") : x; }).join(" ");
     return String(v);
   }
 

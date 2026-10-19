@@ -216,7 +216,43 @@
   }
 
   const nomBotanique = (p) => (WIKIDATA[p.id] || [])[1] || (String(p.latin || "").match(/[A-Z][a-z]+ [a-z][a-z-]+/) || [""])[0];
-  const choisie = (p, quoi) => ((p.photosLibres || {})[quoi]) || (quoi === "plante" ? (WIKIDATA[p.id] || [])[2] : null) || null;
+  const choisie = (p, quoi) => ((p.photosLibres || {})[quoi]) || (quoi === "plante" ? (WIKIDATA[p.id] || [])[2] : null) || (p.pc && pcTrouves.has(p.id) ? (pcTrouves.get(p.id) || {})[quoi] : null) || null;
+
+  // Les substances de la pharmacopée chinoise n'ont pas de nom latin dans les fiches : on cherche
+  // leurs caractères dans Wikidata, qui donne la plante d'origine (son nom botanique) et souvent
+  // une photo de la drogue elle-même.
+  const WD = "https://www.wikidata.org/w/api.php?format=json&origin=*";
+  const pcTrouves = new Map();
+  const premiere = (e, prop) => { const c = ((e && e.claims) || {})[prop]; const v = c && c[0] && c[0].mainsnak && c[0].mainsnak.datavalue; return v ? v.value : null; };
+  async function entites(ids) {
+    const j = await (await fetch(WD + "&action=wbgetentities&props=claims&ids=" + ids.join("|"))).json();
+    return j.entities || {};
+  }
+  async function chinoise(p) {
+    if (pcTrouves.has(p.id)) return pcTrouves.get(p.id);
+    const v = p.valeurs || {}, mot = v.hanzi || p.nom;
+    let r = null;
+    try {
+      const j = await (await fetch(WD + "&action=wbsearchentities&type=item&limit=6&language=zh&uselang=zh&search=" + encodeURIComponent(mot))).json();
+      const ids = (j.search || []).map((x) => x.id);
+      if (ids.length) {
+        const es = await entites(ids);
+        for (const id of ids) {
+          const e = es[id];
+          let taxon = premiere(e, "P225"), photo = premiere(e, "P18");
+          const origine = premiere(e, "P1582");
+          if (!taxon && origine && origine.id) {
+            const o = (await entites([origine.id]))[origine.id];
+            taxon = premiere(o, "P225");
+            if (taxon) r = { nom: taxon, partie: photo, plante: premiere(o, "P18") };
+          } else if (taxon) r = { nom: taxon, plante: photo, partie: null };
+          if (r) break;
+        }
+      }
+    } catch (e) { /* hors connexion */ }
+    pcTrouves.set(p.id, r);
+    return r;
+  }
 
   // une petite image pour les aperçus (la bulle des jardins) : la photo d'ƟvƟ, sinon la photo libre
   function vignette(p, largeur) {
@@ -245,7 +281,8 @@
       }
       img.hidden = false;
       img.src = x.info.thumburl || urlFichier(x.fichier);
-      if (illus) {
+      // l'image en haut de la fiche reste le dessin botanique, tant qu'on n'a pas gardé une photo
+      if (illus && ((p.photosLibres || {})[quoi] === x.fichier || (H.d.plante(p.id).photosLibres || {})[quoi] === x.fichier)) {
         illus.src = img.src;
         illus.alt = "La partie utilisée : " + p.nom;
         illus.classList.add("photo-partie");
@@ -291,6 +328,7 @@
       H.d.majPlante(p.id, (x) => (x.photosLibres = Object.assign({}, x.photosLibres, { [quoi]: courante.fichier })));
       H.toast("Photo gardée pour " + H.leNom(p));
       garder.hidden = true;
+      montrer(courante);
     };
     // au départ : la photo gardée (ou la photo principale de Wikidata), sinon la première trouvée
     (async () => {
@@ -308,6 +346,7 @@
   }
 
   function section(p, recharger, illus) {
+    if (p.pc) return sectionChinoise(p, recharger, illus);
     const nom = nomBotanique(p);
     if (!nom) return null;
     return H.el("div.fiche-preps.photos-libres", null,
@@ -318,6 +357,27 @@
       ),
       H.el("p.discret", null, "Photos de Wikimedia Commons, sous licences libres. « Garder celle-ci » la retient pour la fiche.")
     );
+  }
+
+  // une substance chinoise : la plante d'origine, et la drogue (cherchée aussi par ses caractères)
+  function sectionChinoise(p, recharger, illus) {
+    const v = p.valeurs || {};
+    const zone = H.el("div.fiche-preps.photos-libres", null, H.el("h3", null, "Photos libres"), H.el("p.discret", null, "Je cherche la plante d’origine…"));
+    chinoise(p).then((t) => {
+      const nom = t && t.nom;
+      const plante = nom ? ['"' + nom + '"'] : [v.hanzi, v.nomFr].filter(Boolean);
+      const partie = [v.hanzi ? v.hanzi : null, nom ? '"' + nom + '" (dried OR drug OR herba OR fructus OR radix OR semen)' : null, v.nomFr || null].filter(Boolean);
+      zone.replaceChildren(
+        H.el("h3", null, "Photos libres"),
+        nom ? H.el("p.discret", null, "Plante d’origine : ", H.el("em", null, nom), " (d’après Wikidata).") : null,
+        H.el("div.cadres-photos", null,
+          cadre(p, "plante", "La plante", plante, recharger),
+          cadre(p, "partie", "La substance", partie, recharger, illus)
+        ),
+        H.el("p.discret", null, "Photos de Wikimedia Commons, sous licences libres. « Garder celle-ci » la retient pour la fiche.")
+      );
+    });
+    return zone;
   }
 
   H.photos = { WIKIDATA, vignette, section, urlFichier };

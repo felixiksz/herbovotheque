@@ -9,6 +9,7 @@
     ["choix-multiple", "Plusieurs choix dans une liste"],
     ["mois", "Mois de l’année"],
     ["plantes", "Autres plantes"],
+    ["liste", "Liste de petites phrases"],
   ];
   const FORMES = [
     ["bocal", "Bocal"],

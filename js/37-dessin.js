@@ -312,4 +312,100 @@
     );
     fermer = H.fenetre(corps);
   };
+
+  // Dessiner soi-même la photo d'une plante (le portrait en haut de sa fiche), à main levée, sur
+  // une feuille de papier : crayon, feutre, pinceau, gomme, la palette du jeu ou n'importe quelle
+  // couleur. La photo d'avant peut rester dessous, en transparence, pour décalquer.
+  H.dessinerPortrait = function (id, apres) {
+    const p = H.d.plante(id);
+    if (!p) return;
+    const L = 720, HT = 900, PAPIER = "#fbf7ec";
+    const toile = H.el("canvas.toile-portrait", { width: L, height: HT });
+    const g = toile.getContext("2d", { willReadFrequently: true });
+    g.fillStyle = PAPIER;
+    g.fillRect(0, 0, L, HT);
+    // le calque à décalquer (la photo d'avant), sous la feuille, jamais enregistré
+    // (sans photo : le dessin botanique automatique)
+    const modele = (p.photo && p.photo.src) || (H.terrain && H.terrain.portrait ? H.terrain.portrait(p) : null);
+    const dessous = H.el("img.calque-portrait" + (p.photo ? "" : ".pixel"), { alt: "", hidden: !modele });
+    if (modele) dessous.src = modele;
+    let couleur = "#23214a", outil = "crayon", taille = 6;
+    const historique = [];
+    const memoriser = () => { historique.push(g.getImageData(0, 0, L, HT)); if (historique.length > 25) historique.shift(); };
+    const OUTILS = { crayon: { nom: "Crayon", alpha: 0.9, k: 0.5 }, feutre: { nom: "Feutre", alpha: 1, k: 1 }, pinceau: { nom: "Pinceau", alpha: 0.35, k: 2.2 }, gomme: { nom: "Gomme", alpha: 1, k: 2 } };
+    const point = (e) => { const r = toile.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * L, ((e.clientY - r.top) / r.height) * HT, e.pressure > 0 && e.pointerType === "pen" ? e.pressure : 0.6]; };
+    let avant = null;
+    function trait(a, b) {
+      const o = OUTILS[outil];
+      g.save();
+      g.globalAlpha = o.alpha;
+      g.strokeStyle = outil === "gomme" ? PAPIER : couleur;
+      g.lineCap = g.lineJoin = "round";
+      g.lineWidth = Math.max(1, taille * o.k * (0.4 + b[2]));
+      g.beginPath();
+      g.moveTo(a[0], a[1]);
+      g.lineTo(b[0], b[1]);
+      g.stroke();
+      g.restore();
+    }
+    toile.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      memoriser();
+      toile.setPointerCapture(e.pointerId);
+      avant = point(e);
+      trait(avant, avant);
+    });
+    toile.addEventListener("pointermove", (e) => {
+      if (!avant) return;
+      for (const ev of e.getCoalescedEvents ? e.getCoalescedEvents() : [e]) { const q = point(ev); trait(avant, q); avant = q; }
+    });
+    const lever = () => (avant = null);
+    toile.addEventListener("pointerup", lever);
+    toile.addEventListener("pointercancel", lever);
+
+    const outils = H.el("div.pastilles.dessin-outils");
+    const couleurs = H.el("div.dessin-couleurs.pixel");
+    const libre = H.el("input.couleur-libre", { type: "color", value: couleur, "aria-label": "Une autre couleur", oninput(e) { couleur = e.target.value; if (outil === "gomme") outil = "crayon"; dessinerOutils(); } });
+    function dessinerCouleurs() {
+      couleurs.replaceChildren(...COULEURS.map((c) => H.el("button.pastille-couleur" + (c === couleur && outil !== "gomme" ? ".actif" : ""), {
+        type: "button", style: "--c:" + c, "aria-label": "Couleur " + c,
+        onclick() { couleur = c; libre.value = c; if (outil === "gomme") outil = "crayon"; dessinerCouleurs(); dessinerOutils(); },
+      })), libre);
+    }
+    function dessinerOutils() {
+      outils.replaceChildren(
+        ...Object.entries(OUTILS).map(([id, o]) => H.el("button.bouton.petit" + (outil === id ? ".actif" : ""), { type: "button", onclick: () => { outil = id; dessinerOutils(); dessinerCouleurs(); } }, o.nom)),
+        H.el("label.taille-trait", null, "Épaisseur ", H.el("input", { type: "range", min: 1, max: 40, value: taille, oninput: (e) => (taille = +e.target.value) })),
+        H.el("button.bouton.petit", { type: "button", onclick: () => { const d = historique.pop(); if (d) g.putImageData(d, 0, 0); } }, "Annuler"),
+        H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { memoriser(); g.fillStyle = PAPIER; g.fillRect(0, 0, L, HT); } }, "Tout effacer"),
+        ...(modele ? [H.el("label.case", null, H.el("input", { type: "checkbox", checked: true, onchange: (e) => (dessous.hidden = !e.target.checked) }), p.photo ? " Photo d’avant en transparence" : " Dessin botanique en transparence")] : [])
+      );
+    }
+    dessinerCouleurs();
+    dessinerOutils();
+
+    let fermer;
+    const corps = H.el("div.editeur-dessin.editeur-portrait", null,
+      H.el("h2", null, "Le portrait " + H.duNom(p)),
+      H.el("p.discret", null, "Dessine la plante comme tu la vois : ce dessin devient sa photo, en haut de sa fiche." + (modele ? (p.photo ? " La photo d’avant" : " Le dessin botanique") + " reste dessous, en transparence, pour décalquer." : "")),
+      H.el("div.cadre-portrait", null, dessous, toile),
+      couleurs,
+      outils,
+      H.el("div.boutons-bas", null,
+        H.el("button.bouton.discret-bouton", { type: "button", onclick: () => fermer() }, "Annuler"),
+        H.el("button.bouton", {
+          type: "button",
+          onclick() {
+            const d = new Date();
+            const date = String(d.getDate()).padStart(2, " ") + " " + String(d.getMonth() + 1).padStart(2, " ") + " '" + String(d.getFullYear()).slice(2);
+            H.d.majPlante(p.id, (x) => (x.photo = { src: toile.toDataURL("image/jpeg", 0.85), date, dessin: true }));
+            H.toast("Portrait enregistré");
+            fermer();
+            apres && apres();
+          },
+        }, "Garder ce dessin")
+      )
+    );
+    fermer = H.fenetre(corps);
+  };
 })();

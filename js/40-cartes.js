@@ -18,6 +18,10 @@
     const cartes = [];
     const champs = H.d.champs().filter((c) => c.cartes);
     for (const p of H.d.plantes()) {
+      // une substance chinoise : retrouver le pinyin d'après le nom français
+      if (p.pc && (p.valeurs || {}).nomFr) {
+        cartes.push({ id: p.id + "|_pinyin", plante: p.id, rubrique: "_pinyin", categorie: "pc-identite", recto: () => texte("Quelle substance est ", H.el("strong", null, p.valeurs.nomFr), " ?"), verso: () => H.el("p.reponse-courte", null, p.nom + (p.valeurs.hanzi ? " · " + p.valeurs.hanzi : "")) });
+      }
       if (p.latin) {
         cartes.push({ id: p.id + "|_latin", plante: p.id, rubrique: "_latin", categorie: "identite", recto: () => texte("Nom latin " + H.duNom(p).slice(0, -H.nomPhrase(p).length), H.el("strong", null, H.nomPhrase(p))), verso: () => H.el("p.reponse-courte", null, H.el("em", null, p.latin)) });
         cartes.push({ id: p.id + "|_nom", plante: p.id, rubrique: "_nom", categorie: "identite", recto: () => texte("Quelle plante est ", H.el("em", null, p.latin), " ?"), verso: () => H.el("p.reponse-courte", null, p.nom) });
@@ -81,9 +85,14 @@
   }
 
   // Rubriques révisables, rangées pour le choix : [{titre, items:[{cle, nom}]}]
-  function groupesDeRubriques() {
-    const g = [{ titre: "Identité", items: [{ cle: "_latin", nom: "Nom latin" }, { cle: "_nom", nom: "Retrouver la plante d’après son nom latin" }] }];
+  // (dans le monde de Mesi, seulement les rubriques des substances choisies : chinoises ou d'ƟvƟ)
+  function groupesDeRubriques(f) {
+    const origine = H.monde === "mesi" ? (f || filtre()).origine : "";
+    const g = [];
+    if (origine !== "pc") g.push({ titre: "Identité", items: [{ cle: "_latin", nom: "Nom latin" }, { cle: "_nom", nom: "Retrouver la plante d’après son nom latin" }] });
+    if (H.monde === "mesi" && origine !== "ovo") g.push({ titre: "Pinyin", items: [{ cle: "_pinyin", nom: "Retrouver le pinyin d’après le nom français" }] });
     for (const s of H.d.sections()) {
+      if (origine && s.id.startsWith("pc-") !== (origine === "pc")) continue;
       const items = H.d.champs().filter((c) => c.cartes && c.section === s.id).map((c) => ({ cle: c.id, nom: c.nom }));
       if (items.length) g.push({ titre: s.nom, items });
     }
@@ -95,11 +104,17 @@
   }
 
   // --- choix de ce qu'on révise (gardé sur l'appareil) --------------------------
+  // dans le monde de Mesi : d'abord les substances chinoises, avec les rubriques de la fiche du jeu
+  const PC_DEFAUT = ["_pinyin", "hanzi", "classe", "nature", "saveur", "tropisme", "actions", "indications"];
   function filtre() {
     const f = Object.assign(
       { rubriques: ["_latin", "famille", "proprietes", "mtcSaveur", "tisanes"], rangement: "", groupes: [], mode: "dues", nouvelles: 15, plante: null, plantesChoisies: [] },
       H.local.filtreCartes || {}
     );
+    if (H.monde === "mesi" && f.origine == null) {
+      f.origine = "pc";
+      if (!f.rubriques.some((r) => PC_DEFAUT.includes(r))) f.rubriques = PC_DEFAUT.concat(f.rubriques.filter((r) => r === "tisanes"));
+    }
     return f;
   }
   function majFiltre(fn) {
@@ -119,6 +134,9 @@
       return habituelles.length ? habituelles : dIle;
     }
     let cartes = toutes.filter((c) => f.rubriques.includes(c.rubrique));
+    if (H.monde === "mesi" && f.origine) {
+      cartes = cartes.filter((c) => { const p = c.plante && H.d.plante(c.plante); return !p || !!p.pc === (f.origine === "pc"); });
+    }
     if ((f.plantesChoisies || []).length) {
       const ids = new Set(f.plantesChoisies);
       cartes = cartes.filter((c) => c.plante && ids.has(c.plante));
@@ -301,8 +319,17 @@
           H.el("input", { type: "number", min: 1, max: 100, value: f.nouvelles, style: { width: "4.5em" }, onchange: (e) => { majFiltre((x) => (x.nouvelles = Math.max(1, parseInt(e.target.value, 10) || 1))); setTimeout(() => accueil(derniersParams), 0); } })) : null
       ));
     }
+    // monde de Mesi : les substances chinoises, celles d'ƟvƟ, ou toutes
+    if (H.monde === "mesi" && !rubriquesSeules) {
+      det.appendChild(H.el("h3", null, "Quelles substances"));
+      det.appendChild(H.el("div.pastilles", null,
+        [["pc", "Pharmacopée chinoise"], ["ovo", H.fixe("Plantes d’ƟvƟ")], ["", "Toutes"]].map(([o, t]) => H.el("button.bouton.petit" + (f.origine === o ? ".actif" : ""), {
+          type: "button", "aria-pressed": String(f.origine === o),
+          onclick: () => { majFiltre((x) => (x.origine = o)); setTimeout(() => accueil(derniersParams), 0); },
+        }, t))));
+    }
     // rubriques
-    for (const g of groupesDeRubriques()) {
+    for (const g of groupesDeRubriques(f)) {
       det.appendChild(H.el("h3", null, g.titre));
       det.appendChild(H.el("div.pastilles", null,
         g.items.map((it) => {

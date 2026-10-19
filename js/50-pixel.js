@@ -454,6 +454,8 @@
     loloGalop: [0, 1, 2, 3].map((i) => loloAuPas(i, { galop: true })),
     loloBalade: [0, 1, 2, 3].map((i) => loloAuPas(i, { memeDebout: true })),
     loloSeule: [0, 1, 2, 3].map((i) => loloAuPas(i, { seule: true })),
+    // Lóló sans Mémé sur l'encolure (quand Mémé est sortie par la chatière)
+    loloSansMeme: [LOLO, LOLO_2].map((G) => contour(sansMeme(G.map((l) => l.split("")), false))),
     memePas: [MEME_DEBOUT, MEME_PAS],
   };
   const cache = new Map();

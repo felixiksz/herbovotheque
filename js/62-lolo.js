@@ -122,6 +122,30 @@
     ]);
   }
 
+  // Mémé sort par la chatière une fois par jour, quelques heures (entre 2 et 4), à une heure qui
+  // change chaque jour mais qui est la même sur tous les appareils. Pendant ce temps, elle n'est
+  // nulle part : personne ne sait ce qu'elle fait dehors. Renvoie { depart, retour } ou null.
+  function sortieDeMeme(jour) {
+    const d = new Date(jour);
+    d.setHours(0, 0, 0, 0);
+    let h = 2166136261;
+    for (const c of "meme" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+    const a = ((h >>> 0) % 1000) / 1000, b = (((h >>> 10) >>> 0) % 1000) / 1000;
+    const depart = +d + (10 + a * 5) * 3600e3, retour = depart + (2 + b * 2) * 3600e3;
+    return { depart, retour };
+  }
+  H.memeDehors = (t) => {
+    t = t || Date.now();
+    const s = sortieDeMeme(t);
+    return t >= s.depart && t < s.retour ? s : null;
+  };
+  // rentrée depuis moins d'une heure
+  H.memeRentree = (t) => {
+    t = t || Date.now();
+    const s = sortieDeMeme(t);
+    return t >= s.retour && t < s.retour + 3600e3;
+  };
+
   // une pluie de joie de Lóló en cours (elle arrose toutes les îles)
   H.pluieMagique = () => !!(H.jeu && H.jeu.pluieMagique && H.jeu.pluieMagique > H.maintenant());
 

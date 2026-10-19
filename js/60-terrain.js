@@ -1659,7 +1659,7 @@
       const image = galope ? Math.floor(t / 90) % 4 : Math.floor(t / 700) % 2;
       if (visible) debout.push({ prof: lx + place.y + 0.5, dessin: () => {
         const [sx, sy] = proj(lx, place.y);
-        H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", sx, sy - (galope && image % 2 ? 2 : 0), 2, image);
+        H.pixel.dessiner(ctx, galope ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", sx, sy - (galope && image % 2 ? 2 : 0), 2, image);
         if (!galope && Math.floor(t / 1400) % 2) { ctx.font = "10px 'Suez One', serif"; ctx.fillStyle = "#ff2e9a"; ctx.fillText("rrr", sx + 12, sy - 60); }
       } });
     }
@@ -1667,7 +1667,7 @@
       const l = vue.loloVisite, pos = H.sons.position(l.course, t);
       if (pos) {
         const image = pos.enCourse ? Math.floor(t / 90) % 4 : Math.floor(t / 700) % 2;
-        debout.push({ prof: pos.x + l.y + 1, dessin: () => { const [sx, sy] = proj(pos.x + 0.5, l.y + 0.5); H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : "lolo", sx, sy - (pos.enCourse && image % 2 ? 2 : 0), 2, image); } });
+        debout.push({ prof: pos.x + l.y + 1, dessin: () => { const [sx, sy] = proj(pos.x + 0.5, l.y + 0.5); H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", sx, sy - (pos.enCourse && image % 2 ? 2 : 0), 2, image); } });
       }
     }
     if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
@@ -1815,7 +1815,7 @@
       const place = ile.lolo || { x: ile.cols / 2, y: ile.lignes / 2 + 0.6 };
       const lx = pos ? pos.x : place.x;
       const image = galope ? Math.floor(maintenant / 90) % 4 : Math.floor(maintenant / 700) % 2;
-      if (visible) H.pixel.dessiner(ctx, galope ? "loloGalop" : "lolo", lx * T, place.y * T - (galope && image % 2 ? 2 : 0), 2, image);
+      if (visible) H.pixel.dessiner(ctx, galope ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", lx * T, place.y * T - (galope && image % 2 ? 2 : 0), 2, image);
       if (visible && !galope && Math.floor(maintenant / 1400) % 2) {
         ctx.font = "10px 'Suez One', serif";
         ctx.fillStyle = "#ff2e9a";
@@ -1844,7 +1844,7 @@
       const pos = H.sons.position(l.course, performance.now());
       if (pos) {
         const image = pos.enCourse ? Math.floor(performance.now() / 90) % 4 : Math.floor(performance.now() / 700) % 2;
-        H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : "lolo", (pos.x + 0.5) * T, (l.y + 0.9) * T - (pos.enCourse && image % 2 ? 2 : 0), 2, image);
+        H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", (pos.x + 0.5) * T, (l.y + 0.9) * T - (pos.enCourse && image % 2 ? 2 : 0), 2, image);
       }
     }
     if (vue.luigi && !enCalin) {
@@ -2969,5 +2969,29 @@
     return dessinPlante(Object.assign({}, p, { dessinCarte: null }), 3, true, 1.6).toDataURL("image/png");
   }
 
-  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto };
+  // Le portrait botanique d'une plante (l'image par défaut en haut de sa fiche) : la plante adulte
+  // et en fleur, dessinée selon sa famille, toujours à la même hauteur quelle que soit sa vraie
+  // taille, en gros pixels nets sur une feuille de papier.
+  const portraits = new Map();
+  function portrait(p) {
+    const cle = p.id + "|" + ((p.valeurs || {}).famille || "") + "|" + ((p.valeurs || {}).cycle || "") + "|" + (p.dessinFace || p.dessinCote || "").length;
+    if (portraits.has(cle)) return portraits.get(cle);
+    const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
+    const d = planteDebout(p, { caseM: Math.max(0.02, (eff * 2 * HW * 0.55) / 62) }, 3, true);
+    const L = 300, Hh = 360, k = Math.max(1, Math.floor(Math.min((L * 0.8) / d.l, (Hh * 0.82) / d.h)));
+    const c = document.createElement("canvas");
+    c.width = L; c.height = Hh;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = "#f6f0de"; g.fillRect(0, 0, L, Hh);
+    const x = Math.round(L / 2 - (d.l * k) / 2), y = Math.round(Hh * 0.9 - d.h * k);
+    g.fillStyle = "#e3d8bb"; g.fillRect(0, Math.round(Hh * 0.9) - 2 * k, L, Hh);
+    g.drawImage(d.pied, x, y, d.l * k, d.h * k);
+    if (d.couronne) g.drawImage(d.couronne, x, y, d.l * k, d.h * k);
+    const url = c.toDataURL("image/png");
+    portraits.set(cle, url);
+    return url;
+  }
+
+  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait };
 })();

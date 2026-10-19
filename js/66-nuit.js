@@ -61,7 +61,7 @@
 
   // on coche qui vient se promener : Mesi, Lóló, Mémé (seul·e si personne n'est coché)
   function choixCompagnons() {
-    const qui = [["luigi", "Mesi"]].concat(loloLa() ? [["lolo", "Lóló"], ["meme", "Mémé"]] : []);
+    const qui = [["luigi", "Mesi"]].concat(loloLa() ? [["lolo", "Lóló"]].concat(H.memeDehors() ? [] : [["meme", "Mémé"]]) : []);
     const coches = new Set(H.local.compagnons || ["luigi"]);
     const cases = qui.map(([id, nom]) => H.el("label.case", null,
       H.el("input", { type: "checkbox", checked: coches.has(id), onchange: (e) => (e.target.checked ? coches.add(id) : coches.delete(id)) }), " " + nom));
@@ -1203,6 +1203,9 @@
     ctx.fillStyle = "#a8d8ec"; ctx.fillRect(PORTE.x + 3, PORTE.y + 12, 4, 44);
     ctx.fillStyle = "#7a4520"; ctx.fillRect(PORTE.x - 3, PORTE.y - 7, PORTE.w + 6, 7); ctx.strokeRect(PORTE.x - 3, PORTE.y - 7, PORTE.w + 6, 7);
     ctx.beginPath(); ctx.arc(PORTE.x - 2, PORTE.y + 92, 2.8, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
+    // la chatière de Mémé, en bas de la porte : son cadre sombre et son rabat
+    ctx.fillStyle = "#4b3427"; ctx.fillRect(PORTE.x - 1, PORTE.y + PORTE.h - 32, PORTE.w + 2, 26); ctx.strokeRect(PORTE.x - 1, PORTE.y + PORTE.h - 32, PORTE.w + 2, 26);
+    ctx.fillStyle = "#c99a3a"; ctx.fillRect(PORTE.x + 2, PORTE.y + PORTE.h - 29, PORTE.w - 4, 20);
     // les fondations, en pierre
     ctx.fillStyle = "#9a9a9a"; ctx.fillRect(-14, SOL_DEHORS, LARGE + 28, 14); ctx.strokeRect(-14, SOL_DEHORS, LARGE + 28, 14);
     // les trémies de l'escalier, dans les planchers
@@ -1784,7 +1787,18 @@
     const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     const zones = [
       { id: "fenetre", x: BAIE.x, y: BAIE.y, w: BAIE.w, h: 110, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
-      { id: "meme", x: 282, y: 186, w: 34, h: 20, nom: "Caresser Mémé", agir: () => (H.sons.caresseMeme && H.sons.caresseMeme(), H.dialogue.dire([{ qui: "meme", texte: H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que le canapé vibre.)"]) }])) },
+      { id: "meme", x: 282, y: 186, w: 34, h: 20, get nom() { return H.memeDehors() ? "La place de Mémé" : "Caresser Mémé"; }, agir: () => {
+        // sortie par la chatière : on ne sait pas ce qu'elle fait dehors
+        if (H.memeDehors()) return H.dialogue.dire([{ qui: "ovo", nom: "La place de Mémé", texte: H.histoires.auHasard([
+          "(La place de Mémé est vide, encore un peu tiède. Elle est sortie par la chatière.)",
+          "Mémé est partie en vadrouille par la chatière… Qui sait ce qu’elle fabrique dehors ?",
+          "(Personne ne sait où va Mémé quand elle sort. Elle rentrera quand elle l’aura décidé.)",
+        ]) }].concat(Math.random() < 0.5 ? [{ qui: "lolo", texte: "Hiii… Mémé ne me dit jamais où elle va." }] : []));
+        if (H.sons.caresseMeme) H.sons.caresseMeme();
+        return H.dialogue.dire([{ qui: "meme", texte: H.memeRentree()
+          ? H.histoires.auHasard(["Mrrrou. (Mémé est rentrée de sa vadrouille, une brindille de thym dans les poils, l’air très contente d’elle.)", "Rrr… (Elle sent le dehors et la terre. Elle ne dira rien de ce qu’elle a fait.)"])
+          : H.histoires.auHasard(["Rrr… rrr… (Mémé s’étire sans ouvrir les yeux, puis se rendort en boule.)", "Mrrrou. (Elle tend le menton pour qu’on le gratte.)", "Rrrrrrr… (Mémé ronronne si fort que le canapé vibre.)"]) }]);
+      } },
       { id: "lolo", x: 246, y: 150, w: 116, h: 54, nom: "Lóló raconte", agir: async () => {
         // le premier matin de la journée, on lui demande seulement s'il a bien dormi
         if (H.lolo.leMatin()) {
@@ -2165,7 +2179,7 @@
       cc.save();
       cc.translate(DX + CANAPE_T.x, CANAPE_T.y);
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
-      memeEnBoule(cc, 168, 203, t);
+      if (!H.memeDehors()) memeEnBoule(cc, 168, 203, t);
       if (surCanape) {
         // sur le canapé, face à face, les jambes qui se balancent au-dessus du tapis
         assis(cc, "ovo", 240, 1, t, 2, loloRaconte, 210);

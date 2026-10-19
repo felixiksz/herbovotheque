@@ -95,6 +95,8 @@
   const CHAMPS_JEU = [
     { id: "amendeSol", nom: "Améliore le sol", type: "choix", multiple: true, section: "jardin",
       options: ["Enrichit (azote)", "Apporte de l’humus", "Décompacte", "Draine", "Garde la fraîcheur", "Acidifie", "Adoucit le calcaire"] },
+    { id: "auJardin", nom: "Au jardin, elle…", type: "liste", section: "jardin",
+      suggestions: ["attire énormément les pucerons", "attire les coccinelles", "attire les abeilles", "attire les papillons", "repousse les pucerons", "repousse les limaces", "sert de plante piège", "abrite les auxiliaires", "nourrit les oiseaux en hiver"] },
   ];
 
   // La première fois qu'on ouvre le jeu, une seule tisane attend dans le placard : celle de
@@ -163,6 +165,12 @@
     }
     const idsChamps = new Set(s.champs.map((x) => x.id));
     for (const x of CHAMPS_JEU) if (!idsChamps.has(x.id) && !s.retires.includes(x.id)) s.champs.push(copie(x));
+    // les rubriques de la base marquées d'un numéro de mise à jour reprennent leur nom et leurs cartes
+    for (const x of H.base.champs || []) {
+      if (!x.maj) continue;
+      const c = s.champs.find((y) => y.id === x.id);
+      if (c && (c.maj || 0) < x.maj) Object.assign(c, { nom: x.nom, cartes: x.cartes, maj: x.maj });
+    }
   }
 
   H.d = {
