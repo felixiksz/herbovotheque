@@ -35,7 +35,14 @@
     H.d.changer("jeu");
   }
 
+  // Une île de forme libre : les cases de son rectangle qui ne font pas partie de l'île (ile.vides)
+  // sont du vide, où l'on voit le ciel ou la mer ; au-delà du rectangle, c'est vide aussi.
+  const estVide = (ile, x, y) => x < 0 || y < 0 || x >= ile.cols || y >= ile.lignes || !!(ile.vides && ile.vides[cle(x, y)]);
+  function texteEchelle(ile) {
+    return ile.largeur + " × " + ile.longueur + " m · une case = " + (ile.caseM < 1 ? ile.caseM * 100 + " cm" : ile.caseM + " m") + (ile.croquis ? " · croquis" : "");
+  }
   function caseDe(ile, x, y) {
+    if (ile.vides && ile.vides[cle(x, y)]) return { t: "vide", expo: ile.expo || "Plein soleil", sol: ile.sol || [] };
     const c = (ile.cases || {})[cle(x, y)] || {};
     return { t: c.t || "sol", expo: c.expo || ile.expo || "Plein soleil", sol: c.sol || ile.sol || [] };
   }
@@ -457,6 +464,7 @@
       const u = (x + 0.5 - ox) / a, v = ((y + 0.5 - oy) * 2) / a, i = (u + v) / 2, j = (v - u) / 2;
       if (i < 0 || j < 0 || i >= cols || j >= lignes) continue;
       const tt = caseDe(ile, Math.floor(i), Math.floor(j)).t;
+      if (tt === "vide") continue;
       const t = tt === "sol" ? (ile.croquis ? tons.herbe : teintesSol(ile.sol).base) : tons[tt] || tons.herbe, h = hsh(x, y);
       P(x, y, h < 0.6 ? t[0] : h < 0.85 ? t[1] : t[2]);
     }
@@ -469,7 +477,11 @@
         for (let d = 0; d < 6; d++) P(x, y + d, d < 1 ? (ile.croquis ? "#c9c4b0" : clair ? "#6cbd5c" : "#3f8a42") : d < 4 ? (clair ? "#b9834f" : "#9a6a3c") : clair ? "#8a98cc" : "#6b6578");
       }
     };
-    tranche(ax, ay, bx, by, true); tranche(bx, by, cx, cy, false);
+    for (let y = 0; y < lignes; y++) for (let x = 0; x < cols; x++) {
+      if (estVide(ile, x, y)) continue;
+      if (estVide(ile, x, y + 1)) { const [p0, q0] = iso(x, y + 1), [p1, q1] = iso(x + 1, y + 1); tranche(p0, q0, p1, q1, true); }
+      if (estVide(ile, x + 1, y)) { const [p0, q0] = iso(x + 1, y + 1), [p1, q1] = iso(x + 1, y); tranche(p0, q0, p1, q1, false); }
+    }
     // les plantes, du fond vers l'avant ; les arbres et les arbustes dépassent
     const plantes = Object.entries(ile.plantes || {}).map(([k, pl]) => { const [x, y] = k.split(",").map(Number); return { x, y, p: H.d.plante(pl.p) }; })
       .filter((o) => o.p).sort((m, n) => m.x + m.y - (n.x + n.y));
@@ -869,12 +881,14 @@
     const outils = H.el("div.outils-terrain");
     const options = H.el("div.options-outil");
     const panneau = H.el("div.panneau-case", { hidden: true });
+    let echelle = null;
 
     conteneur.appendChild(H.el("div.terrain-tete", null,
       H.el("a.bouton.discret-bouton", { href: "#terrain" }, "Archipel"),
       H.el("h1", null, ile.nom),
-      H.el("span.discret.echelle-ile", null, ile.largeur + " × " + ile.longueur + " m · une case = " + (ile.caseM < 1 ? ile.caseM * 100 + " cm" : ile.caseM + " m") + (ile.croquis ? " · croquis" : ""))
+      (echelle = H.el("span.discret.echelle-ile", null, texteEchelle(ile)))
     ));
+    vue.echelle = echelle;
     conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, zoneToile, panneau);
     conteneur.appendChild(H.el("div.pied-ile", null,
       H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe(ile) }, "Exporter la liste des plantes"),
@@ -940,9 +954,10 @@
 
   function dessinerOutils() {
     const ile = vue.ile;
-    const liste = ile.croquis
+    const liste = (ile.croquis
       ? [["regarder", "Regarder"], ["planter", "Planter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]]
-      : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]];
+      : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]])
+      .concat(ile.secrete ? [] : [["forme", "Forme de l’île"]]);
     vue.outils.innerHTML = "";
     liste.forEach(([id, nom]) =>
       vue.outils.appendChild(H.el("button.bouton.petit.outil" + (vue.outil === id ? ".actif" : ""), { type: "button", "aria-pressed": String(vue.outil === id), onclick: () => { vue.outil = id; dessinerOutils(); } }, nom))
@@ -993,6 +1008,10 @@
       o.appendChild(H.el("span.cout", null, "Les plantes prêtes à récolter sont entourées de fluo · " + cout({ energie: 2 })));
     } else if (vue.outil === "retirer") {
       o.appendChild(H.el("span.cout", null, "Retire la plante ou l’aménagement de la case"));
+    } else if (vue.outil === "forme") {
+      const mode = vue.formeMode || "ajouter";
+      for (const [id, nom] of [["ajouter", "Ajouter de la terre"], ["enlever", "Enlever de la terre"]]) o.appendChild(H.el("button.bouton.petit" + (mode === id ? ".actif" : ""), { type: "button", onclick: () => { vue.formeMode = id; dessinerOutils(); } }, nom));
+      o.appendChild(H.el("span.cout", null, mode === "ajouter" ? "Clique au bord de l’île (ou dans un trou) pour y ajouter une case : l’île s’agrandit d’elle-même" : "Clique sur une case sans plante pour la rendre à la mer : baies, criques, presqu’îles…"));
     } else {
       o.appendChild(H.el("span.cout", null, "Clique sur une plante pour voir comment elle se porte"));
     }
@@ -1096,6 +1115,7 @@
     for (let y = 0; y < ile.lignes; y++) {
       for (let x = 0; x < ile.cols; x++) {
         const c = caseDe(ile, x, y);
+        if (c.t === "vide") { ctx.fillStyle = "#8fc3dc"; ctx.fillRect((x + BX) * k - 0.5, (y + BY) * k - 0.5, k + 1, k + 1); continue; }
         if (c.t === "sol") continue;
         const tex = textureTuile(c.t, saison, H.hash(cle(x, y)) % 3);
         ctx.drawImage(tex, (x + BX) * k, (y + BY) * k, k + 0.5, k + 0.5);
@@ -1783,8 +1803,12 @@
         }
       }
     };
-    tranche([0, Lg], [C, Lg], true);
-    tranche([C, Lg], [C, 0], false);
+    // (case par case : chaque bord qui donne sur le vide, devant à gauche ou devant à droite)
+    for (let y = 0; y < Lg; y++) for (let x = 0; x < C; x++) {
+      if (estVide(ile, x, y)) continue;
+      if (estVide(ile, x, y + 1)) tranche([x, y + 1], [x + 1, y + 1], true);
+      if (estVide(ile, x + 1, y)) tranche([x + 1, y + 1], [x + 1, y], false);
+    }
     // le dessus, pixel par pixel, comme un jardin en pixel art : l'herbe en touffes claires et
     // sombres avec des fleurettes, la terre bêchée en sillons, les dalles du chemin avec leurs
     // joints moussus, le gravier, l'eau qui miroite, la serre
@@ -1804,6 +1828,7 @@
       const [fx, fy] = versCase(x + 0.5, y + 0.5);
       if (fx < 0 || fy < 0 || fx >= C || fy >= Lg) continue;
       const cx0 = Math.floor(fx), cy0 = Math.floor(fy), t2 = caseDe(ile, cx0, cy0).t, h = hp(x, y), n = hp(x >> 2, y >> 1), u = fx - cx0, v = fy - cy0;
+      if (t2 === "vide") continue;
       let col;
       if (t2 === "terre") {
         const sillon = Math.floor(v * 5 + n * 0.3) % 2;
@@ -1842,7 +1867,13 @@
     ctx.drawImage(plat, 0, 0);
     ctx.imageSmoothingEnabled = true;
     // un liseré plus clair au bord du dessus, comme l'herbe qui déborde
-    for (const [a, b] of [[[0, Lg], [C, Lg]], [[C, Lg], [C, 0]]]) {
+    const bords = [];
+    for (let y = 0; y < Lg; y++) for (let x = 0; x < C; x++) {
+      if (estVide(ile, x, y)) continue;
+      if (estVide(ile, x, y + 1)) bords.push([[x, y + 1], [x + 1, y + 1]]);
+      if (estVide(ile, x + 1, y)) bords.push([[x + 1, y + 1], [x + 1, y]]);
+    }
+    for (const [a, b] of bords) {
       const [x0, y0] = proj(a[0], a[1]), [x1, y1] = proj(b[0], b[1]), n2 = Math.round(Math.abs(x1 - x0));
       for (let q = 0; q <= n2; q++) { const xx = x0 + ((x1 - x0) * q) / n2, yy = y0 + ((y1 - y0) * q) / n2; ctx.fillStyle = PAL.herbe[4]; ctx.fillRect(Math.round(xx), Math.round(yy) - 1, 1, 1); if (H.hash(String(q)) % 3 === 0) { ctx.fillStyle = PAL.herbe[2]; ctx.fillRect(Math.round(xx), Math.round(yy) + 1, 1, 2); } }
     }
@@ -1859,9 +1890,9 @@
       const [x, y] = k.split(",").map(Number), [sx] = proj(x + 0.5, y + 0.5), hm = hauteurM(p);
       const longueur = Math.min(PROF - 3, 4 + Math.sqrt(hm) * 9) * (st === 3 ? 1 : 0.6);
       const g = H.hash(k);
-      // tranche de gauche (bord y = lignes) et de droite (bord x = cols)
-      for (const [dist, i, j] of [[ile.lignes - (y + 0.5), (sx - vue.ox) / HW + ile.lignes, ile.lignes], [ile.cols - (x + 0.5), ile.cols, ile.cols - (sx - vue.ox) / HW]]) {
-        if (dist > 1.6 || i < 0 || j < 0 || i > ile.cols || j > ile.lignes) continue;
+      // la tranche juste devant elle, à gauche (si la case devant à gauche est vide) ou à droite
+      for (const [dist, i, j] of [[0.5, x + 0.5, y + 1], [0.5, x + 1, y + 0.5]]) {
+        if ((j === y + 1 && !estVide(ile, x, y + 1)) || (i === x + 1 && !estVide(ile, x + 1, y))) continue;
         const [bx, by] = proj(i, j), force = 1 - dist / 1.6, L = Math.round(longueur * (0.5 + force * 0.5));
         let rx = bx;
         for (let d = 2; d < L; d++) {
@@ -2102,6 +2133,7 @@
     ctx.save();
     aplat(ctx, z);
     for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
+      if (estVide(ile, x, y)) continue;
       const expo = expoIci(ile, x, y);
       if (expo !== "Plein soleil") {
         ctx.save();
@@ -2270,6 +2302,7 @@
     ctx.setTransform(1, 0, 0, 1, vue.bx * k, vue.by * k);
     for (let y = 0; y < ile.lignes; y++) {
       for (let x = 0; x < ile.cols; x++) {
+        if (estVide(ile, x, y)) continue;
         // (l'exposition vraie : celle qu'on a peinte, et l'ombre des arbres, comme en relief)
         const expo = expoIci(ile, x, y);
         const x0 = Math.round(x * k), y0 = Math.round(y * k), w = Math.round((x + 1) * k) - x0, h = Math.round((y + 1) * k) - y0;
@@ -2395,13 +2428,17 @@
       const grande = (vue.boites || []).filter((b) => b.grande && lx >= b.g && lx <= b.d && ly >= b.h && ly <= b.b).sort((a, b) => b.prof - a.prof)[0];
       if (grande) return { x: grande.x, y: grande.y };
       const [fx, fy] = versCase(lx, ly), x = Math.floor(fx), y = Math.floor(fy);
-      if (x < 0 || y < 0 || x >= vue.ile.cols || y >= vue.ile.lignes) return null;
-      return { x, y };
+      return dansOuAuBord(x, y);
     }
     const k = T * vue.zoom;
     const x = Math.floor((e.clientX - rect.left) / k - vue.bx);
     const y = Math.floor((e.clientY - rect.top) / k - vue.by);
-    if (x < 0 || y < 0 || x >= vue.ile.cols || y >= vue.ile.lignes) return null;
+    return dansOuAuBord(x, y);
+  }
+  // (avec l'outil de la forme, on peut cliquer juste au-delà du bord, pour agrandir l'île)
+  function dansOuAuBord(x, y) {
+    const ile = vue.ile, forme = vue.outil === "forme" && (vue.formeMode || "ajouter") === "ajouter";
+    if (x < 0 || y < 0 || x >= ile.cols || y >= ile.lignes) return forme && x >= -1 && y >= -1 && x <= ile.cols && y <= ile.lignes ? { x, y } : null;
     return { x, y };
   }
 
@@ -2477,6 +2514,8 @@
       if (!H.$(".dialogue")) H.lolo.parler(vue.ile);
       return;
     }
+    if (vue.outil === "forme") return agir(c.x, c.y);
+    if (estVide(vue.ile, c.x, c.y)) return;
     marcherVers(c.x, c.y, () => agir(c.x, c.y));
   }
 
@@ -2564,7 +2603,7 @@
       vue.ovo.y = Math.min(vue.ile.lignes - 1, y + 1);
       return ensuite();
     }
-    vue.ovo.file.push({ cible: { x, y: Math.min(vue.ile.lignes - 1, y + 1) }, ensuite });
+    vue.ovo.file.push({ cible: { x, y: estVide(vue.ile, x, y + 1) ? y : y + 1 }, ensuite });
     if (!vue.ovo.cible) prochaineEtape();
   }
   function prochaineEtape() {
@@ -2577,16 +2616,88 @@
     };
   }
 
+  // Décaler toute l'île de dx, dy cases (pour l'agrandir par la gauche ou par le haut, ou la
+  // resserrer) : ses cases, ses plantes, ses trous, ses animaux, et ƟvƟ
+  function decaler(ile, dx, dy) {
+    const bouger = (obj) => {
+      const neuf = {};
+      for (const [k, v] of Object.entries(obj || {})) {
+        const [x, y] = k.split(",").map(Number), nx = x + dx, ny = y + dy;
+        if (nx >= 0 && ny >= 0) neuf[cle(nx, ny)] = v;
+      }
+      return neuf;
+    };
+    ile.cases = bouger(ile.cases); ile.plantes = bouger(ile.plantes); ile.vides = bouger(ile.vides);
+    for (const a of ile.animaux || []) { a.x += dx; a.y += dy; }
+    ile.cols = Math.max(1, ile.cols + dx); ile.lignes = Math.max(1, ile.lignes + dy);
+    if (vue && vue.ile === ile) { vue.ovo.x += dx; vue.ovo.y += dy; if (vue.ovo.cible) { vue.ovo.cible.x += dx; vue.ovo.cible.y += dy; } }
+  }
+  // ajouter la case x, y (qui peut être juste au-delà du bord : l'île s'agrandit, et la nouvelle
+  // rangée reste vide sauf cette case)
+  function agrandir(ile, x, y) {
+    const vides = Object.assign({}, ile.vides);
+    ile.vides = vides;
+    if (x < 0 || y < 0) {
+      const dx = x < 0 ? 1 : 0, dy = y < 0 ? 1 : 0;
+      decaler(ile, dx, dy);
+      for (let j = 0; j < ile.lignes; j++) for (let i = 0; i < ile.cols; i++) if ((dx && i === 0) || (dy && j === 0)) ile.vides[cle(i, j)] = 1;
+      x += dx; y += dy;
+    }
+    if (x >= ile.cols) { for (let j = 0; j < ile.lignes; j++) ile.vides[cle(ile.cols, j)] = 1; ile.cols++; }
+    if (y >= ile.lignes) { for (let i = 0; i < ile.cols; i++) ile.vides[cle(i, ile.lignes)] = 1; ile.lignes++; }
+    delete ile.vides[cle(x, y)];
+    majTaille(ile);
+  }
+  // les rangées et les colonnes du bord devenues entièrement vides disparaissent
+  function rogner(ile) {
+    const ligneVide = (j) => { for (let i = 0; i < ile.cols; i++) if (!estVide(ile, i, j)) return false; return true; };
+    const colVide = (i) => { for (let j = 0; j < ile.lignes; j++) if (!estVide(ile, i, j)) return false; return true; };
+    while (ile.lignes > 1 && ligneVide(0)) decaler(ile, 0, -1);
+    while (ile.cols > 1 && colVide(0)) decaler(ile, -1, 0);
+    while (ile.lignes > 1 && ligneVide(ile.lignes - 1)) { for (let i = 0; i < ile.cols; i++) delete ile.vides[cle(i, ile.lignes - 1)]; ile.lignes--; }
+    while (ile.cols > 1 && colVide(ile.cols - 1)) { for (let j = 0; j < ile.lignes; j++) delete ile.vides[cle(ile.cols - 1, j)]; ile.cols--; }
+    majTaille(ile);
+  }
+  // les mesures de l'île (en mètres) suivent sa nouvelle emprise
+  function majTaille(ile) {
+    ile.largeur = Math.round(ile.cols * ile.caseM * 10) / 10;
+    ile.longueur = Math.round(ile.lignes * ile.caseM * 10) / 10;
+    const ech = vue && vue.echelle;
+    if (ech) ech.textContent = texteEchelle(ile);
+  }
+
   function agir(x, y) {
     const ile = vue.ile;
     const k = cle(x, y);
     const pl = (ile.plantes || {})[k];
     const libre = (txt) => H.toast(txt);
+    if (vue.outil !== "forme" && estVide(ile, x, y)) return;
     switch (vue.outil) {
       case "regarder":
         if (pl) inspecter(x, y);
         else montrerCase(x, y);
         break;
+      case "forme": {
+        if (ile.secrete) return;
+        if ((vue.formeMode || "ajouter") === "enlever") {
+          if (estVide(ile, x, y)) return;
+          if (pl) return libre("Il y a une plante ici : retire-la d’abord.");
+          let reste = 0;
+          for (let j = 0; j < ile.lignes; j++) for (let i = 0; i < ile.cols; i++) if (!estVide(ile, i, j)) reste++;
+          if (reste <= 1) return libre("Il faut bien garder un peu de terre !");
+          ile.vides = Object.assign({}, ile.vides, { [k]: 1 });
+          if (ile.cases && ile.cases[k]) { ile.cases = Object.assign({}, ile.cases); delete ile.cases[k]; }
+          rogner(ile);
+        } else {
+          if (!estVide(ile, x, y)) return;
+          agrandir(ile, x, y);
+        }
+        sauver(ile);
+        vue.casesBonnes = null;
+        H.bruit("plante");
+        dimensionner(); peindreFond(); dessiner();
+        break;
+      }
       case "planter": {
         if (!vue.plante) return libre("Choisis d’abord une plante.");
         const t = caseDe(ile, x, y).t;
@@ -2733,7 +2844,7 @@
     for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
       if ((ile.plantes || {})[cle(x, y)]) continue;
       const t = caseDe(ile, x, y).t;
-      if (t === "eau" || t === "dalle" || t === "chemin") continue;
+      if (t === "eau" || t === "dalle" || t === "chemin" || t === "vide") continue;
       if (evaluer(ile, x, y, p, null).facteur >= SE_PLAIT) bonnes.push(cle(x, y));
     }
     return bonnes;
