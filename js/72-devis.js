@@ -19,15 +19,20 @@
     accord: "Bon pour accord — date et signature, précédées de la mention « Lu et approuvé » :",
     pied: "",
     formatDevis: "D-{AAAA}-{N3}", formatFacture: "F-{AAAA}-{N3}", compteurs: {},
-    modele: "fenetre", couleur: "#2f6b35", police: "serif", logo: null, logoPlace: "gauche",
+    modele: "fenetre", couleur: "#2f6b35", police: "sans", logo: null, logoPlace: "gauche",
     colonnes: { unite: true, tva: true, remise: false, detail: true },
     titreDevis: "Devis", titreFacture: "Facture",
   };
   const MODELES = [["fenetre", "Fenêtre (noir et blanc)", "le cadre des fenêtres du jeu, en noir et blanc, typographie sobre : prêt pour l’imprimante"], ["classique", "Classique", "sobre, un filet de couleur, les totaux encadrés"], ["herbier", "Herbier", "comme une planche d’herbier : un cadre fin, le titre manuscrit, une étiquette pour le client"], ["moderne", "Moderne", "un grand bandeau de couleur en haut, les lignes alternées"]];
-  const POLICES = [["serif", "Caudex (avec empattements)", "Caudex, Georgia, serif"], ["sans", "Sans empattements", "'Helvetica Neue', Arial, sans-serif"], ["manuscrite", "Titres manuscrits (Beth Ellen)", "Caudex, Georgia, serif"], ["machine", "Machine à écrire", "'Courier New', monospace"]];
+  const POLICES = [["sans", "Sans empattements (Helvetica)", "'Helvetica Neue', Helvetica, Arial, sans-serif"], ["serif", "Caudex (avec empattements)", "Caudex, Georgia, serif"], ["manuscrite", "Titres manuscrits (Beth Ellen)", "Caudex, Georgia, serif"], ["machine", "Machine à écrire", "'Courier New', monospace"]];
   const STATUTS = { devis: ["Brouillon", "Envoyé", "Accepté", "Refusé"], facture: ["Brouillon", "Envoyée", "Payée", "En retard"] };
 
-  const ent = () => Object.assign({}, DEFAUT, H.jeu.entreprise || {}, { colonnes: Object.assign({}, DEFAUT.colonnes, (H.jeu.entreprise || {}).colonnes) });
+  const ent = () => {
+    const e = Object.assign({}, DEFAUT, H.jeu.entreprise || {}, { colonnes: Object.assign({}, DEFAUT.colonnes, (H.jeu.entreprise || {}).colonnes) });
+    // l'ancienne police par défaut (Caudex) laisse place aux sans empattements, sauf si elle a été choisie
+    if (e.police === "serif" && !e.policeChoisie) e.police = "sans";
+    return e;
+  };
   function majEnt(fn) {
     const e = ent();
     fn(e);
@@ -81,8 +86,8 @@
   function pageImprimable(doc) {
     const e = ent(), c = coll("clients").find((x) => x.id === doc.client) || {}, T = totaux(doc), col = e.colonnes;
     const facture = doc.type === "facture", modele = doc.modele || e.modele, couleur = e.couleur || "#2f6b35";
-    const police = modele === "fenetre" ? "'Helvetica Neue', Helvetica, Arial, sans-serif" : (POLICES.find((p) => p[0] === e.police) || POLICES[0])[2];
-    const titreF = modele === "fenetre" ? police : e.police === "manuscrite" || modele === "herbier" ? "'Beth Ellen', cursive" : police;
+    const police = (POLICES.find((p) => p[0] === e.police) || POLICES[0])[2];
+    const titreF = e.police === "manuscrite" || modele === "herbier" ? "'Beth Ellen', cursive" : police;
     const base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
     const tva = !e.franchiseTVA && col.tva;
     const tetes = ["Désignation"].concat(col.unite ? ["Qté", "Unité"] : ["Qté"], ["Prix unit. HT"], col.remise ? ["Remise"] : [], tva ? ["TVA"] : [], ["Total HT"]);
@@ -132,11 +137,11 @@
       ${modele === "herbier" ? `body { padding: 6mm; } .cadre { border: 1px solid ${couleur}; padding: 8mm; min-height: 250mm; position: relative; }
         .bloc-client { background: #f3ead8; border: 1px solid #8a6a3c; border-radius: 0; box-shadow: 2px 2px 0 #8a6a3c55; }
         .lignes th { border-bottom: 1px solid ${couleur}; } .totaux .fort td { border-top: 1px solid ${couleur}; }` : ""}
-      ${modele === "fenetre" ? `body { color: #000; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9.5pt; }
+      ${modele === "fenetre" ? `body { color: #000; font-family: ${police}; font-size: 9.5pt; }
         .cadre-fenetre { border: 1.5px solid #000; box-shadow: 3px 3px 0 #000; }
         .titre-fenetre { border-bottom: 1.5px solid #000; padding: 4px 10px; text-align: center; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .08em; }
         .dedans { padding: 12px 14px 16px; }
-        h1 { font: 700 20pt/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #000; margin-top: 6px; }
+        h1 { font: 700 20pt/1.15 ${titreF}; color: #000; margin-top: 6px; }
         .bloc-client { border: 1px solid #000; border-radius: 0; }
         .lignes th { color: #000; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; font-size: 7.5pt; }
         .lignes td { border-bottom: .5px solid #000; } .lignes .titre td { color: #000; text-transform: uppercase; letter-spacing: .04em; font-size: 8.5pt; }
@@ -250,7 +255,7 @@
     const choixCatalogue = H.el("select", { onchange: (ev) => { const a = catalogue.find((x) => x.id === ev.target.value); if (a) ajouter({ designation: a.designation, detail: a.detail || "", quantite: 1, unite: a.unite, prix: a.prix, tva: a.tva == null ? ent().tvaDefaut : a.tva }); ev.target.value = ""; } },
       H.el("option", { value: "" }, "+ Depuis mes prix…"), catalogue.map((a) => H.el("option", { value: a.id }, a.designation + " — " + euros(a.prix))));
     // depuis un jardin : une ligne par plante, avec le prix noté dans le catalogue
-    const iles = Object.values(H.jeu.iles || {}).filter((i) => i && !i.supprime);
+    const iles = H.ilesVisibles();
     const choixJardin = H.el("select", { onchange: (ev) => { const ile = (H.jeu.iles || {})[ev.target.value]; ev.target.value = ""; if (ile) remplirDepuis(ile); } },
       H.el("option", { value: "" }, "+ Les plantes d’un jardin…"), iles.map((i) => H.el("option", { value: i.id }, i.nom)));
     function remplirDepuis(ile) {
@@ -416,7 +421,7 @@
     const rafraichir = () => { const dd = apercuF.contentDocument; if (!dd) return; dd.open(); dd.write(pageImprimable(exemple)); dd.close(); };
     // (l'onglet n'est pas encore affiché : l'aperçu se remplit quand il apparaît)
     apercuF.addEventListener("load", () => { const dd = apercuF.contentDocument; if (dd && !dd.body.childElementCount) rafraichir(); });
-    const choix = (cle, liste, apres) => H.el("div.pastilles", null, liste.map(([id, n, aide]) => H.el("button.bouton.petit" + (ent()[cle] === id ? ".actif" : ""), { type: "button", title: aide || "", onclick: (ev) => { majEnt((x) => (x[cle] = id)); ev.target.parentNode.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.target)); rafraichir(); if (apres) apres(); } }, n)));
+    const choix = (cle, liste, apres) => H.el("div.pastilles", null, liste.map(([id, n, aide]) => H.el("button.bouton.petit" + (ent()[cle] === id ? ".actif" : ""), { type: "button", title: aide || "", onclick: (ev) => { majEnt((x) => { x[cle] = id; if (cle === "police") x.policeChoisie = true; }); ev.target.parentNode.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.target)); rafraichir(); if (apres) apres(); } }, n)));
     const colonne = (cle, nom) => H.el("label.case", null, H.el("input", { type: "checkbox", checked: !!e.colonnes[cle], onchange: (ev) => { majEnt((x) => (x.colonnes = Object.assign({}, x.colonnes, { [cle]: ev.target.checked }))); rafraichir(); } }), " " + nom);
     const logoBtn = H.el("button.bouton.petit", {
       type: "button",

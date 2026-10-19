@@ -366,9 +366,9 @@
               const t = s / l, x = Math.round(16.5 + dir * s), y = Math.round(y0 - s * (0.28 + u * 0.25) - t * t * 2.5);
               // la branche en bas, les aiguilles dressées au-dessus ; le tout plutôt foncé
               pixel(c, x, y, "#2c1c12");
-              if (t < 0.95) pixel(c, x, y - 1, "#1e3d25");
-              if (t < 0.85) pixel(c, x, y - 2, s % 2 ? "#2f6b35" : "#24502f");
-              if (t > 0.15 && t < 0.7 && s % 2 === 0) pixel(c, x, y - 3, "#3a6e40");
+              // de longues aiguilles dressées, plus courtes vers le bout de la branche
+              const lg = Math.round((t < 0.95 ? 2 : 1) + (t < 0.85 ? 2 : 0) + (t > 0.15 && t < 0.7 ? 1 : 0) - (s % 2 ? 0 : 1));
+              for (let q = 1; q <= lg; q++) pixel(c, x, y - q, q === lg && lg > 2 ? "#3a6e40" : q > 2 ? (s % 2 ? "#2f6b35" : "#24502f") : "#1e3d25");
             }
           }
         }

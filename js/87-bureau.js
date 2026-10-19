@@ -100,6 +100,13 @@
     return contenu;
   }
 
+  // L'herbothèque et ses fiches gardent leur propre bureau, avec les mêmes icônes à gauche.
+  function cadreOrdi(vue, conteneur) {
+    const contenu = H.el("div.contenu-ordi");
+    conteneur.append(icones(vue === "fiche" ? "herbotheque" : vue), contenu);
+    return contenu;
+  }
+
   // « fenetre » pour les outils, « ordi » pour l'herbothèque, rien pour les scènes
   function mode(vue, params) {
     if (vue === "terrain" && params[0]) return null;
@@ -147,6 +154,7 @@
   H.bureau = {
     mode,
     cadre,
+    cadreOrdi,
     onglets,
     preparer(m) {
       if (m) document.documentElement.dataset.bureau = m;

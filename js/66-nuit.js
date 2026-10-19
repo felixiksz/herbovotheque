@@ -497,8 +497,9 @@
           const tx = (bx - ax) || s * 0.01, ty = by - ay, l = Math.hypot(tx, ty) || 1, ux = tx / l, uy = ty / l;
           const larg = L * 0.13 * Math.pow(Math.sin(Math.PI * (0.12 + 0.88 * t)), 0.75) * (1 - t * 0.35);
           // les rameaux d'aiguilles se dressent au-dessus de la branche, vers le haut et un peu vers le bout
-          if (hsh(n + k * 41, s + 3) > 0.12) {
-            const ex = ax + ux * larg * 0.45 + (hsh(n, k) - 0.5) * p, ey = ay - larg * 1.5;
+          // (une sur deux, longues et bien séparées, pour qu'on les voie une à une)
+          if (n % 2 === 0 && hsh(n + k * 41, s + 3) > 0.1) {
+            const lg = 3.6 + hsh(n + 7, k) * 1.2, ex = ax + ux * larg * 1.5 + (hsh(n, k) - 0.5) * p, ey = ay - larg * lg;
             trait(ax, ay, ex, ey, 1, (i2, j2, e, v) => pose(i2, j2, brume(v > 0.75 ? "#3a6e40" : v > 0.35 ? "#24502f" : "#173a26", f)));
           }
           trait(ax, ay, bx, by, t < 0.5 ? 2 : 1, (i2, j2) => pose(i2, j2, brume(t < 0.3 ? "#3a2618" : "#1f4229", f)));

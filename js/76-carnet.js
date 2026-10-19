@@ -49,7 +49,7 @@
     if (pg) return { type: "page", nom: pg.titre, hash: "carnet/" + pg.id };
     const pl = H.d.plantes().find((p) => norme(p.nom) === n || norme(p.latin).split(",")[0] === n);
     if (pl) return { type: "plante", nom: pl.nom, hash: "fiche/" + encodeURIComponent(pl.id) };
-    const ile = Object.values(H.jeu.iles || {}).find((i) => i && !i.supprime && norme(i.nom) === n);
+    const ile = H.ilesVisibles().find((i) => norme(i.nom) === n);
     if (ile) return { type: "jardin", nom: ile.nom, hash: "terrain/" + encodeURIComponent(ile.id) };
     const cl = Object.values(H.jeu.clients || {}).find((c) => c && !c.supprime && norme(c.nom) === n);
     if (cl) return { type: "client", nom: cl.nom, hash: "devis" };
@@ -60,7 +60,7 @@
     return [].concat(
       toutes().filter((p) => p.titre).map((p) => ({ nom: p.titre, type: "page" })),
       H.d.plantes().map((p) => ({ nom: p.nom, type: "plante" })),
-      Object.values(H.jeu.iles || {}).filter((i) => i && !i.supprime).map((i) => ({ nom: i.nom, type: "jardin" })),
+      H.ilesVisibles().map((i) => ({ nom: i.nom, type: "jardin" })),
       Object.values(H.jeu.clients || {}).filter((c) => c && !c.supprime).map((c) => ({ nom: c.nom, type: "client" })));
   }
   // les textes de tout le jeu où l'on peut citer quelque chose : [{ titre, hash, texte }]
@@ -394,7 +394,7 @@
     H.toast("Modèle enregistré : « " + m.titre + " ». Tu peux mettre {date}, {client} ou {jardin} dans le texte.");
   }
   function depuisModele(m, parent) {
-    const clients = Object.values(H.jeu.clients || {}).filter((c) => c && !c.supprime), iles = Object.values(H.jeu.iles || {}).filter((i) => i && !i.supprime);
+    const clients = Object.values(H.jeu.clients || {}).filter((c) => c && !c.supprime), iles = H.ilesVisibles();
     const brut = JSON.stringify(m.blocs) + m.titre, aClient = /\{client\}/.test(brut), aJardin = /\{jardin\}/.test(brut);
     const fin = (client, jardin) => {
       const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -454,7 +454,7 @@
     if (v === "carnet" && a && a !== "etiquette" && a !== "corbeille") { const p = page(a); return p && !p.supprime ? "Carnet · " + (p.titre || "Sans titre") : null; }
     if (v === "carnet" && a === "etiquette") return "Étiquette #" + b;
     if (v === "fiche") { const p = H.d.plante(a); return p ? "Fiche · " + p.nom : null; }
-    if (v === "terrain" && a) { const i = (H.jeu.iles || {})[a]; return i ? "Jardin · " + i.nom : null; }
+    if (v === "terrain" && a) { const i = H.ilesVisibles().find((x) => x.id === a); return i ? "Jardin · " + i.nom : null; }
     return { carnet: "Carnet", taches: "To-do liste", devis: "Devis et factures", herbotheque: "Herbothèque", cartes: "Flashcartes", terrain: "Les îles", labo: "Labo", serre: "Serre", lettres: "Lettres", tisanes: "Tisanes" }[v] || null;
   }
   let enregistrerRecents = null;
@@ -474,7 +474,7 @@
     for (const t of Object.values(H.jeu.taches || {})) if (t && !t.supprime) s.push({ titre: t.titre, type: "Tâche", hash: "taches", texte: t.notes || "" });
     for (const d of Object.values(H.jeu.documents || {})) if (d && !d.supprime) s.push({ titre: (d.type === "devis" ? "Devis " : "Facture ") + d.numero + (d.objet ? " · " + d.objet : ""), type: d.type === "devis" ? "Devis" : "Facture", hash: "devis", texte: (d.lignes || []).map((l) => l.designation).join(" ") });
     for (const c of Object.values(H.jeu.clients || {})) if (c && !c.supprime) s.push({ titre: c.nom, type: "Client", hash: "devis", texte: [c.adresse, c.email, c.notes].join(" ") });
-    for (const i of Object.values(H.jeu.iles || {})) if (i && !i.supprime) s.push({ titre: i.nom, type: "Jardin", hash: "terrain/" + encodeURIComponent(i.id), texte: "" });
+    for (const i of H.ilesVisibles()) s.push({ titre: i.nom, type: "Jardin", hash: "terrain/" + encodeURIComponent(i.id), texte: "" });
     for (const l of Object.values(H.jeu.lettres || {})) if (l && !l.supprime) s.push({ titre: l.titre || (l.texte || "").slice(0, 40), type: "Lettre", hash: "lettres", texte: l.texte || "" });
     for (const t of Object.values((H.herbier && H.herbier.tisanes) || {})) if (t && !t.supprime) s.push({ titre: t.nom, type: H.monde === "mesi" ? "Formule" : "Tisane", hash: "tisanes", texte: [t.usage, t.notes].join(" ") });
     return s;

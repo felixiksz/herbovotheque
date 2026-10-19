@@ -366,7 +366,8 @@ label { font-size: 0.95rem; }
 }
 
 /* le bureau : les icônes à gauche, la fenêtre à droite */
-:root[data-bureau="fenetre"] #vue { max-width: 1120px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 18px; align-items: start; }
+:root:is([data-bureau="fenetre"], [data-bureau="ordi"]) #vue { max-width: 1120px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 18px; align-items: start; }
+.contenu-ordi { min-width: 0; }
 .icones-bureau { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px; }
 .icone-bureau { display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; color: var(--encre); font: 1.1rem/1 var(--menu-police); text-align: center; padding: 2px; }
 .icone-pixel { width: 36px; height: 36px; image-rendering: pixelated; display: block; }
@@ -385,7 +386,7 @@ label { font-size: 0.95rem; }
 /* à l'intérieur d'une fenêtre, les cadres sont plus légers */
 .contenu-vue :is(.reglage, details.cartes-choix, details.cartes-stats, details.cartes-perso, details.cartes-recompenses, .cartes-resume, .bandeau-pause, .carte-ile) { box-shadow: 3px 3px 0 rgba(35, 33, 74, 0.5); }
 @media (max-width: 640px) {
-  :root[data-bureau="fenetre"] #vue { grid-template-columns: minmax(0, 1fr); gap: 10px; padding-inline: 10px; }
+  :root:is([data-bureau="fenetre"], [data-bureau="ordi"]) #vue { grid-template-columns: minmax(0, 1fr); gap: 10px; padding-inline: 10px; }
   .icones-bureau { position: static; flex-direction: row; overflow-x: auto; gap: 4px; scrollbar-width: none; margin: 0 -10px; padding: 0 10px; }
   .icones-bureau::-webkit-scrollbar { display: none; }
   .icone-bureau { flex: 0 0 auto; min-width: 64px; }

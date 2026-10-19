@@ -16,7 +16,7 @@
   }
   const debutJour = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return +x; };
   const dateCourte = (t) => new Date(t).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
-  const iles = () => Object.values(H.jeu.iles || {}).filter((i) => i && !i.supprime);
+  const iles = () => H.ilesVisibles();
   const nomIle = (id) => ((H.jeu.iles || {})[id] || {}).nom || "";
 
   // la prochaine échéance d'une tâche qui revient

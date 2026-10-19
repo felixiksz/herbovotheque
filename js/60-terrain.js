@@ -3019,4 +3019,7 @@
   }
 
   H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait, plantePetite };
+  // les îles qu'on peut montrer ailleurs dans le jeu (to-do, devis, carnet, recherche), tout ce qui
+  // se partage : l'île de Lóló et Mémé y reste cachée jusqu'à son vrai jour, même en aperçu
+  H.ilesVisibles = () => iles().filter((i) => i && (!i.secrete || new Date() >= OUVERTURE_SECRETE));
 })();
