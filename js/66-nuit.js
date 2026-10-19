@@ -632,17 +632,44 @@
         const mx = g.fx + (bx - g.fx) * 0.45 + (hsh(a.x, k + 9) - 0.5) * 10, my = g.fy + (by - g.fy) * 0.55;
         trait(g.fx, g.fy, mx, my, unite(6), ecorce); trait(mx, my, bx, by, unite(4), ecorce);
       }
-      const n = 7 + Math.floor(hsh(a.x, 5) * 3);
+      // L'ombrelle : beaucoup de petites touffes d'aiguilles (des pompons), serrées en dôme plat.
+      // Chaque pompon est fait d'aiguilles qui rayonnent de son centre : son bord est hérissé, le
+      // dessus pris par la lumière (vert tendre côté soleil), le dessous dans l'ombre (vert bleuté
+      // très sombre) ; entre les pompons, des creux sombres, et çà et là un trou de ciel.
+      const pompons = [], n = Math.round(g.L / 7);
       for (let q = 0; q < n; q++) {
-        const t = q / (n - 1), px = g.cx + (t - 0.5) * g.L * 1.7 + (hsh(a.x, q + 20) - 0.5) * 14;
-        const dome = 1 - Math.pow((t - 0.5) * 2, 2), py = g.haut + g.ep * 0.55 - dome * g.ep * 0.45 + (hsh(a.x, q + 30) - 0.5) * 6;
-        const rx = g.L * (0.2 + hsh(a.x, q + 40) * 0.07), ry = g.ep * (0.42 + dome * 0.25);
-        ovale(px, py, rx, ry, (i, j, dx, dy) => {
-          if (dy > 0.45 + Math.abs(Math.sin((X(i) + a.x) / 9)) * 0.25) return;
-          if (lum && dy > 0.25) return pose(i, j, hsh(i + i0, j + j0) < 0.5 ? "#e9b44c" : "#ffc46b", true);
-          const hh = hsh(i + i0, j + j0), bord = dx * dx + dy * dy;
-          pose(i, j, dy < -0.35 && bord > 0.55 ? (hh < 0.5 ? "#9cc77a" : "#6cbd5c") : dy < -0.1 ? (hh < 0.3 ? "#4aa63e" : "#3f8a42") : dy < 0.2 ? "#2f6b35" : "#1e3d25");
+        const t = hsh(a.x, q + 20), u = (t - 0.5) * 2, dome = 1 - u * u;
+        const px = g.cx + u * g.L * 0.86, py = g.haut + g.ep * (0.62 - dome * 0.5) + (hsh(a.x, q + 30) - 0.5) * g.ep * 0.55;
+        const r = g.L * (0.09 + hsh(a.x, q + 40) * 0.06);
+        pompons.push([px, py, r, q]);
+      }
+      // (les pompons du haut et du fond d'abord ; ceux du bord inférieur passent devant)
+      pompons.sort((A, B) => A[1] - B[1]);
+      for (const [px, py, r, q] of pompons) {
+        const ry = r * 0.72;
+        ovale(px, py, r * 1.25, ry * 1.25, (i, j, dx, dy) => {
+          const x = X(i), y = Y(j), ax = (x - px) / r, ay = (y - py) / ry, ang = Math.atan2(ay, ax), d2 = ax * ax + ay * ay;
+          // le bord hérissé : chaque aiguille dépasse plus ou moins
+          const aiguille = hsh(Math.floor((ang + Math.PI) * 9) + q * 31, 7);
+          if (d2 > 0.62 + aiguille * 0.95 || (ay > 0.55 && d2 > 0.75)) return;
+          if (lum && ay > 0.3) return pose(i, j, hsh(i + i0, j + j0) < 0.5 ? "#e9b44c" : "#ffc46b", true);
+          // les aiguilles qui rayonnent : des traits fins, plus clairs, de la base au bout
+          const rai = hsh(Math.floor((ang + Math.PI) * 14) + q * 17, Math.floor(Math.sqrt(d2) * 3));
+          const soleil = -(ax * 0.7 + ay) / 1.3;
+          let c;
+          if (ay > 0.35) c = rai < 0.25 ? "#26503a" : "#173a2c";
+          else if (soleil > 0.45) c = rai < 0.3 ? "#9cc77a" : rai < 0.7 ? "#6cb05a" : "#4a9a46";
+          else if (soleil > 0.05) c = rai < 0.3 ? "#4f9e4a" : rai < 0.7 ? "#3a7f40" : "#2c6a3c";
+          else c = rai < 0.3 ? "#3a7f40" : rai < 0.7 ? "#2c6a3c" : "#1f5034";
+          // le creux au cœur du pompon, où les aiguilles se rejoignent
+          if (d2 < 0.08 && ay > -0.2) c = "#173a2c";
+          pose(i, j, c);
         });
+      }
+      // le dessous de l'ombrelle, presque droit, dans l'ombre bleue ; quelques trous de ciel par-dessus
+      for (let x = g.cx - g.L * 0.8; x < g.cx + g.L * 0.8; x += p) {
+        const y = g.haut + g.ep * 0.82 + Math.sin(x / 11 + a.x) * g.ep * 0.06;
+        if (hsh(Math.floor(x / 6), a.x) < 0.8) pose(I(x), J(y), lum ? "#e9b44c" : "#173a2c", lum);
       }
     }
     const couronne = (cx, cy, rx, ry, lumineux) => touffes(cx, cy, rx, ry, Math.round(cx * 7 + cy), lumineux);

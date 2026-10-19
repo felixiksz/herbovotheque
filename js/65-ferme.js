@@ -284,6 +284,37 @@
     if (Math.abs(x) >= l - 0 && v < 0.5) return tons[3];
     return lum + v * 0.6 > 0.7 ? tons[2] : lum + v * 0.6 > -0.1 ? tons[1] : tons[0];
   });
+  // L'ombrelle d'un pin parasol : des petites touffes d'aiguilles serrées en dôme plat. Chaque touffe
+  // a un bord hérissé (des aiguilles qui dépassent), le dessus clair côté soleil, le dessous sombre
+  // et bleuté ; entre elles des creux sombres, et le dessous de l'ombrelle presque droit.
+  function ombrelle(c, cx, cy, rx, ry, graine) {
+    const n = Math.max(5, Math.round(rx / 2.2)), touffes = [];
+    for (let q = 0; q < n; q++) {
+      const u = (q / (n - 1)) * 2 - 1 + (hash(graine, q) - 0.5) * 0.2, dome = 1 - u * u;
+      touffes.push([cx + u * (rx - 2.5), cy + Math.round(ry * 0.35 - dome * ry * 0.5 + (hash(q, graine) - 0.5) * 1.5), 3 + hash(graine + q, 3) * 1.6, q]);
+      if (dome > 0.25) touffes.push([cx + u * (rx - 4) + (hash(q, graine + 2) - 0.5) * 2, cy - Math.round(dome * ry * 0.9) - 1, 2.8 + hash(q, graine + 5) * 1.4, q + 50]);
+      if (dome > 0.7) touffes.push([cx + u * (rx - 7), cy - Math.round(dome * ry * 1.5) - 1, 2.4 + hash(q, graine + 8) * 1.2, q + 90]);
+    }
+    touffes.sort((A, B) => A[1] - B[1]);
+    const clair = nuit ? "#3f6a6a" : "#8cc46a", moyen = nuit ? "#2c5050" : "#4a9a46", sombre = nuit ? "#1a3438" : "#2c6a3c", ombre = nuit ? "#0f2228" : "#173a2c";
+    // le cœur de l'ombrelle, plein et sombre, sous les touffes (pas de trou, sauf quelques-uns)
+    for (let y = -ry; y <= ry * 0.7; y++) for (let x = -rx + 2; x <= rx - 2; x++) {
+      const u = x / (rx - 1), haut = -ry * 0.9 * (1 - u * u);
+      if (y >= haut && hash(x + graine, y) > 0.06) pixel(c, Math.round(cx + x), Math.round(cy + y), y > ry * 0.2 ? ombre : sombre);
+    }
+    for (const [tx, ty, r, q] of touffes) {
+      const R = Math.ceil(r + 1);
+      for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) {
+        const ax = x / r, ay = y / (r * 0.7), d2 = ax * ax + ay * ay, ang = Math.atan2(ay, ax);
+        const aiguille = hash(Math.floor((ang + Math.PI) * 4) + q * 13, graine);
+        if (d2 > 0.7 + aiguille * 0.8 || (ay > 0.6 && d2 > 0.8)) continue;
+        const soleil = ((cote < 0 ? ax : -ax) * 0.6 * (cote === 0 ? 0.3 : 1) - ay) / 1.3, v = hash(tx * 7 + x, ty * 5 + y);
+        pixel(c, Math.round(tx + x), Math.round(ty + y), ay > 0.4 ? ombre : soleil + v * 0.3 > 0.55 ? clair : soleil + v * 0.3 > 0.05 ? moyen : sombre);
+      }
+    }
+    // le dessous, presque droit
+    for (let x = -rx + 2; x <= rx - 2; x++) if (hash(x, graine + 7) < 0.75) pixel(c, Math.round(cx + x), Math.round(cy + ry * 0.75), ombre);
+  }
   const VERTS_PIN = ["#1e3d25", "#2f6b35", "#4aa63e", "#173a26"], VERTS_BLEUS = ["#1e3d25", "#26406a", "#3f8a42", "#173a26"];
   function dessinPlante(p) {
     switch (p.e) {
@@ -293,7 +324,9 @@
         if (!fourche) return sprite("pin" + p.v, 36, 40, (c) => {
           const h = 22 + p.v * 4;
           for (let y = 0; y < h; y++) { const x = 18 + Math.round(Math.sin(y / 6) * 1.5); pixel(c, x, 39 - y, "#7a4520"); pixel(c, x + 1, 39 - y, "#4b3427"); }
-          feuillage(c, 17, 39 - h - 1, 15, 4, VERTS_PIN); feuillage(c, 15, 39 - h - 4, 10, 3, VERTS_PIN);
+          // quelques branches en éventail sous l'ombrelle
+          for (const [dx, dy] of [[-8, 4], [7, 3], [-3, 6]]) for (let k = 0; k <= 5; k++) pixel(c, 18 + Math.round((dx * k) / 5), 39 - h + 2 + Math.round((dy * (5 - k)) / 5), "#7a4520");
+          ombrelle(c, 17, 39 - h - 2, 16, 5, p.v * 31 + 7);
         });
         return sprite("pinY" + p.v, 48, 44, (c) => {
           const h = 24 + p.v * 4, f = Math.round(h * 0.45), cx = 24;
@@ -303,7 +336,7 @@
           for (const [sens, hb, ecart] of bras) for (let y = f; y < hb; y++) { const u = (y - f) / (hb - f), x = cx + sens * Math.round(ecart * Math.pow(u, 0.8)); pixel(c, x, 43 - y, "#7a4520"); pixel(c, x + 1, 43 - y, "#4b3427"); }
           for (const [sens, hb, ecart] of bras) {
             const x = cx + sens * ecart + 1, y = 43 - hb - 1;
-            feuillage(c, x, y, 10, 3, VERTS_PIN); feuillage(c, x - sens, y - 3, 7, 2, VERTS_PIN);
+            ombrelle(c, x, y - 1, 11, 4, p.v * 17 + sens * 5 + 3);
           }
         });
       }
