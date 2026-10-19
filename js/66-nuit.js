@@ -623,14 +623,27 @@
     const nuitLum = moment !== "jour";
     // un pin parasol : le tronc penche, se divise en branches en éventail, sous une ombrelle large
     // et plate faite de paquets d'aiguilles, le dessus éclairé, le dessous presque droit
-    function pinParasol(a, ecorce, lum) {
+    function pinParasol(a, ecorce0, lum) {
       const g = pinGeo(a), h = a.h;
-      for (let k = 0; k < 24; k++) { const u = k / 24, u2 = (k + 1) / 24; trait(a.x + (g.fx - a.x) * u * (0.6 + 0.4 * u), bas - (bas - g.fy) * u, a.x + (g.fx - a.x) * u2 * (0.6 + 0.4 * u2), bas - (bas - g.fy) * u2, unite(11 - 4 * u), ecorce); }
+      // L'écorce du pin parasol : de grandes plaques brun-rouge, séparées de fissures profondes et
+      // sombres, plus claires côté soleil ; le tronc ondule un peu, s'évase au pied.
+      const ecorce = (i, j, e, ep) => {
+        const xi = i + i0, yj = j + j0, plaque = hsh(Math.floor((yj + (xi % 3) * 0.7) / 2.6), xi >> 1);
+        const bord = e / Math.max(1, (ep || 2) / 2);
+        let c = bord < -0.35 ? (plaque < 0.5 ? "#d38a56" : "#c0703f") : bord > 0.45 ? (plaque < 0.5 ? "#7a3f26" : "#6a3420") : plaque < 0.5 ? "#a8582f" : "#b8683c";
+        if (plaque < 0.14 || (yj % 3 === 0 && plaque < 0.55) || (xi % 4 === 0 && plaque > 0.85)) c = "#4b2a1c";
+        pose(i, j, c);
+      };
+      for (let k = 0; k < 24; k++) {
+        const u = k / 24, u2 = (k + 1) / 24, ond = (v) => Math.sin(v * Math.PI * 1.6 + a.x) * h * 0.018;
+        const ep = unite((17 - 7 * u) * (1 + Math.max(0, 0.12 - u) * 3));
+        trait(a.x + (g.fx - a.x) * u * (0.6 + 0.4 * u) + ond(u), bas - (bas - g.fy) * u, a.x + (g.fx - a.x) * u2 * (0.6 + 0.4 * u2) + ond(u2), bas - (bas - g.fy) * u2, ep, (i, j, e) => ecorce(i, j, e, ep));
+      }
       const nb = 4 + Math.floor(hsh(a.x, 3) * 2);
       for (let k = 0; k < nb; k++) {
         const t = k / (nb - 1), bx = g.cx + (t - 0.5) * g.L * 1.5, by = g.haut + g.ep * (0.75 + hsh(a.x, k + 4) * 0.2);
         const mx = g.fx + (bx - g.fx) * 0.45 + (hsh(a.x, k + 9) - 0.5) * 10, my = g.fy + (by - g.fy) * 0.55;
-        trait(g.fx, g.fy, mx, my, unite(6), ecorce); trait(mx, my, bx, by, unite(4), ecorce);
+        trait(g.fx, g.fy, mx, my, unite(6), (i, j, e) => ecorce(i, j, e, unite(6))); trait(mx, my, bx, by, unite(4), (i, j, e) => ecorce(i, j, e, unite(4)));
       }
       // L'ombrelle : beaucoup de petites touffes d'aiguilles (des pompons), serrées en dôme plat.
       // Chaque pompon est fait d'aiguilles qui rayonnent de son centre : son bord est hérissé, le

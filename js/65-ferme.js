@@ -315,6 +315,13 @@
     // le dessous, presque droit
     for (let x = -rx + 2; x <= rx - 2; x++) if (hash(x, graine + 7) < 0.75) pixel(c, Math.round(cx + x), Math.round(cy + ry * 0.75), ombre);
   }
+  // le tronc d'un pin parasol : trois pixels de large, l'écorce en plaques brun-rouge et fissures
+  function troncPin(c, x, y, k) {
+    const plaque = hash(Math.floor((y + (x % 2)) / 2), x), fissure = plaque < 0.18 || (y % 3 === 0 && plaque < 0.5);
+    pixel(c, x - 1, y, fissure ? "#4b2a1c" : cote < 0 ? "#7a3f26" : "#c0703f");
+    pixel(c, x, y, fissure ? "#4b2a1c" : plaque < 0.6 ? "#a8582f" : "#b8683c");
+    pixel(c, x + 1, y, cote < 0 ? "#c0703f" : "#6a3420");
+  }
   const VERTS_PIN = ["#1e3d25", "#2f6b35", "#4aa63e", "#173a26"], VERTS_BLEUS = ["#1e3d25", "#26406a", "#3f8a42", "#173a26"];
   function dessinPlante(p) {
     switch (p.e) {
@@ -323,14 +330,14 @@
         const fourche = hash(Math.round(p.x * 10), Math.round(p.y * 10)) < 0.33;
         if (!fourche) return sprite("pin" + p.v, 36, 40, (c) => {
           const h = 22 + p.v * 4;
-          for (let y = 0; y < h; y++) { const x = 18 + Math.round(Math.sin(y / 6) * 1.5); pixel(c, x, 39 - y, "#7a4520"); pixel(c, x + 1, 39 - y, "#4b3427"); }
+          for (let y = 0; y < h; y++) troncPin(c, 18 + Math.round(Math.sin(y / 6 + p.v) * 1.5), 39 - y);
           // quelques branches en éventail sous l'ombrelle
           for (const [dx, dy] of [[-8, 4], [7, 3], [-3, 6]]) for (let k = 0; k <= 5; k++) pixel(c, 18 + Math.round((dx * k) / 5), 39 - h + 2 + Math.round((dy * (5 - k)) / 5), "#7a4520");
           ombrelle(c, 17, 39 - h - 2, 16, 5, p.v * 31 + 7);
         });
         return sprite("pinY" + p.v, 48, 44, (c) => {
           const h = 24 + p.v * 4, f = Math.round(h * 0.45), cx = 24;
-          for (let y = 0; y < f; y++) { pixel(c, cx, 43 - y, "#7a4520"); pixel(c, cx + 1, 43 - y, "#4b3427"); }
+          for (let y = 0; y < f; y++) troncPin(c, cx + Math.round(Math.sin(y / 5) * 0.8), 43 - y);
           // les deux branches qui s'écartent en montant
           const bras = [[-1, h - 3, 9], [1, h, 10]];
           for (const [sens, hb, ecart] of bras) for (let y = f; y < hb; y++) { const u = (y - f) / (hb - f), x = cx + sens * Math.round(ecart * Math.pow(u, 0.8)); pixel(c, x, 43 - y, "#7a4520"); pixel(c, x + 1, 43 - y, "#4b3427"); }
