@@ -3251,17 +3251,19 @@
     if (nuit) {
       // (des étoiles posées sur les gros pixels, qui ne clignotent pas : seule une sur huit scintille,
       // lentement ; avant, toutes vacillaient et le passage en gros pixels les faisait clignoter)
-      S.etoiles.forEach(([x, y, a], i) => {
-        const scintille = i % 8 === 0 ? (Math.sin(t / 2600 + i) > 0.6 ? 0.25 : 0) : 0;
-        ctx.fillStyle = "rgba(255,240,250," + Math.min(1, a + scintille) + ")";
+      // (les étoiles restent fixes : sur tablette, le moindre scintillement passé en gros pixels
+      // faisait clignoter le ciel, surtout quand on s'arrête pour se baigner)
+      S.etoiles.forEach(([x, y, a]) => {
+        ctx.fillStyle = "rgba(255,240,250," + a + ")";
         ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
       });
-      // une étoile filante, de temps en temps
-      const f = ((t / 1000) % 9) / 9;
-      if (f < 0.07) {
-        ctx.strokeStyle = "rgba(255,255,255," + (1 - f / 0.07) + ")";
+      // une étoile filante, rarement (une fois toutes les trois quarts de minute)
+      const f = ((t / 1000) % 47) / 47;
+      if (f < 0.014) {
+        ctx.strokeStyle = "rgba(255,255,255," + (1 - f / 0.014) + ")";
         ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(w * 0.62 + f * 600, h * 0.08 + f * 300); ctx.lineTo(w * 0.62 + f * 600 - 46, h * 0.08 + f * 300 - 24); ctx.stroke();
+        const fs = f * 5;
+        ctx.beginPath(); ctx.moveTo(w * 0.62 + fs * 600, h * 0.08 + fs * 300); ctx.lineTo(w * 0.62 + fs * 600 - 46, h * 0.08 + fs * 300 - 24); ctx.stroke();
       }
     }
     // la vraie lune, avec sa phase de ce soir
@@ -3274,7 +3276,8 @@
       }
       S.profils.nuages.forEach((v, i) => {
         if (i >= S.couvert.n * 2) return;
-        nuagePlat(ctx, boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120), h * (0.08 + v * 0.22), 50 + v * 50, S.couvert.couleur);
+        const gp = H.retro.taillePour(3) / dpr, nx = boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120);
+        nuagePlat(ctx, Math.round(nx / gp) * gp, h * (0.08 + v * 0.22), 50 + v * 50, S.couvert.couleur);
       });
     }
     // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit ;
