@@ -238,44 +238,60 @@
   // passent (on les voit aussi par le velux), la nuit les étoiles et la vraie lune ; les collines
   // au loin, des pins, l'herbe, et sous la maison, la terre et ses cailloux.
   function dehorsMonde(ctx, t, moment, etat, R, p) {
-    // Le paysage, comme si on coupait l'île de la ferme en deux, droit à travers la maison, et qu'on
-    // regardait depuis la serre : le ciel, les calanques, la mer, les pins, l'araucaria, le labo et
-    // la roulotte, la coupe de l'île. Il est peint à la manière de Roger Brown (de grands dégradés
-    // soufflés, des formes qui reviennent en rythme, des lumières contrastées, une symétrie presque
-    // parfaite autour de la maison), en pixels fins avec le grain d'une photo argentique (voir
-    // paysagePixels). Par-dessus, ce qui bouge, toujours case par case.
+    const matin = new Date().getHours() < 12, nuit = moment !== "jour";
+    const CIEL = moment === "jour" ? ["#2f8fe0", "#6fb6ee", "#a8d8ec", "#d6eef7"]
+      : moment === "soir" ? (matin ? ["#3a3aa8", "#8a58cc", "#d07ab8", "#ffb3a8", "#ffd23a"] : ["#2a2c6a", "#5b3c8f", "#c93f6e", "#ff5b4f", "#ffb36b"])
+      : ["#15124a", "#1b1d4a", "#232a63", "#2a2c6a", "#3a3aa8"];
+    const g = ctx.createLinearGradient(0, Math.min(R.y0, -400), 0, SOL_DEHORS);
+    CIEL.forEach((c, k) => g.addColorStop(k / (CIEL.length - 1), c));
+    ctx.fillStyle = g; ctx.fillRect(R.x0 - 2, R.y0 - 2, R.x1 - R.x0 + 4, SOL_DEHORS - R.y0 + 2);
+    // les étoiles, une par case de ciel au plus (toujours aux mêmes places)
+    if (nuit) {
+      const C = 40;
+      for (let i = Math.floor(R.x0 / C); i * C < R.x1; i++) for (let j = Math.floor(R.y0 / C); j * C < SOL_DEHORS - 90; j++) {
+        const h = hsh(i, j);
+        if (h > 0.55) continue;
+        const x = i * C + hsh(i + 7, j) * C, y = j * C + hsh(i, j + 7) * C, grosse = h < 0.06;
+        const a = moment === "nuit" ? 0.45 + 0.55 * Math.sin(t / 700 + h * 40 + x) : 0.3;
+        ctx.fillStyle = "rgba(255,245,230," + Math.max(0.1, a).toFixed(2) + ")";
+        ctx.fillRect(x, y, grosse ? 2.6 : 1.8, grosse ? 2.6 : 1.8);
+      }
+      // dans le velux, une ou deux étoiles, qu'ƟvƟ regarde depuis son oreiller
+      for (const [dx, dy, ph] of [[24, 14, 0], [64, 26, 2]]) {
+        const x = VELUX.x0 + dx, y = veluxY(VELUX.x0 + dx) + dy, a = moment === "nuit" ? 0.6 + 0.4 * Math.sin(t / 650 + ph) : 0.35;
+        ctx.fillStyle = "rgba(255,245,230," + a.toFixed(2) + ")";
+        ctx.fillRect(x - 1, y - 1, 2.6, 2.6);
+      }
+      if (etat.lune.alt > -2) lunePlate(ctx, Math.min(R.x1 - 60, LARGE + 150), Math.max(R.y0 + 64, -330), 14, etat.lune.phase);
+    }
+    // les nuages, plus nombreux quand le ciel est couvert ; ils passent aussi derrière le velux
+    const m = H.ciel.meteo || {}, couvert = m.nuages != null ? m.nuages / 100 : 0.3;
+    const n = Math.round(2 + couvert * 6), large = R.x1 - R.x0 + 240;
+    ctx.fillStyle = moment === "jour" ? "#f3f0dc" : moment === "soir" ? "rgba(255,179,168,0.75)" : "rgba(58,58,168," + (0.25 + couvert * 0.5).toFixed(2) + ")";
+    for (let i = 0; i < n; i++) {
+      const l = 46 + hsh(i, 3) * 50, y = -350 + i * (240 / n) + hsh(i, 9) * 20;
+      const x = R.x0 - 120 + ((t * (0.004 + hsh(i, 5) * 0.006) + hsh(i, 1) * large) % large);
+      arrondi(ctx, x, y, l, 12, 6); ctx.fill();
+      arrondi(ctx, x + l * 0.22, y - 8, l * 0.5, 13, 6.5); ctx.fill();
+    }
+    // Le paysage, comme si on coupait l'île de la ferme en deux, droit à travers la maison, et
+    // qu'on regardait depuis la serre : au loin la mer, les calanques et les montagnes ; derrière,
+    // l'araucaria, le labo et la boîte aux lettres à gauche, la roulotte jaune à droite ; tout près,
+    // les grands pins ; l'île s'arrête à ses bords, coupée comme sur la maquette de la ferme
+    // (l'herbe, la terre rouge, la roche), et la mer autour. Il est dessiné en vrais pixels, case
+    // par case sur la grille des gros pixels (voir paysagePixels), puis on y ajoute ce qui bouge.
     const pa = paysagePixels(R, p, moment);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(pa.toile, pa.x0, pa.y0, pa.toile.width * p, pa.toile.height * p);
     ctx.restore();
-    const cas = (x, y, c, n) => { ctx.fillStyle = c; ctx.fillRect(Math.floor(x / p) * p, Math.floor(y / p) * p, p * (n || 1), p * (n || 1)); };
-    // la nuit : les étoiles qui scintillent (deux dans le velux) et la vraie lune
-    if (moment !== "jour") {
-      const C = 36;
-      for (let i = Math.floor(R.x0 / C); i * C < R.x1; i++) for (let j = Math.floor(R.y0 / C); j * C < PAYS.horizon - 160; j++) {
-        const h = hsh(i, j);
-        if (h > 0.5) continue;
-        const a = moment === "nuit" ? 0.5 + 0.5 * Math.sin(t / 700 + h * 40 + i) : 0.3;
-        cas(i * C + hsh(i + 7, j) * C, j * C + hsh(i, j + 7) * C, "rgba(255,245,230," + a.toFixed(2) + ")", h < 0.05 ? 2 : 1);
-      }
-      for (const [dx, dy, ph] of [[24, 14, 0], [64, 26, 2]]) cas(VELUX.x0 + dx, veluxY(VELUX.x0 + dx) + dy, "rgba(255,245,230," + (moment === "nuit" ? 0.6 + 0.4 * Math.sin(t / 650 + ph) : 0.35).toFixed(2) + ")");
-      if (etat.lune.alt > -2) {
-        const cx = Math.min(R.x1 - 70, LARGE + 160), cy = Math.max(R.y0 + 70, -340), r = 16, k = Math.cos(etat.lune.phase * Math.PI * 2), croit = etat.lune.phase < 0.5;
-        for (let y = -r; y <= r; y += p) for (let x = -r; x <= r; x += p) {
-          const u = x / r, v = y / r;
-          if (u * u + v * v > 1) continue;
-          const bord = Math.sqrt(1 - v * v), eclaire = croit ? u > k * bord : u < -k * bord;
-          cas(cx + x, cy + y, eclaire ? (u + v < -0.6 ? "#fffbe8" : "#f3ecd0") : "rgba(40,44,90,0.85)");
-        }
-      }
-    }
     // les reflets qui scintillent sur la mer
-    ctx.fillStyle = moment === "jour" ? "#f6fbfc" : moment === "soir" ? "#ffd2b0" : "#8a96d8";
+    ctx.fillStyle = moment === "jour" ? "#f3f0dc" : moment === "soir" ? "#ffb3a8" : "#7f97f2";
     for (let i = Math.floor(R.x0 / (p * 9)); i * p * 9 < R.x1; i++) {
       const h = hsh(i, 77), ph = (t / 1400 + h * 7) % 1;
       if (h > 0.45 || ph > 0.35) continue;
-      const x = Math.floor((i * 9 + hsh(i, 78) * 9)) * p, y = Math.floor((PAYS.horizon + 4 + hsh(i, 79) * (SOL_DEHORS - PAYS.horizon - 12)) / p) * p;
+      const x = Math.floor((i * 9 + hsh(i, 78) * 9) * p / p) * p, y = PAYS.horizon + p * (2 + Math.floor(hsh(i, 79) * (PAYS.mer - PAYS.horizon) / p * 0.9));
+      if (x > PAYS.ile.g && x < PAYS.ile.d && y > SOL_DEHORS - 4) continue;
       ctx.fillRect(x, y, p * (2 + Math.floor(h * 6)), p);
     }
     // de temps en temps, un ver de terre creuse sa galerie dans la terre de l'île
@@ -288,9 +304,15 @@
         if (u < 0 || u > 1.5) continue;
         const sens = hsh(k, 14) < 0.5 ? -1 : 1, x0 = g0 + 60 + hsh(k, 12) * Math.max(0, g1 - g0 - 120), y0 = SOL_DEHORS + 36 + hsh(k, 13) * 26;
         const pos = (v) => [x0 + sens * v * 80, y0 + Math.sin(v * 6 + k) * 6 - v * 8];
+        const chemin = (a, b) => { ctx.beginPath(); for (let v = Math.max(0, a), i = 0; v <= b + 1e-6; v += 0.02, i++) { const [x, y] = pos(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
         const tete = Math.min(1, u);
-        for (let v = 0; v <= tete; v += 0.012) { const [x, y] = pos(v); cas(x, y, moment === "jour" ? "#3a2418" : "#120c18"); }
-        if (u < 1.15) for (let v = Math.max(0, tete - 0.2); v <= tete; v += 0.012) { const [x, y] = pos(v); cas(x, y, moment === "nuit" ? "#a86a7a" : "#e88a9a"); }
+        ctx.lineCap = "round";
+        ctx.strokeStyle = moment === "jour" ? "#4b3427" : "#1b1d4a"; ctx.lineWidth = 6; chemin(0, tete); ctx.stroke();
+        if (u < 1.15) {
+          const ondule = Math.sin(t / 160) * 0.015;
+          ctx.strokeStyle = ENCRE; ctx.lineWidth = 5; chemin(tete - 0.2 + ondule, tete); ctx.stroke();
+          ctx.strokeStyle = moment === "nuit" ? "#a86a7a" : "#e88a9a"; ctx.lineWidth = 3; chemin(tete - 0.2 + ondule, tete); ctx.stroke();
+        }
       }
     }
     // les guirlandes : de la maison au premier arbre, puis d'arbre en arbre, en festons
@@ -298,151 +320,139 @@
     const accroches = { g: [[0, 150]], d: [[LARGE, 150]] };
     for (const a of ARBRES) {
       if (!a.pres) continue;
-      accroches[a.x < 280 ? "g" : "d"].push(a.cypres ? [a.x, bas - a.h * 0.62] : a.enY ? [a.x + a.h * 0.04, bas - a.h * 0.78] : [a.x + a.pe, bas - a.h + 4]);
+      accroches[a.x < 0 ? "g" : "d"].push(a.cypres ? [a.x, bas - a.h * 0.62] : a.enY ? [a.x + a.h * 0.04, bas - a.h * 0.78] : [a.x + a.pe, bas - a.h + 4]);
     }
     for (const cote of ["g", "d"]) {
       const pts = accroches[cote].sort((a, b) => (cote === "g" ? b[0] - a[0] : a[0] - b[0]));
-      for (let k = 0; k + 1 < pts.length; k++) guirlande(ctx, pts[k], pts[k + 1], lumBas, t, k, p);
+      for (let k = 0; k + 1 < pts.length; k++) guirlande(ctx, pts[k], pts[k + 1], lumBas, t, k);
     }
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
   }
 
   // --- le paysage en vrais pixels ---------------------------------------------------------------
   // Les repères du paysage (dans le dessin) : l'horizon, la surface de la mer, le fond de l'île,
-  // ses bords ; et les arbres, rangés presque en miroir de chaque côté de la maison (son milieu est
-  // à x = 280) : jamais tout à fait pareils (la hauteur, la pente, la forme varient un peu).
-  const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 96, fond: SOL_DEHORS + 124, ile: { g: -870, d: 1650 }, milieu: LARGE / 2 };
-  const ARBRES = (() => {
-    const liste = [];
-    for (const [d, sorte, h, pres] of [[510, "pin", 360, true], [590, "cypres", 300, true], [690, "pinY", 335, true], [860, "pin", 285, false], [1050, "pin", 260, false], [1260, "pinY", 240, false]]) {
-      for (const s of [-1, 1]) {
-        const x = PAYS.milieu + s * d + (hsh(d, s + 2) - 0.5) * 14, hh = h * (0.94 + hsh(d, s + 5) * 0.12);
-        liste.push(sorte === "cypres" ? { x, h: hh, cypres: true, pres } : { x, h: hh, pres, pe: s * (6 + hsh(d, s) * 10), rx: (pres ? 50 : 40) + hsh(d, s + 9) * 8, enY: sorte === "pinY" });
-      }
-    }
-    return liste;
-  })();
+  // ses bords ; et les arbres tout autour de la maison (les grands pins des guirlandes, les cyprès,
+  // les pins plus loin).
+  const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 96, fond: SOL_DEHORS + 124, ile: { g: -870, d: 1650 } };
+  const ARBRES = [
+    ...[[-300, 300], [LARGE + 104, 320]].map(([x, h]) => ({ x, h, cypres: true, pres: true })),
+    ...[-216, -380, -480, -620, -760, LARGE + 46, LARGE + 170, LARGE + 290, LARGE + 760, LARGE + 900].map((x) => {
+      const pres = x > -400 && x < LARGE + 200;
+      return { x, pres, h: pres ? 330 + hsh(x, 2) * 60 : 230 + hsh(x, 2) * 90, pe: (hsh(x, 4) - 0.5) * 24, rx: (pres ? 46 : 36) + hsh(x, 5) * 12, enY: hsh(x, 9) < 0.45 };
+    }),
+  ];
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+  const RGB = new Map();
+  const rgb = (c) => { let v = RGB.get(c); if (!v) RGB.set(c, (v = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)))); return v; };
   const bruit1 = (x, g) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return hsh(i, g) * (1 - u) + hsh(i + 1, g) * u; };
-  const melC = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-  const lisse = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-  const degrade = (arrets, t) => {
-    t = Math.max(0, Math.min(1, t));
-    for (let k = 1; k < arrets.length; k++) if (t <= arrets[k][0]) { const [t0, c0] = arrets[k - 1], [t1, c1] = arrets[k]; return melC(c0, c1, (t - t0) / (t1 - t0 || 1)); }
-    return arrets[arrets.length - 1][1];
-  };
-  // les couleurs du tableau, selon le moment
-  const TABLEAU = {
-    jour: {
-      ciel: [[0, [22, 48, 122]], [0.5, [48, 104, 190]], [0.82, [118, 178, 230]], [1, [214, 236, 244]]], lueur: [255, 246, 220],
-      feston: { bord: [255, 255, 250], corps: [110, 160, 222], haut: [40, 78, 160] },
-      roche: { base: [96, 82, 78], milieu: [196, 182, 160], lumiere: [250, 244, 228], trait: [46, 38, 52] },
-      mer: [[0, [206, 232, 238]], [0.2, [96, 196, 214]], [1, [16, 104, 156]]], vague: [238, 250, 252],
-      masse: [[0, [46, 98, 56]], [1, [18, 44, 30]]], halo: [176, 226, 146], tronc: [74, 54, 44], troncC: [150, 116, 90],
-      herbe: [70, 150, 70], herbeC: [150, 206, 112], nuit: 0,
-    },
-    soir: {
-      ciel: [[0, [24, 20, 64]], [0.5, [96, 54, 134]], [0.8, [232, 112, 92]], [1, [255, 212, 124]]], lueur: [255, 222, 140],
-      feston: { bord: [255, 196, 156], corps: [164, 92, 146], haut: [56, 32, 86] },
-      roche: { base: [62, 40, 62], milieu: [176, 112, 112], lumiere: [255, 204, 152], trait: [30, 18, 40] },
-      mer: [[0, [255, 204, 152]], [0.25, [156, 92, 142]], [1, [40, 40, 102]]], vague: [255, 214, 172],
-      masse: [[0, [40, 30, 60]], [1, [16, 12, 30]]], halo: [255, 152, 92], tronc: [34, 22, 40], troncC: [120, 70, 70],
-      herbe: [56, 70, 60], herbeC: [150, 110, 90], nuit: 0.45,
-    },
-    nuit: {
-      ciel: [[0, [6, 6, 22]], [0.6, [16, 18, 60]], [1, [42, 52, 112]]], lueur: [64, 74, 146],
-      feston: { bord: [96, 106, 176], corps: [28, 32, 78], haut: [10, 10, 32] },
-      roche: { base: [14, 14, 34], milieu: [42, 46, 94], lumiere: [118, 128, 186], trait: [4, 4, 14] },
-      mer: [[0, [54, 64, 124]], [0.3, [22, 32, 84]], [1, [8, 12, 42]]], vague: [124, 134, 204],
-      masse: [[0, [16, 26, 32]], [1, [6, 10, 16]]], halo: [78, 98, 160], tronc: [10, 10, 18], troncC: [40, 40, 70],
-      herbe: [16, 34, 30], herbeC: [40, 60, 80], nuit: 0.8,
-    },
-  };
+  // ce que le soir et la nuit font aux couleurs du jour (les ampoules des guirlandes restent chaudes)
+  const TEINTE = { soir: { m: [0.66, 0.5, 0.72], a: [26, 8, 40] }, nuit: { m: [0.26, 0.3, 0.55], a: [10, 10, 26] } };
   let cachePaysage = { cle: "" };
   function paysagePixels(R, p, moment) {
     const i0 = Math.floor(R.x0 / p), j0 = Math.floor(R.y0 / p);
     const W = Math.ceil(R.x1 / p) - i0 + 1, Hh = Math.ceil(R.y1 / p) - j0 + 1;
     const cle = [i0, j0, W, Hh, p.toFixed(4), moment].join("|");
     if (cachePaysage.cle === cle) return cachePaysage;
-    const T = TABLEAU[moment];
     const img = new ImageData(W, Hh), d = img.data, brille = new Uint8Array(W * Hh);
     const X = (i) => (i0 + i + 0.5) * p, Y = (j) => (j0 + j + 0.5) * p;
     const I = (x) => Math.floor(x / p) - i0, J = (y) => Math.floor(y / p) - j0;
     const dans = (i, j) => i >= 0 && j >= 0 && i < W && j < Hh;
-    // une couleur [r, g, b] (ou "#rrggbb") ; lum : elle brille par elle-même (ni assombrie ni tramée)
     const pose = (i, j, c, lum) => {
       if (!dans(i, j)) return;
-      if (typeof c === "string") c = [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16));
-      const k = (j * W + i) * 4;
-      d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255;
+      const k = (j * W + i) * 4, v = rgb(c);
+      d[k] = v[0]; d[k + 1] = v[1]; d[k + 2] = v[2]; d[k + 3] = 255;
       brille[j * W + i] = lum ? 1 : 0;
     };
-    // les objets de la ferme, assombris le soir et la nuit (leurs fenêtres, elles, s'allument)
-    const obj = (c) => (typeof c === "string" ? obj([1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16))) : T.nuit ? melC(c, moment === "soir" ? [60, 30, 70] : [8, 8, 24], T.nuit) : c);
-    const H_ = PAYS.horizon, M_ = PAYS.milieu;
-    // 1. le ciel : un grand dégradé, et la bande de lumière juste au-dessus de l'horizon
-    for (let j = 0; j < Math.min(Hh, J(H_) + 1); j++) {
-      const y = Y(j), t = (y - Math.min(R.y0, -420)) / (H_ - Math.min(R.y0, -420));
-      const c = melC(degrade(T.ciel, t), T.lueur, Math.exp(-Math.pow((H_ - y) / 70, 2)) * 0.55);
-      for (let i = 0; i < W; i++) pose(i, j, c);
-    }
-    // 2. les nuages en festons, rangée après rangée (les plus hautes, plus proches, plus grandes),
-    // chaque lobe soufflé du bord clair vers le haut sombre ; presque réguliers, jamais tout à fait
-    const rangees = [];
-    for (let r = 0, y = H_ - 230; y > Math.min(R.y0, -500) - 200; r++, y -= 118 + r * 14) rangees.push({ r, y, P: 150 + r * 46, A: 30 + r * 10, L: 104 + r * 26 });
-    for (const rg of rangees.slice().reverse()) {
-      for (let j = Math.max(0, J(rg.y - rg.L - 4)); j < Math.min(Hh, J(rg.y + rg.A + 2)); j++) {
-        const y = Y(j);
-        for (let i = 0; i < W; i++) {
-          const x = X(i), dx = x - M_ + (rg.r % 2 ? rg.P / 2 : 0), n = Math.floor(dx / rg.P);
-          const u = ((dx - n * rg.P) / rg.P) * 2 - 1, A = rg.A * (0.9 + hsh(n, rg.r) * 0.2), yb = rg.y + A * (1 - u * u);
-          if (y > yb || y < yb - rg.L) continue;
-          const dist = (yb - y) / rg.L;
-          const c = dist < 0.12 ? melC(T.feston.bord, T.feston.corps, lisse(dist / 0.12)) : melC(T.feston.corps, T.feston.haut, lisse((dist - 0.12) / 0.88));
+    const plein = (i, j) => dans(i, j) && d[(j * W + i) * 4 + 3] > 0;
+    const seuil = (i, j) => BAYER[((j + j0) & 3) * 4 + ((i + i0) & 3)];
+    const tram = (i, j, f, a, b) => (f > seuil(i, j) ? b : a);
+    const H_ = PAYS.horizon, unite = (v) => Math.max(1, Math.round(v / p));
+    // les montagnes au loin, bleuies par l'air, l'arête éclairée du côté du soleil
+    for (const [g, haut, corps, arete, ombre] of [[1, 150, "#a8d8ec", "#d6eef7", "#6fb6ee"], [3, 90, "#6fb6ee", "#a8d8ec", "#2f8fe0"]]) {
+      const mont = (x) => H_ - (haut * 0.45 + haut * 0.75 * bruit1(x / 260, g) + haut * 0.25 * bruit1(x / 70, g + 1));
+      for (let i = 0; i < W; i++) {
+        const x = X(i), top = mont(x), pente = mont(x + p) - mont(x - p);
+        for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(H_)); j++) {
+          const prof = Y(j) - top;
+          let c = corps;
+          if (prof < 2.5 * p) c = pente < 0 ? arete : corps;
+          else if (pente > 0.2 * p) c = tram(i, j, Math.min(1, prof / 30), corps, ombre);
+          else if (hsh(i + i0, (j + j0) >> 1) < 0.06) c = arete;
+          if (Y(j) > H_ - 14) c = tram(i, j, (Y(j) - (H_ - 14)) / 14, c, "#d6eef7");
           pose(i, j, c);
         }
       }
     }
-    // 3. les calanques : des pics de calcaire en deux rangées décalées, presque en miroir autour de
-    // la maison, striés de lumière depuis leur sommet (le soleil vient de la gauche)
-    for (const [haut, P, dec, g] of [[170, 270, 0, 1], [118, 320, 160, 2]]) {
-      for (let i = 0; i < W; i++) {
-        const x = X(i), dm = Math.abs(x - M_), n = Math.floor((dm + dec) / P), cx0 = n * P - dec + P / 2;
-        for (const cxm of [cx0, cx0 - P, cx0 + P]) {
-          const sgn = x >= M_ ? 1 : -1, cx = M_ + sgn * cxm, nn = Math.round(cxm / P);
-          const h = haut * (0.86 + hsh(nn, g) * 0.28), demi = P * (0.62 + hsh(nn, g + 3) * 0.08), ex = Math.abs(x - cx) / demi;
-          if (ex >= 1) continue;
-          const sommet = H_ - h, bordY = H_ - h * Math.pow(1 - ex, 1.15);
-          for (let j = Math.max(0, J(sommet)); j < Math.min(Hh, J(H_)); j++) {
-            const y = Y(j);
-            if (y < bordY) continue;
-            const a = Math.atan2(x - cx, y - sommet), stries = 0.5 + 0.5 * Math.sin(a * 16 + nn * 2.3), v = (y - sommet) / h;
-            const cote = (x < cx ? 0.35 : -0.25) * (1 - v);
-            const l = Math.max(0, Math.min(1, (1 - v) * 0.55 + stries * 0.35 * (1 - v * 0.6) + cote));
-            let c = l > 0.5 ? melC(T.roche.milieu, T.roche.lumiere, (l - 0.5) * 2) : melC(T.roche.base, T.roche.milieu, l * 2);
-            if (y - bordY < p * 1.2) c = T.roche.trait;
-            pose(i, j, c);
-          }
-        }
+    // les calanques, à gauche : le calcaire clair en gradins, ses failles, ses strates, la garrigue
+    const cal = (x) => {
+      const k = Math.max(0, Math.min(1, (430 - x) / 160));
+      return H_ - k * (Math.round((50 + 120 * bruit1(x / 230, 5)) / 18) * 18 + 9 * bruit1(x / 26, 6));
+    };
+    for (let i = 0; i < W; i++) {
+      const x = X(i);
+      if (x > 430) continue;
+      const top = cal(x), pente = cal(x + p) - cal(x - p);
+      if (H_ - top < p) continue;
+      for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(H_)); j++) {
+        const y = Y(j), prof = y - top;
+        let c = Math.abs(pente) > 1.5 * p ? (pente > 0 ? "#9a9a9a" : "#f3f0dc") : prof < 4 * p ? "#f3f0dc" : "#e9e3cd";
+        if ((i + i0) % 7 === 0 && hsh(i + i0, 3) < 0.6 && prof > 2 * p) c = "#9a9a9a";
+        else if ((i + i0) % 7 === 1 && hsh(i + i0, 3) < 0.6 && prof > 2 * p) c = "#c9c9c4";
+        if (Math.floor(prof / (3 * p)) % 4 === 3) c = tram(i, j, 0.5, c, "#c9c9c4");
+        if (prof < p * 1.2 && hsh(i + i0, 7) < 0.55) c = hsh(i + i0, 8) < 0.5 ? "#4aa63e" : "#2f6b35";
+        else if (prof < 6 * p && Math.abs(pente) < p && hsh(i + i0, j + j0) < 0.07) c = "#3f8a42";
+        pose(i, j, c);
       }
+      if (hsh(i + i0, 7) < 0.4) pose(i, J(top) - 1, "#4aa63e");
     }
-    // 4. la mer : du pâle à l'horizon au bleu profond, et des vaguelettes qui reviennent en rythme
+    // la mer, jusqu'à l'horizon : des bandes tramées, quelques traits d'écume
+    const MER_C = ["#d6eef7", "#a8d8ec", "#6fb6ee", "#2f8fe0", "#2f8fe0", "#0d8fae"];
     for (let j = Math.max(0, J(H_)); j < Hh; j++) {
-      const y = Y(j), sousEau = y > PAYS.mer, rang = Math.floor((y - H_) / 12);
+      const y = Y(j), sousEau = y > PAYS.mer;
       for (let i = 0; i < W; i++) {
-        const x = X(i);
-        let c = sousEau ? melC(degrade(T.mer, 1), [10, 20, 50], Math.min(1, (y - PAYS.mer) / 120)) : degrade(T.mer, (y - H_) / (PAYS.mer - H_ + 20));
-        if (!sousEau && (j + j0) % 4 === 0) { const ph = ((x + rang * 23) % 46 + 46) % 46; if (ph < 10 + rang * 0.6) c = melC(c, T.vague, 0.6); }
+        if (plein(i, j)) continue;
+        let c;
+        if (!sousEau) {
+          const f = Math.min(0.999, (y - H_) / (PAYS.mer - H_ + 30)) * (MER_C.length - 1), a = Math.floor(f);
+          c = tram(i, j, f - a, MER_C[a], MER_C[a + 1]);
+          if ((j + j0) % 3 === 0 && hsh((i + i0) >> 2, j + j0) < 0.05) c = "#d6eef7";
+        } else c = tram(i, j, Math.min(1, (y - PAYS.mer) / 90), "#0d8fae", "#26406a");
         pose(i, j, c);
       }
     }
-    // --- les petites formes ---
+    // --- les petites formes en pixels ---
     const ovale = (cx, cy, rx, ry, fn) => {
       for (let j = J(cy - ry); j <= J(cy + ry); j++) for (let i = I(cx - rx); i <= I(cx + rx); i++) {
         const dx = (X(i) - cx) / rx, dy = (Y(j) - cy) / ry;
         if (dx * dx + dy * dy <= 1) fn(i, j, dx, dy);
       }
     };
-    const rect = (x, y, w, h, c, lum) => { for (let j = J(y); j < J(y + h); j++) for (let i = I(x); i < I(x + w); i++) pose(i, j, c, lum); };
+    // un feuillage en touffes : de petits paquets d'aiguilles, chacun éclairé en haut à gauche,
+    // sombre en bas à droite (les touffes du fond d'abord, celles du dessus ensuite)
+    const touffes = (cx, cy, rx, ry, graine, lumineux, f) => {
+      // (d'abord le cœur du feuillage, plein et sombre, puis les touffes par-dessus)
+      ovale(cx, cy + ry * 0.1, rx * 0.92, ry * 0.85, (i, j, dx, dy) => {
+        if (lumineux && dy > 0.45) return pose(i, j, "#e9b44c", true);
+        const c = dy > 0.5 ? "#1e3d25" : "#2f6b35";
+        pose(i, j, f ? brume(c, f) : c);
+      });
+      const n = Math.max(6, Math.round((rx * ry) / 14)), liste = [];
+      for (let k = 0; k < n; k++) {
+        const a = hsh(graine, k) * Math.PI * 2, r = Math.sqrt(hsh(graine, k + 99));
+        liste.push([cx + Math.cos(a) * r * (rx - 5), cy + Math.sin(a) * r * (ry - 3), 7 + hsh(graine, k + 7) * 6]);
+      }
+      liste.sort((u, v) => v[1] - u[1]);
+      for (const [x, y, r] of liste) {
+        const haut = (cy - y) / ry;
+        ovale(x, y, r, r * 0.8, (i, j, dx, dy) => {
+          const h = hsh(i + i0, j + j0), e = dx * dx + dy * dy;
+          let c = e > 0.8 && dy > 0 ? "#1e3d25" : dx + dy < -0.7 ? (haut > 0.1 ? "#9cc77a" : "#6cbd5c") : dx + dy < -0.1 ? (h < 0.3 ? "#6cbd5c" : "#4aa63e") : dy > 0.35 ? "#2f6b35" : (h < 0.25 ? "#4aa63e" : "#3f8a42");
+          if (lumineux && haut < -0.3 && dy > 0.2) return pose(i, j, h < 0.5 ? "#e9b44c" : "#ffc46b", true);
+          pose(i, j, f ? brume(c, f) : c);
+        });
+      }
+    };
+    const rect = (x, y, w, h, c) => { for (let j = J(y); j < J(y + h); j++) for (let i = I(x); i < I(x + w); i++) pose(i, j, c); };
     const trait = (x0, y0, x1, y1, ep, fn) => {
       const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / p));
       for (let s = 0; s <= n; s++) {
@@ -450,151 +460,179 @@
         for (let e = -Math.floor(ep / 2); e < Math.ceil(ep / 2); e++) fn(I(x) + e, J(y), e, s / n);
       }
     };
-    const unite = (v) => Math.max(1, Math.round(v / p)), bas = SOL_DEHORS + 2;
-    const fenetre = (x, y, w, h) => rect(x, y, w, h, T.nuit ? [255, 204, 96] : [176, 216, 234], !!T.nuit);
-    // le labo (à gauche) et la roulotte jaune (à droite), au loin, la boîte aux lettres
+    const bas = SOL_DEHORS + 2, brume = (c, f) => { const v = rgb(c), b = rgb("#d6eef7"); return "#" + v.map((x, k) => Math.round(x + (b[k] - x) * f).toString(16).padStart(2, "0")).join(""); };
+    // l'araucaria, derrière la maison : un tronc droit et ses étages de branches bien fournis
     {
-      const x = -640, w = 230, hm = 160;
-      rect(x + 150, bas - hm - 118, 18, 70, obj("#2c2a3e"));
-      for (let j = J(bas - hm); j < J(bas); j++) for (let i = I(x); i < I(x + w); i++) pose(i, j, obj(melC([110, 180, 100], [60, 120, 70], (Y(j) - (bas - hm)) / hm)));
-      for (let j = J(bas - hm - 92); j < J(bas - hm + 4); j++) {
-        const y = Y(j), u = (bas - hm + 4 - y) / 96, demi = (w / 2 + 18) * (1 - u);
-        for (let i = I(x + w / 2 - demi); i < I(x + w / 2 + demi); i++) pose(i, j, obj(melC([232, 120, 80], [170, 70, 50], u)));
+      const x = -64, h = 760, f = 0.22;
+      trait(x, bas, x, bas - h, unite(9), (i, j, e) => pose(i, j, brume(e < 0 ? "#9a6a3c" : e > 0 ? "#4b3427" : "#7a4520", f)));
+      // des étages de branches, l'un sur deux décalé : chaque branche part du tronc, pend un peu,
+      // et porte des touffes d'aiguilles de plus en plus grosses vers le bout, qui remonte
+      for (let k = 0; k < 14; k++) {
+        const u = k / 13, y = bas - h * (0.22 + 0.76 * u), L = (150 * (1 - u * 0.78) + 20) * (0.85 + hsh(k, 61) * 0.3);
+        for (const s of [-1, 1]) {
+          const tombe = 18 + hsh(k, s + 63) * 14;
+          trait(x, y, x + s * L * 0.9, y + tombe * 0.7, 1, (i, j) => pose(i, j, brume("#4b3427", f)));
+          for (let q = 0.25; q <= 1.0001; q += 0.16) {
+            const bx = x + s * q * L, by = y + Math.sin(q * Math.PI * 0.8) * tombe - (q > 0.85 ? (q - 0.85) * 40 : 0);
+            touffes(bx, by, 9 + q * 9, 6 + q * 4, k * 31 + Math.round(q * 10) + s * 7, false, f);
+          }
+        }
       }
-      rect(x + 140, bas - 98, 42, 98, obj("#e9b44c")); fenetre(x + 36, bas - hm + 40, 54, 40);
+      touffes(x, bas - h - 6, 12, 20, 999, false, f);
     }
-    rect(-522, bas - 64, 6, 64, obj("#7a4520")); rect(-538, bas - 90, 38, 28, obj("#3d5ee8"));
+    // le labo, derrière à gauche : planches vertes, toit de tuiles, porte jaune, cheminée
     {
-      const x = 1040, w = 300, hb = 150, y0 = bas - 44 - hb;
-      for (let j = J(y0); j < J(y0 + hb); j++) for (let i = I(x - w / 2); i < I(x + w / 2); i++) pose(i, j, obj(melC([250, 204, 96], [200, 150, 58], (Y(j) - y0) / hb)));
-      ovale(x, y0 + 4, w / 2 + 16, 64, (i, j, dx, dy) => { if (dy <= 0) pose(i, j, obj(melC([236, 122, 80], [176, 80, 52], 1 + dy))); });
-      rect(x + 48, y0 + 38, 52, hb - 38, obj("#3d5ee8")); fenetre(x - 94, y0 + 44, 66, 44);
-      for (const dx of [-92, 92]) ovale(x + dx, bas - 26, 26, 26, (i, j, ux, uy) => pose(i, j, obj(ux * ux + uy * uy > 0.55 ? "#2c2a3e" : "#4b3427")));
+      const x = -640, w = 230, hm = 160, f = 0.18, b = (c) => brume(c, f);
+      rect(x + 150, bas - hm - 118, 18, 70, b("#2c2a3e"));
+      for (let j = J(bas - hm); j < J(bas); j++) for (let i = I(x); i < I(x + w); i++) pose(i, j, b(Math.floor((Y(j) - (bas - hm)) / 12) % 2 ? "#6cbd5c" : "#4aa63e"));
+      for (let j = J(bas - hm - 92); j < J(bas - hm + 4); j++) {
+        const y = Y(j), dy = (bas - hm + 4 - y) / 96, demi = (w / 2 + 18) * (1 - dy);
+        for (let i = I(x + w / 2 - demi); i < I(x + w / 2 + demi); i++) pose(i, j, b(Math.floor((y - (bas - hm - 92)) / 10) % 2 ? "#e8714a" : "#b2552e"));
+      }
+      rect(x + 140, bas - 98, 42, 98, b("#e9b44c")); rect(x + 172, bas - 54, 5, 5, b("#2c2a3e"));
+      rect(x + 30, bas - hm + 34, 66, 52, b("#c49a6c")); rect(x + 36, bas - hm + 40, 54, 40, b("#a8d8ec")); rect(x + 62, bas - hm + 40, 3, 40, b("#c49a6c"));
+      rect(x + 40, bas - hm + 44, 8, 3, b("#f3f0dc"));
     }
-    // le petit porche devant la porte : la terrasse, deux poteaux, l'auvent, le bois sec rangé
+    // la boîte aux lettres bleue, sur son piquet
+    rect(-522, bas - 64, 6, 64, "#7a4520"); rect(-538, bas - 90, 38, 28, "#3d5ee8"); rect(-538, bas - 90, 38, 4, "#7f97f2"); rect(-504, bas - 104, 4, 16, "#ff5b4f");
+    // la roulotte jaune des flashcartes, derrière à droite, sur ses roues
+    {
+      const x = 1040, w = 300, hb = 150, y0 = bas - 44 - hb, f = 0.1, b = (c) => brume(c, f);
+      for (let j = J(y0); j < J(y0 + hb); j++) for (let i = I(x - w / 2); i < I(x + w / 2); i++) pose(i, j, b(Y(j) > y0 + hb - 14 ? "#c99a3a" : (i + i0) % unite(30) === 0 ? "#c99a3a" : "#e9b44c"));
+      ovale(x, y0 + 4, w / 2 + 16, 64, (i, j, dx, dy) => { if (dy <= 0) pose(i, j, b(Math.floor((dx + 1) * 7) % 2 ? "#e8714a" : "#b2552e")); });
+      rect(x + 48, y0 + 38, 52, hb - 38, b("#3d5ee8")); rect(x + 54, y0 + 46, 40, 30, b("#7f97f2")); rect(x + 88, y0 + 96, 5, 5, b("#e9b44c"));
+      rect(x - 100, y0 + 38, 78, 56, b("#c49a6c")); rect(x - 94, y0 + 44, 66, 44, b("#a8d8ec")); rect(x - 90, y0 + 48, 10, 4, b("#f3f0dc"));
+      for (const dx of [-92, 92]) {
+        ovale(x + dx, bas - 26, 26, 26, (i, j, ux, uy) => pose(i, j, b(ux * ux + uy * uy > 0.55 ? "#2c2a3e" : ux * ux + uy * uy < 0.12 ? "#c49a6c" : (Math.abs(ux) < 0.12 || Math.abs(uy) < 0.12) ? "#7a4520" : "#4b3427")));
+      }
+    }
+    // le petit porche devant la porte, à gauche de la maison : la terrasse en planches, deux
+    // poteaux, l'auvent de tuiles, et le bois sec rangé contre le mur, à l'abri
     {
       const m = -10, x0 = -184, haut = (x) => 326 + ((m - x) * 26) / (m - x0);
-      for (let j = J(504); j < J(bas); j++) for (let i = I(x0); i < I(m); i++) pose(i, j, obj(((X(i) - x0) % 15 < p) ? [154, 106, 60] : [196, 154, 108]));
-      for (const x of [-178, -104]) rect(x, haut(x) + 2, 8, 504 - haut(x) - 2, obj("#9a6a3c"));
-      for (let i = I(x0 - 8); i < I(m); i++) { const y = haut(X(i)); for (let j = J(y - 10); j < J(y + 5); j++) pose(i, j, obj(Y(j) < y - 5 ? [222, 112, 74] : Y(j) < y ? [178, 85, 46] : [196, 154, 108])); }
+      for (let j = J(504); j < J(SOL_DEHORS + 2); j++) for (let i = I(x0); i < I(m); i++) {
+        const x = X(i), y = Y(j), lame = Math.floor((x - x0) / 15);
+        let c = y > SOL_DEHORS - 3 ? "#7a4520" : lame % 2 ? "#b9834f" : "#c49a6c";
+        if ((x - x0) % 15 < p) c = "#9a6a3c";
+        if (y < 504 + p) c = "#e9c99a";
+        pose(i, j, c);
+      }
+      for (const x of [-178, -104]) { rect(x, haut(x) + 2, 8, 504 - haut(x) - 2, "#9a6a3c"); rect(x, haut(x) + 2, 3, 504 - haut(x) - 2, "#c49a6c"); }
+      for (let i = I(x0 - 8); i < I(m); i++) {
+        const y = haut(X(i));
+        for (let j = J(y - 10); j < J(y + 5); j++) {
+          const yy = Y(j);
+          pose(i, j, yy < y - 5 ? (((i + i0) >> 1) % 2 ? "#e8714a" : "#c96a3a") : yy < y ? "#b2552e" : "#c49a6c");
+        }
+      }
       for (let r = 0; r < 5; r++) for (let k = 0; k < 5; k++) {
         const cx = -84 + k * 15 + (r % 2) * 7, cy = 496 - r * 13;
         if (cx > -20 || (r === 4 && k > 2)) continue;
-        ovale(cx, cy, 7.5, 6.5, (i, j, dx, dy) => { const e = dx * dx + dy * dy; pose(i, j, obj(e > 0.62 ? [122, 69, 32] : e > 0.14 ? [233, 201, 154] : [196, 154, 108])); });
-      }
-    }
-    // 5. l'île coupée : l'herbe, la terre rouge, la terre et ses cailloux, la roche, ses bords
-    const { g: IG, d: ID } = PAYS.ile, F = PAYS.fond;
-    const bordIle = (x, y) => (x < (IG + ID) / 2 ? IG + (y - SOL_DEHORS) * 0.18 : ID - (y - SOL_DEHORS) * 0.18);
-    for (let i = 0; i < W; i++) {
-      const x = X(i);
-      if (x < IG || x > ID) continue;
-      for (let j = Math.max(0, J(SOL_DEHORS)); j < Hh; j++) {
-        const y = Y(j), fondIci = F + hsh(Math.floor(x / 24), 7) * 10;
-        if (y > fondIci) break;
-        if ((x < (IG + ID) / 2 && x < bordIle(x, y)) || (x >= (IG + ID) / 2 && x > bordIle(x, y))) continue;
-        const prof = y - SOL_DEHORS;
-        let c;
-        if (prof < 2 * p) c = T.herbe;
-        else if (prof < 18) c = obj(melC([226, 120, 70], [176, 84, 48], prof / 18));
-        else if (prof < 74) c = obj(melC([150, 98, 58], [90, 56, 36], (prof - 18) / 56));
-        else c = obj(melC([170, 168, 170], [96, 92, 104], (prof - 74) / 50));
-        if (y > PAYS.mer) c = melC(c, [20, 40, 80], 0.45);
-        pose(i, j, c);
-      }
-      const hT = hsh(i + i0, 31) < 0.45 ? 1 : hsh(i + i0, 31) < 0.8 ? 2 : 3, js = J(SOL_DEHORS);
-      for (let k = 1; k <= hT; k++) pose(i, js - k, k === hT ? T.herbeC : T.herbe);
-    }
-    for (let ci = Math.floor(Math.max(R.x0, IG) / 30); ci * 30 < Math.min(R.x1, ID); ci++) for (let cj = 0; cj < 3; cj++) {
-      if (hsh(ci, cj + 50) > 0.45) continue;
-      const cx = ci * 30 + hsh(ci, cj + 51) * 30, cy = SOL_DEHORS + 24 + cj * 16 + hsh(ci, cj + 52) * 10, rr = 4 + hsh(ci, cj + 53) * 5;
-      ovale(cx, cy, rr * 1.4, rr, (i, j, dx, dy) => pose(i, j, obj(melC([206, 202, 196], [90, 84, 90], lisse((dx + dy + 1.2) / 2.4)))));
-    }
-    // 6. la garrigue : des buissons ronds, sombres, bordés de lumière, en rythme le long du sol
-    for (let k = -30; k <= 30; k++) {
-      for (const s of [-1, 1]) {
-        if (k === 0 && s === 1) continue;
-        const x = M_ + s * (330 + Math.abs(k) * 46) + (hsh(k, s + 20) - 0.5) * 12;
-        if (x < IG + 30 || x > ID - 30 || x < R.x0 - 40 || x > R.x1 + 40 || hsh(k, s + 21) > 0.7) continue;
-        const r = 14 + hsh(k, s + 23) * 8;
-        ovale(x, bas - r * 0.6, r, r * 0.62, (i, j, dx, dy) => {
-          const bordH = dy < 0 && dx * dx + dy * dy > 0.62;
-          pose(i, j, bordH ? T.halo : degrade(T.masse, (dy + 1) / 2));
+        ovale(cx, cy, 7.5, 6.5, (i, j, dx, dy) => {
+          const e = dx * dx + dy * dy;
+          pose(i, j, e > 0.62 ? "#7a4520" : e > 0.3 ? "#e9c99a" : e > 0.14 ? "#c49a6c" : dx + dy < 0 ? "#f3f0dc" : "#e9c99a");
         });
       }
     }
-    // 7. les arbres : de grandes silhouettes sombres bordées de lumière ; le soir, les ampoules des
-    // guirlandes éclairent le dessous des pins près de la maison
-    const nuitLum = moment !== "jour";
-    const houppier = (cx, cy, rx, ry, lum) => {
-      // une ombrelle aux lobes réguliers sur le dessus, presque symétrique
-      const lobes = 7;
-      ovale(cx, cy, rx, ry * 1.25, (i, j, dx, dy) => {
-        const x = X(i), y = Y(j), u = (x - cx) / rx;
-        const dessus = cy - ry * (0.55 + 0.45 * Math.sqrt(Math.max(0, 1 - u * u))) - Math.abs(Math.sin((u + 1) * Math.PI * lobes / 2)) * ry * 0.28;
-        const dessous = cy + ry * (0.35 + 0.15 * Math.cos(u * 6));
-        if (y < dessus || y > dessous) return;
-        const v = (y - dessus) / (dessous - dessus);
-        if (lum && v > 0.72) return pose(i, j, melC([255, 200, 110], [255, 150, 70], (v - 0.72) / 0.28), true);
-        pose(i, j, y - dessus < p * 1.6 ? T.halo : degrade(T.masse, v));
+    // l'île : l'herbe en touffes, la terre rouge, la terre et ses cailloux, la roche en pavés, les bords
+    const { g: IG, d: ID } = PAYS.ile, F = PAYS.fond;
+    const bord = (x, y) => (x < (IG + ID) / 2 ? IG + (y - SOL_DEHORS) * 0.18 + hsh(Math.floor(y / 9), 5) * 6 : ID - (y - SOL_DEHORS) * 0.18 - hsh(Math.floor(y / 9), 6) * 6);
+    for (let i = 0; i < W; i++) {
+      const x = X(i), xi = i + i0;
+      if (x < IG || x > ID) continue;
+      for (let j = Math.max(0, J(SOL_DEHORS)); j < Hh; j++) {
+        const y = Y(j);
+        const fondIci = F + hsh(Math.floor(x / 24), 7) * 10;
+        if (y > fondIci) break;
+        if ((x < (IG + ID) / 2 && x < bord(x, y)) || (x >= (IG + ID) / 2 && x > bord(x, y))) continue;
+        const prof = y - SOL_DEHORS, h = hsh(xi, j + j0);
+        let c;
+        if (prof < 2 * p) c = h < 0.2 ? "#2f6b35" : "#3f8a42";
+        else if (prof < 18) c = h < 0.12 ? "#7a4520" : h < 0.45 ? "#e8714a" : h < 0.9 ? "#c96a3a" : "#9a6a3c";
+        else if (prof < 74) c = h < 0.18 ? "#4b3427" : h < 0.6 ? "#9a6a3c" : "#7a4520";
+        else {
+          // la roche, en pavés gris séparés de joints sombres
+          const r = Math.floor((prof - 74) / (3 * p)), dec = r % 2 ? 2 : 0, col = Math.floor((xi + dec) / 5);
+          const joint = (j + j0) % 3 === 0 || (xi + dec) % 5 === 0;
+          c = joint ? "#4b3427" : hsh(col, r) < 0.5 ? "#9a9a9a" : "#c9c9c4";
+        }
+        if (y > PAYS.mer) c = tram(i, j, 0.5, c, "#26406a");
+        pose(i, j, c);
+      }
+      // les touffes d'herbe au-dessus du sol
+      const hT = hsh(xi, 31) < 0.45 ? 1 : hsh(xi, 31) < 0.8 ? 2 : 3, js = J(SOL_DEHORS);
+      for (let k = 1; k <= hT; k++) pose(i, js - k, k === hT ? (hsh(xi, 33) < 0.5 ? "#9cc77a" : "#6cbd5c") : "#4aa63e");
+    }
+    // les cailloux dans la terre, avec leur reflet et leur ombre
+    for (let ci = Math.floor(Math.max(R.x0, IG) / 30); ci * 30 < Math.min(R.x1, ID); ci++) for (let cj = 0; cj < 3; cj++) {
+      if (hsh(ci, cj + 50) > 0.45) continue;
+      const cx = ci * 30 + hsh(ci, cj + 51) * 30, cy = SOL_DEHORS + 24 + cj * 16 + hsh(ci, cj + 52) * 10, rr = 4 + hsh(ci, cj + 53) * 5;
+      ovale(cx, cy, rr * 1.4, rr, (i, j, dx, dy) => pose(i, j, dx * dx + dy * dy > 0.7 ? "#4b3427" : dx + dy < -0.6 ? "#c9c9c4" : "#9a9a9a"));
+    }
+    // les racines des grands pins, qui descendent dans la terre
+    for (const a of ARBRES) {
+      if (a.cypres || a.x < IG || a.x > ID) continue;
+      for (let r = 0; r < 4; r++) {
+        let x = a.x + (r - 1.5) * 4, y = bas + 2;
+        const dir = (r - 1.5) * 0.5;
+        for (let s = 0; s < 14; s++) {
+          const nx = x + dir * 5 + (hsh(a.x + r, s) - 0.5) * 6, ny = y + 4;
+          trait(x, y, nx, ny, 1, (i, j) => pose(i, j, s % 3 ? "#4b3427" : "#7a4520"));
+          x = nx; y = ny;
+        }
+      }
+    }
+    // la garrigue, le long du sol : romarin, lentisque, lavande
+    for (let x = Math.floor(R.x0 / 23) * 23; x < R.x1; x += 23) {
+      if (x < IG + 30 || x > ID - 30 || (x > -200 && x < LARGE + 40) || hsh(x, 21) > 0.6) continue;
+      const sorte = Math.floor(hsh(x, 22) * 3), r = 10 + hsh(x, 23) * 10;
+      const T = [["#9cc77a", "#4aa63e", "#2f6b35"], ["#a8d8ec", "#7f97f2", "#3a3aa8"], ["#9cc77a", "#3f8a42", "#1e3d25"]][sorte];
+      ovale(x, bas - r * 0.55, r, r * 0.6, (i, j, dx, dy) => {
+        let c = dy < -0.45 || dx < -0.6 ? T[0] : dy > 0.4 || dx > 0.6 ? T[2] : T[1];
+        if (hsh(i + i0, j + j0) < 0.18) c = T[0];
+        if (sorte === 1 && dy < -0.3 && hsh(i + i0, j + j0 + 9) < 0.3) c = "#8a58cc";
+        pose(i, j, c);
       });
-    };
-    const ecorce = (i, j, e) => pose(i, j, e < 0 ? T.troncC : T.tronc);
-    const arbres = ARBRES.filter((a) => a.x > IG + 20 && a.x < ID - 20 && a.x > R.x0 - 160 && a.x < R.x1 + 160).sort((a, b) => b.h - a.h);
-    for (const a of arbres) {
+    }
+    // les arbres, au premier plan ; le soir, le dessous des pins des guirlandes brille
+    const nuitLum = moment !== "jour";
+    const couronne = (cx, cy, rx, ry, lumineux) => touffes(cx, cy, rx, ry, Math.round(cx * 7 + cy), lumineux);
+    for (const a of ARBRES) {
+      if (a.x < IG + 20 || a.x > ID - 20 || a.x < R.x0 - 120 || a.x > R.x1 + 120) continue;
       const lum = nuitLum && a.pres;
       if (a.cypres) {
         for (let j = J(bas - a.h); j < J(bas); j++) {
-          const y = Y(j), u = (bas - y) / a.h, demi = 16 * Math.sin(Math.min(1, u * 1.15) * Math.PI) * (u > 0.8 ? 0.9 : 1) + 3;
+          const y = Y(j), u = (bas - y) / a.h, demi = 15 * Math.sin(Math.min(1, u * 1.15) * Math.PI) * (u > 0.8 ? 0.9 : 1) + 3;
           for (let i = I(a.x - demi); i <= I(a.x + demi); i++) {
-            const dx = (X(i) - a.x) / demi;
-            pose(i, j, dx < -0.72 ? T.halo : degrade(T.masse, (dx + 1) / 2));
+            const dx = (X(i) - a.x) / demi, h = hsh(i + i0, j + j0);
+            pose(i, j, dx < -0.4 ? (h < 0.4 ? "#4aa63e" : "#3f8a42") : dx > 0.45 ? "#1e3d25" : h < 0.15 ? "#3f8a42" : "#2f6b35");
           }
         }
-        if (lum) ovale(a.x, bas - a.h * 0.62 + 6, 14, 6, (i, j, dx, dy) => { if (dy > 0) pose(i, j, [255, 196, 100], true); });
+        if (lum) ovale(a.x, bas - a.h * 0.62 + 6, 14, 6, (i, j, dx, dy) => { if (dy > 0) pose(i, j, "#e9b44c", true); });
         continue;
       }
+      const ecorce = (i, j, e) => pose(i, j, e < 0 ? "#9a6a3c" : e > 0 ? "#4b3427" : "#7a4520");
       if (a.enY) {
         const t = a.h * 1.05, fx = a.x + t * 0.04, fy = bas - t * 0.42;
         trait(a.x, bas, fx, fy, unite(8), ecorce);
         for (const [cx, cy, l] of [[a.x - t * 0.3, bas - t * 0.84, 0.3], [a.x + t * 0.34, bas - t * 0.92, 0.34]]) {
-          trait(fx, fy, cx, cy + t * 0.04, unite(6), ecorce);
-          houppier(cx, cy, t * l * 1.1, t * 0.1, lum);
+          trait(fx, fy, cx, cy + t * 0.02, unite(6), ecorce);
+          for (const [dx, ry, rr] of [[-0.5, 0.07, 0.45], [0, 0.09, 0.55], [0.48, 0.07, 0.45]]) couronne(cx + dx * t * l, cy, t * l * rr, ry * t, lum);
         }
         continue;
       }
-      for (let k = 0; k <= 20; k++) {
-        const u = k / 20, x = a.x + a.pe * 0.4 * 2 * u * (1 - u) + a.pe * u * u, y = bas - a.h * u;
-        trait(x, y, x, y + a.h / 20 + 1, unite(9), ecorce);
+      const tx = a.x + a.pe, ty = bas - a.h;
+      for (let s = 0; s <= 20; s++) {
+        const u = s / 20, x = a.x + a.pe * 0.4 * 2 * u * (1 - u) + a.pe * u * u, y = bas - a.h * u;
+        trait(x, y, x, y + a.h / 20 + 1, unite(8), ecorce);
       }
-      houppier(a.x + a.pe, bas - a.h + 10, a.rx * 1.3, 34, lum);
+      for (const [dx, dy, rx, ry] of [[-0.6, 6, 0.7, 17], [0.55, 9, 0.75, 18], [0, -6, 0.72, 16], [-0.1, 12, 0.95, 14]]) couronne(tx + dx * a.rx, ty + dy, a.rx * rx, ry, lum);
     }
-    // 8. l'araucaria, derrière la maison, son feuillage bien éclairé, devant ses voisins : un tronc
-    // droit et des étages réguliers de branches, chacun soufflé du vert clair au vert sombre
-    {
-      // (le soir et la nuit, son feuillage reste visible : il s'assombrit moitié moins que le reste)
-      const obj = (c) => (T.nuit ? melC(c, moment === "soir" ? [60, 30, 70] : [14, 16, 40], T.nuit * 0.55) : c);
-      const x = -64, h = 760;
-      trait(x, bas, x, bas - h, unite(9), (i, j, e) => pose(i, j, obj(e < 0 ? [150, 110, 80] : [80, 56, 40])));
-      const vertClair = melC([150, 210, 120], T.halo, 0.3), vertSombre = degrade(T.masse, 0.2);
-      for (let k = 0; k < 14; k++) {
-        const u = k / 13, y = bas - h * (0.2 + 0.78 * u), L = (150 * Math.pow(1 - u, 0.8) + 22) * (0.94 + hsh(k, 61) * 0.12);
-        ovale(x, y + 8, L, 13 + (1 - u) * 6, (i, j, dx, dy) => {
-          const xx = X(i), bout = Math.abs(xx - x) / L, yy = Y(j), creux = Math.abs(Math.sin(bout * Math.PI * 5)) * 4;
-          if (dy < -0.2 && yy < y + 8 - (13 + (1 - u) * 6) * 0.2 - creux * (1 - bout)) return;
-          const c = obj(melC(vertClair, vertSombre, lisse((dy + 1) / 2)));
-          pose(i, j, dy > 0.65 ? obj(T.masse[1][1]) : c);
-        });
-      }
-      ovale(x, bas - h - 8, 9, 24, (i, j, dx, dy) => pose(i, j, obj(melC(vertClair, vertSombre, (dy + 1) / 2))));
-    }
-    // le grain de la photo argentique : chaque couleur ramenée sur quelques niveaux, avec une trame
-    // fine (ce qui brille par soi-même reste net)
-    const N = 13, pas = 255 / (N - 1);
-    for (let q = 0, k = 0; q < W * Hh; q++, k += 4) {
+    // le soir et la nuit, tout se teinte (sauf ce qui brille)
+    const te = TEINTE[moment];
+    if (te) for (let q = 0, k = 0; q < W * Hh; q++, k += 4) {
       if (!d[k + 3] || brille[q]) continue;
-      const i = q % W, j = Math.floor(q / W), o = BAYER[((j + j0) & 3) * 4 + ((i + i0) & 3)] - 0.5;
-      for (let c = 0; c < 3; c++) d[k + c] = Math.max(0, Math.min(255, Math.round(d[k + c] / pas + o) * pas));
+      for (let c = 0; c < 3; c++) d[k + c] = Math.min(255, d[k + c] * te.m[c] + te.a[c]);
     }
     const toile = document.createElement("canvas");
     toile.width = W; toile.height = Hh;
@@ -602,25 +640,27 @@
     cachePaysage = { cle, toile, x0: i0 * p, y0: j0 * p };
     return cachePaysage;
   }
-  // une guirlande tendue entre deux accroches, qui pend un peu (case par case) ; le soir, ses
-  // ampoules s'allument et rayonnent
-  function guirlande(ctx, [x0, y0], [x1, y1], allumee, t, k, p) {
-    p = p || 2;
+  // une guirlande tendue entre deux accroches, qui pend un peu ; le soir, ses ampoules s'allument
+  function guirlande(ctx, [x0, y0], [x1, y1], allumee, t, k) {
     const creux = 18 + Math.abs(x1 - x0) * 0.08, mx = (x0 + x1) / 2, my = (y0 + y1) / 2 + creux * 2;
     const pt = (u) => [(1 - u) * (1 - u) * x0 + 2 * u * (1 - u) * mx + u * u * x1, (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * my + u * u * y1];
-    const cas = (x, y, c, n) => { ctx.fillStyle = c; ctx.fillRect(Math.floor(x / p) * p, Math.floor(y / p) * p, p * (n || 1), p * (n || 1)); };
-    const L = Math.hypot(x1 - x0, y1 - y0) + creux, pasFil = p / L;
-    for (let u = 0; u <= 1; u += pasFil) { const [x, y] = pt(u); cas(x, y, allumee ? "#1a1424" : "#3a3048"); }
-    const n = Math.max(3, Math.round(L / 13));
+    ctx.strokeStyle = "#2c2a3e"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx, my, x1, y1); ctx.stroke();
+    const n = Math.max(3, Math.round(Math.hypot(x1 - x0, y1 - y0) / 13));
     for (let i = 1; i < n; i++) {
       const [x, y] = pt(i / n);
       if (allumee) {
         const a = 0.75 + 0.25 * Math.sin(t / 500 + i * 1.7 + k);
-        ctx.fillStyle = "rgba(255,210,110," + (0.22 * a).toFixed(2) + ")";
-        ctx.fillRect(Math.floor(x / p) * p - p * 2, Math.floor(y / p) * p - p, p * 5, p * 5);
-        cas(x, y + p, "#fff06a"); cas(x, y + 2 * p, "#ffc46b");
-      } else cas(x, y + p, "#e9e3cd");
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        const g = ctx.createRadialGradient(x, y + 2, 0, x, y + 2, 9);
+        g.addColorStop(0, "rgba(255,210,110," + (0.45 * a).toFixed(2) + ")"); g.addColorStop(1, "rgba(255,210,110,0)");
+        ctx.fillStyle = g; ctx.fillRect(x - 9, y - 7, 18, 18);
+        ctx.restore();
+        ctx.fillStyle = "#fff06a";
+      } else ctx.fillStyle = "#e9e3cd";
+      ctx.fillRect(x - 1.3, y + 0.5, 2.6, 3);
     }
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
   }
   // les vitres de la maison (le dehors proche, derrière la baie et la petite fenêtre)
   function fenetresDehors(m, t, moment, etat) {
@@ -628,13 +668,11 @@
   }
   // Poser une image : le dehors d'abord, puis la maison peinte (M) par-dessus. Rend ce qu'on voit
   // du dehors, et laisse la toile dans le repère du dessin.
-  function poserMaison(ctx, v, t, moment, etat, M, palette) {
+  function poserMaison(ctx, v, t, moment, etat, M) {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, v.W, v.Hc);
     mondeRepere(ctx, v);
     const R = { x0: BOITE.x - v.px / v.K, y0: BOITE.y - v.py / v.K, x1: BOITE.x + (v.W - v.px) / v.K, y1: BOITE.y + (v.Hc - v.py) / v.K };
     dehorsMonde(ctx, t, moment, etat, R, v.taille / v.K);
-    // la maison en gros pixels aux couleurs du jeu (le paysage, lui, garde toutes ses nuances)
-    H.retro.appliquer(M, v.taille, 0.6, null, palette);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(M, v.px, v.py);
     mondeRepere(ctx, v);
     return R;
@@ -2211,7 +2249,9 @@
       // les enceintes : quand la musique joue, les membranes battent
       if (H.musique && H.musique.enCours()) membranes(m, t);
       // le dehors tout autour, la maison par-dessus
-      const R = poserMaison(ctx, v, t, moment, etat, M, paletteMaison(moment, false));
+      const R = poserMaison(ctx, v, t, moment, etat, M);
+      // de gros pixels aux couleurs des pochettes ; le nom survolé reste net, par-dessus
+      H.retro.appliquer(toile, v.taille, 0.6, null, paletteMaison(moment, false));
       mondeRepere(ctx, v);
       // le nom de ce qu'on survole
       if (survol) {
@@ -3569,7 +3609,7 @@
       }
       m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.drawImage(calque, 0, 0); m.restore();
       // le dehors tout autour, la maison par-dessus
-      poserMaison(ctx, v, t, "nuit", etat, M, paletteMaison("nuit", true));
+      poserMaison(ctx, v, t, "nuit", etat, M);
 
       // de temps en temps, Mémé ronfle : un petit « rrr » s'envole
       if (t > prochainRonflement) {
@@ -3586,7 +3626,7 @@
         ctx.globalAlpha = 1;
       }
       // tout passe en gros pixels, aux couleurs des pochettes
-      // (la maison est déjà passée en gros pixels, le paysage garde ses nuances)
+      H.retro.appliquer(toile, grosPixel(), 0.6, null, paletteMaison("nuit", true));
     }
     requestAnimationFrame(image);
   }

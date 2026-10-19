@@ -1430,14 +1430,13 @@
   function majHeureMeteo() {
     if (!scene) return;
     const m = H.ciel.meteo, lieu = (H.jeu.lieu && H.jeu.lieu.nom) || "Marseille";
-    const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    // l'heure, la température, l'humidité, le ciel, la phase de la lune, le signe et le degré de la
+    // la température, l'humidité, le ciel, la phase de la lune, le signe et le degré de la
     // Lune (la nuit) ou du Soleil (le jour), et le lieu
     // la nuit, la Lune dans son signe ; le jour, le Soleil dans le sien
     const e = H.ciel.etat(), jour = e.soleil.alt > 0, z = jour ? H.ciel.signeSoleil() : H.ciel.signeLune();
     // (la phase de la lune seulement la nuit)
     const lune = (jour ? "" : H.ciel.nomPhase(e.lune.phase) + " · ") + (jour ? "Soleil" : "Lune") + " en " + z.signe + " " + z.degre + "°";
-    scene.heureMeteo.textContent = [heure, m && m.temperature != null ? m.temperature + " °C" : null, m && m.humidite != null ? m.humidite + " % d’humidité" : null,
+    scene.heureMeteo.textContent = [m && m.temperature != null ? m.temperature + " °C" : null, m && m.humidite != null ? m.humidite + " % d’humidité" : null,
       m && m.libelle ? m.libelle.toLowerCase() : null, lune, lieu].filter(Boolean).join(" · ");
   }
   H.sur("meteo", majHeureMeteo);
