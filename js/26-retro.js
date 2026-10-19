@@ -62,7 +62,7 @@
   // dégradés en paliers) à 1 (la trame habituelle)
   // defile : { x, depuis } fait glisser la trame avec le décor, sous la ligne « depuis » (de 0 à 1),
   // pour qu'un sol qui défile emporte ses petits points avec lui
-  function appliquer(toile, taille, trame, defile, enPlus) {
+  function appliquer(toile, taille, trame, defile, enPlus, cible) {
     const forceTrame = trame == null ? 1 : trame;
     actuel = jeu(enPlus);
     const W = toile.width, Hh = toile.height;
@@ -101,6 +101,13 @@
         d[i + 2] = c[2];
         d[i + 3] = 255;
       }
+    }
+    // (la petite image, déjà en gros pixels, posée telle quelle dans une autre toile que l'écran
+    // agrandit : bien plus léger pour une tablette que de repeindre une grande toile)
+    if (cible) {
+      if (cible.width !== sw || cible.height !== sh) { cible.width = sw; cible.height = sh; }
+      cible.getContext("2d").putImageData(img, 0, 0);
+      return;
     }
     pc.putImageData(img, 0, 0);
     const ctx = toile.getContext("2d");

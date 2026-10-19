@@ -795,7 +795,7 @@
         ctx.fillStyle = h2; ctx.fillRect(x - 30, y - 24, 60, 60);
         ctx.restore();
         ctx.fillStyle = "#fff06a";
-      } else ctx.fillStyle = "#e9e3cd";
+      } else ctx.fillStyle = "#3a3858"; // (éteintes : le verre sombre, sans lumière)
       ctx.fillRect(x - 1.3, y + 0.5, 2.6, 3);
     }
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
@@ -2951,7 +2951,7 @@
   function scene(toile, compagnons) {
     // (on peint chaque image hors de l'écran, on la passe en gros pixels, puis on la pose d'un
     // seul coup sur la toile visible : sur tablette, l'écran ne montre jamais une image à moitié faite)
-    const ecran = document.createElement("canvas"), ctx = ecran.getContext("2d"), visible = toile.getContext("2d");
+    const ecran = document.createElement("canvas"), ctx = ecran.getContext("2d"), visible = null;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     const w = toile.clientWidth || 600;
     const h = window.innerWidth < 640 ? 300 : 360;
@@ -2960,10 +2960,8 @@
     const portrait = window.innerHeight > window.innerWidth * 1.15;
     const Htot = portrait ? Math.max(h, Math.min(window.innerHeight - 30, Math.round(w * 2))) : h;
     const haut = Math.round((Htot - h) * 0.55), bas = Htot - h - haut;
-    toile.width = Math.round(w * dpr);
-    toile.height = Math.round(Htot * dpr);
     toile.style.height = Htot + "px";
-    ecran.width = toile.width; ecran.height = toile.height;
+    ecran.width = Math.round(w * dpr); ecran.height = Math.round(Htot * dpr);
     const nuit = H.ciel.etat().soleil.alt < -4;
     const rEt = H.alea("etoiles-balade");
     const etoiles = Array.from({ length: 70 + Math.round(haut / 3) }, () => [rEt() * w, rEt() * rEt() * (h * 0.5 + haut) - haut, rEt() * 0.6 + 0.35]);
@@ -3175,6 +3173,109 @@
 
   // Le chemin passe par la terre rouge : rochers rouges et petite crique où l'on peut se baigner.
   const CYCLE = 4200, ROUGE = [650, 2900], DUNES = [2950, 3550], FALAISES = [3600, 4180];
+  // --- le fond de la balade : les collines des calanques, comme derrière la maison ---------------
+  // Six rangées en couches horizontales, de plus en plus pâles et bleutées au loin (la perspective
+  // aérienne), chacune peinte une fois en une longue bande qui boucle sans couture, puis qui défile
+  // plus ou moins vite selon sa distance. En marchant vers la crique, les rangées s'enfoncent l'une
+  // après l'autre, les plus lointaines d'abord, et laissent voir le large ; elles reviennent ensuite.
+  const RANGEES_B = 6, LONG_BANDE = 2400;
+  const bandesBalade = {};
+  // un bruit doux qui boucle sur une période (aucune couture quand la bande se répète)
+  const bruitBoucle = (x, periode, g) => { const t = ((x % periode) + periode) % periode, a = t / periode; return bruit1(t, g) * (1 - a) + bruit1(t - periode, g) * a; };
+  const hauteurRangee = (f) => 44 + 96 * f;
+  function bandeCollines(k, mo, gp) {
+    const cle = k + "|" + mo + "|" + gp.toFixed(2);
+    if (bandesBalade[cle]) return bandesBalade[cle];
+    const f = k / (RANGEES_B - 1), Hc = hauteurRangee(f) / gp, desc = 120 / gp;
+    const Wp = Math.max(8, Math.round(LONG_BANDE / gp)), Hp = Math.ceil(Hc + desc);
+    const c = document.createElement("canvas");
+    c.width = Wp; c.height = Hp;
+    const g = c.getContext("2d"), img = g.createImageData(Wp, Hp), d = img.data;
+    const C3 = { clair: [255, 240, 196], milieu: [240, 220, 182], fond: [96, 108, 172], strate: [178, 184, 224], garrigue: [92, 148, 66], garrigueS: [38, 92, 70] };
+    const mel = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    // la perspective aérienne, et la lumière du moment (le soir rosé, la nuit bleue de lune)
+    const valeur = 0.7 + 0.3 * (1 - f), bleu = mel([70, 112, 172], [206, 224, 242], Math.pow(1 - f, 0.8)), air = Math.pow(1 - f, 0.75) * 0.82;
+    const teinte = (c0) => {
+      let r = mel([c0[0] * valeur, c0[1] * valeur, c0[2] * valeur], bleu, air);
+      if (mo === "soir") r = mel([r[0] * 0.88, r[1] * 0.8, r[2] * 0.86], [255, 160, 150], 0.16 * (1 - f * 0.5));
+      if (mo === "nuit") r = [r[0] * 0.3 + 14, r[1] * 0.36 + 18, r[2] * 0.62 + 44];
+      return r;
+    };
+    const pose = (i, j, col) => { const q = (j * Wp + i) * 4; d[q] = col[0]; d[q + 1] = col[1]; d[q + 2] = col[2]; d[q + 3] = 255; };
+    const P = Wp, ech = 1 / gp;
+    for (let i = 0; i < Wp; i++) {
+      const x = i * gp;
+      const forme = 0.42 * bruitBoucle(x / 180, LONG_BANDE / 180, k + 15) + 0.2 * bruitBoucle(x / 60, LONG_BANDE / 60, k + 16) + 0.9 * Math.pow(bruitBoucle(x / 110, LONG_BANDE / 110, k + 18), 2.6);
+      const ybi = Hc + (bruitBoucle(x / 90, LONG_BANDE / 90, k + 77) - 0.5) * (4 + 7 * f) * ech;
+      const top = ybi - Hc * (0.2 + 0.62 * forme);
+      const falaise = Hc * (0.16 + 0.16 * bruitBoucle(x / 140, LONG_BANDE / 140, k + 50));
+      for (let j = Math.max(0, Math.floor(top)); j < Hp; j++) {
+        const dep = j - top, v = Math.min(1, dep / Math.max(1, ybi - top));
+        // le vallon au pied de la rangée : de la garrigue en touffes
+        if (j >= ybi) { const gg = hsh(i >> 1, (j >> 1) + k * 9); pose(i, j, teinte(gg > 0.6 ? C3.garrigue : gg > 0.3 ? mel(C3.garrigue, C3.garrigueS, 0.6) : C3.garrigueS)); continue; }
+        let col = v < 0.4 ? mel(C3.clair, C3.milieu, v / 0.4) : mel(C3.milieu, C3.fond, Math.pow((v - 0.4) / 0.6, 0.8));
+        if (ybi - j < falaise) {
+          // la falaise claire au pied, en bancs de calcaire
+          const fv = 1 - (ybi - j) / falaise, sb = (ybi - j) * gp / 6 + bruitBoucle(x / 45, LONG_BANDE / 45, k + 51) * 1.4;
+          col = mel(mel(C3.clair, C3.milieu, 0.3), C3.fond, Math.pow(fv, 2) * 0.7);
+          if (sb - Math.floor(sb) < 0.25) col = mel(col, C3.strate, 0.55);
+        } else {
+          // les gradins : des couches horizontales, de la garrigue entre elles, les corniches claires
+          const sb = (ybi - j) * gp / 9 + bruitBoucle(x / 37, LONG_BANDE / 37, k + 21) * 1.8, bande = Math.floor(sb), dansB = sb - bande;
+          const sommet = dep < (ybi - top) * 0.12;
+          const vert = !sommet && bande % 3 !== 0 && hsh(i >> 1, j + k * 13) > 0.34 - f * 0.14;
+          if (vert) col = mel(dansB < 0.35 ? C3.garrigueS : C3.garrigue, col, 0.25);
+          else if (dansB > 0.82) col = mel(col, C3.fond, 0.3);
+          else if (dansB < 0.18) col = mel(col, C3.clair, 0.4);
+        }
+        if (dep < 1) col = mel(C3.fond, [36, 40, 110], 0.5);
+        pose(i, j, teinte(col));
+      }
+    }
+    g.putImageData(img, 0, 0);
+    bandesBalade[cle] = c;
+    return c;
+  }
+  // combien une rangée est là (de 0 à 1), selon l'endroit de la boucle de la balade : les plus
+  // lointaines s'enfoncent d'abord, juste avant la crique ; au retour, les plus proches reviennent d'abord
+  function presenceRangee(k, avance) {
+    const u = (((avance % CYCLE) + CYCLE) % CYCLE) / CYCLE, r = k / (RANGEES_B - 1);
+    const part = 0.03 + 0.12 * r, revient = 0.68 + 0.03 * (RANGEES_B - 1 - k), duree = 0.055;
+    if (u < part) return 1;
+    if (u < part + duree) return 1 - (u - part) / duree;
+    if (u < revient) return 0;
+    if (u < revient + duree) return (u - revient) / duree;
+    return 1;
+  }
+  // le large (toujours là, derrière les collines) puis les rangées, du fond vers l'avant
+  function fondBalade(ctx, S, w, h, avance, nuit, alt, t) {
+    const gp = H.retro.taillePour(3) / S.dpr, mo = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
+    const hz = h * 0.3;
+    const gm = ctx.createLinearGradient(0, hz, 0, h * 0.78);
+    (nuit ? ["#3a3aa8", "#26406a", "#1e3358"] : mo === "soir" ? ["#e9a6be", "#6f86c8", "#2a5a9a"] : ["#d6eef7", "#6fb6ee", "#12aec4", "#0d8fae"]).forEach((c2, k, l) => gm.addColorStop(k / (l.length - 1), c2));
+    ctx.fillStyle = gm;
+    ctx.fillRect(0, hz, w, h * 0.5);
+    for (let i = 0; i < 26; i++) {
+      const u = (i % 8) / 8, y = hz + 3 + u * h * 0.42;
+      ctx.fillStyle = nuit ? "rgba(168,216,236," + (0.15 + u * 0.35) + ")" : "rgba(255,255,255," + (0.25 + u * 0.5) + ")";
+      ctx.fillRect(boucler(i * 97 - avance * (0.05 + u * 0.3), w, 40), Math.round(y), 3 + u * 20, 1 + u);
+    }
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    for (let k = 0; k < RANGEES_B; k++) {
+      const pres = presenceRangee(k, avance);
+      if (pres <= 0.001) continue;
+      const f = k / (RANGEES_B - 1), b = bandeCollines(k, mo, gp), Hc = hauteurRangee(f);
+      const pied = h * (0.2 + 0.54 * Math.pow(f, 1.05));
+      // (une rangée qui s'en va s'enfonce derrière la suivante)
+      const y = Math.round(pied - Hc + (1 - pres) * (Hc + 40));
+      const L = b.width * gp, par = 0.05 + 0.42 * f;
+      let x0 = -((((avance * par) % L) + L) % L);
+      for (let x = x0; x < w; x += L) ctx.drawImage(b, Math.round(x), y, Math.ceil(L) + 1, Math.ceil(b.height * gp));
+    }
+    ctx.restore();
+  }
+
   function zone(X, [a, b], fondu) {
     const x = ((X % CYCLE) + CYCLE) % CYCLE;
     return Math.max(0, Math.min(1, (x - a) / fondu, (b - x) / fondu));
@@ -3283,18 +3384,8 @@
     // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit ;
     // bleuies par l'air qui les sépare de nous
     const air = nuit ? "#3a3aa8" : alt > 8 ? "#9fcdf0" : H.ciel.teinteCiel(alt, H.ciel.estMatin ? H.ciel.estMatin() : undefined).bas;
-    calanquesBalade(ctx, w, h * 0.58, h * 0.24, avance * 0.1, S.profils.falaises, air, nuit, ici);
-    // la mer
-    // claire et lisse vers l'horizon, plus profonde et plus détaillée en s'approchant
-    const gm = ctx.createLinearGradient(0, h * 0.58, 0, h * 0.72);
-    (nuit ? ["#3a3aa8", "#26406a", "#1e3358"] : [brume("#d6eef7", 0.2, air), "#6fb6ee", melange("#12aec4", "#19c1c7", ici), "#0d8fae"]).forEach((c2, k, l) => gm.addColorStop(k / (l.length - 1), c2));
-    ctx.fillStyle = gm;
-    ctx.fillRect(0, h * 0.58, w, h * 0.14);
-    for (let i = 0; i < 18; i++) {
-      const u = 0.15 + (i % 6) / 6 * 0.85, y = h * (0.585 + u * 0.13);
-      ctx.fillStyle = nuit ? "rgba(168,216,236," + (0.2 + u * 0.4) + ")" : "rgba(255,255,255," + (0.3 + u * 0.55) + ")";
-      ctx.fillRect(boucler(i * 97 - avance * (0.2 + u * 0.3), w, 40), y, 4 + u * 22, 1 + u);
-    }
+    // au loin : le large, et les collines des calanques en rangées, comme derrière la maison
+    fondBalade(ctx, S, w, h, avance, nuit, alt, t);
     // la baignade se passe dans la mer : derrière les rochers, le chemin et la garrigue
     if (b.baignade) dessinerBaignade(ctx, b, t, w, h);
     // au pied des falaises : une grande paroi de calcaire qui monte juste derrière le chemin
@@ -3447,13 +3538,12 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       for (const v of H.ciel.lumiere(alt)) {
         ctx.fillStyle = "rgba(" + v.couleur + "," + v.alpha * 0.6 + ")";
-        ctx.fillRect(0, 0, b.toile.width, b.toile.height);
+        ctx.fillRect(0, 0, S.ecran.width, S.ecran.height);
       }
     }
     // la trame des gros pixels glisse avec le chemin, sous la ligne du rivage
-    H.retro.appliquer(S.ecran, H.retro.taillePour(3), 0.7, { x: avance * (b.toile.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) });
-    S.visible.setTransform(1, 0, 0, 1, 0, 0);
-    S.visible.drawImage(S.ecran, 0, 0);
+    // (la toile visible reçoit directement la petite image en gros pixels ; l'écran l'agrandit)
+    H.retro.appliquer(S.ecran, H.retro.taillePour(3), 0.7, { x: avance * (S.ecran.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) }, null, b.toile);
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 
