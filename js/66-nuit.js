@@ -365,38 +365,60 @@
       const A = hsh(a0 + b0 * 57, g), B = hsh(a0 + 1 + b0 * 57, g), Cc = hsh(a0 + (b0 + 1) * 57, g), D = hsh(a0 + 1 + (b0 + 1) * 57, g); return (A * (1 - u) + B * u) * (1 - v) + (Cc * (1 - u) + D * u) * v; };
     const poseRVB = (i, j, c) => { if (!dans(i, j)) return; const k = (j * W + i) * 4; d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255; brille[j * W + i] = 0; };
     {
-      const MIL = LARGE / 2, haut0 = Math.min(R.y0, -400), CIEL = haut0 + (SOL_DEHORS - haut0) * 0.07, PIED = SOL_DEHORS - 40, N = 8;
+      const MIL = LARGE / 2, haut0 = Math.min(R.y0, -400), CIEL = haut0 + (SOL_DEHORS - haut0) * 0.07, PIED = SOL_DEHORS + 24, N = 8;
       for (let k = 0; k < N; k++) {
         const f = k / (N - 1), yb = CIEL + 28 + (PIED - CIEL - 28) * Math.pow(f, 1.05);
-        const Hc = 70 + 170 * f, P = 260 + 420 * f, dec = hsh(k, 71) * P, air = Math.pow(1 - f, 0.75) * (moment === "nuit" ? 0.7 : 0.88);
+        const Hc = 70 + 240 * f, P = 260 + 420 * f, dec = hsh(k, 71) * P, air = Math.pow(1 - f, 0.75) * (moment === "nuit" ? 0.7 : 0.88);
         // La perspective aérienne, comme chez les peintres flamands : le plus proche est le plus sombre,
         // vert profond et chaud, très contrasté ; en s'éloignant, chaque rangée s'éclaircit, perd ses
         // contrastes et tourne au bleu-vert, puis à un bleu pâle qui rejoint presque le ciel.
         const valeur = 0.7 + 0.3 * (1 - f), bleu = melC([70, 112, 172], [206, 224, 242], Math.pow(1 - f, 0.8));
         const teinte = (c) => melC([c[0] * valeur, c[1] * valeur, c[2] * valeur], bleu, air);
+        const ybx = (x) => yb + (bruit1(x / 140, k + 77) - 0.5) * (14 + 26 * f);
         const massif = (x) => {
           const u = Math.abs(x - MIL) + (x < MIL ? 11 + k * 7 : 0) + dec;
           const forme = 0.42 * bruit1(u / (P * 0.55), k + 15) + 0.2 * bruit1(u / (P * 0.18), k + 16) + 0.08 * bruit1(u / 26, k + 17) + 0.95 * Math.pow(bruit1(u / (P * 0.3), k + 18), 2.6);
-          return yb - Hc * (0.2 + 0.62 * forme);
+          // (jamais de long plateau tout droit : une ondulation douce en plus, et le pied lui aussi ondule)
+          return ybx(x) - Hc * (0.22 + 0.58 * forme + 0.12 * bruit1(u / 55, k + 19));
         };
         const PLATEAU = Hc * 0.4;
         for (let i = 0; i < W; i++) {
           const x = X(i), top = massif(x);
-          const falaise = Hc * (0.16 + 0.16 * bruit1((Math.abs(x - MIL) + dec) / (P * 0.4), k + 50));
+          // une ou deux falaises nues, pour varier : du calcaire à pic, sans garrigue
+          const nue = (k === 3 && Math.abs(x - (MIL - 520)) < 150) || (k === 5 && Math.abs(x - (MIL + 540)) < 170);
+          const falaise = nue ? 1e4 : Hc * (0.16 + 0.16 * bruit1((Math.abs(x - MIL) + dec) / (P * 0.4), k + 50));
           // (chaque rangée descend jusqu'au pied du paysage : pas de trou entre deux rangées)
+          const ybi = ybx(x), pente = massif(x + p) - massif(x - p);
           for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(PIED + 90)); j++) {
-            const y = Y(j), dep = y - top, v = Math.min(1, dep / Math.max(1, yb - top));
-            if (y >= yb) { poseRVB(i, j, teinte(bruit2(x / 13, y / 8, k + 61) > 0.55 ? C3.garrigue : C3.garrigueS)); continue; }
+            const y = Y(j), dep = y - top, v = Math.min(1, dep / Math.max(1, ybi - top));
+            if (nue) {
+              // La falaise nue : du calcaire à pic, sans un brin de vert. Des bancs en couches qui
+              // ondulent, des corniches éclairées dessus et leur ombre bleue dessous, des fissures
+              // verticales, des pans plus clairs face au soleil, et le pied dans l'ombre.
+              const prof = y - top, sb = prof / 7 + bruit1(x / 33, k + 52) * 1.6 + bruit1(x / 9, k + 53) * 0.3, dansB = sb - Math.floor(sb);
+              let c = degrade([[0, C3.clair], [0.45, C3.milieu], [1, melC(C3.fond, C3.sombre, 0.4)]], Math.min(1, prof / (Hc * 1.3)));
+              if (pente < -p) c = melC(c, C3.clair, 0.3); else if (pente > p) c = melC(c, C3.fond, 0.35);
+              if (dansB < 0.16) c = melC(c, C3.clair, 0.45);
+              else if (dansB > 0.8) c = melC(c, C3.fond, 0.45);
+              const pan = bruit2(x / 18, y / 26, k + 54);
+              if (pan > 0.66) c = melC(c, C3.clair, 0.25); else if (pan < 0.25) c = melC(c, C3.sombre, 0.3);
+              const fis = Math.floor((x + bruit1(y / 20, k + 55) * 9) / (p * 4));
+              if (hsh(fis, k + 56) < 0.16 && hsh(fis, Math.floor(y / 30) + k) < 0.7) c = melC(c, C3.fond, 0.55);
+              if (dep < p * 1.1) c = melC(C3.fond, [36, 40, 110], 0.5);
+              poseRVB(i, j, teinte(c));
+              continue;
+            }
+            // le vallon au pied de la rangée : de la garrigue en petites touffes, jamais un aplat
+            if (y >= ybi) { const g = bruit2(x / 7, y / 5, k + 61) + (hsh(i + i0, j + j0) - 0.5) * 0.3; poseRVB(i, j, teinte(g > 0.62 ? C3.garrigue : g > 0.3 ? melC(C3.garrigue, C3.garrigueS, 0.6) : C3.garrigueS)); continue; }
             let c = degrade([[0, C3.clair], [0.4, C3.milieu], [1, C3.fond]], Math.pow(v, 0.8));
-            if (yb - y < falaise) {
-              const fv = 1 - (yb - y) / falaise, sb2 = (yb - y) / 6 + bruit1(x / 45, k + 51) * 0.8;
+            if (ybi - y < falaise) {
+              const fv = 1 - (ybi - y) / falaise, sb2 = (ybi - y) / 6 + bruit1(x / 45, k + 51) * 1.4 + bruit1(x / 11, k + 57) * 0.35;
               c = melC(melC(C3.clair, C3.milieu, 0.3), C3.fond, Math.pow(fv, 2) * 0.7);
               if (sb2 - Math.floor(sb2) < 0.25) c = melC(c, C3.strate, 0.55);
-              if ((yb - y) > falaise - p * 1.2) c = melC(c, C3.garrigueS, 0.5);
+              if ((ybi - y) > falaise - p * 1.2) c = melC(c, C3.garrigueS, 0.5);
             } else {
-              const sb = (yb - y) / 9 + bruit1(x / 37, k + 21) * 1.4, bande = Math.floor(sb), dansB = sb - bande;
-              const sommet = dep < (yb - top) * 0.12;
-              // (la garrigue s'efface avec la distance : au loin, on ne voit plus que le calcaire bleui)
+              const sb = (ybi - y) / 9 + bruit1(x / 37, k + 21) * 1.8 + bruit1(x / 10, k + 22) * 0.4, bande = Math.floor(sb), dansB = sb - bande;
+              const sommet = dep < (ybi - top) * 0.12;
               const vert = !sommet && (bande % 3 !== 0 || dep < PLATEAU) && bruit2(x / 19, y / 9, k + 31) > 0.34 - f * 0.14;
               if (vert) c = melC(dansB < 0.35 ? C3.garrigueS : C3.garrigue, c, 0.2 + bruit2(x / 6, y / 5, k + 33) * 0.25);
               else if (dansB > 0.82) c = melC(c, C3.fond, 0.3);
@@ -406,7 +428,7 @@
             poseRVB(i, j, teinte(c));
           }
           // de petits pins sur les plateaux, en rythme
-          if (k >= 3 && hsh(Math.floor((x + k * 37) / 26), k + 41) < 0.18 && ((Math.floor(x) % 26) + 26) % 26 < p) {
+          if (!nue && k >= 3 && hsh(Math.floor((x + k * 37) / 26), k + 41) < 0.18 && ((Math.floor(x) % 26) + 26) % 26 < p) {
             const r = 3 + f * 6;
             for (let jj = J(top - r * 0.8); jj <= J(top + r * 0.4); jj++) for (let ii = I(x - r * 1.3); ii <= I(x + r * 1.3); ii++) {
               const dx = (X(ii) - x) / (r * 1.3), dy = (Y(jj) - (top - r * 0.2)) / (r * 0.6);

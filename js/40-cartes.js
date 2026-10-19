@@ -544,7 +544,7 @@
           H.el("span.discret", null, (c.paquet || "Mes cartes") + " · "),
           c.recto.replace(/\*\*/g, "").slice(0, 80),
           " ",
-          H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => editerCarte(c) }, "Modifier")
+          H.boutonCrayon(() => editerCarte(c), "Modifier la carte")
         ))
       ));
     } else {

@@ -478,3 +478,8 @@ html.chargement body { background: #1b1d4a; }
 html.chargement #ciel { display: none; }
 .pistes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px; margin-top: 6px; }
 .ligne-ips { display: grid; grid-template-columns: minmax(140px, 260px) minmax(0, 1fr); gap: 12px; align-items: center; max-width: 620px; } .ligne-ips input { accent-color: var(--fluo); padding: 0; }
+
+/* le petit bouton crayon (modifier, remplir) */
+.bouton-crayon { display: inline-flex; align-items: center; justify-content: center; padding: 4px; background: none; border: 1px solid transparent; border-radius: 999px; color: #8a88a0; cursor: pointer; line-height: 0; transition: color .15s, border-color .15s; }
+.bouton-crayon svg { width: 18px; height: 18px; }
+.bouton-crayon:hover, .bouton-crayon:focus-visible { color: var(--encre); border-color: rgba(35, 33, 74, 0.25); outline: none; }

@@ -245,7 +245,7 @@
     if (aVerif) {
       actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => { H.d.confirmer(p.id, champ.id); recharger(); } }, "C’est juste"));
     }
-    actions.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => modifier() }, vide(v) ? "Remplir" : "Modifier"));
+    actions.appendChild(H.boutonCrayon(() => modifier(), vide(v) ? "Remplir" : "Modifier"));
     const corps = H.el("div.corps-rubrique", null, valeurLecture(champ, v));
     bloc.append(H.el("div.tete-rubrique", null, titre, actions), corps);
 

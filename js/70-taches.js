@@ -125,7 +125,7 @@
       H.el("span.infos-tache.discret", null,
         [t.echeance ? dateCourte(t.echeance) : null, t.repetition ? "↻ " + (REPETITIONS.find((r) => r[0] === t.repetition) || [0, ""])[1].toLowerCase() : null, t.ile ? nomIle(t.ile) : null].filter(Boolean).join(" · "),
         p ? H.el("a", { href: "#fiche/" + encodeURIComponent(p.id) }, " · " + p.nom) : null),
-      H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => formulaire(t) }, "Modifier")
+      H.boutonCrayon(() => formulaire(t), "Modifier la tâche")
     );
   }
 

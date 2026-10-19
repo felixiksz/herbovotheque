@@ -92,7 +92,7 @@
       t.preparation ? H.el("div", null, H.el("h3", null, "Préparation"), H.el("div.texte-fiche", { html: H.texteRiche(t.preparation) })) : null,
       t.notes ? H.el("div", null, H.el("h3", null, "Notes"), H.el("div.texte-fiche", { html: H.texteRiche(t.notes) })) : null,
       H.el("div.boutons-bas", null,
-        H.el("button.bouton", { type: "button", onclick: () => { fermer(); editer(t); } }, "Modifier")
+        H.boutonCrayon(() => { fermer(); editer(t); }, "Modifier la recette")
       )
     );
     const fermer = H.fenetre(corps);
