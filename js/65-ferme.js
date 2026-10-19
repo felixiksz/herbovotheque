@@ -511,16 +511,8 @@
         }
         return;
       }
-      if (m.genre === "ponton") {
-        // le panneau en flèche, avec deux petites îles peintes dessus (le ponton lui-même et la
-        // barque sont dessinés au-dessus de la mer, voir pontonSurLaMer)
-        ligne(c, 6, h - 9, 6, h - 27, "#7a4520");
-        const fl = [[0, h - 30], [12, h - 30], [16, h - 26], [12, h - 22], [0, h - 22]];
-        remplir(c, fl, "#e9b44c"); contour(c, fl, "#7a4520");
-        ligne(c, 2, h - 25, 11, h - 25, "#2f8fe0");
-        pixel(c, 4, h - 27, "#3f8a42"); pixel(c, 5, h - 27, "#3f8a42"); pixel(c, 4, h - 26, "#3f8a42"); pixel(c, 9, h - 27, "#3f8a42"); pixel(c, 9, h - 26, "#3f8a42"); pixel(c, 10, h - 26, "#3f8a42");
-        return;
-      }
+      // (le ponton lui-même et la barque sont dessinés au-dessus de la mer, voir pontonSurLaMer)
+      if (m.genre === "ponton") return;
       if (m.genre === "a") {
         const A = [ox - m.d * 8, oy - m.d * 4], B = [ox, oy], C = [ox + m.w * 8, oy - m.w * 4], D = [ox + (m.w - m.d) * 8, oy - (m.w + m.d) * 4];
         const S = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - 30], R = [(C[0] + D[0]) / 2, (C[1] + D[1]) / 2 - 30];

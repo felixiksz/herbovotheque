@@ -205,16 +205,16 @@
   }
 
   function exporter() {
-    const lignes = [];
-    for (const t of tisanes()) {
-      lignes.push(t.nom.toUpperCase());
-      if (t.usage) lignes.push((M() ? "  Indications : " : "  Pour quoi : ") + t.usage.replace(/\n/g, " "));
-      composition(t).forEach((c) => lignes.push("  - " + c));
-      if (t.preparation) lignes.push("  Préparation : " + t.preparation.replace(/\n/g, " "));
-      if (t.notes) lignes.push("  Notes : " + t.notes.replace(/\n/g, " "));
-      lignes.push("");
-    }
-    H.telecharger(M() ? "mes-formules.txt" : "placard-a-tisanes.txt", lignes.join("\n"));
+    H.exporter({
+      titre: M() ? "Mes formules" : "Le placard à tisanes",
+      nomFichier: M() ? "mes-formules" : "placard-a-tisanes",
+      sections: tisanes().map((t) => ({
+        titre: t.nom,
+        paragraphes: [t.usage ? (M() ? "Indications : " : "Pour quoi : ") + t.usage : "", t.preparation ? "Préparation : " + t.preparation : "", t.notes ? "Notes : " + t.notes : ""].filter(Boolean),
+        colonnes: [M() ? "Substance" : "Plante", "Partie", "Rôle"],
+        lignes: (t.plantes || []).map((x) => { const p = H.d.plante(x.id); return p ? [(x.rang ? nomRang(x.rang) + " · " : "") + p.nom, x.part || "", x.role || ""] : null; }).filter(Boolean),
+      })),
+    });
   }
 
   // --- les bocaux de plantes sèches, au fond du placard -----------------------------

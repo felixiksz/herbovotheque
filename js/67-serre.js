@@ -34,30 +34,26 @@
   const cache = new Map();
   // le pot de terre cuite en gros pixels : le bord, la terre, et la plante qui grandit
   function dessinPot(p, etape) {
-    const cle = "px|" + (p ? p.id : "vide") + "|" + etape;
+    const cle = "px2|" + (p ? p.id : "vide") + "|" + etape;
     if (cache.has(cle)) return cache.get(cle);
     const c0 = document.createElement("canvas");
-    c0.width = 24; c0.height = 28;
+    c0.width = 36; c0.height = 46;
     const g = c0.getContext("2d"), R0 = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
     const E = "#23214a";
-    if (p && etape > 0) {
-      const feuille = ["#4aa63e", "#6cbd5c", "#3f8a42"][H.hash(p.id) % 3], haut = [0, 4, 8, 12][etape];
-      R0(11, 15 - haut, 2, haut, "#2f6b35");
-      const n = etape === 1 ? 1 : etape === 2 ? 2 : 3;
-      for (let i = 0; i < n; i++) {
-        const y = 14 - Math.round(haut * (0.35 + (i / Math.max(1, n)) * 0.55));
-        R0(7 - i, y, 4 + i, 2, feuille); R0(13, y - 1, 4 + i, 2, feuille);
-        R0(7 - i, y, 1, 1, E); R0(16 + i, y - 1, 1, 1, E);
-      }
-      if (etape === 3) { const f = ["#f6ee55", "#ff5b4f", "#8a58cc", "#ffffff"][H.hash(p.id) % 4]; R0(10, 15 - haut - 3, 4, 3, E); R0(11, 15 - haut - 2, 2, 1, f); }
+    g.imageSmoothingEnabled = false;
+    // la plante, dessinée selon sa famille botanique, de la plantule à la plante en fleur
+    if (p && etape > 0 && H.terrain && H.terrain.miniature) {
+      const m = H.terrain.miniature(p, [0, 9, 18, 28][etape], etape, etape === 3);
+      g.drawImage(m, Math.round(18 - m.width / 2), 35 - m.height + 2);
     }
     // le pot : bord, corps qui s'affine, terre
-    R0(2, 14, 20, 5, E); R0(3, 15, 18, 3, "#d9824f"); R0(3, 15, 18, 1, "#e8a070");
-    R0(4, 15, 16, 1, "#4b3427");
-    R0(4, 19, 16, 8, E);
-    for (let y = 19; y < 27; y++) { const m = Math.round((y - 19) / 3); R0(5 + m, y, 14 - 2 * m, y === 26 ? 0 : 1, "#c96a3a"); }
-    R0(6, 20, 1, 5, "#e8a070");
-    R0(5, 27, 14, 1, E);
+    const ox = 6, oy = 18;
+    R0(ox + 2, oy + 14, 20, 5, E); R0(ox + 3, oy + 15, 18, 3, "#d9824f"); R0(ox + 3, oy + 15, 18, 1, "#e8a070");
+    R0(ox + 4, oy + 15, 16, 1, "#4b3427");
+    R0(ox + 4, oy + 19, 16, 8, E);
+    for (let y = 19; y < 27; y++) { const m = Math.round((y - 19) / 3); R0(ox + 5 + m, oy + y, 14 - 2 * m, y === 26 ? 0 : 1, "#c96a3a"); }
+    R0(ox + 6, oy + 20, 1, 5, "#e8a070");
+    R0(ox + 5, oy + 27, 14, 1, E);
     const url0 = c0.toDataURL("image/png");
     cache.set(cle, url0);
     return url0;

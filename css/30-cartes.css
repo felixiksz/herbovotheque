@@ -155,3 +155,7 @@
   .ligne-devis .designation { grid-column: 1 / -1; }
   .ligne-devis.titre-devis { grid-template-columns: minmax(0, 1fr) auto; }
 }
+
+/* la fenêtre d'export */
+.fenetre-export h3 { margin: 16px 0 4px; }
+.apercu-export { width: 100%; height: 56vh; border: 1px solid var(--filet); background: #fff; margin-top: 8px; }

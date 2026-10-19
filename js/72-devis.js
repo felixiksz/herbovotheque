@@ -166,6 +166,24 @@
     return fermer;
   }
 
+  // en texte ou en tableau, les lignes d'un document (son PDF garde ses propres modèles)
+  function exporterDoc(doc) {
+    const e = ent(), T = totaux(doc), c = coll("clients").find((x) => x.id === doc.client) || {};
+    const lignes = (doc.lignes || []).filter((l) => l.type !== "titre").map((l) => [l.designation, l.detail || "", nombre(l.quantite), l.unite || "", nombre(l.prix), e.franchiseTVA ? "" : nombre(l.tva) + " %", Math.round(nombre(l.quantite) * nombre(l.prix) * (1 - nombre(l.remise) / 100) * 100) / 100]);
+    H.exporter({
+      titre: (doc.type === "devis" ? e.titreDevis : e.titreFacture) + " " + doc.numero,
+      sousTitre: [c.nom, doc.objet, dateFr(doc.date)].filter(Boolean).join(" · "),
+      nomFichier: H.slug(doc.numero),
+      sections: [
+        { colonnes: ["Désignation", "Détail", "Quantité", "Unité", "Prix unitaire HT", "TVA", "Total HT"], lignes },
+        { titre: "Totaux", colonnes: ["", "Montant"], lignes: [["Total HT", euros(T.ht)]].concat(T.remise ? [["Remise", euros(T.remise)]] : [], T.lignesTva.map(([t, b, v]) => ["TVA " + t + " %", euros(v)]), [[e.franchiseTVA ? "Total" : "Total TTC", euros(T.ttc)]]) },
+      ],
+    }, { pdf: () => imprimer(doc) });
+  }
+  function exporterListe(titre, cle, colonnes, rang) {
+    H.exporter({ titre, nomFichier: H.slug(titre), sections: [{ colonnes, lignes: coll(cle).map(rang) }] });
+  }
+
   // --- l'éditeur d'un document -------------------------------------------------------------
   let conteneur = null, ouvert = null, onglet = null;
   function nouveau(type, depuis) {
@@ -267,6 +285,7 @@
         H.el("button.bouton.petit", { type: "button", onclick: () => nouveau(doc.type, doc) }, "Dupliquer"),
         doc.type === "devis" ? H.el("button.bouton.petit", { type: "button", onclick: () => { doc.statut = "Accepté"; sauver(); nouveau("facture", doc); } }, "En faire une facture") : null,
         H.el("button.bouton.petit", { type: "button", onclick: () => apercu(doc) }, "Aperçu"),
+        H.el("button.bouton.petit", { type: "button", onclick: () => exporterDoc(doc) }, "Exporter"),
         H.el("button.bouton", { type: "button", onclick: () => imprimer(doc) }, "PDF"))
     );
   }
@@ -303,14 +322,17 @@
     return H.el("div", null,
       H.el("div.pastilles", null,
         H.el("button.bouton", { type: "button", onclick: () => nouveau("devis") }, "Nouveau devis"),
-        H.el("button.bouton", { type: "button", onclick: () => nouveau("facture") }, "Nouvelle facture")),
+        H.el("button.bouton", { type: "button", onclick: () => nouveau("facture") }, "Nouvelle facture"),
+        docs.length ? H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe("Devis et factures", "documents", ["Type", "Numéro", "Date", "Client", "Objet", "Total", "Statut"], (d) => [d.type === "devis" ? "Devis" : "Facture", d.numero, dateFr(d.date), nomClient(d.client), d.objet || "", euros(totaux(d).ttc), d.statut || ""]) }, "Exporter la liste") : null),
       !ent().nom ? H.el("p.discret", null, "Commence par « Mon entreprise » : ton nom, ton adresse, ton SIRET… ils apparaîtront sur chaque document.") : null,
       docs.length ? H.el("ul.liste-docs", null, docs.map(rangee)) : H.el("p.discret", null, "Pas encore de devis ni de facture."));
   }
   function ongletClients() {
     const zone = H.el("div");
     const liste = () => zone.replaceChildren(
-      H.el("button.bouton", { type: "button", onclick: () => nouveauClient(() => liste()) }, "Nouveau client"),
+      H.el("div.pastilles", null,
+        H.el("button.bouton", { type: "button", onclick: () => nouveauClient(() => liste()) }, "Nouveau client"),
+        H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe("Mes clients", "clients", ["Nom", "Contact", "Adresse", "E-mail", "Téléphone", "Notes"], (c) => [c.nom, c.contact || "", c.adresse || "", c.email || "", c.telephone || "", c.notes || ""]) }, "Exporter")),
       H.el("ul.liste-docs", null, coll("clients").sort((a, b) => a.nom.localeCompare(b.nom)).map((c) => H.el("li.doc-devis", { onclick: () => nouveauClient(() => liste(), c) },
         H.el("strong", null, c.nom), H.el("span.discret", null, (c.adresse || "").split("\n").join(", ")), H.el("span.discret", null, c.email || ""),
         H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: (ev) => { ev.stopPropagation(); if (confirm("Supprimer " + c.nom + " ?")) { c.supprime = true; garder("clients", c); liste(); } } }, "×")))));
@@ -324,6 +346,7 @@
       H.el("p.discret", null, "Tes prix habituels : plantes (avec la taille du pot), fournitures, main-d’œuvre à l’heure, déplacements… Une ligne reliée à une plante sert à remplir un devis depuis un jardin."),
       H.el("div.pastilles", null,
         H.el("button.bouton", { type: "button", onclick: () => article() }, "Nouveau prix"),
+        H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe("Mes prix", "catalogue", ["Catégorie", "Désignation", "Détail", "Unité", "Prix HT", "TVA"], (a) => [a.categorie || "", a.designation, a.detail || "", a.unite || "", euros(a.prix), ent().franchiseTVA ? "" : nombre(a.tva) + " %"]) }, "Exporter"),
         H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes([], (ids) => { for (const id of ids) { const p = H.d.plante(id); if (p && !coll("catalogue").some((a) => a.plante === id)) garder("catalogue", { id: H.uid("prix"), designation: p.nom, plante: id, unite: "u.", prix: 0, tva: e.tvaDefaut, categorie: "Plantes" }); } liste(); }, "Ajouter des plantes à mes prix") }, "+ Des plantes")),
       H.el("ul.liste-docs", null, coll("catalogue").sort((a, b) => (a.categorie || "").localeCompare(b.categorie || "") || a.designation.localeCompare(b.designation)).map((a) => H.el("li.doc-devis", { onclick: () => article(a) },
         H.el("span.discret", null, a.categorie || ""), H.el("strong", null, a.designation), H.el("span.discret", null, a.detail || ""), H.el("span.n", null, euros(a.prix) + " / " + (a.unite || "u.")),

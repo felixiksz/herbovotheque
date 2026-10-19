@@ -44,6 +44,27 @@
     sauver();
   }
 
+  // l'icône d'une récolte : la plante en fleur, dessinée selon sa famille botanique, coupée et posée
+  // dans un panier d'osier
+  const icones = new Map();
+  function iconeRecolte(p) {
+    if (icones.has(p.id)) return icones.get(p.id);
+    const c = document.createElement("canvas");
+    c.width = 36; c.height = 46;
+    const g = c.getContext("2d"), R0 = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    g.imageSmoothingEnabled = false;
+    if (H.terrain && H.terrain.miniature) { const m = H.terrain.miniature(p, 30, 3, true); g.drawImage(m, Math.round(18 - m.width / 2), 36 - m.height + 2); }
+    // le panier : l'anse, puis le corps tressé
+    const E = "#23214a";
+    for (let x = 6; x <= 29; x++) { const y = 31 - Math.round(Math.sin(((x - 6) / 23) * Math.PI) * 9); R0(x, y, 1, 2, x % 3 ? "#9a6a3c" : "#7a4520"); }
+    R0(4, 32, 28, 2, E); R0(5, 34, 26, 10, E);
+    for (let y = 34; y < 44; y++) for (let x = 6; x < 30; x++) R0(x, y, 1, 1, (x + (y % 2) * 2) % 4 < 2 ? "#c99a5a" : "#a8763e");
+    R0(5, 44, 26, 1, E);
+    const url = c.toDataURL("image/png");
+    icones.set(p.id, url);
+    return url;
+  }
+
   let conteneur = null;
   function dessiner() {
     if (!conteneur) return;
@@ -58,7 +79,7 @@
     const recoltes = Object.entries(l.recoltes).filter(([id, n]) => n > 0 && H.d.plante(id));
     const ongletRecoltes = [
       recoltes.length
-        ? H.el("div.pastilles", null, recoltes.map(([id, n]) => H.el("span.pastille-valeur", null, H.d.plante(id).nom + " × " + n)))
+        ? H.el("div.grille-pots", null, recoltes.map(([id, n]) => { const p = H.d.plante(id); return H.el("a.pot.recolte", { href: "#fiche/" + encodeURIComponent(id), title: "La fiche " + H.duNom(p) }, H.el("img", { src: iconeRecolte(p), alt: "" }), H.el("span.nom-pot", null, p.nom), H.el("span.etat-pot", null, n > 1 ? n + " récoltes" : "1 récolte")); }))
         : H.el("p.discret", null, "Pas encore de récolte. Récolte une plante sur une île, ou va cueillir dans la nature."),
       H.el("div.pastilles", null,
         H.el("button.bouton.petit", { type: "button", onclick: cueillir }, "Aller cueillir dans la nature (" + H.quantiteTexte("energie", COUT_CUEILLETTE.energie) + ")")),

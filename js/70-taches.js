@@ -129,6 +129,18 @@
     );
   }
 
+  function exporterTaches() {
+    const g = groupes(taches().filter((t) => !filtreIle || t.ile === filtreIle));
+    const rang = (t) => [t.titre, t.echeance ? dateCourte(t.echeance) : "", t.repetition ? (REPETITIONS.find((r) => r[0] === t.repetition) || [0, ""])[1] : "", t.ile ? nomIle(t.ile) : "", t.plante && H.d.plante(t.plante) ? H.d.plante(t.plante).nom : "", t.notes || ""];
+    const cols = ["Tâche", "Pour le", "Revient", "Jardin", "Plante", "Notes"];
+    H.exporter({
+      titre: "To-do liste" + (filtreIle ? " — " + nomIle(filtreIle) : ""),
+      nomFichier: "to-do-liste",
+      sections: [["En retard", g.retard], ["Aujourd’hui", g.aujourdhui], ["Cette semaine", g.semaine], ["Plus tard", g.plusTard], ["Sans date", g.sansDate], ["Faites", g.faites]]
+        .filter(([, l]) => l.length).map(([titre, l]) => ({ titre, colonnes: cols, lignes: l.map(rang) })),
+    });
+  }
+
   function dessiner() {
     if (!conteneur) return;
     const liste = taches().filter((t) => !filtreIle || t.ile === filtreIle);
@@ -144,6 +156,7 @@
     conteneur.replaceChildren(...[
       H.el("div.barre-taches", null,
         H.el("button.bouton", { type: "button", onclick: () => formulaire() }, "Nouvelle tâche"),
+        H.el("button.bouton.petit", { type: "button", onclick: exporterTaches }, "Exporter"),
         H.el("label.discret", null, "Jardin ", H.el("select", { onchange: (e) => { filtreIle = e.target.value; dessiner(); } },
           H.el("option", { value: "" }, "Tous"), iles().map((i) => H.el("option", { value: i.id, selected: filtreIle === i.id }, i.nom))))),
       liste.length ? null : H.el("p.discret", null, "Rien à faire pour l’instant. Ajoute une tâche, ou pioche dans les idées du mois."),

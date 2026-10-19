@@ -2814,7 +2814,7 @@
     for (const pl of Object.values(ile.plantes || {})) quantites[pl.p] = (quantites[pl.p] || 0) + 1;
     const plantes = Object.keys(quantites).map((id) => H.d.plante(id)).filter(Boolean).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     if (!plantes.length) return H.toast("Pas encore de plantes sur cette île");
-    H.exporterPlantes(plantes, H.slug(ile.nom), quantites);
+    H.exporterPlantes(plantes, H.slug(ile.nom), quantites, "Les plantes de « " + ile.nom + " »");
   }
 
   function exporterImage(ile) {
@@ -2992,5 +2992,19 @@
     return url;
   }
 
-  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait };
+  // Une plante en petit, debout, dessinée selon sa famille (pour les pots de la serre, les récoltes
+  // du labo…) : haut, sa hauteur en pixels ; st, son âge (1 : plantule, 2 : jeune, 3 : adulte).
+  // Rend une toile, l'origine au pied, en bas au milieu.
+  function miniature(p, haut, st, fleur) {
+    const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
+    const d = planteDebout(p, { caseM: Math.max(0.02, (eff * 2 * HW * 0.55) / haut) }, st == null ? 3 : st, !!fleur);
+    if (!d.couronne) return d.pied;
+    const c = document.createElement("canvas");
+    c.width = d.l; c.height = d.h;
+    const g = c.getContext("2d");
+    g.drawImage(d.pied, 0, 0); g.drawImage(d.couronne, 0, 0);
+    return c;
+  }
+
+  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait, miniature };
 })();

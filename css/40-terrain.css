@@ -298,7 +298,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root:is([data-vue="village"], [data-vue="balade"]) #vue { padding: 0; max-width: none; }
 :root[data-vue="village"] .liens-village, :root[data-vue="village"] .nouvelles { display: none; }
 :root[data-vue="village"] .village { border: 0; border-radius: 0; position: relative; margin: 0 auto; max-width: calc(100vh / 0.6); }
-.pastilles-scene { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: 10px; display: flex; gap: 6px; z-index: 2; }
+.pastilles-scene { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: flex; gap: 6px; z-index: 2; }
 .pastille-scene {
   font: 0.85rem "Suez One", var(--texte); color: #f2f0e8; text-decoration: none; cursor: pointer;
   background: rgba(35, 33, 74, 0.72); border: 0; border-radius: 999px; padding: 3px 12px 4px;

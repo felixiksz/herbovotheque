@@ -317,28 +317,20 @@
   }
 
   // --- export de listes de plantes (herbothèque, îles, tisanes) ---------------
-  H.exporterPlantes = function (plantes, nomFichier, quantites) {
+  H.exporterPlantes = function (plantes, nomFichier, quantites, titre) {
     const champs = ["famille", "cycle", "exposition", "sol", "arrosage", "rusticite", "hauteur", "espacement", "moisFloraison"]
       .map((id) => H.d.champ(id))
       .filter(Boolean);
-    const cell = (v) => {
-      if (Array.isArray(v)) v = v.map((x) => (typeof x === "number" ? H.MOIS[x - 1] : x)).join(", ");
-      v = v == null ? "" : String(v).replace(/\*\*/g, "");
-      return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-    };
-    const lignes = [["Plante", "Nom latin"].concat(quantites ? ["Quantité"] : [], champs.map((c) => c.nom)).map(cell).join(";")];
-    for (const p of plantes) {
-      lignes.push(
-        [p.nom, p.latin]
-          .concat(quantites ? [quantites[p.id] || ""] : [], champs.map((c) => (p.valeurs || {})[c.id]))
-          .map(cell)
-          .join(";")
-      );
-    }
-    // en UTF-8 simple : Numbers, Excel sur Mac et les tableurs en ligne lisent bien les accents
-    const contenu = lignes.join("\n");
-    H.telecharger(nomFichier + ".csv", contenu, "text/csv;charset=utf-8");
-    H.toast("Liste exportée (" + plantes.length + " plantes)");
+    const valeur = (v) => (Array.isArray(v) ? v.map((x) => (typeof x === "number" ? H.MOIS[x - 1] : x)).join(", ") : v == null ? "" : String(v));
+    H.exporter({
+      titre: titre || "Plantes de l’herbothèque",
+      sousTitre: plantes.length + " plantes",
+      nomFichier,
+      sections: [{
+        colonnes: ["Plante", "Nom latin"].concat(quantites ? ["Quantité"] : [], champs.map((c) => c.nom)),
+        lignes: plantes.map((p) => [p.nom, p.latin || ""].concat(quantites ? [quantites[p.id] || ""] : [], champs.map((c) => valeur((p.valeurs || {})[c.id])))),
+      }],
+    });
   };
 
   // --- choisir des plantes dans une liste (étagères, îles, tisanes) -----------
