@@ -299,7 +299,7 @@
   // --- en-tête de fiche : nom, préparations, étagères, photo ---------------------
   // de petites icônes en pixels : le crayon (changer la photo, renommer) et le cerveau (réviser)
   const CRAYON = ["......kk.", ".....kyyk", "....kmkyk", "...kmmkk.", "..kmmmk..", ".kwmmk...", "kwwkk....", "kkk......"];
-  const CERVEAU = ["...kkkkk...", ".kkpPpPpkk.", "kpPppkpPppk", "kPpkPpkpPpk", "kppPpkpPpPk", "kPpkpPkppPk", ".kkpPpkpPk.", "...kkkkkpk.", "........kk."];
+  const CERVEAU = ["..kkkk.kkkk..", ".kpPpkkkpPpk.", "kpPkpPkPpkPpk", "kPppkpkpkppPk", "kpkPpPkPpPkpk", "kPpkppkppkpPk", "kpPpkPkPkpPpk", "kPkppPkPppkPk", ".kpPkpkpkPpk.", "..kkkk.kkkk.."];
   const icone = (motif, palette, n) => H.el("img.icone-fiche", { src: H.dessinPixel(motif, palette, n || 3), alt: "" });
   const PAL_CRAYON = { k: "#23214a", y: "#f6ee55", m: "#ff8f2e", w: "#f3f0dc" }, PAL_GRIS = { k: "#8a88a0", y: "#c9c9c4", m: "#b8b6cc", w: "#e9e7f0" };
   const PAL_CERVEAU = { k: "#23214a", p: "#f4a3b8", P: "#d07ab8" };
