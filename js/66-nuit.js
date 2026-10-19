@@ -3092,6 +3092,40 @@
     ctx.fill();
   }
   // un pin parasol en aplat : tronc sinueux, branches, couronne en nuage plat
+  // Les arbres de la balade, dessinés comme dans l'herbier : chacun selon sa famille botanique (le
+  // pin, l'olivier, le lentisque, le genévrier sauvage, le cyprès, le figuier, le myrte…), à la
+  // taille d'un gros pixel par point, assombris et bleuis la nuit, rosés le soir.
+  const ARBRES_BALADE = [["Pin sylvestre", 4], ["Olivier", 3], ["Lentisque", 2], ["Genevrier commun", 2], ["Cyprès", 1], ["Figuier", 1], ["Myrte", 1], ["Laurier noble", 1]];
+  const dessinsArbres = new Map();
+  function arbreBalade(ctx, x, base, taille, mo, k) {
+    if (!H.terrain || !H.terrain.plantePetite) return false;
+    const total = ARBRES_BALADE.reduce((a, e) => a + e[1], 0);
+    let n = Math.floor(hsh(Math.round(taille * 13), 17) * total), nom = ARBRES_BALADE[0][0];
+    for (const [nm, poids] of ARBRES_BALADE) { if (n < poids) { nom = nm; break; } n -= poids; }
+    const haut = Math.max(12, Math.round(taille * k)), cle = nom + "|" + haut + "|" + mo;
+    let d = dessinsArbres.get(cle);
+    if (d === undefined) {
+      const p = H.d.plantes().find((q) => q.nom === nom);
+      d = null;
+      if (p) {
+        const src = H.terrain.plantePetite(p, haut, 3, true);
+        d = document.createElement("canvas");
+        d.width = src.width; d.height = src.height;
+        const g = d.getContext("2d");
+        g.drawImage(src, 0, 0);
+        // (la lumière du moment, seulement sur le dessin)
+        if (mo !== "jour") { g.globalCompositeOperation = "source-atop"; g.fillStyle = mo === "nuit" ? "rgba(16,20,66,0.72)" : "rgba(120,60,110,0.28)"; g.fillRect(0, 0, d.width, d.height); }
+      }
+      if (dessinsArbres.size > 120) dessinsArbres.clear();
+      dessinsArbres.set(cle, d);
+    }
+    if (!d) return false;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(d, Math.round(x - d.width / k / 2), Math.round(base - d.height / k), d.width / k, d.height / k);
+    ctx.restore();
+    return true;
+  }
   function pinPlat(ctx, x, base, t, couleur, dessous, tronc) {
     // un pin sur trois environ pousse en Y : le tronc se sépare en deux, et la couronne aussi
     if (Math.round(t) % 3 === 0) return pinEnY(ctx, x, base, t, couleur, dessous, tronc);
@@ -3148,6 +3182,40 @@
     ctx.fill();
   }
   // un nuage plat, bien arrondi
+  // Un nuage net pour la balade : peint une fois, en gros pixels pleins (sans bord adouci) et dans
+  // des couleurs de la palette, le ventre plus sombre. Posé à des positions entières, il glisse sans
+  // que ses pixels ne changent de teinte à chaque pas (c'est ce qui le faisait clignoter).
+  const nuagesNets = new Map();
+  function nuageNet(ctx, x, y, t, nuit, sombre, gp) {
+    const clair = nuit ? "#3a3aa8" : sombre ? "#8a98cc" : "#f3f0dc", ventre = nuit ? "#2a2c6a" : sombre ? "#5b5fa8" : "#c2cdec";
+    const cle = Math.round(t) + "|" + clair + "|" + gp.toFixed(2);
+    let c = nuagesNets.get(cle);
+    if (!c) {
+      const L = Math.ceil((t * 2.2) / gp), Hh = Math.ceil((t * 1.0) / gp);
+      const tmp = document.createElement("canvas");
+      tmp.width = L; tmp.height = Hh;
+      const g = tmp.getContext("2d"), k = 1 / gp, cx = L / 2, cy = Hh * 0.62;
+      g.fillStyle = "#000";
+      g.beginPath();
+      g.ellipse(cx, cy, t * k, t * 0.32 * k, 0, 0, Math.PI * 2);
+      g.ellipse(cx - t * 0.35 * k, cy - t * 0.12 * k, t * 0.4 * k, t * 0.3 * k, 0, 0, Math.PI * 2);
+      g.ellipse(cx + t * 0.25 * k, cy - t * 0.2 * k, t * 0.45 * k, t * 0.36 * k, 0, 0, Math.PI * 2);
+      g.fill();
+      const im = g.getImageData(0, 0, L, Hh), d = im.data, [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(clair.slice(i, i + 2), 16)), [vr, vg, vb] = [1, 3, 5].map((i) => parseInt(ventre.slice(i, i + 2), 16));
+      for (let j = 0; j < Hh; j++) for (let i = 0; i < L; i++) {
+        const q = (j * L + i) * 4, plein = d[q + 3] > 120, bas = j > cy + t * 0.12 * k;
+        d[q] = bas ? vr : cr; d[q + 1] = bas ? vg : cg; d[q + 2] = bas ? vb : cb; d[q + 3] = plein ? 255 : 0;
+      }
+      g.putImageData(im, 0, 0);
+      c = tmp;
+      if (nuagesNets.size > 40) nuagesNets.clear();
+      nuagesNets.set(cle, c);
+    }
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(c, Math.round((x - (c.width * gp) / 2) / gp) * gp, Math.round((y - c.height * gp * 0.62) / gp) * gp, c.width * gp, c.height * gp);
+    ctx.restore();
+  }
   function nuagePlat(ctx, x, y, t, couleur) {
     ctx.fillStyle = couleur;
     ctx.beginPath();
@@ -3383,7 +3451,7 @@
       S.profils.nuages.forEach((v, i) => {
         if (i >= S.couvert.n * 2) return;
         const gp = 1 / dpr, nx = boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120);
-        nuagePlat(ctx, Math.round(nx / gp) * gp, h * (0.08 + v * 0.22), 50 + v * 50, S.couvert.couleur);
+        nuageNet(ctx, nx, h * (0.08 + v * 0.22), 50 + v * 50, nuit, !!S.couvert.ventre && /^#[0-9a-f]{6}$/i.test(S.couvert.couleur) && parseInt(S.couvert.couleur.slice(1, 3), 16) < 200, gp);
       });
     }
     // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit ;
@@ -3444,8 +3512,10 @@
         for (let j = 0; j < 5; j++) { ctx.beginPath(); ctx.moveTo(x + j * 3, sol(x) - h * 0.15); ctx.lineTo(x + j * 3 + (j - 2) * 3, sol(x) - h * 0.15 - 14 - (j % 2) * 6); ctx.stroke(); }
       } else buissonPlat(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, nuit ? "#163024" : i % 2 ? "#2f7a3e" : "#4f9a46");
     }
+    const moA = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
     poses(S.arbres, b, 0.85, (x, taille) => {
       if (dunes(X(x)) > 0.6) return;
+      if (arbreBalade(ctx, x, sol(x) - h * 0.14, taille, moA, dpr)) return;
       if (nuit) pinPlat(ctx, x, sol(x) - h * 0.14, taille, "#132a1e", "#0f2218", "#132a1e");
       else pinPlat(ctx, x, sol(x) - h * 0.14, taille, taille > 160 ? "#1f7a3a" : "#2d8f45", "#155a2a", "#5a3a2a");
     });
@@ -3482,7 +3552,7 @@
     }
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
-    poses(S.devant, b, 1.3, (x, taille) => pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
+    poses(S.devant, b, 1.3, (x, taille) => arbreBalade(ctx, x, h * 1.04, taille, moA, dpr) || pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
     // On peut aller se baigner quand le chemin longe la crique aux rochers rouges. En y arrivant,
     // on s'arrête (même si quelqu'un est en train de raconter une histoire) ; une fois la bulle
     // fermée, on attend un moment devant la crique avant de repartir. S'il fait froid, ƟvƟ le dit.
