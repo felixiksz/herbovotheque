@@ -574,13 +574,8 @@
         let c;
         if (prof < 2 * p) c = h < 0.2 ? "#2f6b35" : "#3f8a42";
         else if (prof < 18) c = h < 0.12 ? "#7a4520" : h < 0.45 ? "#e8714a" : h < 0.9 ? "#c96a3a" : "#9a6a3c";
-        else if (prof < 150) c = h < 0.18 ? "#4b3427" : h < 0.6 ? "#9a6a3c" : "#7a4520";
-        else {
-          // la roche, en pavés gris séparés de joints sombres
-          const r = Math.floor((prof - 150) / (3 * p)), dec = r % 2 ? 2 : 0, col = Math.floor((xi + dec) / 5);
-          const joint = (j + j0) % 3 === 0 || (xi + dec) % 5 === 0;
-          c = joint ? "#4b3427" : hsh(col, r) < 0.5 ? "#8a98cc" : "#c2cdec";
-        }
+        // (de la terre jusqu'en bas, sans couche de roche)
+        else c = h < 0.18 ? "#4b3427" : h < 0.6 ? "#9a6a3c" : "#7a4520";
         pose(i, j, c);
       }
       // les touffes d'herbe au-dessus du sol
