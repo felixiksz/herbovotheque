@@ -3396,7 +3396,7 @@
     if (b.attenteCrique && !b.baignade && !parle) {
       if (!b.criqueDepuis) {
         b.criqueDepuis = t;
-        if (cheminee.froid()) H.dialogue.dire([{ qui: "ovo", texte: "La crique est belle… mais l’eau est bien trop froide aujourd’hui pour se baigner. On continue !" }]);
+        if (cheminee.froid()) direUneFois([{ qui: "ovo", texte: "La crique est belle… mais l’eau est bien trop froide aujourd’hui pour se baigner. On continue !" }]);
       }
       if (t - b.criqueDepuis > (cheminee.froid() ? 1500 : 14000)) { b.attenteCrique = false; b.pause = false; }
     }
@@ -3509,7 +3509,7 @@
         f.parle = true;
         const repliques = [{ qui: "flamant", texte: "Flma-mala-lamama !" }, { qui: "ovo", texte: "Fala-la-lamala !" }];
         if (b.s.compagnons.includes("luigi")) repliques.push({ qui: "luigi", texte: "Fla-fla-mala !" });
-        H.dialogue.dire(repliques);
+        direUneFois(repliques);
       }
       if (f.x < -60) {
         f.x = null;
@@ -3541,7 +3541,7 @@
     if (!b.s.compagnons.length) {
       lignes.push({ qui: "ovo", nom: "Balade", texte: froid ? "Personne à l’horizon. Juste ƟvƟ, la mer froide et les rochers rouges." : "Personne à l’horizon. Juste ƟvƟ, la mer tiède et les rochers rouges." });
     }
-    await H.dialogue.dire(lignes);
+    await direUneFois(lignes);
     if (balade === b) b.sortir.hidden = false;
   }
 
@@ -3562,6 +3562,21 @@
     if (balade === b) H.aller("maison");
   }
 
+  // Pendant une balade, une même réplique ne revient pas : on garde ce qui a déjà été dit, et
+  // on ne le redit plus (l'introduction quand on continue, les pensées, la crique, le flamant)
+  function pasEncoreDit(lignes) {
+    const b = balade;
+    if (!b) return lignes;
+    b.dits = b.dits || new Set();
+    const neuves = lignes.filter((l) => !b.dits.has(l.texte));
+    for (const l of neuves) b.dits.add(l.texte);
+    return neuves;
+  }
+  async function direUneFois(lignes) {
+    const neuves = pasEncoreDit(lignes);
+    if (neuves.length) await H.dialogue.dire(neuves);
+  }
+
   async function deroulerBalade(compagnons) {
     const avec = (q) => compagnons.includes(q);
     const intro = [];
@@ -3570,7 +3585,7 @@
     if (avec("meme") && avec("lolo")) intro.push({ qui: "meme", texte: "Mrrr… (Mémé se réveille, s’étire et se met debout sur le dos de Lóló : elle voyage sans même avoir à bouger.)" });
     else if (avec("meme")) intro.push({ qui: "meme", texte: "Mrrrou ! (Mémé trottine devant, la queue en l’air, les yeux toujours fermés. Elle connaît le chemin par cœur.)" });
     if (!intro.length) intro.push({ qui: "ovo", nom: "Balade", texte: "ƟvƟ part seul·e sur le petit chemin, entre les pins et la mer." });
-    await H.dialogue.dire(intro);
+    await direUneFois(intro);
     if (!balade) return;
     if (avec("luigi")) {
       await raconter("luigi");
@@ -3579,7 +3594,8 @@
     if (balade && !avec("luigi") && !avec("lolo")) {
       // (quand ƟvƟ s'assoit un moment, on s'arrête : on la voit de dos, assis·e sur une pierre,
       // face à la mer, le temps de la pensée)
-      for (const ligne of histoires().pensees()) {
+      // (les pensées pas encore eues pendant cette balade)
+      for (const ligne of pasEncoreDit(histoires().pensees())) {
         if (!balade) return;
         const assis = /s’assoit/.test(ligne.texte);
         if (assis) { balade.assis = true; balade.pause = true; }
