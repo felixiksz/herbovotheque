@@ -52,6 +52,14 @@
       entree.gain.setTargetAtTime(1, ctx.currentTime, 0.08);
     }
   });
+  // Le navigateur garde le son coupé tant qu'on n'a pas touché la page (une règle des navigateurs
+  // contre les pages qui font du bruit toutes seules) : on le débloque dès le premier geste, où
+  // que ce soit (un toucher, un clic, une touche), et pas seulement sur un bouton qui joue un son.
+  const debloquer = () => {
+    const c = contexte();
+    if (c && c.state === "running") for (const ev of ["pointerdown", "pointerup", "touchend", "keydown"]) document.removeEventListener(ev, debloquer, true);
+  };
+  for (const ev of ["pointerdown", "pointerup", "touchend", "keydown"]) document.addEventListener(ev, debloquer, true);
   H.audio = {
     contexte,
     sortie: () => (contexte(), entree),

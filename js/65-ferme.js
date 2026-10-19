@@ -1024,9 +1024,19 @@
   // téléphone), le haut de la ferme reste sous une bande de ciel, assez haute pour que le soleil
   // et la lune passent sous les boutons. Sur un écran en largeur (une tablette couchée), le bas de
   // la ferme passe avant le ciel : le ponton doit toujours rester visible et cliquable.
+  // la ferme entière, dans le dessin : de la cime des arbres du fond à la tranche de devant, et du
+  // coin gauche au ponton
+  const FERME = { g: -4, d: 2 * N * 8 + 44, h: OY - 64, b: OY + N * 8 + 30 };
+  // Quand toute la ferme tient à l'écran, on la centre (sous les boutons du haut) ; sinon la caméra
+  // suit ƟvƟ, sans sortir de la ferme
   function hautCamera(y) {
     const cache = zoneBoutons(), bande = (cache ? cache.b : 0) + 26;
+    if (Ht - bande >= FERME.b - FERME.h) return Math.round((FERME.h + FERME.b) / 2 - (Ht + bande) / 2);
     return Math.min(y, Math.max(OY - 50 - bande, OY + 226 - Ht));
+  }
+  function largeCamera(x) {
+    if (W >= FERME.d - FERME.g) return Math.round((FERME.g + FERME.d) / 2 - W / 2);
+    return Math.max(FERME.g - 10, Math.min(FERME.d + 10 - W, x));
   }
   // la place des boutons du haut (Aménager, Les îles, Réglages), dans les coordonnées du dessin
   function zoneBoutons() {
@@ -1100,8 +1110,10 @@
       });
     }
   }
-  const MARCASSIN = [".rRrRr.", "rRrRrRr", "rRrRrRp", ".n.n.n."];
-  const MARCASSIN_PAS = MARCASSIN.slice(0, 3).concat(["n.n..n."]);
+  // le marcassin : brun, avec ses rayures claires dans la longueur du corps (pas en travers : il
+  // ressemblait à une abeille), l'oreille, l'œil et le groin clair à droite, quatre petites pattes
+  const MARCASSIN = ["..RRRR.R.", ".ReeeeRNR", "RRRRRRRRe", ".ReeeeRR.", "..n.n.n.n"];
+  const MARCASSIN_PAS = MARCASSIN.slice(0, 4).concat([".n..n.n.."]);
   const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#3e2210", N: "#1b1414", k: "#2a1d1b", b: "#6b5442", B: "#8a7258", e: "#c9b090", s: "#b8a090", r: "#b9834f", R: "#7a4520", p: "#8a98cc" };
   function dessinBete(c, x, y, g, gauche) {
     const L = g[0].length;
@@ -1525,7 +1537,11 @@
     const b = scene.boite, cw = b.clientWidth || 800, ch = b.clientHeight || 500;
     // des pixels entiers : chaque pixel du dessin fait 2 à 6 pixels d'écran
     // (la taille choisie dans les réglages, de très fins à très gros)
-    const k = Math.max(1, Math.round(Math.max(2, Math.floor(Math.min(cw, ch) / 190)) * (H.finesse ? H.finesse() : 1)));
+    // (et jamais si petits que la ferme flotte au milieu d'un grand vide : elle remplit l'écran,
+    // quitte à dépasser un peu en hauteur)
+    const kFin = Math.max(1, Math.round(Math.max(2, Math.floor(Math.min(cw, ch) / 190)) * (H.finesse ? H.finesse() : 1)));
+    const kRemplit = Math.round(Math.min(cw / (FERME.d - FERME.g), (ch - 30) / (FERME.b - FERME.h)));
+    const k = Math.max(1, kFin, kRemplit);
     W = Math.max(120, Math.floor(cw / k));
     Ht = Math.max(120, Math.floor(ch / k));
     scene.k = k;
@@ -1539,7 +1555,7 @@
     // (le fond et les dessins restent en mémoire d'une visite à l'autre, tant que la taille et le
     // moment ne changent pas : revenir de la maison à la ferme est alors presque immédiat)
     const [sx, sy] = iso(scene.ovo.x, scene.ovo.y);
-    scene.cam.x = sx - W / 2; scene.cam.y = hautCamera(sy - Ht / 2 - 10);
+    scene.cam.x = largeCamera(sx - W / 2); scene.cam.y = hautCamera(sy - Ht / 2 - 10);
   }
 
   // ƟvƟ marche de maison en maison par les chemins
@@ -1606,7 +1622,7 @@
       peindreFond(); sprites.clear(); fondCle = mo.periode + mo.cote + W + "x" + Ht;
     }
     const [sx, sy] = iso(perso.x, perso.y);
-    scene.cam.x += (sx - W / 2 - scene.cam.x) * 0.06;
+    scene.cam.x += (largeCamera(sx - W / 2) - scene.cam.x) * 0.06;
     scene.cam.y += (hautCamera(sy - Ht / 2 - 10) - scene.cam.y) * 0.06;
     if (perso.trajet) {
       perso.i = Math.min(perso.trajet.length - 1, perso.i + 0.5);
@@ -1770,7 +1786,15 @@
       for (let k = 0; k < 3; k++) { const x = Math.round(W * (1.1 - u * 1.3) + k * 9), y = Math.round(18 + k * 5 + Math.sin(t / 200 + k) * 2), aile = Math.floor(t / 180 + k) % 2; pixel(ctx, x, y, "#f3f0dc"); pixel(ctx, x - 1, y - aile, "#f3f0dc"); pixel(ctx, x + 1, y - aile, "#f3f0dc"); pixel(ctx, x - 2, y - aile + 1, "#c2cdec"); pixel(ctx, x + 2, y - aile + 1, "#c2cdec"); }
     }
     // la lumière du moment
-    const teinte = { nuit: "rgba(20,18,64,0.3)", aube: "rgba(255,179,168,0.12)", crepuscule: "rgba(255,91,79,0.13)" }[periode];
+    // (la nuit, la lumière de la lune : tout passe au bleu, les verts deviennent bleu-vert, les
+    // rouges violacés ; seules les fenêtres allumées gardent un peu de leur chaleur)
+    if (periode === "nuit") {
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = 0.88; ctx.fillStyle = "#6a82e6"; ctx.fillRect(0, 0, W, Ht);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1; ctx.fillStyle = "rgba(70,90,190,0.14)"; ctx.fillRect(0, 0, W, Ht);
+      ctx.restore();
+    }
+    const teinte = { aube: "rgba(255,179,168,0.12)", crepuscule: "rgba(255,91,79,0.13)" }[periode];
     if (teinte) { ctx.fillStyle = teinte; ctx.fillRect(0, 0, W, Ht); }
     // le nom de la maison survolée (ou touchée une première fois), en VT323 net, par-dessus
     scene.survol = null;
@@ -1898,7 +1922,9 @@
     }
   }
 
-  H.ferme = { scene: () => scene, fond: () => fond, aUnBassin: () => casesBassin().length > 0 };
+  H.ferme = { scene: () => scene, fond: () => fond, aUnBassin: () => casesBassin().length > 0,
+    // les bêtes de la nuit, pour qu'on les voie aussi passer depuis la maison
+    betes: { RENARD, RENARD_PAS, SANGLIER, SANGLIER_PAS, MARCASSIN, MARCASSIN_PAS, HERISSON, HERISSON_PAS, PAL_BETES, PAL_BASSIN } };
   H.vues.village = {
     afficher(c) {
       const boite = H.el("div.village");
@@ -1922,7 +1948,7 @@
       dimensionner();
       peindreSol(); peindreSol2();
       const [sx, sy] = iso(px, py);
-      scene.cam.x = sx - W / 2; scene.cam.y = hautCamera(sy - Ht / 2 - 10);
+      scene.cam.x = largeCamera(sx - W / 2); scene.cam.y = hautCamera(sy - Ht / 2 - 10);
       // Lóló : la première fois de la visite, il arrive au galop ; ensuite il est là, à côté d'ƟvƟ
       if (galopDejaVu) Object.assign(scene.lolo, { x: px - 1.6, y: py + 0.4 });
       else {

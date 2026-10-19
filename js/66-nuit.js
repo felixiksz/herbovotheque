@@ -298,8 +298,34 @@
         }
       }
     }
+    // La nuit, des bêtes traversent dehors, comme à la ferme : un renard qui trotte, une laie et ses
+    // marcassins, un hérisson. Elles passent derrière la maison et ressortent de l'autre côté.
+    if (moment === "nuit" && H.ferme && H.ferme.betes) {
+      // (à l'heure de l'horloge : une traversée toutes les quatre-vingts secondes au plus)
+      const tn = Date.now(), B = H.ferme.betes, P = 80000, k = Math.floor(tn / P);
+      if (hsh(k, 31) < 0.75) {
+        const esp = ["renard", "renard", "sanglier", "herisson"][Math.floor(hsh(k, 32) * 4)];
+        const u = (tn - k * P) / { renard: 22000, sanglier: 34000, herisson: 46000 }[esp];
+        if (u >= 0 && u <= 1.2) {
+          const sens = hsh(k, 33) < 0.5 ? 1 : -1, g0 = Math.max(R.x0, PAYS.ile.g) - 60, g1 = Math.min(R.x1, PAYS.ile.d) + 60;
+          const xA = sens > 0 ? g0 : g1, xB = sens > 0 ? g1 : g0, y = SOL_DEHORS + 8 + hsh(k, 34) * 10, s = p * 3, pas = Math.floor(t / 150) % 2;
+          // (dessinées de profil, la tête à droite : on les retourne quand elles vont à gauche)
+          const bete = (grille, pal, x) => {
+            const L = grille[0].length;
+            grille.forEach((l, j) => [...l].forEach((ch, i) => { const c = pal[ch]; if (!c) return; const ii = sens < 0 ? L - 1 - i : i; ctx.fillStyle = c; ctx.fillRect(Math.round(x + (ii - L / 2) * s), Math.round(y + (j - grille.length) * s), Math.ceil(s), Math.ceil(s)); }));
+          };
+          const x = xA + (xB - xA) * u;
+          if (esp === "renard") bete(pas ? B.RENARD_PAS : B.RENARD, B.PAL_BETES, x);
+          else if (esp === "herisson") bete(pas ? B.HERISSON_PAS : B.HERISSON, B.PAL_BASSIN, x);
+          else {
+            bete(pas ? B.SANGLIER_PAS : B.SANGLIER, B.PAL_BETES, x);
+            for (let m = 1; m <= 2 + Math.floor(hsh(k, 35) * 2); m++) bete((pas + m) % 2 ? B.MARCASSIN_PAS : B.MARCASSIN, B.PAL_BETES, x - sens * (22 + m * 12) * p);
+          }
+        }
+      }
+    }
     // les guirlandes : de la maison au premier arbre, puis d'arbre en arbre, en festons
-    const lumBas = moment !== "jour", bas = SOL_DEHORS + 2;
+    const lumBas = moment !== "jour" && guirlandesAllumees(), bas = SOL_DEHORS + 2;
     const accroches = { g: [[0, 150]], d: [[LARGE, 150]] };
     for (const a of ARBRES) {
       if (!a.pres) continue;
@@ -336,10 +362,13 @@
   // ce que le soir et la nuit font aux couleurs du jour (les ampoules des guirlandes restent chaudes)
   const TEINTE = { soir: { m: [0.66, 0.5, 0.72], a: [26, 8, 40] }, nuit: { m: [0.26, 0.3, 0.55], a: [10, 10, 26] } };
   let cachePaysage = { cle: "" }, decorGarde = { cle: "" };
+  // les guirlandes dehors s'allument le soir, sauf si on les a éteintes (le même interrupteur
+  // pour la ferme et pour la maison)
+  const guirlandesAllumees = () => !(H.local && H.local.guirlandesEteintes);
   function paysagePixels(R, p, moment) {
     const i0 = Math.floor(R.x0 / p), j0 = Math.floor(R.y0 / p);
     const W = Math.ceil(R.x1 / p) - i0 + 1, Hh = Math.ceil(R.y1 / p) - j0 + 1;
-    const cle = [i0, j0, W, Hh, p.toFixed(4), moment].join("|");
+    const cle = [i0, j0, W, Hh, p.toFixed(4), moment, guirlandesAllumees()].join("|");
     if (cachePaysage.cle === cle) return cachePaysage;
     const img = new ImageData(W, Hh), d = img.data, brille = new Uint8Array(W * Hh);
     const X = (i) => (i0 + i + 0.5) * p, Y = (j) => (j0 + j + 0.5) * p;
@@ -635,7 +664,7 @@
       });
     }
     // les arbres, au premier plan ; le soir, le dessous des pins des guirlandes brille
-    const nuitLum = moment !== "jour";
+    const nuitLum = moment !== "jour" && guirlandesAllumees();
     // un pin parasol : le tronc penche, se divise en branches en éventail, sous une ombrelle large
     // et plate faite de paquets d'aiguilles, le dessus éclairé, le dessous presque droit
     function pinParasol(a, ecorce0, lum) {
@@ -2009,6 +2038,10 @@
       { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "bois", x: -92, y: 430, w: 78, h: 80, nom: "Prendre du bois sec", agir: () => cheminee.prendreBois() },
       { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: () => !trajet && fenetreBalade() },
+      // les guirlandes dehors, accrochées de la maison aux arbres : on les allume ou on les éteint
+      ...[[-EP_MUR - 250, 100], [LARGE + EP_MUR + 10, 100]].map(([x, y], k) => ({ id: "guirlandes" + k, x, y, w: 240, h: 110,
+        get nom() { return momentMaison() === "jour" ? "Les guirlandes" : guirlandesAllumees() ? "Éteindre les guirlandes" : "Allumer les guirlandes"; },
+        agir: () => (momentMaison() === "jour" ? H.dialogue.dire([{ qui: "luigi", texte: "Elles s’allumeront ce soir." }]) : H.d.majLocal((l) => { l.guirlandesEteintes = !l.guirlandesEteintes; })) })),
     ];
     return zones;
   }
@@ -2344,7 +2377,7 @@
       derniere = t;
       const v = vueMaison(toile), moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
-      const cleD = [v.W, v.Hc, v.K, v.taille, moment, cheminee.feuActif(), cheminee.bois(), fenetresOuvertes()].join("|");
+      const cleD = [v.W, v.Hc, v.K, v.taille, moment, cheminee.feuActif(), cheminee.bois(), fenetresOuvertes(), guirlandesAllumees()].join("|");
       if (cle !== cleD) {
         cle = cleD;
         vue = v;

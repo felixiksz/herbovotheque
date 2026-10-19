@@ -1972,7 +1972,29 @@
       }
     }
     if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
+    // les paniers de la récolte du jour, sur le bord de devant
+    paniersIle(ile).forEach((b, i) => {
+      const q = H.d.plante(b.p), [bx, by] = placePanier(ile, i);
+      if (q) debout.push({ prof: bx + by, dessin: () => { const [sx, sy] = proj(bx, by); ctx.save(); ctx.translate(Math.round(sx), Math.round(sy)); ctx.scale(2, 2); panierRecolte(ctx, 0, 0, q, b.n); ctx.restore(); } });
+    });
+    // les pots à repiquer, qui flottent devant l'angle de devant (par-dessus tout le reste)
+    vue.potsFlottants = [];
+    potsDeLaCaisse(ile).forEach((q, i) => {
+      const pq = H.d.plante(q.id);
+      if (!pq) return;
+      const [sx, sy] = proj(q.x, q.y), hy = sy - 12;
+      vue.potsFlottants.push({ id: q.id, g: sx - 15, d: sx + 15, h: hy - 30, b: hy + 14 });
+      debout.push({ prof: 100 + q.x + q.y, dessin: () => { ctx.save(); ctx.translate(Math.round(sx), Math.round(hy)); ctx.scale(1.7, 1.7); potFlottant(ctx, 0, 0, pq, vue.outil === "planter" && vue.depuisSerre && vue.plante === q.id, t, i); ctx.restore(); } });
+    });
     debout.sort((a, b) => a.prof - b.prof).forEach((e) => e.dessin());
+    // ce qui vole : un brin récolté vers son panier, en arc
+    vue.envols = (vue.envols || []).filter((e) => t - e.t0 < 750);
+    for (const e of vue.envols) {
+      const u = (t - e.t0) / 750, [ax, ay] = proj(e.de[0], e.de[1]), [bx, by] = proj(e.vers[0], e.vers[1]);
+      const x = ax + (bx - ax) * u, y = ay - 20 + (by - 10 - (ay - 20)) * u - Math.sin(Math.PI * u) * 26;
+      ctx.fillStyle = FEUILLES_PIX[H.hash(e.p.id) % FEUILLES_PIX.length]; ctx.fillRect(Math.round(x), Math.round(y), 1, 4); ctx.fillRect(Math.round(x) - 1, Math.round(y) + 1, 3, 1);
+      ctx.fillStyle = FLEURS_ISO[H.hash(e.p.id) % FLEURS_ISO.length]; ctx.fillRect(Math.round(x), Math.round(y) - 1, 2, 2);
+    }
     // les couronnes des arbres par-dessus, un peu transparentes : on voit ce qui pousse dessous
     ctx.save();
     ctx.globalAlpha = 0.72;
@@ -2007,6 +2029,56 @@
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
   const PANIER = ["..kkkk..", ".k....k.", "kkkkkkkk", "kAaAaAak", "kaAaAaAk", ".kAaAak.", "..kkkk.."];
+  // --- les paniers de la récolte et les pots à repiquer ---------------------------------------
+  // Chaque récolte va dans un panier d'osier posé au bord de l'île (un panier par plante, trois
+  // récoltes au plus par panier) ; les paniers restent là jusqu'au lendemain (sur cet appareil).
+  const jourLocal = () => new Date().toLocaleDateString("sv");
+  function paniersIle(ile) { const p = (H.local.paniersIles || {})[ile.id]; return p && p.jour === jourLocal() ? p.liste : []; }
+  function mettreAuPanier(ile, pid) {
+    H.d.majLocal((l) => {
+      const tous = Object.assign({}, l.paniersIles), avant = tous[ile.id] && tous[ile.id].jour === jourLocal() ? tous[ile.id].liste : [];
+      const liste = avant.map((x) => Object.assign({}, x)), b = liste.find((x) => x.p === pid && x.n < 3);
+      if (b) b.n++; else liste.push({ p: pid, n: 1 });
+      tous[ile.id] = { jour: jourLocal(), liste: liste.slice(-10) };
+      l.paniersIles = tous;
+    });
+  }
+  // la place du panier n° i : sur le bord de devant, à gauche, l'un à côté de l'autre
+  const placePanier = (ile, i) => [0.6 + i * 1.05, ile.lignes - 0.32];
+  function panierRecolte(ctx, sx, sy, p, n) {
+    const x0 = Math.round(sx - 6), y0 = Math.round(sy - 6), px = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); };
+    const fleur = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length];
+    // la récolte en tas, plus haute avec chaque récolte : des brins verts et des fleurs
+    for (let k = 0; k < 8 + n * 7; k++) {
+      const u = (H.hash(p.id + "|" + k) % 1000) / 1000, v = (H.hash(k + "|" + p.id) % 1000) / 1000, hx = x0 + 2 + Math.round(u * 8), bombe = 1 - Math.abs(u - 0.5) * 2;
+      px(hx, y0 - Math.round(v * (1 + n * 1.3) * bombe), k % 3 === 0 ? fleur : k % 3 === 1 ? feuille : assombrir(feuille, 0.7));
+    }
+    // l'anse, puis le panier tressé
+    for (const [x, y] of [[2, -3], [3, -5], [4, -6], [5, -6], [6, -6], [7, -6], [8, -5], [9, -3]]) px(x0 + x, y0 + y, "#7a4520");
+    ["kkkkkkkkkkkk", "kAaAaAaAaAak", "kaAaAaAaAaAk", ".kAaAaAaAak.", ".kkkkkkkkkk."].forEach((l, j) => [...l].forEach((c, i) => { if (c !== ".") px(x0 + i, y0 + j, c === "k" ? "#4b3427" : c === "A" ? "#e9b44c" : "#b9834f"); }));
+  }
+  // un pot de terre cuite qui flotte au bord de l'île, avec son bébé plante
+  function potFlottant(ctx, sx, sy, p, choisi, t, g) {
+    const bob = Math.round(Math.sin(t / 700 + g) * 2), x0 = Math.round(sx - 4), y0 = Math.round(sy + bob), px = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); };
+    // son ombre, très pâle, un peu plus bas
+    ctx.fillStyle = "rgba(35,33,74,0.12)"; ctx.fillRect(x0 + 1, Math.round(sy) + 10, 7, 1);
+    const bebe = plantePetite(p, 14, 2, false);
+    ctx.drawImage(bebe, Math.round(sx - bebe.width / 2), y0 + 1 - bebe.height);
+    ["kkkkkkkkk", "kCcCcCcCk", ".kcCcCck.", ".kCcCcCk.", "..kkkkk.."].forEach((l, j) => [...l].forEach((c, i) => { if (c !== ".") px(x0 + i, y0 + j, c === "k" ? "#7a2e1e" : c === "C" ? "#c96a3a" : "#d9824f"); }));
+    if (choisi) { ctx.strokeStyle = "#f6ee55"; ctx.lineWidth = 1; ctx.strokeRect(Math.round(sx - 8) + 0.5, y0 - 16 + 0.5, 16, 22); }
+  }
+  // les pots de la caisse de la serre, qui flottent devant l'angle de devant de l'île, de part et
+  // d'autre de la pointe (là où rien ne les cache, ni les plantes ni leurs bulles)
+  function potsDeLaCaisse(ile) {
+    if (ile.croquis || !H.serre) return [];
+    const pots = [];
+    for (const [id, n] of H.serre.bebes()) for (let k = 0; k < n && pots.length < 14; k++) pots.push(id);
+    return pots.map((id, i) => {
+      const a = i % 2 === 0, j = Math.floor(i / 2);
+      return { id, x: a ? ile.cols + 0.75 : ile.cols - 0.4 - j * 1.1, y: a ? ile.lignes - 0.4 - j * 1.1 : ile.lignes + 0.75 };
+    }).filter((q) => q.x > -0.5 && q.y > -0.5);
+  }
+
   function panierACueillir(ctx, sx, haut, l, h, g, t) {
     const saut = Math.round(Math.abs(Math.sin(t / 260 + g)) * 4), x0 = Math.round(sx - 4), y0 = Math.round(haut - 12 - saut);
     const couleurs = { k: "#23214a", A: "#e9b44c", a: "#b9834f" };
@@ -2383,6 +2455,19 @@
   }
 
   function clic(e) {
+    if (vue.iso) {
+      const rect = vue.toile.getBoundingClientRect(), lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
+      const pot = (vue.potsFlottants || []).find((q) => lx >= q.g && lx <= q.d && ly >= q.h && ly <= q.b);
+      if (pot) {
+        const q = H.d.plante(pot.id);
+        vue.plante = pot.id; vue.depuisSerre = true; vue.outil = "planter";
+        dessinerOutils(); dessiner();
+        if (q) H.toast("Clique sur une case pour y repiquer " + H.leNom(q) + " (en vert, là où elle se plairait).");
+        return;
+      }
+      const ile = vue.ile, b = paniersIle(ile).find((x, i) => { const [bx, by] = proj(...placePanier(ile, i)); return Math.abs(lx - bx) < 14 && ly > by - 26 && ly < by + 4; });
+      if (b) { const q = H.d.plante(b.p); if (q) H.toast("Dans ce panier : " + (b.n > 1 ? b.n + " récoltes" : "une récolte") + " " + H.duNom(q) + ", déjà parties au labo."); return; }
+    }
     const c = caseCliquee(e);
     if (!c) return;
     if (vue.pointeur && vue.pointeur !== "mouse") montrerBulle(e, 2600);
@@ -2619,6 +2704,10 @@
     if ((p.preparations || []).includes("plante-seche")) gains.paille = 1;
     Object.entries(gains).forEach(([k2, n]) => H.ressources.ajouter(k2, n));
     if (H.labo) H.labo.ajouterRecolte(p.id, 1);
+    // un brin s'envole de la plante jusqu'à son panier
+    const deja = paniersIle(ile), iP = deja.findIndex((b) => b.p === p.id && b.n < 3);
+    vue.envols = (vue.envols || []).concat({ p, de: [x + 0.5, y + 0.5], vers: placePanier(ile, iP < 0 ? deja.length : iP), t0: performance.now() });
+    mettreAuPanier(ile, p.id);
     if (H.journal) H.journal.noter("recolter:" + ile.id, "j’ai récolté ", H.leNom(p), " sur « " + ile.nom + " »");
     if (p.valeurs.cycle === "Annuelle") pl.c = 40;
     sauver(ile);
