@@ -81,6 +81,11 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 
 .pied-ile { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 30px; }
 .pied-ile .zoom { margin-left: auto; display: flex; gap: 4px; }
+/* le menu du bas des îles : des groupes séparés par un filet fin, chacun avec son petit titre */
+.pied-ile { gap: 6px 0; }
+.groupe-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 14px; border-left: 1px solid color-mix(in srgb, currentColor 30%, transparent); }
+.groupe-pied:first-child { border-left: 0; padding-left: 0; }
+.titre-groupe { font: 0.95rem/1 var(--menu-police); opacity: 0.6; margin-right: 4px; }
 
 /* bulle de dialogue, en bas de l'écran */
 .dialogue {
