@@ -43,12 +43,13 @@
   // rouge argileuse, le calcaire clair, l'humus sombre, le limon ; et des cailloux s'il est caillouteux.
   function teintesSol(sols) {
     const a = new Set(sols || []);
-    const base = a.has("Sableux") ? ["#d9b48a", "#e9c99a", "#c9a06a", "#f3e2c0"]
-      : a.has("Calcaire") ? ["#d9d0b8", "#e9e3cd", "#c9c4b0", "#f3f0dc"]
+    // (toujours une couleur de terre : le calcaire est ocre clair, pas gris)
+    const base = a.has("Sableux") ? ["#e9c99a", "#f3e2c0", "#d9b48a", "#f6ecc8"]
+      : a.has("Calcaire") ? ["#c9a06a", "#d9b48a", "#b9834f", "#e9c99a"]
       : a.has("Argileux") ? ["#b2552e", "#c96a3a", "#9a4a2a", "#d9824f"]
       : a.has("Humifère") || a.has("Riche") ? ["#4b3427", "#5a3e2a", "#3a2a20", "#7a4520"]
       : ["#9a6a3c", "#8a5c34", "#7a4520", "#b9834f"];
-    return { base, cailloux: a.has("Caillouteux") ? 0.1 : a.has("Calcaire") ? 0.05 : 0.015 };
+    return { base, cailloux: a.has("Caillouteux") ? 0.1 : a.has("Calcaire") ? 0.05 : 0.015, pierres: a.has("Calcaire") ? ["#f3f0dc", "#e9e3cd"] : ["#8a98cc", "#c2cdec"] };
   }
 
   function nombre(texte) {
@@ -346,29 +347,6 @@
       imagesDessin.set(cleI, e);
     }
     return e.pret ? e.img : null;
-  }
-
-  // le modèle en volume d'une plante (ses trois vues dessinées à la main), quand ses images sont
-  // chargées ; null sinon
-  const volumes = new Map();
-  function modeleVolume(p) {
-    const cleV = p.id + "|" + ["dessinFace", "dessinCote", "dessinCarte"].map((c) => (p[c] ? p[c].length : 0)).join("|");
-    if (volumes.has(cleV)) return volumes.get(cleV);
-    const images = {}, champs = { face: "dessinFace", cote: "dessinCote", dessus: "dessinCarte" };
-    for (const [vue2, champ] of Object.entries(champs)) {
-      if (!p[champ]) continue;
-      const img = imageDessin(p, champ);
-      if (!img) return null; // pas encore chargée : on redessinera
-      const c = document.createElement("canvas");
-      c.width = c.height = 32;
-      const cc = c.getContext("2d");
-      cc.imageSmoothingEnabled = false;
-      cc.drawImage(img, 0, 0, 32, 32);
-      images[vue2] = c;
-    }
-    const m = H.modele3d ? H.modele3d(images) : null;
-    volumes.set(cleV, m);
-    return m;
   }
 
   function dessinPlante(p, st, fleur, rayonCases) {
@@ -1173,28 +1151,16 @@
   }
   function planteDeboutFin(p, ile, st, fleur, fin) {
     const h = Math.round(hauteurPx(p, ile, st) * fin), w = Math.round(largeurPx(p, ile, st) * fin), v = p.valeurs || {};
-    const debout = p.dessinFace ? "dessinFace" : p.dessinCote ? "dessinCote" : null;
-    // (le modèle en volume n'est prêt qu'une fois ses images chargées : la clé le dit, pour redessiner)
-    const volumePret = debout && st >= 2 ? !!modeleVolume(p) : false;
-    const versions = ["dessinFace", "dessinCote", "dessinCarte"].map((c) => (p[c] ? p[c].length : 0)).join(",");
+    // (debout, chaque plante prend toujours son dessin botanique automatique : les modèles en volume
+    // dessinés de face et de côté ne servent plus ; la vue de dessus reste pour la vue d'oiseau)
     const saison = H.feuillage ? H.feuillage(p.id) : null;
-    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + versions + "|" + (volumePret ? 1 : 0) + "|" + (saison ? saison.cle : ""), () => {
+    return memo("iso|" + p.id + "|" + st + "|" + (fleur ? 1 : 0) + "|" + h + "|" + w + "|" + (saison ? saison.cle : ""), () => {
       const L = w + 6, Hh = h + 6, toile = (lw, lh) => { const c = document.createElement("canvas"); c.width = lw; c.height = lh; return c; };
       const pied = toile(L, Hh), g = pied.getContext("2d"), cx = Math.floor(L / 2), sol = Hh - 2;
       const R = (gg, x, y, ww, hh, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(ww)), Math.max(1, Math.round(hh))); };
       const feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length], sombre = assombrir(feuille, 0.7), clair = assombrir(feuille, 1.18).replace(/#(..)(..)(..)/, (m0, a, b, c) => "#" + [a, b, c].map((x) => Math.min(255, parseInt(x, 16)).toString(16).padStart(2, "0")).join(""));
       const fleurCol = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], r = H.alea(p.id + "|iso|" + st);
       const res = { pied, couronne: null, l: L, h: Hh, haut: h };
-      // un modèle dessiné à la main : ses trois vues forment un volume, dressé à sa vraie hauteur
-      if (debout && st >= 2) {
-        const m = modeleVolume(p);
-        if (m) {
-          const k = h / m.height, mw = Math.round(m.width * k), toile2 = toile(Math.max(L, mw + 4), Hh), g2 = toile2.getContext("2d");
-          g2.imageSmoothingEnabled = false;
-          g2.drawImage(m, Math.round(toile2.width / 2 - mw / 2), sol - h, mw, h);
-          return Object.assign(res, { pied: toile2, l: toile2.width });
-        }
-      }
       if (st === 0) { R(g, cx - 3, sol - 1, 6, 2, "#6b4423"); R(g, cx, sol - 2, 1, 1, "#4f7a3a"); return res; }
       // Un feuillage en grappes : une masse sombre, puis des bouquets de feuilles posés dessus,
       // chacun éclairé en haut à gauche, avec des feuilles claires sur le dessus et des trous
@@ -1223,7 +1189,8 @@
         const fe = toile(L, Hh), gf = fe.getContext("2d");
         ligneux(p, v, g, gf, cx, sol, w, h, { feuille, sombre, clair, tresSombre, fleurCol }, fleur && st >= 2, r, saison);
         appliquerSaison(fe, saison, p.id);
-        if (cycle === "Arbre") res.couronne = fe; else g.drawImage(fe, 0, 0);
+        // (le feuillage reste opaque, avec le reste du dessin : transparent, il disparaissait)
+        g.drawImage(fe, 0, 0);
         return res;
       }
       if (cycle === "Arbre" || (cycle === "Arbuste" && hm >= 2.5)) {
@@ -1310,22 +1277,39 @@
   const BOIS_ESPECES = [
     [/^pin /i, { forme: "pin" }], [/c[eè]dre/i, { forme: "etages" }], [/sapin/i, { forme: "cone" }],
     [/bouleau/i, { forme: "pleureur", ecorce: "blanche" }], [/aulne/i, { forme: "ovale" }], [/noisetier/i, { forme: "multitige" }],
-    [/genevrier|genévrier/i, { forme: "colonne", repro: "baies" }], [/amandier/i, { forme: "etale", repro: "cinq", fleur: "#f6cfe0" }],
+    [/genevrier|genévrier/i, { forme: "sauvage", feuille: "aiguilles", repro: "baies", ecorce: "genevrier", vert: ["#7aa64a", "#b4cf6a", "#4f7a3a", "#2f5034"] }], [/amandier/i, { forme: "etale", repro: "cinq", fleur: "#f6cfe0" }],
     [/aub[eé]pine/i, { forme: "boule", repro: "corymbes" }], [/eucalyptus/i, { forme: "ovale", ecorce: "claire", feuille: "argent" }],
     [/fr[eê]ne/i, { forme: "ovale", feuille: "pennees", repro: null }], [/figuier/i, { ecorce: "lisse" }], [/m[uû]rier/i, { forme: "boule", feuille: "cordees", repro: "mures" }],
     [/giroflier/i, { forme: "cone", feuille: "lanceolees", repro: "jaunes" }], [/cannelier/i, { forme: "ovale" }],
     [/ch[aâ]taignier/i, { forme: "rond", feuille: "lanceolees" }], [/myrte\b/i, { forme: "boule", feuille: "petites" }],
     [/olivier/i, { ecorce: "noueuse" }], [/saule/i, { forme: "pleureur" }],
   ];
-  const ECORCES = { brune: ["#7a4520", "#9a6a3c", "#4b3427"], blanche: ["#f3f0dc", "#ffffff", "#23214a"], claire: ["#d9c29a", "#efe0bc", "#9a7a52"], lisse: ["#8f8cb8", "#b4b2d6", "#5a5888"], noueuse: ["#6b5a3a", "#8f7a50", "#3e3324"] };
+  const TOUFFUS = ["rond", "etale", "ovale", "boule", "pleureur", "pin", "multitige", "coussin"];
+  const TOUFFE = { Moraceae: 0.13, Hippocastanaceae: 0.13, Juglandaceae: 0.1, Fagaceae: 0.09, Malvaceae: 0.1, Oleaceae: 0.075, Betulaceae: 0.055, Salicaceae: 0.06, Myrtaceae: 0.065, Lauraceae: 0.075, Rutaceae: 0.1, Ginkgoaceae: 0.065, Anacardiaceae: 0.07, Rosaceae: 0.07, Theaceae: 0.08, Grossulariaceae: 0.09, Cornaceae: 0.08, Adoxaceae: 0.08, Araliaceae: 0.1, Ericaceae: 0.07 };
+  // le vert de chaque famille (clair, moyen, sombre, très sombre), pour que les arbres ne se ressemblent pas
+  const VERTS_FAMILLE = {
+    Pinaceae: ["#2f6b4f", "#5a9a6a", "#1e4a3a", "#143326"], Cupressaceae: ["#2f5a34", "#4f7a3a", "#1e3d25", "#132a1c"],
+    Oleaceae: ["#7ea48c", "#a9c8b4", "#4f7a66", "#35584c"], Moraceae: ["#4aa63e", "#7cc860", "#2f7a35", "#1e5228"],
+    Juglandaceae: ["#7aa64a", "#a8c860", "#4f7a3a", "#33552a"], Fagaceae: ["#3f7a3a", "#6a9a4a", "#2a5a30", "#1a3d22"],
+    Hippocastanaceae: ["#2f7a3e", "#5aa64a", "#1e5a30", "#143d22"], Malvaceae: ["#6cbd5c", "#a0d878", "#3f8a42", "#2a6033"],
+    Betulaceae: ["#8ab84a", "#c0dc70", "#5a8a3a", "#3a6030"], Salicaceae: ["#8fae7a", "#c0d4a0", "#5f7f5a", "#3f5a42"],
+    Myrtaceae: ["#6a9a8a", "#9cc4b0", "#456e60", "#2e4c44"], Lauraceae: ["#2f6b35", "#5a9a4a", "#1e4a28", "#13331c"],
+    Rutaceae: ["#2f7a35", "#5aa64a", "#1e5228", "#133a1c"], Ginkgoaceae: ["#9cc77a", "#d0e89a", "#6a9a4a", "#466a34"],
+    Anacardiaceae: ["#3f6b3a", "#6a8f4a", "#2a4a2a", "#1a321e"], Rosaceae: ["#4f9a46", "#86c060", "#2f6b35", "#1e4a28"],
+    Ericaceae: ["#3f7a4a", "#6aa060", "#2a5a3a", "#1a3d28"], Adoxaceae: ["#5a9a46", "#8cc060", "#3a7035", "#264d26"],
+  };
+  const ECORCES = { brune: ["#7a4520", "#9a6a3c", "#4b3427"], blanche: ["#f3f0dc", "#ffffff", "#23214a"], claire: ["#d9c29a", "#efe0bc", "#9a7a52"], lisse: ["#8f8cb8", "#b4b2d6", "#5a5888"], noueuse: ["#6b5a3a", "#8f7a50", "#3e3324"], genevrier: ["#b8a07e", "#ddd0b4", "#6b5440"] };
   function ligneux(p, v, g, gf, cx, sol, w, h, C, fleurit, r, saison) {
     let [forme, feuille, repro] = BOIS[v.famille] || ["ovale", "ovales", null];
     let ecorce = "brune", fleurCol = C.fleurCol;
     for (const [motif, o] of BOIS_ESPECES) if (motif.test(p.nom || "")) {
+      if (o.vert) C = Object.assign({}, C, { vert: o.vert });
       if (o.forme) forme = o.forme; if (o.feuille) feuille = o.feuille; if ("repro" in o) repro = o.repro; if (o.ecorce) ecorce = o.ecorce; if (o.fleur) fleurCol = o.fleur;
       break;
     }
     if (v.cycle === "Arbuste" && ["rond", "etale", "ovale", "boule", "pleureur"].includes(forme) && hauteurM(p) < 4) forme = forme === "pleureur" ? "multitige" : forme === "boule" ? "boule" : "multitige";
+    const vf = C.vert || VERTS_FAMILLE[v.famille];
+    if (vf) C = Object.assign({}, C, { feuille: vf[0], clair: vf[1], sombre: vf[2], tresSombre: vf[3] });
     const [eB, eC, eS] = ECORCES[ecorce] || ECORCES.brune;
     const P = (gg, x, y, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), 1, 1); };
     const trait = (gg, x0, y0, x1, y1, ep, col, colC) => {
@@ -1372,7 +1356,7 @@
       switch (repro) {
         case "chatons": for (let s = 1; s <= 3; s++) P(gf, x, y + s, s === 3 ? "#9a7a3a" : "#d9c26a"); break;
         case "cones": P(gf, x, y, "#7a4520"); P(gf, x + 1, y, "#9a6a3c"); P(gf, x, y + 1, "#4b3427"); P(gf, x + 1, y + 1, "#7a4520"); break;
-        case "baies": P(gf, x, y, "#3d4a8a"); P(gf, x + 1, y + 1, "#5a6ab8"); break;
+        case "baies": P(gf, x, y, "#3d4a8a"); P(gf, x + 1, y, "#a8b8e0"); P(gf, x, y + 1, "#5a6ab8"); break;
         case "baiesRouges": P(gf, x, y, "#c93f4e"); P(gf, x + 1, y, "#e9606a"); break;
         case "mures": P(gf, x, y, "#3a1a3a"); P(gf, x, y + 1, "#5a2a5a"); break;
         case "cinq": P(gf, x, y, "#f2c94c"); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) P(gf, x + dx, y + dy, fleurCol); break;
@@ -1456,6 +1440,36 @@
           pointes.push([x, y, aa]);
         }
       }
+    } else if (forme === "sauvage") {
+      // Le genévrier commun dans la nature : plusieurs troncs tordus et clairs qui partent du pied
+      // en s'écartant, chacun portant sa propre flèche étroite et ébouriffée, de hauteurs inégales,
+      // faite de rameaux courts hérissés d'aiguilles piquantes qui pointent vers le haut.
+      ccy = sol - h / 2; cry = h / 2 + 2; crx = w / 2;
+      const k = 3 + Math.floor(r() * 3), plusHaut = Math.floor(r() * k);
+      for (let i = 0; i < k; i++) {
+        const u = k > 1 ? i / (k - 1) - 0.5 : 0, penche = u * 0.45 + (r() - 0.5) * 0.2, hi = h * (i === plusHaut ? 0.97 : 0.5 + r() * 0.4);
+        let x = cx + u * 4, y = sol;
+        const lmax = w * (0.14 + r() * 0.1);
+        for (let s = 0; s < hi; s++) {
+          const t = s / hi, a = -Math.PI / 2 + penche * (1 - t * 0.5) + Math.sin(s / 5 + i) * 0.12;
+          x += Math.cos(a); y += Math.sin(a);
+          // le tronc clair et tordu, bien visible en bas
+          if (t < 0.45) { P(g, x, y, eB); P(g, x - 1, y, eC); if (t < 0.25) P(g, x + 1, y, eS); }
+          else P(g, x, y, C.sombre);
+          // des rameaux courts et ébouriffés, plus longs vers le milieu de la flèche, qui montent
+          if (t > 0.18 && s % 3 === 0) {
+            const larg = lmax * Math.sin(Math.PI * Math.min(1, (t - 0.18) / 0.82)) * (0.5 + r() * 0.8) + 1;
+            for (const sd of [-1, 1]) {
+              if (r() < 0.25) continue;
+              const b = a + sd * (0.75 + r() * 0.5), x1 = Math.max(cx - w / 2 + 3, Math.min(cx + w / 2 - 3, x + Math.cos(b) * larg)), y1 = y + Math.sin(b) * larg;
+              trait(g, x, y, x1, y1, 1, C.sombre);
+              long.push([x, y, x1, y1, b - sd * 0.5]);
+              if (larg > 4) pointes.push([x1, y1, b]);
+            }
+          }
+        }
+        pointes.push([x, y, -Math.PI / 2]);
+      }
     } else if (forme === "arque") {
       // des cannes qui montent puis s'arquent vers l'extérieur, la pointe vers le bas
       const k = Math.max(8, Math.round(w / 3.5));
@@ -1499,19 +1513,56 @@
     // les feuilles : le long des derniers rameaux et en touffe à leur bout ; les fleurs ou les fruits
     // au bout des rameaux (sur la moitié haute pour les tiges dressées)
     const dens = saison ? saison.densite : 1;
-    for (const [x0, y0, x1, y1, a] of long) {
-      if (r() > Math.max(0.15, dens)) continue;
-      const ll = Math.hypot(x1 - x0, y1 - y0), m = Math.max(1, Math.floor(ll / (["petites", "ecailles", "lineaires", "aiguilles"].includes(feuille) ? 1.5 : 3)));
-      for (let k = 0; k <= m; k++) { const t = ll ? k / m : 1; poserFeuille(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, a); }
-    }
-    for (const [x, y, a] of pointes) {
-      if (r() > Math.max(0.15, dens)) continue;
-      for (let k = 0; k < 3; k++) poserFeuille(x + (r() - 0.5) * 3, y + (r() - 0.5) * 3, a + (r() - 0.5));
-      if (forme === "pleureur") { let px = x, py = y; for (let s = 0; s < h * 0.22 && py < sol - 3; s += 2) { py += 2; px += Math.cos(a) * 0.3; poserFeuille(px, py, Math.PI / 2); } }
+    const fines = ["aiguilles", "ecailles", "petites", "lineaires", "cladodes"].includes(feuille);
+    const garde = [];
+    for (const e of long) if (r() <= Math.max(0.15, dens)) garde.push(e);
+    if (TOUFFUS.includes(forme) && !fines) {
+      // Les feuillus : des touffes pleines, comme dans le pixel art des arbres, chacune ombrée en
+      // dessous et éclairée en haut à gauche, avec des sous-bouquets plus clairs et quelques feuilles
+      // qui dépassent du bord (de la forme de la famille, quand la touffe est assez grande). Leur
+      // taille dépend de la famille (grosses masses du figuier, petites touffes aérées du bouleau)
+      // et de la taille de l'arbre ; on les pose du bas vers le haut, les plus hautes par-dessus.
+      const cr = Math.max(2, Math.round(h * (TOUFFE[v.famille] || 0.08) * (forme === "multitige" || forme === "coussin" ? 1.1 : 1)));
+      const trous = feuille === "argent" ? 0.16 : ["Betulaceae", "Salicaceae", "Ginkgoaceae"].includes(v.famille) ? 0.12 : 0.03;
+      const centres = [];
+      // (chaque touffe reste entière dans le dessin : pas de couronne coupée net)
+      const ajouter = (x, y) => { x = Math.max(cx - w / 2 + cr * 1.2 + 1, Math.min(cx + w / 2 - cr * 1.2 - 1, x)); y = Math.max(sol - h + cr * 1.05 + 1, y); for (const [a2, b2] of centres) if ((a2 - x) ** 2 + (b2 - y) ** 2 < (cr * 0.7) ** 2) return; centres.push([x, y]); };
+      for (const [x, y] of pointes) if (r() <= Math.max(0.15, dens)) ajouter(x, y);
+      for (const [x0, y0, x1, y1] of garde) { const ll = Math.hypot(x1 - x0, y1 - y0); for (let t = cr * 1.1; t < ll; t += cr * 1.1) ajouter(x0 + ((x1 - x0) * t) / ll, y0 + ((y1 - y0) * t) / ll); }
+      if (forme === "pleureur") for (const [x, y] of pointes.slice()) for (let s = cr; s < h * 0.25 && y + s < sol - 3; s += cr) ajouter(x + (r() - 0.5) * 2, y + s);
+      centres.sort((a, b) => b[1] - a[1]);
+      const teinte = (c) => (feuille === "argent" ? argent(c) : c);
+      for (const [x0, y0] of centres) {
+        const rr = cr * (0.8 + r() * 0.4), ry = rr * 0.85;
+        for (let y = -Math.ceil(ry); y <= Math.ceil(ry); y++) for (let x = -Math.ceil(rr); x <= Math.ceil(rr); x++) {
+          const d = (x * x) / (rr * rr) + (y * y) / (ry * ry);
+          if (d > 1 - r() * 0.22 || (d < 0.8 && r() < trous)) continue;
+          const lum = (-x * 0.6 - y) / rr + (r() - 0.5) * 0.55;
+          P(gf, x0 + x, y0 + y, teinte(d > 0.8 && y > -ry * 0.2 ? C.tresSombre : lum > 0.6 ? C.clair : lum > -0.1 ? C.feuille : lum > -0.65 ? C.sombre : C.tresSombre));
+        }
+        // des sous-bouquets plus clairs sur le dessus
+        for (let k = 0; k < 2; k++) {
+          const bx = x0 - rr * (0.1 + r() * 0.35), by = y0 - ry * (0.15 + r() * 0.35), br = Math.max(1, rr * 0.35);
+          for (let y = -br; y <= br; y++) for (let x = -br; x <= br; x++) if (x * x + y * y <= br * br && r() > 0.25) P(gf, bx + x, by + y, teinte((-x - y) / br > 0.3 ? C.clair : C.feuille));
+        }
+        // des feuilles qui dépassent du bord
+        if (cr >= 4) for (let k = 0; k < 2; k++) { const a2 = -Math.PI / 2 + (r() - 0.6) * 2.4; poserFeuille(x0 + Math.cos(a2) * rr, y0 + Math.sin(a2) * ry, a2); }
+        else for (let k = 0; k < rr; k++) { const a2 = r() * Math.PI * 2; P(gf, x0 + Math.cos(a2) * (rr + 1), y0 + Math.sin(a2) * (ry + 1), teinte(a2 > Math.PI ? C.feuille : C.sombre)); }
+      }
+    } else {
+      // les aiguilles, les écailles, les petites feuilles : posées une à une le long des rameaux
+      for (const [x0, y0, x1, y1, a] of garde) {
+        const ll = Math.hypot(x1 - x0, y1 - y0), m = Math.max(1, Math.floor(ll / (forme === "sauvage" ? 2.6 : fines ? 1.5 : 3)));
+        for (let k = 0; k <= m; k++) { const t = ll ? k / m : 1; poserFeuille(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, a); }
+      }
+      for (const [x, y, a] of pointes) {
+        if (r() > Math.max(0.15, dens)) continue;
+        for (let k = 0; k < 3; k++) poserFeuille(x + (r() - 0.5) * 3, y + (r() - 0.5) * 3, a + (r() - 0.5));
+      }
     }
     if (fleurit && repro && dens >= 0.6) {
       const ok = ["verticilles", "epis"].includes(repro) ? long.filter(([, y]) => y < sol - h * 0.5) : pointes;
-      for (const [x, y] of ok) if (r() < (ok === pointes ? 0.7 : 0.35)) poserRepro(x + (r() - 0.5) * 2, y + (r() - 0.5) * 2);
+      for (const [x, y] of ok) if (r() < (forme === "sauvage" ? 0.2 : ok === pointes ? 0.7 : 0.35)) poserRepro(x + (r() - 0.5) * 2, y + (r() - 0.5) * 2);
     }
   }
 
@@ -1768,7 +1819,7 @@
         // la terre nue, selon le sol de la case : des mottes plus claires ou plus sombres, des cailloux
         const ts = teintesSol(caseDe(ile, cx0, cy0).sol), nn = hp(x >> 2, y >> 1);
         col = ts.base[h < 0.1 ? 2 : nn < 0.4 ? 0 : nn < 0.8 ? 1 : 3];
-        if (hp(x >> 1, y) < ts.cailloux) col = hp(y, x) < 0.5 ? "#8a98cc" : "#c2cdec";
+        if (hp(x >> 1, y) < ts.cailloux) col = ts.pierres[hp(y, x) < 0.5 ? 0 : 1];
       } else {
         // l'herbe : des plaques plus claires et plus sombres, des brins, quelques fleurettes
         // des touffes : chaque colonne de pixels a ses brins de 2 à 4 pixels de haut, clairs en
@@ -3225,7 +3276,7 @@
   // taille, en gros pixels nets sur une feuille de papier.
   const portraits = new Map();
   function portrait(p) {
-    const cle = p.id + "|" + ((p.valeurs || {}).famille || "") + "|" + ((p.valeurs || {}).cycle || "") + "|" + (p.dessinFace || p.dessinCote || "").length;
+    const cle = p.id + "|" + ((p.valeurs || {}).famille || "") + "|" + ((p.valeurs || {}).cycle || "");
     if (portraits.has(cle)) return portraits.get(cle);
     const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
     // (les arbres et les arbustes en deux fois plus de pixels : on y lit les rameaux et la forme des feuilles)

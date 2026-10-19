@@ -129,6 +129,8 @@
     bas: { plafond: 272, plancher: 502, sol: 510 },
   };
   const SOL_DEHORS = 518, CAGE = 84;
+  // l'épaisseur des murs extérieurs (vus coupés)
+  const EP_MUR = 18;
   // ce qu'on peint de la maison (le reste, c'est le dehors)
   // (la boîte descend un mètre sous la maison : on voit la terre, et les vers de terre qui y creusent)
   const BOITE = { x: -30, y: -272, w: LARGE + 60, h: 900 };
@@ -167,7 +169,8 @@
   const fenetresOuvertes = () => !!(H.local && H.local.fenetresOuvertes);
   const MOMENTS = {
     // le mur du lit bleu foncé, le mur de la baie vert foncé
-    jour: { murG: "#26406a", murD: "#2f6b35", murBas: "#5b3c8f", sol: "#c93f6e", plinthe: "#7a2444", ombreMur: "rgba(15,13,58,0.45)", lampe: true },
+    // (les murs intérieurs en pastel très clair : bleu pour la cage et le grenier, vert au salon, rose en bas)
+    jour: { murG: "#d8e6f6", murD: "#d9efdd", murBas: "#f7dfe9", sol: "#c93f6e", plinthe: "#7a2444", ombreMur: "rgba(60,70,170,0.22)", lampe: true },
     soir: { murG: "#232a63", murD: "#1e5a30", sol: "#b2365f", plinthe: "#6a1f3d", ombreMur: "rgba(15,13,58,0.5)", lampe: true },
     nuit: { murG: "#1b1d4a", murD: "#1e3d25", sol: "#9a2f55", plinthe: "#5a1a34", ombreMur: "rgba(15,13,58,0.55)", lampe: true },
   };
@@ -677,7 +680,11 @@
           // le bord hérissé : chaque aiguille dépasse plus ou moins
           const aiguille = hsh(Math.floor((ang + Math.PI) * 9) + q * 31, 7);
           if (d2 > 0.62 + aiguille * 0.95 || (ay > 0.55 && d2 > 0.75)) return;
-          if (lum && ay > 0.3) return pose(i, j, hsh(i + i0, j + j0) < 0.5 ? "#e9b44c" : "#ffc46b", true);
+          if (lum && ay > 0.3) {
+            // (les ampoules pendent dessous : la lumière monte dans les aiguilles et s'y perd)
+            const f = Math.min(1, (ay - 0.3) / 0.65), chaud = hsh(i + i0, j + j0) < 0.5 ? "#e9b44c" : "#ffc46b";
+            return pose(i, j, f < 0.5 ? tram(i, j, f * 2, "#173a2c", "#7a5a2a") : tram(i, j, (f - 0.5) * 2, "#7a5a2a", chaud), f > 0.75);
+          }
           // les aiguilles qui rayonnent : des traits fins, plus clairs, de la base au bout
           const rai = hsh(Math.floor((ang + Math.PI) * 14) + q * 17, Math.floor(Math.sqrt(d2) * 3));
           const soleil = -(ax * 0.7 + ay) / 1.3;
@@ -694,7 +701,7 @@
       // le dessous de l'ombrelle, presque droit, dans l'ombre bleue ; quelques trous de ciel par-dessus
       for (let x = g.cx - g.L * 0.8; x < g.cx + g.L * 0.8; x += p) {
         const y = g.haut + g.ep * 0.82 + Math.sin(x / 11 + a.x) * g.ep * 0.06;
-        if (hsh(Math.floor(x / 6), a.x) < 0.8) pose(I(x), J(y), lum ? "#e9b44c" : "#173a2c", lum);
+        if (hsh(Math.floor(x / 6), a.x) < 0.8) pose(I(x), J(y), lum ? (hsh(Math.floor(x / 3), a.x + 5) < 0.75 ? "#5a4a2a" : "#c98a3a") : "#173a2c", false);
       }
     }
     const couronne = (cx, cy, rx, ry, lumineux) => touffes(cx, cy, rx, ry, Math.round(cx * 7 + cy), lumineux);
@@ -709,7 +716,7 @@
             pose(i, j, dx < -0.4 ? (h < 0.4 ? "#4aa63e" : "#3f8a42") : dx > 0.45 ? "#1e3d25" : h < 0.15 ? "#3f8a42" : "#2f6b35");
           }
         }
-        if (lum) ovale(a.x, bas - a.h * 0.62 + 6, 14, 6, (i, j, dx, dy) => { if (dy > 0) pose(i, j, "#e9b44c", true); });
+        if (lum) ovale(a.x, bas - a.h * 0.62 + 6, 16, 9, (i, j, dx, dy) => { if (dy > -0.2) pose(i, j, tram(i, j, Math.min(1, (dy + 0.2) / 1.1), "#1e3d25", dy > 0.5 ? "#e9b44c" : "#7a5a2a"), dy > 0.6); });
         continue;
       }
       const ecorce = (i, j, e) => pose(i, j, e < 0 ? "#9a6a3c" : e > 0 ? "#4b3427" : "#7a4520");
@@ -739,9 +746,13 @@
       if (allumee) {
         const a = 0.75 + 0.25 * Math.sin(t / 500 + i * 1.7 + k);
         ctx.save(); ctx.globalCompositeOperation = "lighter";
+        // un cœur vif, puis un halo large et doux qui éclaire l'air et ce qui est autour
         const g = ctx.createRadialGradient(x, y + 2, 0, x, y + 2, 9);
         g.addColorStop(0, "rgba(255,210,110," + (0.45 * a).toFixed(2) + ")"); g.addColorStop(1, "rgba(255,210,110,0)");
         ctx.fillStyle = g; ctx.fillRect(x - 9, y - 7, 18, 18);
+        const h2 = ctx.createRadialGradient(x, y + 6, 0, x, y + 6, 30);
+        h2.addColorStop(0, "rgba(255,190,100," + (0.16 * a).toFixed(2) + ")"); h2.addColorStop(0.6, "rgba(255,170,90," + (0.06 * a).toFixed(2) + ")"); h2.addColorStop(1, "rgba(255,170,90,0)");
+        ctx.fillStyle = h2; ctx.fillRect(x - 30, y - 24, 60, 60);
         ctx.restore();
         ctx.fillStyle = "#fff06a";
       } else ctx.fillStyle = "#e9e3cd";
@@ -892,9 +903,9 @@
     ];
     if (lampes) {
       // la petite lampe posée sur l'enceinte, à côté du canapé ; la lampe de chevet ; la boule
-      sources.push({ x: LAMPE.x, y: LAMPE.y + ENC_DY + 34, rx: 190, ry: 130, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 60, etage: "salon" });
-      sources.push({ x: CHEVET.x, y: CHEVET.y + 30, rx: 170, ry: 100, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 60, etage: "grenier" });
-      sources.push({ x: BOULE.x, y: BOULE.y + 80, rx: 195, ry: 140, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 75, ey: BOULE.y + 92, table: true, etage: "bas" });
+      sources.push({ x: LAMPE.x, y: LAMPE.y + ENC_DY + 34, rx: 420, ry: 290, douce: true, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 60, etage: "salon" });
+      sources.push({ x: CHEVET.x, y: CHEVET.y + 30, rx: 375, ry: 220, douce: true, col: [215, 148, 70], rim: [255, 214, 140], poids: 1, eclat: [150, 92, 30], re: 60, etage: "grenier" });
+      sources.push({ x: BOULE.x, y: BOULE.y + 80, rx: 430, ry: 310, douce: true, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 75, ey: BOULE.y + 92, table: true, etage: "bas" });
     }
     return {
       ambiant: eteint ? [38, 42, 94] : { jour: [250, 246, 240], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
@@ -906,12 +917,13 @@
     };
   }
   // une tache de lumière douce (ronde, aplatie)
-  function tache(g, x, y, rx, ry, col, a) {
+  function tache(g, x, y, rx, ry, col, a, douce) {
     a = a == null ? 1 : a;
     g.save(); g.translate(x, y); g.scale(1, ry / rx);
     const d = g.createRadialGradient(0, 0, 0, 0, 0, rx);
     // (une chute douce, sans bord : la lumière s'éteint peu à peu)
-    for (const [u, f] of [[0, 1], [0.2, 0.86], [0.4, 0.6], [0.6, 0.32], [0.8, 0.1], [1, 0]]) d.addColorStop(u, rgba(col, a * f));
+    // (douce : la lumière des lampes porte loin, et ne s'éteint qu'à la fin)
+    for (const [u, f] of douce ? [[0, 1], [0.3, 0.88], [0.55, 0.62], [0.75, 0.34], [0.9, 0.12], [1, 0]] : [[0, 1], [0.2, 0.86], [0.4, 0.6], [0.6, 0.32], [0.8, 0.1], [1, 0]]) d.addColorStop(u, rgba(col, a * f));
     g.fillStyle = d; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
     g.restore();
   }
@@ -927,7 +939,7 @@
     repere(g, k);
     g.fillStyle = rgba(L.ambiant); g.fillRect(BOITE.x, BOITE.y, BOITE.w, BOITE.h);
     g.globalCompositeOperation = "lighter";
-    for (const s of L.sources) etage(g, s, () => tache(g, s.x, s.y, s.rx, s.ry, s.col));
+    for (const s of L.sources) etage(g, s, () => tache(g, s.x, s.y, s.rx, s.ry, s.col, 1, s.douce));
     // sous la table, le plateau fait de l'ombre : la boule (juste au-dessus) n'y arrive pas
     g.globalCompositeOperation = "source-over";
     g.filter = "blur(" + Math.round(5 * k) + "px)";
@@ -1029,7 +1041,7 @@
   // Les teintes que la lumière fait naître (pour le passage en gros pixels) : chaque matière de la
   // pièce sous chaque lumière, pour que les dégradés chauds et froids ne soient pas ramenés aux
   // seules couleurs franches de la palette du jeu.
-  const MATIERES = ["#26406a", "#2f6b35", "#c93f6e", "#7a2444", "#e9b44c", "#ff5b4f", "#ff7a6b", "#ffd23a", "#3d5ee8", "#7f97f2", "#f2f0e8", "#ffffff", "#ffb3a8", "#2c2a3e", "#c9ccd6", "#3f8a42", "#4f9a46", "#c96a3a", "#f2c29b", "#b9834f", "#7a4520", "#e04bb0", "#f3f0dc", "#23214a"]
+  const MATIERES = ["#d8e6f6", "#d9efdd", "#f7dfe9", "#26406a", "#2f6b35", "#c93f6e", "#7a2444", "#e9b44c", "#ff5b4f", "#ff7a6b", "#ffd23a", "#3d5ee8", "#7f97f2", "#f2f0e8", "#ffffff", "#ffb3a8", "#2c2a3e", "#c9ccd6", "#3f8a42", "#4f9a46", "#c96a3a", "#f2c29b", "#b9834f", "#7a4520", "#e04bb0", "#f3f0dc", "#23214a"]
     .map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
   const palettes = {};
   function paletteMaison(moment, eteint) {
@@ -1277,7 +1289,7 @@
     }
     // le plancher entre le salon et le rez-de-chaussée
     ctx.fillStyle = "#7a4520"; ctx.fillRect(-10, NIV.salon.plancher + 16, LARGE + 20, NIV.bas.plafond - NIV.salon.plancher - 16);
-    ctx.beginPath(); ctx.moveTo(-10, NIV.bas.plafond); ctx.lineTo(LARGE + 10, NIV.bas.plafond); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-EP_MUR, NIV.bas.plafond); ctx.lineTo(LARGE + EP_MUR, NIV.bas.plafond); ctx.stroke();
     // le tapis du salon, devant le canapé
     ctx.beginPath(); ctx.ellipse(372, NIV.salon.sol + 1, 118, 5, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
@@ -1318,7 +1330,7 @@
     grenier(ctx);
     // les murs extérieurs, coupés : du crépi clair, du toit jusqu'aux fondations
     ctx.fillStyle = "#e9e3cd";
-    for (const [x0, x1] of [[-10, 0], [LARGE, LARGE + 10]]) {
+    for (const [x0, x1] of [[-EP_MUR, 0], [LARGE, LARGE + EP_MUR]]) {
       ctx.beginPath(); ctx.moveTo(x0, toitY(x0) + EP_TOIT); ctx.lineTo(x1, toitY(x1) + EP_TOIT); ctx.lineTo(x1, SOL_DEHORS); ctx.lineTo(x0, SOL_DEHORS); ctx.closePath();
       ctx.fill(); ctx.stroke();
     }
@@ -1326,14 +1338,14 @@
     // linteau au-dessus, la vitre par la tranche, la poignée dehors). C'est par là qu'on sort sur
     // le petit porche, et qu'on part en balade.
     ctx.fillStyle = "#b9834f"; ctx.fillRect(PORTE.x, PORTE.y, PORTE.w, PORTE.h); ctx.strokeRect(PORTE.x, PORTE.y, PORTE.w, PORTE.h);
-    ctx.fillStyle = "#a8d8ec"; ctx.fillRect(PORTE.x + 3, PORTE.y + 12, 4, 44);
+    ctx.fillStyle = "#a8d8ec"; ctx.fillRect(PORTE.x + PORTE.w / 2 - 2, PORTE.y + 12, 4, 44);
     ctx.fillStyle = "#7a4520"; ctx.fillRect(PORTE.x - 3, PORTE.y - 7, PORTE.w + 6, 7); ctx.strokeRect(PORTE.x - 3, PORTE.y - 7, PORTE.w + 6, 7);
     ctx.beginPath(); ctx.arc(PORTE.x - 2, PORTE.y + 92, 2.8, 0, Math.PI * 2); ctx.fillStyle = "#ffd23a"; ctx.fill(); ctx.stroke();
     // la chatière de Mémé, en bas de la porte : son cadre sombre et son rabat
     ctx.fillStyle = "#4b3427"; ctx.fillRect(PORTE.x - 1, PORTE.y + PORTE.h - 32, PORTE.w + 2, 26); ctx.strokeRect(PORTE.x - 1, PORTE.y + PORTE.h - 32, PORTE.w + 2, 26);
     ctx.fillStyle = "#c99a3a"; ctx.fillRect(PORTE.x + 2, PORTE.y + PORTE.h - 29, PORTE.w - 4, 20);
     // les fondations, en pierre
-    ctx.fillStyle = "#8a98cc"; ctx.fillRect(-14, SOL_DEHORS, LARGE + 28, 14); ctx.strokeRect(-14, SOL_DEHORS, LARGE + 28, 14);
+    ctx.fillStyle = "#8a98cc"; ctx.fillRect(-EP_MUR - 4, SOL_DEHORS, LARGE + 2 * EP_MUR + 8, 14); ctx.strokeRect(-EP_MUR - 4, SOL_DEHORS, LARGE + 2 * EP_MUR + 8, 14);
     // les trémies de l'escalier, dans les planchers
     const { x: ex, r: er } = ESCALIER, tx = ex - er - 6, tw = er * 2 + 12;
     ctx.fillStyle = "#1b1d4a";
@@ -1352,7 +1364,7 @@
     // le mur du fond
     ctx.save();
     ctx.beginPath(); ctx.moveTo(0, NIV.grenier.plancher); ctx.lineTo(0, toitY(0)); ctx.lineTo(FAITE.x, FAITE.y); ctx.lineTo(LARGE, toitY(LARGE)); ctx.lineTo(LARGE, NIV.grenier.plancher); ctx.closePath(); ctx.clip();
-    ctx.fillStyle = "#26406a"; ctx.fillRect(0, BOITE.y, LARGE, NIV.grenier.plancher - BOITE.y);
+    ctx.fillStyle = MOMENTS.jour.murG; ctx.fillRect(0, BOITE.y, LARGE, NIV.grenier.plancher - BOITE.y);
     // le dessous du toit (le rampant), vu en fuite au-dessus du lit : un lambris, des chevrons
     // parallèles aux côtés du velux et une panne en bas qui suit la pente. C'est lui qui explique
     // qu'on voie le velux de biais : il est posé entre deux chevrons, dans ce plafond penché.
@@ -1405,8 +1417,8 @@
     ctx.strokeStyle = "#9a6a3c"; ctx.lineWidth = 1.2;
     for (let x = 20; x < LARGE; x += 46) { ctx.beginPath(); ctx.moveTo(x, NIV.grenier.plancher + 1); ctx.lineTo(x - 5, NIV.grenier.plancher + 15); ctx.stroke(); }
     ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
-    ctx.fillStyle = "#7a4520"; ctx.fillRect(-10, 0, LARGE + 20, NIV.salon.plafond);
-    ctx.beginPath(); ctx.moveTo(0, NIV.grenier.plancher); ctx.lineTo(LARGE, NIV.grenier.plancher); ctx.moveTo(-10, 0); ctx.lineTo(LARGE + 10, 0); ctx.moveTo(-10, NIV.salon.plafond); ctx.lineTo(LARGE + 10, NIV.salon.plafond); ctx.stroke();
+    ctx.fillStyle = "#7a4520"; ctx.fillRect(-EP_MUR, 0, LARGE + 2 * EP_MUR, NIV.salon.plafond);
+    ctx.beginPath(); ctx.moveTo(0, NIV.grenier.plancher); ctx.lineTo(LARGE, NIV.grenier.plancher); ctx.moveTo(-EP_MUR, 0); ctx.lineTo(LARGE + EP_MUR, 0); ctx.moveTo(-EP_MUR, NIV.salon.plafond); ctx.lineTo(LARGE + EP_MUR, NIV.salon.plafond); ctx.stroke();
   }
 
   // L'escalier en colimaçon, d'un étage à l'autre : un mât de bois, des marches qui tournent
@@ -1555,7 +1567,7 @@
   // la plante (son milieu, dans les mesures d'avant le décalage)
   const PLANTE = 672;
   // la porte d'entrée : bois clair, une petite vitre en haut, deux panneaux moulurés, la poignée
-  const PORTE = { x: -10, y: 342, w: 10, h: 160 };
+  const PORTE = { x: -EP_MUR, y: 342, w: EP_MUR, h: 160 };
   function porteEntree(ctx) {
     const { x, y, w, h } = PORTE;
     bloc(ctx, x - 6, y - 7, w + 12, h + 7, 2, "#7a4520");

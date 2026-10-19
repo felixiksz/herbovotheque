@@ -155,8 +155,6 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .vue-modele canvas { width: 72px; height: 72px; image-rendering: pixelated; background: repeating-conic-gradient(#efe8d4 0 25%, #fffdf4 0 50%) 0 0 / 12px 12px; }
 .vue-modele.actif { background: #f3ee6a; }
 .cadre-dessin.debout { border-radius: 0; background: linear-gradient(#d6eef7, #f3f0dc 96.8%, #b9834f 96.8%); }
-.vue-modele.vue-3d { cursor: default; background: #eaf5c8; }
-.vue-modele.vue-3d canvas { background: linear-gradient(#d6eef7, #f3f0dc); }
 
 /* la fiche en carte, par-dessus le jardin (réductible) */
 .carte-fiche { position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 60; width: min(560px, calc(100vw - 24px)); max-height: 72vh; display: flex; flex-direction: column; background: var(--papier); color: var(--encre); border: 2px solid #23214a; box-shadow: 5px 5px 0 #23214a; }

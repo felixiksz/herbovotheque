@@ -69,7 +69,6 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
   position: relative;
   background: color-mix(in srgb, var(--papier) 85%, #fff);
 }
-:root[data-theme="nuit"] .panneau-case { background: var(--papier-fonce); }
 .panneau-case h3 { margin: 0 0 2px; }
 .nom-plante-ile { font-family: var(--titre) !important; font-weight: normal !important; font-size: 1.6rem !important; line-height: 1.5; }
 .panneau-case .fermer-panneau { position: absolute; top: 6px; right: 6px; }
@@ -475,7 +474,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root .panneau-case * { color: inherit; opacity: 1; }
 :root .panneau-case .nom-plante-ile, :root .panneau-case h3 { font: 1.7rem/1.1 var(--menu-police) !important; color: #23214a; margin: 0 0 4px; }
 :root .panneau-case p, :root .panneau-case li { font: 1.2rem/1.25 var(--menu-police); color: #23214a; }
-:root .panneau-case .discret { color: #6b6578; }
+:root .panneau-case .discret { color: #4a4870; }
 :root .panneau-case .jauges { font: 1.1rem/1 var(--menu-police); color: #23214a; }
 :root .panneau-case .jauge { border: 2px solid #23214a; border-radius: 0; height: 10px; background: #fffdf4; }
 :root .panneau-case .bouton { font: 1.15rem/1 var(--menu-police); background: #fffdf4; color: #23214a; border: 2px solid #23214a; border-radius: 0; box-shadow: 2px 2px 0 #23214a; padding: 4px 9px 5px; }

@@ -19,12 +19,12 @@
     accord: "Bon pour accord — date et signature, précédées de la mention « Lu et approuvé » :",
     pied: "",
     formatDevis: "D-{AAAA}-{N3}", formatFacture: "F-{AAAA}-{N3}", compteurs: {},
-    modele: "fenetre", couleur: "#2f6b35", police: "sans", logo: null, logoPlace: "gauche",
+    modele: "fenetre", couleur: "#2f6b35", police: "serif", logo: null, logoPlace: "gauche",
     colonnes: { unite: true, tva: true, remise: false, detail: true },
     titreDevis: "Devis", titreFacture: "Facture",
   };
   const MODELES = [["fenetre", "Fenêtre (noir et blanc)", "le cadre des fenêtres du jeu, en noir et blanc, typographie sobre : prêt pour l’imprimante"], ["classique", "Classique", "sobre, un filet de couleur, les totaux encadrés"], ["herbier", "Herbier", "comme une planche d’herbier : un cadre fin, le titre manuscrit, une étiquette pour le client"], ["moderne", "Moderne", "un grand bandeau de couleur en haut, les lignes alternées"]];
-  const POLICES = [["sans", "Sans empattements (Helvetica)", "'Helvetica Neue', Helvetica, Arial, sans-serif"], ["serif", "Caudex (avec empattements)", "Caudex, Georgia, serif"], ["manuscrite", "Titres manuscrits (Beth Ellen)", "Caudex, Georgia, serif"], ["machine", "Machine à écrire", "'Courier New', monospace"]];
+  const POLICES = [["serif", "Caudex (serif)", "Caudex, Georgia, serif"], ["sans", "Sans serif (Helvetica)", "'Helvetica Neue', Helvetica, Arial, sans-serif"], ["manuscrite", "Titres manuscrits (Beth Ellen)", "Caudex, Georgia, serif"], ["machine", "Machine à écrire", "'Courier New', monospace"]];
   // Les colonnes des lignes : celles du jeu (qu'on peut renommer, cacher, déplacer) et celles qu'on
   // ajoute soi-même (du texte ou un nombre). La désignation reste toujours.
   const COLONNES_BASE = [["designation", "Désignation"], ["quantite", "Qté"], ["unite", "Unité"], ["prix", "Prix unit. HT"], ["remise", "Remise"], ["tva", "TVA"], ["total", "Total HT"]];
@@ -62,8 +62,6 @@
 
   const ent = () => {
     const e = Object.assign({}, DEFAUT, H.jeu.entreprise || {}, { colonnes: Object.assign({}, DEFAUT.colonnes, (H.jeu.entreprise || {}).colonnes) });
-    // l'ancienne police par défaut (Caudex) laisse place aux sans empattements, sauf si elle a été choisie
-    if (e.police === "serif" && !e.policeChoisie) e.police = "sans";
     return e;
   };
   function majEnt(fn) {
@@ -119,8 +117,8 @@
   function pageImprimable(doc) {
     const e = ent(), c = coll("clients").find((x) => x.id === doc.client) || {}, T = totaux(doc), col = e.colonnes;
     const facture = doc.type === "facture", modele = doc.modele || e.modele, couleur = e.couleur || "#2f6b35";
-    const police = (POLICES.find((p) => p[0] === e.police) || POLICES[0])[2];
-    const titreF = e.police === "manuscrite" || modele === "herbier" ? "'Beth Ellen', cursive" : police;
+    const police = modele === "fenetre" ? "'Helvetica Neue', Helvetica, Arial, sans-serif" : (POLICES.find((p) => p[0] === e.police) || POLICES[0])[2];
+    const titreF = modele === "fenetre" ? police : e.police === "manuscrite" || modele === "herbier" ? "'Beth Ellen', cursive" : police;
     const base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
     const L = (k) => echapper(lib(e, k));
     const cols = colonnesVisibles(e), nc = cols.length;
@@ -502,7 +500,7 @@
     const rafraichir = () => { const dd = apercuF.contentDocument; if (!dd) return; dd.open(); dd.write(pageImprimable(exemple)); dd.close(); };
     // (l'onglet n'est pas encore affiché : l'aperçu se remplit quand il apparaît)
     apercuF.addEventListener("load", () => { const dd = apercuF.contentDocument; if (dd && !dd.body.childElementCount) rafraichir(); });
-    const choix = (cle, liste, apres) => H.el("div.pastilles", null, liste.map(([id, n, aide]) => H.el("button.bouton.petit" + (ent()[cle] === id ? ".actif" : ""), { type: "button", title: aide || "", onclick: (ev) => { majEnt((x) => { x[cle] = id; if (cle === "police") x.policeChoisie = true; }); ev.target.parentNode.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.target)); rafraichir(); if (apres) apres(); } }, n)));
+    const choix = (cle, liste, apres) => H.el("div.pastilles", null, liste.map(([id, n, aide]) => H.el("button.bouton.petit" + (ent()[cle] === id ? ".actif" : ""), { type: "button", title: aide || "", onclick: (ev) => { majEnt((x) => (x[cle] = id)); ev.target.parentNode.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.target)); rafraichir(); if (apres) apres(); } }, n)));
     // la liste des colonnes : cocher, renommer, monter, descendre, ajouter, retirer
     const zoneColonnes = H.el("ul.liste-colonnes");
     const changerColonnes = (fn) => { majEnt((x) => { const l = colonnesDe(x).map(({ id, nom, visible, type }) => ({ id, nom: nom || "", visible: !!visible, type })); fn(l); x.colonnesListe = l; }); dessinerColonnes(); rafraichir(); };
