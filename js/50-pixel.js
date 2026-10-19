@@ -194,6 +194,28 @@
     "...kbbbbbybbbk..",
     "....kbbbbbbbk...",
   ];
+  // ƟvƟ assis·e de dos, qui regarde la mer : les boucles brunes, la nuque, les bretelles de la
+  // salopette sur la chemise rouge, les mains posées de chaque côté, le fond de la salopette
+  const OVO_DOS_ASSIS = [
+    "....kkkkkkk.....",
+    "...kHhHhHhHkk...",
+    "..kHhHhhHhhHhk..",
+    ".khHhhHhhhHhhHk.",
+    ".kHhHhHhHhHhHhk.",
+    ".khHhhHhhHhhHhk.",
+    ".kHhHhhHhhHhHhk.",
+    "..khHhHhHhHhHk..",
+    "..kshHhHhHhHsk..",
+    "...kksssssskk...",
+    "..krrbrrrrbrrk..",
+    ".krrrbrrrrbrrrk.",
+    ".krRrbrrrrbrRrk.",
+    ".ksRrbbbbbbrRsk.",
+    ".kskbbbbbbbbksk.",
+    "..kbbbbbbbbbbk..",
+    "..kBbbbbbbbbBk..",
+    "...kkkkkkkkkk...",
+  ];
   // Mesi : mulet châtain, lunettes, chemise verte, chiendent sur la salopette
   const LUIGI_PROFIL = [
     "....kkkkkkk.....",
@@ -438,6 +460,7 @@
     calin: [0, 1, 2, 3].map((i) => calin(i)),
     calinEte: [0, 1, 2, 3].map((i) => calin(i, true)),
     flamant: [FLAMANT],
+    ovoDosAssis: [OVO_DOS_ASSIS],
     ovo: [OVO, OVO_MARCHE],
     luigi: [LUIGI, LUIGI_MARCHE],
     lolo: [LOLO, LOLO_2],

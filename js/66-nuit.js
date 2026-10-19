@@ -3374,7 +3374,15 @@
     }
     if (!b.baignade) {
       if (avec("luigi")) H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
-      H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
+      if (b.assis) {
+        // une pierre plate au bord du chemin, et ƟvƟ assis·e dessus, de dos
+        const px = w * 0.42, py = sol(px) - h * 0.06;
+        ctx.fillStyle = nuit ? "#3a3f6a" : "#e3d6b8";
+        ctx.beginPath(); ctx.ellipse(px, py - 6, 26, 9, 0, Math.PI, 0); ctx.lineTo(px + 26, py); ctx.lineTo(px - 26, py); ctx.fill();
+        ctx.fillStyle = nuit ? "#2a2c55" : "#b8a07e";
+        ctx.fillRect(px - 26, py - 4, 52, 4);
+        H.pixel.dessiner(ctx, "ovoDosAssis", px, py - 12, 3, 0);
+      } else H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
     }
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
@@ -3560,7 +3568,17 @@
       await raconter("luigi");
     }
     if (balade && avec("lolo")) await raconter("lolo");
-    if (balade && !avec("luigi") && !avec("lolo")) await H.dialogue.dire(histoires().pensees());
+    if (balade && !avec("luigi") && !avec("lolo")) {
+      // (quand ƟvƟ s'assoit un moment, on s'arrête : on la voit de dos, assis·e sur une pierre,
+      // face à la mer, le temps de la pensée)
+      for (const ligne of histoires().pensees()) {
+        if (!balade) return;
+        const assis = /s’assoit/.test(ligne.texte);
+        if (assis) { balade.assis = true; balade.pause = true; }
+        await H.dialogue.dire([ligne]);
+        if (assis && balade) { balade.assis = false; balade.pause = false; }
+      }
+    }
     if (balade && balade.fin) balade.fin.hidden = false;
   }
 
