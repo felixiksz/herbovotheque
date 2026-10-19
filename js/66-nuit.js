@@ -2158,14 +2158,15 @@
       repere(cc, v.K);
       cc.lineJoin = "round"; cc.lineCap = "round"; cc.strokeStyle = ENCRE; cc.lineWidth = 2.2;
       ECL = { k: decor.k, L: decor.L };
-      // en route d'une place à l'autre (dans l'escalier, ou sur un étage)
-      let enRoute = false;
+      // en route d'une place à l'autre (dans l'escalier, ou sur un étage) ; on les dessine par-dessus
+      // le reste, pour qu'ils passent devant Lóló et le canapé
+      let enRoute = false, marcheurs = [];
       if (trajet) {
         const dt = t - trajet.t0;
         if (dt >= trajet.fin) { place = trajet.vers; placeDepuis = t; const e = trajet.ensuite; trajet = null; if (e) e(); }
         else {
           enRoute = true;
-          for (const g of trajet.gens) { const ps = positionSur(g, dt); if (ps) H.pixel.dessiner(cc, g.qui + "Profil", ps.x, ps.y, 4.4, ps.marche ? Math.floor(t / 140) % 4 : 4, ps.gauche); }
+          marcheurs = trajet.gens.map((g) => [g.qui, positionSur(g, dt)]).filter((m) => m[1]);
         }
       }
       // la musique finie, on redescend à la table ; devant la porte, si on n'est pas parti, on revient
@@ -2201,6 +2202,7 @@
       // caché sous la table du goûter
       if (farce && farce.id === "cache") dessinerFarce(cc, t);
       cc.restore();
+      for (const [qui, ps] of marcheurs) H.pixel.dessiner(cc, qui + "Profil", ps.x, ps.y, 4.4, ps.marche ? Math.floor(t / 140) % 4 : 4, ps.gauche);
       // la fausse plante, au rez-de-chaussée, entre le poêle et la table (là où il y avait la porte)
       if (farce && farce.id === "plante") { cc.save(); cc.translate(226 - 338, NIV.bas.sol - 332); dessinerFarce(cc, t); cc.restore(); }
       ECL = null;
@@ -2591,7 +2593,7 @@
     toile.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") survol = null; });
     toile.addEventListener("pointerdown", (e) => (pointeur = e.pointerType));
     toile.addEventListener("click", (e) => {
-      if (dodo) { if (!H.$(".dialogue")) H.lolo.cacherLaLumiere({ couche: () => {} }); return; }
+      if (dodo) return;
       const z = zoneSous(e);
       if (!z || H.$(".dialogue")) return;
       if (pointeur !== "mouse" && (!survol || survol.id !== z.id)) { survol = z; return; }
@@ -3480,18 +3482,23 @@
     const ctx = toile.getContext("2d");
     let derniere = 0, prochainRonflement = performance.now() + 6000 + Math.random() * 8000, zzz = 0, decor = null, cle = "", calque = null, M = null;
     const surLesYeux = { oui: false };
-    // un clic : « il y a trop de lumière… » et Lóló vient cacher la lumière avec son corps
-    toile.addEventListener("click", () => {
-      if (H.$(".dialogue") || surLesYeux.oui) return;
-      H.lolo.cacherLaLumiere({ couche: () => (surLesYeux.oui = true) });
-    });
-    // une tête endormie, de face sur l'oreiller : les lunettes enlevées, les yeux fermés
+    // une tête endormie, de face sur l'oreiller : les lunettes enlevées, les yeux fermés ; Mesi
+    // dort avec son masque de sommeil sur les yeux
     const tete = (ctx, nom, x, y) => {
       const sp = H.pixel.detail(H.pixel.dort(nom)), k = 3, f = sp.f || 1;
       ctx.save(); ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sp, 0, 0, 16 * f, 12 * f, x, y, 16 * k, 12 * k);
-      ctx.fillStyle = ENCRE;
-      for (const ex of [6, 9]) ctx.fillRect(x + (ex - 0.3) * k, y + 6.6 * k, k * 1.6, k * 0.45);
+      // (dans le monde de Mesi, les deux personnages sont échangés : son visage est dans l'autre case)
+      const mesi = H.monde === "mesi" ? nom === "ovo" : nom === "luigi";
+      if (mesi) {
+        ctx.fillStyle = "#2c2a3e"; ctx.fillRect(x + 2 * k, y + 6 * k, 12 * k, k * 0.7);
+        ctx.fillStyle = "#3a3aa8"; ctx.fillRect(x + 4 * k, y + 5.3 * k, 8 * k, 2.4 * k);
+        ctx.fillStyle = "#7f97f2"; ctx.fillRect(x + 4.5 * k, y + 5.5 * k, 7 * k, 0.6 * k);
+        ctx.fillStyle = ENCRE; ctx.fillRect(x + 4 * k, y + 7.5 * k, 8 * k, 0.3 * k);
+      } else {
+        ctx.fillStyle = ENCRE;
+        for (const ex of [6, 9]) ctx.fillRect(x + (ex - 0.3) * k, y + 6.6 * k, k * 1.6, k * 0.45);
+      }
       ctx.restore();
     };
     function image(t) {
