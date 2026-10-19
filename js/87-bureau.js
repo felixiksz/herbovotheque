@@ -11,6 +11,8 @@
     labo: "Labo",
     serre: "Serre",
     lettres: "Boîte aux lettres",
+    taches: "To-do liste",
+    devis: "Devis et factures",
     terrain: "Les îles",
     reglages: "Réglages",
     textes: "Les textes du jeu",
@@ -46,6 +48,10 @@
     ["lettres", "Lettres", [
       "............", "kkkkkkkkkkkk", "kwkwwwwwwkwk", "kwwkwwwwkwwk", "kwwwkwwkwwwk", "kwwwwccwwwwk",
       "kwwwkcckwwwk", "kwwkwwwwkwwk", "kwkwwwwwwkwk", "kkwwwwwwwwkk", "kkkkkkkkkkkk", "............"]],
+    ["taches", "To-do", [
+      "............", ".kkkkkkkkkk.", ".kwwwwwwwwk.", ".kwvwkkkkwk.", ".kvvwwwwwwk.", ".kwwwwwwwwk.", ".kwvwkkkkwk.", ".kvvwwwwwwk.", ".kwwwwwwwwk.", ".kwcwkkkkwk.", ".kwwwwwwwwk.", ".kkkkkkkkkk."]],
+    ["devis", "Devis", [
+      "..kkkkkkk...", "..kwwwwwkk..", "..kwkkkwkwk.", "..kwwwwwkkkk", "..kwkkkkkwwk", "..kwwwwwwwwk", "..kwkkkkwwwk", "..kwwwwwwwwk", "..kwwwkoookk", "..kwwwwoooko", "..kkkkkkkkk.", "............"]],
     ["terrain", "Îles", [
       ".....Vv.vV..", "....vvVvvvv.", "...vV.n..Vv.", "......n.....", "......n.....", ".....n......",
       ".....n......", "...oooooo...", ".oooooooooo.", "bbbbbbbbbbbb", "bBbbbBbbbbBb", "bbbbbbbbbbbb"]],

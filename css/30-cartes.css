@@ -99,3 +99,59 @@
 .reglage-carte input { width: 100%; }
 .reglage-carte.change > span:first-child { font-weight: 700; }
 @media (max-width: 640px) { .reglage-carte { grid-template-columns: minmax(0, 1fr) 5em; } .reglage-carte > .discret { grid-column: 1 / -1; } }
+
+/* la to-do liste */
+.barre-taches { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-bottom: 10px; }
+.groupe-taches { margin: 8px 0; }
+.groupe-taches > summary { cursor: pointer; list-style: none; }
+.groupe-taches > summary h3 { display: inline; font-size: 1.05rem; }
+.groupe-retard > summary h3 { color: #c93f6e; }
+.liste-taches { list-style: none; margin: 4px 0 0; padding: 0; }
+.tache { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--filet); }
+.case-tache { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.case-tache input { width: 18px; height: 18px; accent-color: #2f6b35; }
+.infos-tache { grid-column: 1; font-size: 0.85rem; padding-left: 26px; }
+.tache > .bouton { grid-column: 2; grid-row: 1 / span 2; }
+.tache.faite .titre-tache { text-decoration: line-through; opacity: 0.6; }
+.tache.en-retard .titre-tache { color: #c93f6e; }
+.idees-taches .pastille-valeur { cursor: pointer; font: inherit; font-size: 0.9rem; }
+.form-tache label { display: flex; flex-direction: column; gap: 2px; }
+
+/* les devis et les factures */
+.liste-docs { list-style: none; margin: 10px 0 0; padding: 0; }
+.doc-devis { display: grid; grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 1.4fr) auto auto; gap: 4px 12px; align-items: center; padding: 8px 6px; border-bottom: 1px solid var(--filet); cursor: pointer; }
+.doc-devis:hover { background: var(--surligne); }
+.type-doc { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border: 1px solid currentColor; border-radius: 3px; }
+.type-doc.facture { color: #2f6b35; }
+.statut-doc { font-size: 0.85rem; opacity: 0.8; }
+.doc-devis .n, .totaux-devis .n { text-align: right; font-variant-numeric: tabular-nums; }
+.editeur-devis h2 { margin: 4px 0 10px; }
+.grille-devis { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 14px; margin: 8px 0; }
+.champ-devis { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; margin: 4px 0; }
+.champ-devis small { font-size: 0.8rem; }
+.tete-lignes, .ligne-devis { display: grid; grid-template-columns: minmax(0, 1fr) 4.5em 4em 6em auto auto auto; gap: 6px; align-items: start; }
+.tete-lignes { font-size: 0.8rem; margin-top: 10px; }
+.ligne-devis { padding: 4px 0; border-bottom: 1px dashed var(--filet); }
+.ligne-devis input, .ligne-devis select { width: 100%; min-width: 0; }
+.ligne-devis .designation { display: flex; flex-direction: column; gap: 3px; }
+.ligne-devis .detail { font-size: 0.85rem; }
+.ligne-devis input.n { text-align: right; }
+.ligne-devis.titre-devis { grid-template-columns: minmax(0, 1fr) auto; }
+.titre-devis input { font-weight: 700; }
+.outils-ligne { display: flex; gap: 2px; }
+.totaux-devis table { margin: 12px 0 12px auto; min-width: 260px; border-collapse: collapse; }
+.totaux-devis td { padding: 3px 8px; }
+.totaux-devis .fort td { font-weight: 700; border-top: 1.5px solid var(--encre); }
+.reglages-devis { max-width: 640px; }
+.reglages-devis .champ-devis input, .reglages-devis .champ-devis textarea { width: 100%; }
+.apercu-devis { width: 100%; height: 70vh; border: 1px solid var(--filet); background: #fff; }
+.apercu-devis.petit { height: 520px; }
+.fenetre-apercu { display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 640px) {
+  .doc-devis { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .doc-devis > :nth-child(4), .doc-devis > :nth-child(6) { display: none; }
+  .tete-lignes { display: none; }
+  .ligne-devis { grid-template-columns: 1fr 1fr 1fr; }
+  .ligne-devis .designation { grid-column: 1 / -1; }
+  .ligne-devis.titre-devis { grid-template-columns: minmax(0, 1fr) auto; }
+}
