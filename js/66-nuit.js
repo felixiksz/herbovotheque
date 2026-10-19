@@ -2952,7 +2952,9 @@
     // (on peint chaque image hors de l'écran, on la passe en gros pixels, puis on la pose d'un
     // seul coup sur la toile visible : sur tablette, l'écran ne montre jamais une image à moitié faite)
     const ecran = document.createElement("canvas"), ctx = ecran.getContext("2d"), visible = null;
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    // (on peint directement à la taille des gros pixels : un point de la toile de travail est un gros
+    // pixel de l'écran ; « dpr » est donc combien de points de travail fait un point de la page)
+    const dpr = Math.min(window.devicePixelRatio || 1, 3) / H.retro.taillePour(3);
     const w = toile.clientWidth || 600;
     const h = window.innerWidth < 640 ? 300 : 360;
     // sur un écran en hauteur (téléphone), le paysage garde ses proportions : on ajoute du ciel
@@ -2961,7 +2963,7 @@
     const Htot = portrait ? Math.max(h, Math.min(window.innerHeight - 30, Math.round(w * 2))) : h;
     const haut = Math.round((Htot - h) * 0.55), bas = Htot - h - haut;
     toile.style.height = Htot + "px";
-    ecran.width = Math.round(w * dpr); ecran.height = Math.round(Htot * dpr);
+    ecran.width = Math.ceil(w * dpr); ecran.height = Math.ceil(Htot * dpr);
     const nuit = H.ciel.etat().soleil.alt < -4;
     const rEt = H.alea("etoiles-balade");
     const etoiles = Array.from({ length: 70 + Math.round(haut / 3) }, () => [rEt() * w, rEt() * rEt() * (h * 0.5 + haut) - haut, rEt() * 0.6 + 0.35]);
@@ -3238,9 +3240,12 @@
   }
   // combien une rangée est là (de 0 à 1), selon l'endroit de la boucle de la balade : les plus
   // lointaines s'enfoncent d'abord, juste avant la crique ; au retour, les plus proches reviennent d'abord
+  // (les collines ont leur propre boucle, bien plus longue que celle du chemin : chaque rangée met
+  // près d'une minute à s'enfoncer, et il faut quelques minutes pour qu'elles s'effacent toutes)
+  const BOUCLE_COLLINES = 26000;
   function presenceRangee(k, avance) {
-    const u = (((avance % CYCLE) + CYCLE) % CYCLE) / CYCLE, r = k / (RANGEES_B - 1);
-    const part = 0.03 + 0.12 * r, revient = 0.68 + 0.03 * (RANGEES_B - 1 - k), duree = 0.055;
+    const u = ((avance % BOUCLE_COLLINES) + BOUCLE_COLLINES) % BOUCLE_COLLINES;
+    const part = 600 + k * 1000, revient = 15000 + (RANGEES_B - 1 - k) * 1000, duree = 2300;
     if (u < part) return 1;
     if (u < part + duree) return 1 - (u - part) / duree;
     if (u < revient) return 0;
@@ -3249,7 +3254,7 @@
   }
   // le large (toujours là, derrière les collines) puis les rangées, du fond vers l'avant
   function fondBalade(ctx, S, w, h, avance, nuit, alt, t) {
-    const gp = H.retro.taillePour(3) / S.dpr, mo = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
+    const gp = 1 / S.dpr, mo = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
     const hz = h * 0.3;
     const gm = ctx.createLinearGradient(0, hz, 0, h * 0.78);
     (nuit ? ["#3a3aa8", "#26406a", "#1e3358"] : mo === "soir" ? ["#e9a6be", "#6f86c8", "#2a5a9a"] : ["#d6eef7", "#6fb6ee", "#12aec4", "#0d8fae"]).forEach((c2, k, l) => gm.addColorStop(k / (l.length - 1), c2));
@@ -3356,7 +3361,7 @@
       // faisait clignoter le ciel, surtout quand on s'arrête pour se baigner)
       S.etoiles.forEach(([x, y, a]) => {
         ctx.fillStyle = "rgba(255,240,250," + a + ")";
-        ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+        ctx.fillRect(Math.round(x), Math.round(y), Math.max(2, 1 / dpr), Math.max(2, 1 / dpr));
       });
       // une étoile filante, rarement (une fois toutes les trois quarts de minute)
       const f = ((t / 1000) % 47) / 47;
@@ -3377,7 +3382,7 @@
       }
       S.profils.nuages.forEach((v, i) => {
         if (i >= S.couvert.n * 2) return;
-        const gp = H.retro.taillePour(3) / dpr, nx = boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120);
+        const gp = 1 / dpr, nx = boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120);
         nuagePlat(ctx, Math.round(nx / gp) * gp, h * (0.08 + v * 0.22), 50 + v * 50, S.couvert.couleur);
       });
     }
@@ -3482,7 +3487,9 @@
     // on s'arrête (même si quelqu'un est en train de raconter une histoire) ; une fois la bulle
     // fermée, on attend un moment devant la crique avant de repartir. S'il fait froid, ƟvƟ le dit.
     const parle = !!H.$(".dialogue");
-    if (ici > 0.6 && !b.baignade && !b.criqueVue) { b.criqueVue = true; b.attenteCrique = true; b.criqueDepuis = 0; b.pause = true; }
+    // (on ne s'arrête à la crique, et on ne se baigne, que quand les collines ont laissé place au large)
+    const merOuverte = presenceRangee(RANGEES_B - 1, avance) < 0.05;
+    if (ici > 0.6 && merOuverte && !b.baignade && !b.criqueVue) { b.criqueVue = true; b.attenteCrique = true; b.criqueDepuis = 0; b.pause = true; }
     if (ici < 0.2 && !b.baignade) b.criqueVue = false;
     if (b.attenteCrique && !b.baignade && !parle) {
       if (!b.criqueDepuis) {
@@ -3491,7 +3498,7 @@
       }
       if (t - b.criqueDepuis > (cheminee.froid() ? 1500 : 14000)) { b.attenteCrique = false; b.pause = false; }
     }
-    if (b.bain) b.bain.hidden = !(ici > 0.6 && !b.baignade && !parle && !cheminee.froid());
+    if (b.bain) b.bain.hidden = !(ici > 0.6 && merOuverte && !b.baignade && !parle && !cheminee.froid());
     // la pluie, quand il pleut vraiment (ou que Lóló l'a fait tomber)
     const m = H.ciel.meteo || {};
     if ((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage") {
@@ -3543,7 +3550,7 @@
     }
     // la trame des gros pixels glisse avec le chemin, sous la ligne du rivage
     // (la toile visible reçoit directement la petite image en gros pixels ; l'écran l'agrandit)
-    H.retro.appliquer(S.ecran, H.retro.taillePour(3), 0.7, { x: avance * (S.ecran.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) }, null, b.toile);
+    H.retro.appliquer(S.ecran, 1, 0.7, { x: avance * (S.ecran.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) }, null, b.toile);
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 

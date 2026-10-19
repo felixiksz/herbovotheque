@@ -77,6 +77,14 @@
   // la grille des passages, en demi-cases : on ne traverse ni les maisons ni l'eau
   const RG = 2, G = N * RG;
   const occupe = (x, y, marge) => MAISONS.some((m) => m.genre !== "ponton" && x > m.i - marge && x < m.i + m.w + marge && y > m.j - marge && y < m.j + m.d + marge);
+  // la ligne droite de a à b passe-t-elle dans un bâtiment ?
+  const traverse = (x0, y0, x1, y1) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.2); for (let i = 1; i < n; i++) if (occupe(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, 0.15)) return true; return false; };
+  // la place libre la plus proche d'un point (s'il tombe dans un bâtiment)
+  function libre(x, y) {
+    if (!occupe(x, y, 0.2)) return [x, y];
+    for (let r = 0.5; r < 6; r += 0.5) for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) { const nx = x + Math.cos(a) * r, ny = y + Math.sin(a) * r; if (nx > 0.5 && ny > 0.5 && nx < N - 0.5 && ny < N - 0.5 && !occupe(nx, ny, 0.2)) return [nx, ny]; }
+    return [x, y];
+  }
   // (profil : pour les bêtes, qu'on ne voit que de profil, les pas qui descendent ou montent tout
   // droit à l'écran coûtent plus cher : elles avancent plutôt de côté, vers la gauche ou la droite)
   function passage(a, b, profil) {
@@ -1392,9 +1400,23 @@
     const dehors = jour || (new Date().getHours() >= 15 && !rentreesCeSoir && heurePoules().soir);
     return ROBES.map((_, k) => { const [x, y] = placeDansCour(); return { x, y, robe: k, dedans: !dehors, attente: 0, gauche: alea() < 0.5 }; });
   }
+  // Personne ne passe à travers les bâtiments : si la ligne droite en traverse un, on suit un
+  // passage qui le contourne (calculé une fois par destination)
   function bouger(o, cx, cy, v) {
-    const dx = cx - o.x, dy = cy - o.y, d = Math.hypot(dx, dy);
-    if (d < v) { o.x = cx; o.y = cy; return true; }
+    const vers = Math.round(cx * 2) + "," + Math.round(cy * 2);
+    if (o.cheminVers !== vers) {
+      o.cheminVers = vers;
+      o.chemin = traverse(o.x, o.y, cx, cy) ? passage([o.x, o.y], [cx, cy]).slice(1, -1) : null;
+    }
+    let tx = cx, ty = cy;
+    if (o.chemin && o.chemin.length) [tx, ty] = o.chemin[0];
+    const dx = tx - o.x, dy = ty - o.y, d = Math.hypot(dx, dy);
+    if (d < v) {
+      o.x = tx; o.y = ty;
+      if (o.chemin && o.chemin.length) { o.chemin.shift(); return false; }
+      o.cheminVers = null;
+      return true;
+    }
     o.x += (dx / d) * v; o.y += (dy / d) * v;
     if (Math.abs(dx - dy) > 0.01) o.gauche = dx - dy < 0;
     return false;
@@ -1534,11 +1556,9 @@
     if (lo.broute && lo.brouteJusqua && !perso.trajet && t > lo.brouteJusqua && !lo.rejoindre) { lo.broute = false; lo.brouteJusqua = 0; lo.immobile = t; }
     if (lo.rejoindre && t > lo.rejoindre) {
       // au trot, jusqu'à côté d'ƟvƟ
-      const cx = perso.x - 1.6, cy = perso.y + 0.4, dx = cx - lo.x, dy = cy - lo.y, d = Math.hypot(dx, dy);
+      const [cx, cy] = libre(perso.x - 1.6, perso.y + 0.4);
       lo.broute = false;
-      if (d < 0.08) { lo.rejoindre = 0; lo.marche = false; lo.immobile = t; return true; }
-      lo.x += (dx / d) * Math.min(d, 0.07); lo.y += (dy / d) * Math.min(d, 0.07);
-      lo.gauche = dx - dy < 0;
+      if (Math.hypot(cx - lo.x, cy - lo.y) < 0.08 || bouger(lo, cx, cy, 0.07)) { lo.rejoindre = 0; lo.marche = false; lo.immobile = t; return true; }
       lo.marche = true;
       return true;
     }
@@ -1605,8 +1625,14 @@
   }
   // ƟvƟ va où l'on clique sur la ferme, tout droit (but : la maison où entrer en arrivant, ou rien)
   function marcherVers(x, y, but) {
-    const perso = scene.ovo, d = Math.hypot(x - perso.x, y - perso.y), n = Math.max(1, Math.ceil(d / 0.12)), pts = [];
-    for (let k = 1; k <= n; k++) pts.push([perso.x + ((x - perso.x) * k) / n, perso.y + ((y - perso.y) * k) / n]);
+    const perso = scene.ovo;
+    [x, y] = libre(x, y);
+    // (tout droit si rien ne gêne ; sinon par un passage qui contourne les maisons)
+    const etapes = traverse(perso.x, perso.y, x, y) ? passage([perso.x, perso.y], [x, y]) : [[perso.x, perso.y], [x, y]], pts = [];
+    for (let e = 0; e < etapes.length - 1; e++) {
+      const [ax, ay] = etapes[e], [bx, by] = etapes[e + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 0.12));
+      for (let k = 1; k <= n; k++) pts.push([ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n]);
+    }
     perso.lieu = null;
     perso.but = but || null;
     perso.i = 0;
