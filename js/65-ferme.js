@@ -77,7 +77,9 @@
   // la grille des passages, en demi-cases : on ne traverse ni les maisons ni l'eau
   const RG = 2, G = N * RG;
   const occupe = (x, y, marge) => MAISONS.some((m) => m.genre !== "ponton" && x > m.i - marge && x < m.i + m.w + marge && y > m.j - marge && y < m.j + m.d + marge);
-  function passage(a, b) {
+  // (profil : pour les bêtes, qu'on ne voit que de profil, les pas qui descendent ou montent tout
+  // droit à l'écran coûtent plus cher : elles avancent plutôt de côté, vers la gauche ou la droite)
+  function passage(a, b, profil) {
     const cle = (x, y) => y * G + x, versG = ([x, y]) => [Math.max(0, Math.min(G - 1, Math.floor(x * RG))), Math.max(0, Math.min(G - 1, Math.floor(y * RG)))];
     const [sx, sy] = versG(a), [tx, ty] = versG(b);
     const cout = new Map([[cle(sx, sy), 0]]), venu = new Map(), ouverts = [[0, sx, sy]];
@@ -91,7 +93,7 @@
         const wx = (nx + 0.5) / RG, wy = (ny + 0.5) / RG;
         if (occupe(wx, wy, 0.45) && !(nx === tx && ny === ty)) continue;
         // un peu plus cher près des murs, et un léger hasard pour que le chemin serpente
-        const c = cout.get(cle(x, y)) + Math.hypot(dx, dy) + (occupe(wx, wy, 1.1) ? 0.8 : 0) + hash(nx * 3, ny * 5) * 0.35;
+        const c = cout.get(cle(x, y)) + Math.hypot(dx, dy) * (profil && dx === dy ? 2.2 : profil && dx !== -dy ? 1.25 : 1) + (occupe(wx, wy, 1.1) ? 0.8 : 0) + hash(nx * 3, ny * 5) * 0.35;
         if (c < (cout.get(cle(nx, ny)) ?? Infinity)) { cout.set(cle(nx, ny), c); venu.set(cle(nx, ny), [x, y]); ouverts.push([c + Math.hypot(tx - nx, ty - ny), nx, ny]); }
       }
     }
@@ -112,6 +114,15 @@
     return { a, b, pts, cum, long: cum[cum.length - 1], n };
   });
   // un point du chemin, de 0 (départ) à 1 (arrivée)
+  // le sens où regarde une bête qui suit le chemin c, en q : d'après où elle sera un peu plus loin
+  // (et pas au pas suivant, qui peut zigzaguer) ; quand elle descend ou monte presque tout droit à
+  // l'écran, elle garde son sens d'avant au lieu de se retourner
+  function sensBete(c, q, avant) {
+    const a = point(c, q), b = point(c, Math.min(1, q + 1.6 / Math.max(1, c.long)));
+    const dsx = (b[0] - a[0]) - (b[1] - a[1]), dsy = ((b[0] - a[0]) + (b[1] - a[1])) / 2;
+    if (avant != null && Math.abs(dsx) < Math.abs(dsy) * 0.6) return avant;
+    return dsx < 0;
+  }
   function point(c, t) {
     const d = t * c.long;
     let i = 1;
@@ -1103,12 +1114,12 @@
     const [a, b] = Math.random() < 0.5 ? [gauche, droite] : [droite, gauche];
     // s'il y a un bassin, le plus souvent on passe par lui pour boire
     const bords = bordsBassin(), bord = bords.length && Math.random() < 0.8 ? bords[Math.floor(Math.random() * bords.length)] : null;
-    const pts = bord ? passage(a, bord).concat(passage(bord, b).slice(1)) : passage(a, b), cum = [0];
+    const pts = bord ? passage(a, bord, true).concat(passage(bord, b, true).slice(1)) : passage(a, b, true), cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const espece = Math.random() < 0.55 ? "renard" : "sanglier";
     const v = { espece, c: { pts, cum, long: cum[cum.length - 1] }, u: 0, petits: espece === "sanglier" && Math.random() < 0.6 ? 2 + Math.floor(Math.random() * 2) : 0, pause: 0 };
     if (bord) {
-      const iBord = passage(a, bord).length - 1;
+      const iBord = passage(a, bord, true).length - 1;
       v.boire = { u: cum[iBord] / Math.max(0.001, cum[cum.length - 1]) };
     }
     // une fois sur deux, la laie s'arrête au pied d'un pin pour retourner la terre (elle cherche
@@ -1161,11 +1172,12 @@
   function objetsVisiteur(objets) {
     const v = scene.visiteur;
     if (!v) return;
-    const pose = (u) => { const q = Math.max(0, Math.min(1, u)), a = point(v.c, q), b = point(v.c, Math.min(1, q + 0.01)); return { x: a[0], y: a[1], gauche: (b[0] - a[0]) - (b[1] - a[1]) < 0 }; };
-    if (v.u <= 1) objets.push(Object.assign({ prof: 0, bete: v.espece, arret: false }, pose(v.u)));
+    v.sens = v.sens || {};
+    const pose = (u, k) => { const q = Math.max(0, Math.min(1, u)), a = point(v.c, q); v.sens[k] = sensBete(v.c, q, v.sens[k]); return { x: a[0], y: a[1], gauche: v.sens[k] }; };
+    if (v.u <= 1) objets.push(Object.assign({ prof: 0, bete: v.espece, arret: false }, pose(v.u, 0)));
     for (let k = 1; k <= v.petits; k++) {
       const u = v.u - (k * 0.9) / v.c.long;
-      if (u > 0 && u <= 1) objets.push(Object.assign({ prof: 0, bete: "marcassin" }, pose(u)));
+      if (u > 0 && u <= 1) objets.push(Object.assign({ prof: 0, bete: "marcassin" }, pose(u, k)));
     }
     for (const o of objets) if (o.bete && !o.prof) o.prof = o.x + o.y;
   }
@@ -1285,8 +1297,14 @@
     if (!nuitNoire) { scene.herisson = null; return; }
     if (!scene.herisson && (!scene.prochainHerisson || t > scene.prochainHerisson)) {
       scene.prochainHerisson = t + 90000 + Math.random() * 120000;
-      const bord = bords[Math.floor(Math.random() * bords.length)], depart = Math.random() < 0.5 ? [0.6, 2 + Math.random() * (N - 4)] : [2 + Math.random() * (N - 4), N - 0.6];
-      const aller = (a, b) => { const pts = passage(a, b), cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, long: cum[cum.length - 1] }; };
+      const bord = bords[Math.floor(Math.random() * bords.length)];
+      let depart = null, mieux = -1;
+      for (let k = 0; k < 14; k++) {
+        const d = k % 2 ? [0.6, 2 + Math.random() * (N - 4)] : [2 + Math.random() * (N - 4), N - 0.6];
+        const dsx = Math.abs((bord[0] - d[0]) - (bord[1] - d[1])), dsy = Math.abs((bord[0] - d[0]) + (bord[1] - d[1])) / 2, note = dsx / (dsy + 1);
+        if (note > mieux) { mieux = note; depart = d; }
+      }
+      const aller = (a, b) => { const pts = passage(a, b, true), cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, long: cum[cum.length - 1] }; };
       scene.herisson = { etape: "va", c: aller(depart, bord), u: 0, petits: Math.random() < 0.4 ? 1 + Math.floor(Math.random() * 3) : 0, retour: () => aller(bord, [depart[1] > N / 2 ? N - 0.6 : 0.6, depart[0]]) };
     }
     const h = scene.herisson;
@@ -1307,8 +1325,8 @@
     for (const g of scene.grenouilles || []) objets.push({ prof: g.x + g.y, grenouille: g });
     const h = scene.herisson;
     if (h) {
-      const q = Math.min(1, h.u), a = point(h.c, q), b = point(h.c, Math.min(1, q + 0.02));
-      if (h.etape !== "boit") h.gauche = (b[0] - a[0]) - (b[1] - a[1]) < 0;
+      const q = Math.min(1, h.u), a = point(h.c, q);
+      if (h.etape !== "boit") h.gauche = sensBete(h.c, q, h.gauche);
       objets.push({ prof: a[0] + a[1], herisson: h, x: a[0], y: a[1] });
       // les petits suivent en file ; quand elle boit, ils se serrent contre elle
       for (let k = 1; k <= (h.petits || 0); k++) {
