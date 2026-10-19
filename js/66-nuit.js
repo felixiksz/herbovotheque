@@ -1276,7 +1276,7 @@
   // L'escalier en colimaçon, d'un étage à l'autre : un mât de bois, des marches qui tournent
   // autour (celles de derrière plus sombres, cachées en partie par le mât), et la rampe qui
   // s'enroule en suivant le bord des marches.
-  const ESCALIER = { x: 42, r: 26 };
+  const ESCALIER = { x: 42, r: 34 };
   function escalier(ctx, bas, haut) {
     const { x: cx, r: R } = ESCALIER, n = 14, pas = (bas - haut) / n;
     const marches = Array.from({ length: n }, (_, i) => ({ y: bas - (i + 1) * pas, a: 0.5 + i * 0.68 }));
@@ -1674,9 +1674,61 @@
   let chantJusqua = 0, canapeJusqua = 0;
   // après le goûter, ƟvƟ et Mesi vont s'asseoir sur le canapé pour écouter de la musique
   function allerSurLeCanape() {
-    canapeJusqua = performance.now() + 150000;
-    chantJusqua = canapeJusqua;
-    if (H.local.musique && H.musique) H.musique.jouer();
+    partir("canape", () => {
+      canapeJusqua = performance.now() + 150000;
+      chantJusqua = canapeJusqua;
+      if (H.local.musique && H.musique) H.musique.jouer();
+    });
+  }
+
+  // --- monter et descendre l'escalier -----------------------------------------------------------
+  // ƟvƟ et Mesi vont d'une place à l'autre à pied : sur leur étage jusqu'au pied de l'escalier, le
+  // colimaçon (un étage après l'autre, en tournant autour du mât), puis jusqu'à leur nouvelle
+  // place. Mesi suit ƟvƟ de près.
+  const PLACES = {
+    table: { niv: "bas", ovo: 300, luigi: 440 },
+    canape: { niv: "salon", ovo: 382, luigi: 480 },
+    lit: { niv: "grenier", ovo: 300, luigi: 340 },
+    porte: { niv: "bas", ovo: 40, luigi: 80 },
+  };
+  const ETAGES = ["bas", "salon", "grenier"], VITESSE = 0.11, DUREE_ETAGE = 2600;
+  let place = "table", trajet = null, placeDepuis = 0;
+  function segments(qui, de, vers) {
+    const a = PLACES[de], b = PLACES[vers], pied = ESCALIER.x + ESCALIER.r + 18, segs = [];
+    const marche = (niv, x0, x1) => { if (Math.abs(x1 - x0) > 1) segs.push({ type: "marche", y: NIV[niv].sol, x0, x1, d: Math.abs(x1 - x0) / VITESSE }); };
+    const ia = ETAGES.indexOf(a.niv), ib = ETAGES.indexOf(b.niv);
+    if (ia === ib) { marche(a.niv, a[qui], b[qui]); return segs; }
+    marche(a.niv, a[qui], pied);
+    const sens = ib > ia ? 1 : -1;
+    for (let k = ia; k !== ib; k += sens) {
+      const bas = NIV[ETAGES[Math.min(k, k + sens)]].sol, haut = NIV[ETAGES[Math.max(k, k + sens)]].sol;
+      segs.push({ type: "escalier", bas, haut, monte: sens > 0, d: DUREE_ETAGE });
+    }
+    marche(b.niv, pied, b[qui]);
+    return segs;
+  }
+  function partir(vers, ensuite) {
+    if (trajet) return;
+    if (place === vers) { if (ensuite) ensuite(); return; }
+    const de = place;
+    trajet = { t0: performance.now(), vers, ensuite, gens: ["ovo", "luigi"].map((qui, k) => ({ qui, retard: k * 450, segs: segments(qui, de, vers) })) };
+    trajet.fin = Math.max(...trajet.gens.map((g) => g.retard + g.segs.reduce((n, x) => n + x.d, 0)));
+  }
+  function dansSeg(sg, u) {
+    if (sg.type === "marche") return { x: sg.x0 + (sg.x1 - sg.x0) * u, y: sg.y, gauche: sg.x1 < sg.x0, marche: u < 1 };
+    const v = sg.monte ? u : 1 - u, a = 0.5 + v * 13 * 0.68, R = ESCALIER.r * 0.8;
+    return { x: ESCALIER.x + R * Math.sin(a), y: sg.bas - v * (sg.bas - sg.haut), gauche: (sg.monte ? 1 : -1) * Math.cos(a) < 0, marche: true };
+  }
+  // où en est chacun·e : les pieds (x, y), le sens, et s'il ou elle marche encore
+  function positionSur(g, dt) {
+    let t = dt - g.retard;
+    if (!g.segs.length) return null;
+    if (t <= 0) return Object.assign(dansSeg(g.segs[0], 0), { marche: false });
+    for (const sg of g.segs) {
+      if (t <= sg.d) return dansSeg(sg, t / sg.d);
+      t -= sg.d;
+    }
+    return Object.assign(dansSeg(g.segs[g.segs.length - 1], 1), { marche: false });
   }
   H.maison = { canape: allerSurLeCanape };
   function airNanana() {
@@ -1739,7 +1791,7 @@
     if (H.musique.enCours()) { H.musique.arreter(); H.d.majLocal((l) => (l.musique = false)); return; }
     H.d.majLocal((l) => (l.musique = true));
     H.musique.jouer();
-    canapeJusqua = performance.now() + 150000;
+    partir("canape", () => (canapeJusqua = performance.now() + 150000));
   }
   // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin ; la mezzanine au-dessus du zéro)
   function zonesMaison(nuit) {
@@ -1762,7 +1814,7 @@
         if (q === "drame") raconter("lolo");
         else if (q === "blague") blagueLolo();
       } },
-      { id: "lit", x: 168, y: -112, w: 262, h: 108, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? H.aller("dodo/dormir") : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
+      { id: "lit", x: 168, y: -112, w: 262, h: 108, nom: dodo ? "Aller faire dodo" : "Le lit", agir: () => (dodo ? partir("lit", () => H.aller("dodo/dormir")) : H.dialogue.dire([{ qui: "luigi", texte: "Pas encore l’heure de dormir ! Viens plutôt t’asseoir sur le canapé." }])) },
       { id: "velux", x: VELUX.x0, y: veluxY(VELUX.x0) - 4, w: VELUX.x1 - VELUX.x0, h: veluxY(VELUX.x1) + VELUX.prof - veluxY(VELUX.x0) + 8, get nom() { return momentMaison() === "jour" ? "Regarder le ciel" : "Regarder les étoiles"; }, agir: regarderLeCiel },
       { id: "enceintes", x: 172, y: 124, w: 34, h: 128, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
       { id: "enceinte", x: 518, y: 164, w: 34, h: 88, get nom() { return H.musique && H.musique.enCours() ? "Couper la musique" : "Mettre de la musique"; }, agir: basculerMusique },
@@ -1775,7 +1827,7 @@
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
       { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "bois", x: -92, y: 430, w: 78, h: 80, nom: "Prendre du bois sec", agir: () => cheminee.prendreBois() },
-      { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: fenetreBalade },
+      { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: () => partir("porte", fenetreBalade) },
     ];
     return zones;
   }
@@ -2035,6 +2087,8 @@
     const nuit = H.ciel.nuitCalme();
     const zones = zonesMaison(nuit);
     let decor = null, calque = null, M = null, vue = null, cle = "", survol = null, derniere = 0;
+    trajet = null;
+    place = canapeJusqua > performance.now() ? "canape" : "table";
     const zoneSous = (e) => {
       if (!vue) return null;
       const r = toile.getBoundingClientRect();
@@ -2104,7 +2158,24 @@
       repere(cc, v.K);
       cc.lineJoin = "round"; cc.lineCap = "round"; cc.strokeStyle = ENCRE; cc.lineWidth = 2.2;
       ECL = { k: decor.k, L: decor.L };
-      const surCanape = canapeJusqua > t;
+      // en route d'une place à l'autre (dans l'escalier, ou sur un étage)
+      let enRoute = false;
+      if (trajet) {
+        const dt = t - trajet.t0;
+        if (dt >= trajet.fin) { place = trajet.vers; placeDepuis = t; const e = trajet.ensuite; trajet = null; if (e) e(); }
+        else {
+          enRoute = true;
+          for (const g of trajet.gens) { const ps = positionSur(g, dt); if (ps) H.pixel.dessiner(cc, g.qui + "Profil", ps.x, ps.y, 4.4, ps.marche ? Math.floor(t / 140) % 4 : 4, ps.gauche); }
+        }
+      }
+      // la musique finie, on redescend à la table ; devant la porte, si on n'est pas parti, on revient
+      if (!trajet && place === "canape" && canapeJusqua < t) partir("table");
+      if (!trajet && place === "porte" && t - placeDepuis > 2500 && !H.$(".fenetre, .voile, .dialogue")) partir("table");
+      if (!enRoute && (place === "porte" || place === "lit")) {
+        const pl = PLACES[place];
+        for (const qui of ["ovo", "luigi"]) H.pixel.dessiner(cc, qui + "Profil", pl[qui], NIV[pl.niv].sol, 4.4, 4, place === "porte");
+      }
+      const surCanape = !enRoute && place === "canape";
       cc.save();
       cc.translate(DX + CANAPE_T.x, CANAPE_T.y);
       if (!farce) loloCouche(cc, 172, 200, t, loloRaconte);
@@ -2119,14 +2190,14 @@
       cc.restore();
       cc.save();
       cc.translate(TABLE_T.x, TABLE_T.y);
-      if (!surCanape) {
+      if (!enRoute && place === "table") {
         assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
         assis(cc, "luigi", 626, -1, t, 4);
       }
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;
       tableGouter(cc);
-      if (farce && farce.id === "tete" && !surCanape) dessinerFarce(cc, t, { x: 604, y: 156 });
+      if (farce && farce.id === "tete" && !enRoute && place === "table") dessinerFarce(cc, t, { x: 604, y: 156 });
       // caché sous la table du goûter
       if (farce && farce.id === "cache") dessinerFarce(cc, t);
       cc.restore();
