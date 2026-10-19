@@ -366,13 +366,20 @@
   // ce que le soir et la nuit font aux couleurs du jour (les ampoules des guirlandes restent chaudes)
   const TEINTE = { soir: { m: [0.66, 0.5, 0.72], a: [26, 8, 40] }, nuit: { m: [0.26, 0.3, 0.55], a: [10, 10, 26] } };
   let cachePaysage = { cle: "" }, decorGarde = { cle: "" }, nuitBetes = null;
+  // (après un long moment dans un autre onglet, une tablette peut avoir vidé les toiles gardées en
+  // mémoire : au retour, on repeint le décor et le paysage)
+  let generationToiles = 0, cacheDepuis = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") cacheDepuis = Date.now();
+    else if (cacheDepuis && Date.now() - cacheDepuis > 15000) generationToiles++;
+  });
   // les guirlandes dehors s'allument le soir, sauf si on les a éteintes (le même interrupteur
   // pour la ferme et pour la maison)
   const guirlandesAllumees = () => !(H.local && H.local.guirlandesEteintes);
   function paysagePixels(R, p, moment) {
     const i0 = Math.floor(R.x0 / p), j0 = Math.floor(R.y0 / p);
     const W = Math.ceil(R.x1 / p) - i0 + 1, Hh = Math.ceil(R.y1 / p) - j0 + 1;
-    const cle = [i0, j0, W, Hh, p.toFixed(4), moment, guirlandesAllumees()].join("|");
+    const cle = [i0, j0, W, Hh, p.toFixed(4), moment, guirlandesAllumees(), generationToiles].join("|");
     if (cachePaysage.cle === cle) return cachePaysage;
     const img = new ImageData(W, Hh), d = img.data, brille = new Uint8Array(W * Hh);
     const X = (i) => (i0 + i + 0.5) * p, Y = (j) => (j0 + j + 0.5) * p;
@@ -2381,7 +2388,7 @@
       derniere = t;
       const v = vueMaison(toile), moment = momentMaison();
       // (le décor change aussi quand le feu prend ou s'éteint, et avec le tas de bûches)
-      const cleD = [v.W, v.Hc, v.K, v.taille, moment, cheminee.feuActif(), cheminee.bois(), fenetresOuvertes(), guirlandesAllumees()].join("|");
+      const cleD = [v.W, v.Hc, v.K, v.taille, moment, cheminee.feuActif(), cheminee.bois(), fenetresOuvertes(), guirlandesAllumees(), generationToiles].join("|");
       if (cle !== cleD) {
         cle = cleD;
         vue = v;

@@ -1009,6 +1009,19 @@
     }
   }
   let fondCle = null;
+  // Sur tablette, quand l'onglet reste longtemps caché, le navigateur peut vider les toiles gardées
+  // en mémoire (le sol, le fond, les dessins des maisons) : au retour, le sol avait disparu. On
+  // vérifie au retour (et si le navigateur dit qu'il a perdu une toile) et on repeint ce qui manque.
+  function solPerdu() {
+    try { const [x, y] = iso(N / 2, N / 2); return sc.getImageData(Math.round(x), Math.round(y), 1, 1).data[3] === 0; } catch (e) { return true; }
+  }
+  function repeindreTout() {
+    if (!scene) return;
+    peindreSol(); peindreSol2();
+    fondCle = null; sprites.clear();
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && scene && solPerdu()) repeindreTout(); });
+  for (const t of [sol0]) t.addEventListener("contextrestored", () => repeindreTout());
 
   // l'enveloppe convexe d'un nuage de points (pour l'ombre d'une maison)
   function enveloppe(pts) {
@@ -1621,6 +1634,8 @@
     if (!scene.mo || t - scene.moT > 1000 || t < scene.moT) { scene.mo = moment(); scene.moT = t; }
     const mo = scene.mo;
     drapeau = !!(H.lettres && H.lettres.aLire() > 0);
+    // (et toutes les trois secondes, au cas où le retour n'aurait pas été signalé)
+    if (t - (scene.verifSol || 0) > 3000) { scene.verifSol = t; if (solPerdu()) repeindreTout(); }
     if (fondCle !== mo.periode + mo.cote + W + "x" + Ht) {
       nuit = mo.nuit; cote = mo.cote; periode = mo.periode;
       peindreFond(); sprites.clear(); fondCle = mo.periode + mo.cote + W + "x" + Ht;
