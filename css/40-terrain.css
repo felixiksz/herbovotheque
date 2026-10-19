@@ -157,7 +157,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 .sortie-maison:hover, .sortie-maison:focus-visible { background: #23214a; outline: 2px solid #ff5b4f; }
 .page-dodo p { font-size: 1.1rem; }
 .cadre-balade { border: 1px solid var(--filet); border-radius: 8px; overflow: hidden; }
-.toile-balade { display: block; width: 100%; }
+.toile-balade { display: block; width: 100%; /* (sa propre couche à l'écran : certaines tablettes faisaient clignoter toute la toile quand une bulle passait par-dessus) */ will-change: transform; transform: translateZ(0); }
 .fin-balade { margin: 12px 0 30px; }
 .actions-balade { margin-top: 10px; min-height: 2.2em; }
 
