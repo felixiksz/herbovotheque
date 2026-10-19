@@ -12,8 +12,12 @@
     "#1b1d4a", "#232a63", "#2a2c6a", "#3a3aa8", "#1e3d25", "#4b3427",
     // les ciels et l'eau
     "#2f8fe0", "#6fb6ee", "#a8d8ec", "#d6eef7", "#12aec4", "#0d8fae", "#26406a",
-    // les clairs : crème, calcaire, gris de route
-    "#f3f0dc", "#e9e3cd", "#c9c9c4", "#9a9a9a",
+    // les clairs : crème, calcaire ; jamais de gris : les ombres sont bleues (bleus pâles de l'air,
+    // bleus d'ombre), les lumières chaudes (jaune pâle, abricot, rose)
+    "#f3f0dc", "#e9e3cd", "#c2cdec", "#8a98cc", "#b4cdea", "#94b4dc", "#7896c8", "#5f7fb8",
+    "#ffe9b8", "#ffd9c0", "#f6c6d0",
+    // les bleu-vert du lointain
+    "#86ad8a", "#6f9c9a", "#4f8a7e",
     // jaunes, corail, rouges, roses, peau
     "#f6ee55", "#ffd23a", "#e9b44c", "#ffc46b", "#ff8f2e", "#ff5b4f", "#e8714a", "#d23a2a", "#c93f6e", "#e04bb0", "#ffb3a8", "#f2c29b", "#d9a07a",
     // violets

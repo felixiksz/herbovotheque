@@ -454,11 +454,11 @@
   // de terre, et ses plantes, les arbres plus hauts que les herbes. Un croquis est sur papier.
   const PIX_TUILES = {
     herbe: ["#6cbd5c", "#4aa63e", "#9cc77a"], terre: ["#9a6a3c", "#7a4520", "#b9834f"], chemin: ["#d9b48a", "#c9a06a", "#e9c99a"],
-    gravier: ["#c9c9c4", "#9a9a9a", "#e9e3cd"], eau: ["#2f8fe0", "#6fb6ee", "#2f8fe0"], serre: ["#d6eef7", "#a8d8ec", "#f3f0dc"],
+    gravier: ["#c2cdec", "#8a98cc", "#e9e3cd"], eau: ["#2f8fe0", "#6fb6ee", "#2f8fe0"], serre: ["#d6eef7", "#a8d8ec", "#f3f0dc"],
   };
   const PIX_CROQUIS = {
     herbe: ["#efe8d4", "#e9e3cd", "#efe8d4"], terre: ["#d9c4a0", "#c9b090", "#d9c4a0"], chemin: ["#e9d9b8", "#ddd2ba", "#e9d9b8"],
-    gravier: ["#ddd8cc", "#c9c9c4", "#ddd8cc"], eau: ["#a8d8ec", "#d6eef7", "#a8d8ec"], serre: ["#f3f0dc", "#d6eef7", "#f3f0dc"],
+    gravier: ["#ddd8cc", "#c2cdec", "#ddd8cc"], eau: ["#a8d8ec", "#d6eef7", "#a8d8ec"], serre: ["#f3f0dc", "#d6eef7", "#f3f0dc"],
   };
   const FLEURS_PIX = ["#8a58cc", "#ff5b4f", "#f6ee55", "#d07ab8", "#f3f0dc", "#ffd23a", "#e8714a"];
   function miniature(ile) {
@@ -488,7 +488,7 @@
       const n = Math.max(1, Math.round(Math.abs(x1 - x0)));
       for (let q = 0; q <= n; q++) {
         const x = x0 + ((x1 - x0) * q) / n, y = y0 + ((y1 - y0) * q) / n;
-        for (let d = 0; d < 6; d++) P(x, y + d, d < 1 ? (ile.croquis ? "#c9c4b0" : clair ? "#6cbd5c" : "#3f8a42") : d < 4 ? (clair ? "#b9834f" : "#9a6a3c") : clair ? "#9a9a9a" : "#6b6578");
+        for (let d = 0; d < 6; d++) P(x, y + d, d < 1 ? (ile.croquis ? "#c9c4b0" : clair ? "#6cbd5c" : "#3f8a42") : d < 4 ? (clair ? "#b9834f" : "#9a6a3c") : clair ? "#8a98cc" : "#6b6578");
       }
     };
     tranche(ax, ay, bx, by, true); tranche(bx, by, cx, cy, false);
@@ -1478,7 +1478,7 @@
         const x = x0 + ((x1 - x0) * q) / n, y = y0 + ((y1 - y0) * q) / n;
         for (let d = 0; d < PROF; d++) {
           const v = H.hash(cle(Math.round(x), d)) % 100 / 100;
-          let col = d < 2 ? (clair ? "#6cbd5c" : "#3f8a42") : d < PROF * 0.55 ? (v < 0.08 ? "#9a9a9a" : v < 0.3 ? (clair ? "#9a6a3c" : "#7a4520") : clair ? "#b9834f" : "#9a6a3c") : v < 0.15 ? "#6b6578" : clair ? "#9a9a9a" : "#6b6578";
+          let col = d < 2 ? (clair ? "#6cbd5c" : "#3f8a42") : d < PROF * 0.55 ? (v < 0.08 ? "#8a98cc" : v < 0.3 ? (clair ? "#9a6a3c" : "#7a4520") : clair ? "#b9834f" : "#9a6a3c") : v < 0.15 ? "#6b6578" : clair ? "#8a98cc" : "#6b6578";
           ctx.fillStyle = col;
           ctx.fillRect(Math.round(x), Math.round(y + d), 1, 1);
         }
@@ -1494,8 +1494,8 @@
     const rgb = (h) => { const n = parseInt(h.slice(1), 16); return 0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | (n >> 16); };
     const PAL = {
       herbe: { printemps: ["#2f6b35", "#3f8a42", "#4aa63e", "#6cbd5c", "#9cc77a"], "été": ["#2f6b35", "#3f8a42", "#6a9a3a", "#8fae4a", "#c6cf55"], automne: ["#2f6b35", "#3f8a42", "#4aa63e", "#6a9a3a", "#9cc77a"], hiver: ["#2f5a3a", "#3f6a4a", "#5a7a5a", "#7a8a7a", "#9aa89a"] }[saison] || ["#2f6b35", "#3f8a42", "#4aa63e", "#6cbd5c", "#9cc77a"],
-      terre: ["#4b3427", "#7a4520", "#9a6a3c", "#b9834f"], dalle: ["#c9c9c4", "#e9e3cd", "#f3f0dc", "#9a9a9a"], joint: ["#6b6578", "#4a7a3a", "#5a5466"],
-      gravier: ["#9a9a9a", "#c9c9c4", "#e9e3cd", "#6b6578"], eau: ["#2f8fe0", "#3a9ee8", "#6fb6ee", "#a8d8ec"], serre: ["#a8d8ec", "#d6eef7", "#7f97f2"],
+      terre: ["#4b3427", "#7a4520", "#9a6a3c", "#b9834f"], dalle: ["#c2cdec", "#e9e3cd", "#f3f0dc", "#8a98cc"], joint: ["#6b6578", "#4a7a3a", "#5a5466"],
+      gravier: ["#8a98cc", "#c2cdec", "#e9e3cd", "#6b6578"], eau: ["#2f8fe0", "#3a9ee8", "#6fb6ee", "#a8d8ec"], serre: ["#a8d8ec", "#d6eef7", "#7f97f2"],
       fleurs: ["#f6ee55", "#ffffff", "#ffb3a8", "#d07ab8", "#8a58cc", "#ff5b4f"],
     };
     const cache = {};
@@ -1520,7 +1520,7 @@
         // la terre nue, selon le sol de la case : des mottes plus claires ou plus sombres, des cailloux
         const ts = teintesSol(caseDe(ile, cx0, cy0).sol), nn = hp(x >> 2, y >> 1);
         col = ts.base[h < 0.1 ? 2 : nn < 0.4 ? 0 : nn < 0.8 ? 1 : 3];
-        if (hp(x >> 1, y) < ts.cailloux) col = hp(y, x) < 0.5 ? "#9a9a9a" : "#c9c9c4";
+        if (hp(x >> 1, y) < ts.cailloux) col = hp(y, x) < 0.5 ? "#8a98cc" : "#c2cdec";
       } else {
         // l'herbe : des plaques plus claires et plus sombres, des brins, quelques fleurettes
         // des touffes : chaque colonne de pixels a ses brins de 2 à 4 pixels de haut, clairs en

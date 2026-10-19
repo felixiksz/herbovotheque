@@ -357,7 +357,8 @@
     // corniches et sa falaise claire au pied ; la garrigue entre les gradins et sur les plateaux, de
     // petits pins en rythme ; des vallons de garrigue sombre entre les rangées. Pas d'eau ici.
     // (les couleurs sont celles du jour : le soir et la nuit les teintent, plus bas)
-    const C3 = { brume: [150, 192, 236], clair: [255, 246, 218], milieu: [238, 220, 184], sombre: [176, 150, 140], fond: [128, 108, 140], strate: [214, 192, 160], garrigue: [92, 148, 66], garrigueS: [46, 98, 52] };
+    // (jamais de gris : les ombres sont bleues, la lumière chaude)
+    const C3 = { brume: [118, 164, 222], clair: [255, 240, 196], milieu: [240, 220, 182], sombre: [150, 156, 206], fond: [96, 108, 172], strate: [178, 184, 224], garrigue: [92, 148, 66], garrigueS: [38, 92, 70] };
     const melC = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
     const degrade = (arrets, t) => { t = Math.max(0, Math.min(1, t)); for (let k = 1; k < arrets.length; k++) if (t <= arrets[k][0]) { const [t0, c0] = arrets[k - 1], [t1, c1] = arrets[k]; return melC(c0, c1, (t - t0) / (t1 - t0 || 1)); } return arrets[arrets.length - 1][1]; };
     const bruit2 = (x, y, g) => { const a0 = Math.floor(x), b0 = Math.floor(y), fx = x - a0, fy = y - b0, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
@@ -367,8 +368,12 @@
       const MIL = LARGE / 2, haut0 = Math.min(R.y0, -400), CIEL = haut0 + (SOL_DEHORS - haut0) * 0.07, PIED = SOL_DEHORS - 40, N = 8;
       for (let k = 0; k < N; k++) {
         const f = k / (N - 1), yb = CIEL + 28 + (PIED - CIEL - 28) * Math.pow(f, 1.05);
-        const Hc = 70 + 170 * f, P = 260 + 420 * f, dec = hsh(k, 71) * P, air = Math.pow(1 - f, 0.85) * (moment === "nuit" ? 0.6 : 0.78);
-        const teinte = (c) => melC(c, C3.brume, air);
+        const Hc = 70 + 170 * f, P = 260 + 420 * f, dec = hsh(k, 71) * P, air = Math.pow(1 - f, 0.75) * (moment === "nuit" ? 0.7 : 0.88);
+        // La perspective aérienne, comme chez les peintres flamands : le plus proche est le plus sombre,
+        // vert profond et chaud, très contrasté ; en s'éloignant, chaque rangée s'éclaircit, perd ses
+        // contrastes et tourne au bleu-vert, puis à un bleu pâle qui rejoint presque le ciel.
+        const valeur = 0.7 + 0.3 * (1 - f), bleu = melC([70, 112, 172], [206, 224, 242], Math.pow(1 - f, 0.8));
+        const teinte = (c) => melC([c[0] * valeur, c[1] * valeur, c[2] * valeur], bleu, air);
         const massif = (x) => {
           const u = Math.abs(x - MIL) + (x < MIL ? 11 + k * 7 : 0) + dec;
           const forme = 0.42 * bruit1(u / (P * 0.55), k + 15) + 0.2 * bruit1(u / (P * 0.18), k + 16) + 0.08 * bruit1(u / 26, k + 17) + 0.95 * Math.pow(bruit1(u / (P * 0.3), k + 18), 2.6);
@@ -378,9 +383,10 @@
         for (let i = 0; i < W; i++) {
           const x = X(i), top = massif(x);
           const falaise = Hc * (0.16 + 0.16 * bruit1((Math.abs(x - MIL) + dec) / (P * 0.4), k + 50));
-          for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(yb + 90)); j++) {
+          // (chaque rangée descend jusqu'au pied du paysage : pas de trou entre deux rangées)
+          for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(PIED + 90)); j++) {
             const y = Y(j), dep = y - top, v = Math.min(1, dep / Math.max(1, yb - top));
-            if (y >= yb) { poseRVB(i, j, teinte(bruit2(x / 13, y / 8, k + 61) > 0.55 ? C3.garrigue : melC(C3.garrigueS, C3.fond, 0.35))); continue; }
+            if (y >= yb) { poseRVB(i, j, teinte(bruit2(x / 13, y / 8, k + 61) > 0.55 ? C3.garrigue : C3.garrigueS)); continue; }
             let c = degrade([[0, C3.clair], [0.4, C3.milieu], [1, C3.fond]], Math.pow(v, 0.8));
             if (yb - y < falaise) {
               const fv = 1 - (yb - y) / falaise, sb2 = (yb - y) / 6 + bruit1(x / 45, k + 51) * 0.8;
@@ -391,12 +397,12 @@
               const sb = (yb - y) / 9 + bruit1(x / 37, k + 21) * 1.4, bande = Math.floor(sb), dansB = sb - bande;
               const sommet = dep < (yb - top) * 0.12;
               // (la garrigue s'efface avec la distance : au loin, on ne voit plus que le calcaire bleui)
-              const vert = !sommet && f > 0.2 && (bande % 3 !== 0 || dep < PLATEAU) && bruit2(x / 19, y / 9, k + 31) > 0.3 + (1 - f) * 0.25;
+              const vert = !sommet && (bande % 3 !== 0 || dep < PLATEAU) && bruit2(x / 19, y / 9, k + 31) > 0.34 - f * 0.14;
               if (vert) c = melC(dansB < 0.35 ? C3.garrigueS : C3.garrigue, c, 0.2 + bruit2(x / 6, y / 5, k + 33) * 0.25);
               else if (dansB > 0.82) c = melC(c, C3.fond, 0.3);
               else if (dansB < 0.18) c = melC(c, C3.clair, 0.4);
             }
-            if (dep < p * 1.1) c = melC(C3.fond, [30, 26, 46], 0.4);
+            if (dep < p * 1.1) c = melC(C3.fond, [36, 40, 110], 0.5);
             poseRVB(i, j, teinte(c));
           }
           // de petits pins sur les plateaux, en rythme
@@ -476,7 +482,7 @@
     {
       const x = -700, w = 270, hm = 130, roues = 26, mur = bas - roues - 10 - hm, toitH = 70, f = 0.16, b = (c) => brume(c, f);
       rect(x - 6, bas - roues - 12, w + 12, 8, b("#2c2a3e")); rect(x + w + 6, bas - roues - 10, 34, 4, b("#2c2a3e"));
-      for (const u of [0.32, 0.5]) ovale(x + w * u, bas - roues, roues, roues, (i, j, dx, dy) => { const e = dx * dx + dy * dy; pose(i, j, b(e > 0.72 ? "#23214a" : e < 0.06 ? "#9a9a9a" : "#4a4560")); });
+      for (const u of [0.32, 0.5]) ovale(x + w * u, bas - roues, roues, roues, (i, j, dx, dy) => { const e = dx * dx + dy * dy; pose(i, j, b(e > 0.72 ? "#23214a" : e < 0.06 ? "#8a98cc" : "#4a4560")); });
       for (let j = J(mur); j < J(mur + hm); j++) { const y = Y(j), rang = Math.floor((y - mur) / 9); for (let i = I(x); i < I(x + w); i++) pose(i, j, b((y - mur) % 9 < 2 ? "#8a5c34" : rang % 2 ? "#b9834f" : "#c08a55")); }
       rect(x, mur, 6, hm, b("#f3f0dc")); rect(x + w - 6, mur, 6, hm, b("#f3f0dc"));
       for (const [fx, fw] of [[24, 58], [196, 46]]) { rect(x + fx - 4, mur + 22, fw + 8, 54, b("#f3f0dc")); rect(x + fx, mur + 26, fw, 46, b("#a8d8ec")); rect(x + fx + fw / 2 - 1.5, mur + 26, 3, 46, b("#f3f0dc")); }
@@ -500,7 +506,7 @@
       ovale(x + w * 0.3, mur + hm * 0.42, 20, 20, (i, j, dx, dy) => pose(i, j, b(dx * dx + dy * dy > 0.7 ? "#f3f0dc" : "#a8d8ec")));
       rect(x + w * 0.62, mur + 18, 48, hm - 24, b("#3d5ee8")); rect(x + w * 0.62 + 36, mur + 60, 5, 5, b("#f6ee55"));
       ovale(x + w / 2, mur + 4, w / 2 + 16, 62, (i, j, dx, dy) => { if (dy > 0) return; pose(i, j, b(dy > -0.12 ? "#b2552e" : Math.floor((dx + 1) * 9) % 2 ? "#e8714a" : "#d9653e")); });
-      for (const u of [0.22, 0.78]) ovale(x + w * u, bas - r, r, r, (i, j, dx, dy) => { const e = dx * dx + dy * dy, a = Math.atan2(dy, dx); if (e > 0.72) pose(i, j, b("#23214a")); else if (e < 0.06) pose(i, j, b("#9a9a9a")); else if (Math.abs(Math.sin(a * 4)) < 0.18) pose(i, j, b("#7a4520")); });
+      for (const u of [0.22, 0.78]) ovale(x + w * u, bas - r, r, r, (i, j, dx, dy) => { const e = dx * dx + dy * dy, a = Math.atan2(dy, dx); if (e > 0.72) pose(i, j, b("#23214a")); else if (e < 0.06) pose(i, j, b("#8a98cc")); else if (Math.abs(Math.sin(a * 4)) < 0.18) pose(i, j, b("#7a4520")); });
     }
     // le petit porche devant la porte, à gauche de la maison : la terrasse en planches, deux
     // poteaux, l'auvent de tuiles, et le bois sec rangé contre le mur, à l'abri
@@ -550,7 +556,7 @@
           // la roche, en pavés gris séparés de joints sombres
           const r = Math.floor((prof - 74) / (3 * p)), dec = r % 2 ? 2 : 0, col = Math.floor((xi + dec) / 5);
           const joint = (j + j0) % 3 === 0 || (xi + dec) % 5 === 0;
-          c = joint ? "#4b3427" : hsh(col, r) < 0.5 ? "#9a9a9a" : "#c9c9c4";
+          c = joint ? "#4b3427" : hsh(col, r) < 0.5 ? "#8a98cc" : "#c2cdec";
         }
         pose(i, j, c);
       }
@@ -562,7 +568,7 @@
     for (let ci = Math.floor(Math.max(R.x0, IG) / 30); ci * 30 < Math.min(R.x1, ID); ci++) for (let cj = 0; cj < 3; cj++) {
       if (hsh(ci, cj + 50) > 0.45) continue;
       const cx = ci * 30 + hsh(ci, cj + 51) * 30, cy = SOL_DEHORS + 24 + cj * 16 + hsh(ci, cj + 52) * 10, rr = 4 + hsh(ci, cj + 53) * 5;
-      ovale(cx, cy, rr * 1.4, rr, (i, j, dx, dy) => pose(i, j, dx * dx + dy * dy > 0.7 ? "#4b3427" : dx + dy < -0.6 ? "#c9c9c4" : "#9a9a9a"));
+      ovale(cx, cy, rr * 1.4, rr, (i, j, dx, dy) => pose(i, j, dx * dx + dy * dy > 0.7 ? "#4b3427" : dx + dy < -0.6 ? "#c2cdec" : "#8a98cc"));
     }
     // les racines des grands pins, qui descendent dans la terre
     for (const a of ARBRES) {
@@ -1251,7 +1257,7 @@
     ctx.fillStyle = "#4b3427"; ctx.fillRect(PORTE.x - 1, PORTE.y + PORTE.h - 32, PORTE.w + 2, 26); ctx.strokeRect(PORTE.x - 1, PORTE.y + PORTE.h - 32, PORTE.w + 2, 26);
     ctx.fillStyle = "#c99a3a"; ctx.fillRect(PORTE.x + 2, PORTE.y + PORTE.h - 29, PORTE.w - 4, 20);
     // les fondations, en pierre
-    ctx.fillStyle = "#9a9a9a"; ctx.fillRect(-14, SOL_DEHORS, LARGE + 28, 14); ctx.strokeRect(-14, SOL_DEHORS, LARGE + 28, 14);
+    ctx.fillStyle = "#8a98cc"; ctx.fillRect(-14, SOL_DEHORS, LARGE + 28, 14); ctx.strokeRect(-14, SOL_DEHORS, LARGE + 28, 14);
     // les trémies de l'escalier, dans les planchers
     const { x: ex, r: er } = ESCALIER, tx = ex - er - 6, tw = er * 2 + 12;
     ctx.fillStyle = "#1b1d4a";
@@ -1348,7 +1354,7 @@
     bloc(ctx, x, 150, 26, 78, 4, "#7a4520");
     for (const [cy, rr] of HP) {
       ctx.beginPath(); ctx.arc(x + 13, cy, rr, 0, Math.PI * 2); ctx.fillStyle = "#2c2a3e"; ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(x + 13, cy, rr * 0.4, 0, Math.PI * 2); ctx.fillStyle = "#9a9a9a"; ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 13, cy, rr * 0.4, 0, Math.PI * 2); ctx.fillStyle = "#8a98cc"; ctx.fill();
     }
   }
   function membranes(ctx, t) {
@@ -1573,7 +1579,7 @@
   // --- les photos du mur ---
   const PAL_PHOTO = {
     C: "#6fb6ee", B: "#a8d8ec", S: "#12aec4", W: "#f3f0dc", Y: "#efe8d4", y: "#ddd2ba", G: "#6cbd5c", g: "#3f8a42",
-    h: "#3b2416", c: "#8a4b22", s: "#f2c29b", a: "#9a9a9a", q: "#ee9a7e", m: "#b8404e", r: "#e03a3a", e: "#3aa04a", b: "#3a5fd0", n: "#7a4520",
+    h: "#3b2416", c: "#8a4b22", s: "#f2c29b", a: "#8a98cc", q: "#ee9a7e", m: "#b8404e", r: "#e03a3a", e: "#3aa04a", b: "#3a5fd0", n: "#7a4520",
     k: "#5a3418", M: "#3e2210", L: "#c08850", w: "#f3f0dc", E: "#1b1d4a", N: "#3e2210", z: "#3a2216",
     j: "#2a439a", o: "#2a2246", t: "#d8bf98", T: "#6b5442", u: "#f3ead8", p: "#f4a3b8",
   };
@@ -2515,7 +2521,7 @@
     // couleurs de la pièce (le sol magenta en bas, le mur bleu, la lampe) ; quelques bûches à côté
     ajouter(7.6, () => {
       const [cx] = PI_(0.3, 8.6, 0), haut = PI_(0.3, 8.6, MI.MUR)[1], bas = PI_(0.3, 8.6, 16)[1];
-      const bandes = ["#6b6578", "#c9c9c4", "#f3f0dc", "#ffffff", "#c9c9c4", "#9a9a9a"];
+      const bandes = ["#6b6578", "#c2cdec", "#f3f0dc", "#ffffff", "#c2cdec", "#8a98cc"];
       for (let y = Math.round(haut); y < Math.round(bas); y++) {
         const u = (y - haut) / (bas - haut);
         bandes.forEach((col, k) => {
@@ -2527,12 +2533,12 @@
           g.fillStyle = c2; g.fillRect(Math.round(cx) - 3 + k, y, 1, 1);
         });
       }
-      g.fillStyle = "#9a9a9a"; g.fillRect(Math.round(cx) - 4, Math.round(haut), 8, 2);
+      g.fillStyle = "#8a98cc"; g.fillRect(Math.round(cx) - 4, Math.round(haut), 8, 2);
       for (const [i, j] of [[0.15, 9.15], [1.0, 9.15], [1.0, 8.15]]) { const [x, y] = PI_(i, j, 0); g.fillStyle = "#2a2540"; g.fillRect(Math.round(x), Math.round(y) - 3, 1, 3); }
       boiteIso(g, 0.1, 8.1, 0.95, 1.05, 14, { dessus: "#4a4560", gauche: "#3a3550", droite: "#2a2540" }, 3);
       const [vx, vy] = PI_(0.35, 9.15, 12);
       g.fillStyle = o.feu ? "#d23a2a" : "#1b1d4a"; g.fillRect(Math.round(vx), Math.round(vy), 8, 6);
-      g.fillStyle = "#9a9a9a"; g.fillRect(Math.round(vx) - 1, Math.round(vy) - 1, 10, 1);
+      g.fillStyle = "#8a98cc"; g.fillRect(Math.round(vx) - 1, Math.round(vy) - 1, 10, 1);
       if (o.feu) for (let k = 0; k < 3; k++) { const hh = 2 + Math.round(Math.abs(Math.sin(t / (110 + k * 37) + k)) * 4); g.fillStyle = "#ff8f2e"; g.fillRect(Math.round(vx) + 1 + k * 2, Math.round(vy) + 6 - hh, 2, hh); g.fillStyle = "#ffd23a"; g.fillRect(Math.round(vx) + 1 + k * 2, Math.round(vy) + 5, 1, 1); }
       // les bûches, à côté
       for (const [i, j, z] of [[1.3, 8.6, 0], [1.3, 8.95, 0], [1.3, 8.78, 2]]) { const [x, y] = PI_(i, j, z); g.fillStyle = "#7a4520"; g.fillRect(Math.round(x) - 4, Math.round(y) - 3, 8, 3); g.fillStyle = "#e9c99a"; g.fillRect(Math.round(x) - 5, Math.round(y) - 3, 2, 3); }

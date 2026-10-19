@@ -301,7 +301,7 @@
   const CRAYON = ["......kk.", ".....kyyk", "....kmkyk", "...kmmkk.", "..kmmmk..", ".kwmmk...", "kwwkk....", "kkk......"];
   const CERVEAU = ["..kkkk.kkkk..", ".kpPpkkkpPpk.", "kpPkpPkPpkPpk", "kPppkpkpkppPk", "kpkPpPkPpPkpk", "kPpkppkppkpPk", "kpPpkPkPkpPpk", "kPkppPkPppkPk", ".kpPkpkpkPpk.", "..kkkk.kkkk.."];
   const icone = (motif, palette, n) => H.el("img.icone-fiche", { src: H.dessinPixel(motif, palette, n || 3), alt: "" });
-  const PAL_CRAYON = { k: "#23214a", y: "#f6ee55", m: "#ff8f2e", w: "#f3f0dc" }, PAL_GRIS = { k: "#8a88a0", y: "#c9c9c4", m: "#b8b6cc", w: "#e9e7f0" };
+  const PAL_CRAYON = { k: "#23214a", y: "#f6ee55", m: "#ff8f2e", w: "#f3f0dc" }, PAL_GRIS = { k: "#8a88a0", y: "#c2cdec", m: "#b8b6cc", w: "#e9e7f0" };
   const PAL_CERVEAU = { k: "#23214a", p: "#f4a3b8", P: "#d07ab8" };
 
   // le crayon sur la photo : envoyer une photo ou un dessin, choisir une photo libre, ou revenir

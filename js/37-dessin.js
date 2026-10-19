@@ -13,7 +13,7 @@
     "#4b3427", "#7a4520", "#9a6a3c", "#b9834f", "#c96a3a", "#e9e3cd", "#f3f0dc",
     "#f6ee55", "#ffd23a", "#ff8f2e", "#ff5b4f", "#d23a2a", "#c93f6e", "#e04bb0",
     "#ffb3a8", "#d07ab8", "#8a58cc", "#5b3c8f", "#3d5ee8", "#7f97f2", "#a8d8ec",
-    "#9a9a9a", "#c9c9c4", "#23214a",
+    "#8a98cc", "#c2cdec", "#23214a",
   ];
   const rvb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const PALETTE = COULEURS.map(rvb);

@@ -130,7 +130,7 @@
   const OBJETS = { plante: "Plante", pierre: "Pierre", dalle: "Pas japonais", pot: "Pot", banc: "Banc" };
   const PINCEAUX = { gravier: "Gravier", terreRouge: "Terre rouge", terrazzo: "Terrazzo", prairie: "Prairie fleurie", bassin: "Bassin" };
   const TEXTURES_PINCEAUX = {
-    gravier: ["#c9c9c4", "#9a9a9a", "#e9e3cd", "#6b6578"],
+    gravier: ["#c2cdec", "#8a98cc", "#e9e3cd", "#6b6578"],
     terreRouge: ["#c96a3a", "#b2552e", "#d9824f", "#9a6a3c"],
     terrazzo: ["#f3f0dc", "#e9e3cd", "#ff5b4f", "#3d5ee8"],
     prairie: ["#6cbd5c", "#9cc77a", "#d07ab8", "#f6ee55"],
@@ -170,8 +170,8 @@
         const v = hash(x * 3, y + d * 7);
         let col;
         if (d < 2) col = clair ? "#6cbd5c" : "#3f8a42";
-        else if (d < 18) col = v < 0.08 ? "#9a9a9a" : v < 0.3 ? (clair ? "#9a6a3c" : "#7a4520") : clair ? "#b9834f" : "#9a6a3c";
-        else col = v < 0.15 ? "#6b6578" : clair ? "#9a9a9a" : "#6b6578";
+        else if (d < 18) col = v < 0.08 ? "#8a98cc" : v < 0.3 ? (clair ? "#9a6a3c" : "#7a4520") : clair ? "#b9834f" : "#9a6a3c";
+        else col = v < 0.15 ? "#6b6578" : clair ? "#8a98cc" : "#6b6578";
         if (d === 18 && v < 0.6) col = clair ? "#7a4520" : "#4b3427";
         pixel(c, x, y + d, col);
       }
@@ -242,7 +242,7 @@
   }
   function peindreSol2() {
   racinesBords();
-  for (const p of plantes) if (p.e === "pin") { const [x, y] = iso(p.x, p.y); ovale(sc, x, y + 4, 9, 4, null, (dx, dy) => (hash(x + dx, y + dy) < 0.15 ? "#9a9a9a" : hash(x + dx * 2, y + dy) < 0.5 ? "#c96a3a" : "#b2552e")); }
+  for (const p of plantes) if (p.e === "pin") { const [x, y] = iso(p.x, p.y); ovale(sc, x, y + 4, 9, 4, null, (dx, dy) => (hash(x + dx, y + dy) < 0.15 ? "#8a98cc" : hash(x + dx * 2, y + dy) < 0.5 ? "#c96a3a" : "#b2552e")); }
   // des chemins de terre battue : la largeur varie, ils ondulent un peu, quelques cailloux,
   // et l'herbe mord sur les bords
   for (const c of chemins) for (let s = 0; s <= 1; s += 0.6 / (c.long * 8)) {
@@ -252,7 +252,7 @@
     ovale(sc, px, py + 4, Math.round(larg + 1), Math.max(1, Math.round(larg / 2)), null, (dx, dy, l) => {
       const v = hash(Math.round(px + dx), Math.round(py + dy));
       if (Math.abs(dx) >= l - 1 && v < 0.45) return v < 0.2 ? "#6cbd5c" : "#9cc77a";
-      return v < 0.05 ? "#9a9a9a" : v < 0.09 ? "#f3f0dc" : v < 0.55 ? "#d9b48a" : v < 0.85 ? "#c9a06a" : "#e9c99a";
+      return v < 0.05 ? "#8a98cc" : v < 0.09 ? "#f3f0dc" : v < 0.55 ? "#d9b48a" : v < 0.85 ? "#c9a06a" : "#e9c99a";
     });
   }
   // des fleurs sauvages en touffes éparses, jamais en rangs : lavande, coquelicots, thym
@@ -349,7 +349,7 @@
             const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
             for (let k = 0; k <= n; k++) {
               const x = Math.round(x0 + ((x1 - x0) * k) / n), y = Math.round(y0 + ((y1 - y0) * k) / n);
-              for (let e = 0; e < ep; e++) pixel(c, x + e, y, e === 0 ? "#c9c9c4" : e === ep - 1 ? "#6b6b66" : "#9a9a96");
+              for (let e = 0; e < ep; e++) pixel(c, x + e, y, e === 0 ? "#c2cdec" : e === ep - 1 ? "#6b6b66" : "#9a9a96");
             }
           };
           bois(16, 29, 15, 22, 3); bois(15, 22, 8, 14, 2); bois(16, 22, 25, 13, 2); bois(15, 22, 16, 10, 2);
@@ -461,7 +461,7 @@
         mazet: { clair: "#f3f0dc", ombre: "#c9c4b0", trait: "#7a6a56", grain: "#e9e3cd", toitC: "#e8714a", toitO: "#b2552e" },
         herbo: { clair: "#b9834f", ombre: "#8a5c34", trait: "#4b3427", grain: "#9a6a3c", toitC: "#e8714a", toitO: "#b2552e" },
         roulotte: { clair: "#ffd23a", ombre: "#e9a83a", trait: "#9a6a3c", grain: "#f6ee55", toitC: "#e8714a", toitO: "#b2552e" },
-        labo: { clair: "#e9e3cd", ombre: "#b8ae94", trait: "#6b6578", grain: "#c9c9c4", toitC: "#e8714a", toitO: "#b2552e" },
+        labo: { clair: "#e9e3cd", ombre: "#b8ae94", trait: "#6b6578", grain: "#c2cdec", toitC: "#e8714a", toitO: "#b2552e" },
         serre: { clair: "#d6eef7", ombre: "#a8d8ec", trait: "#2f6b35", grain: "#ffffff", toitC: "#e9f6fb", toitO: "#bfe3f2" },
       }[m.genre];
       if (m.genre === "tiny") { tinyHouse(c, ox, oy, m); return; }
@@ -540,13 +540,13 @@
         // le bardage de bois en planches verticales
         for (let k = 1; k < 10; k++) { const u = k / 10; ligne(c, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u - 1, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u - H2 + 1, "#9a6a3c"); }
         // deux roues sous la longue façade, et une petite marche devant la porte
-        for (const u of [0.3, 0.62]) { const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u + lev; ovale(c, x, y - 1, 3, 3, null, (dx, dy) => (dx * dx + dy * dy > 5 ? "#23214a" : dx === 0 && dy === 0 ? "#9a9a9a" : "#4b3427")); }
+        for (const u of [0.3, 0.62]) { const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u + lev; ovale(c, x, y - 1, 3, 3, null, (dx, dy) => (dx * dx + dy * dy > 5 ? "#23214a" : dx === 0 && dy === 0 ? "#8a98cc" : "#4b3427")); }
         const mx = A[0] + (B[0] - A[0]) * 0.52, my = A[1] + (B[1] - A[1]) * 0.52 + lev;
         remplir(c, [[mx - 3, my - 1], [mx + 3, my + 2], [mx + 3, my + 4], [mx - 3, my + 1]], "#b9834f"); contour(c, [[mx - 3, my - 1], [mx + 3, my + 2], [mx + 3, my + 4], [mx - 3, my + 1]], "#4b3427");
       }
       if (m.genre === "labo") {
         // des pierres sèches, avec leurs joints
-        for (let k = 0; k < 26; k++) { const u = hash(k, 3), v = hash(3, k); const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u - 2 - v * (H2 - 4); remplir(c, [[x - 2, y], [x + 1, y + 1], [x + 1, y - 1], [x - 2, y - 2]], hash(k, 9) < 0.5 ? "#d9d0b8" : "#c9c9c4"); contour(c, [[x - 2, y], [x + 1, y + 1], [x + 1, y - 1], [x - 2, y - 2]], "#9a9a9a"); }
+        for (let k = 0; k < 26; k++) { const u = hash(k, 3), v = hash(3, k); const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u - 2 - v * (H2 - 4); remplir(c, [[x - 2, y], [x + 1, y + 1], [x + 1, y - 1], [x - 2, y - 2]], hash(k, 9) < 0.5 ? "#d9d0b8" : "#c2cdec"); contour(c, [[x - 2, y], [x + 1, y + 1], [x + 1, y - 1], [x - 2, y - 2]], "#8a98cc"); }
       }
       if (m.genre === "serre") {
         for (let k = 1; k < 4; k++) { const u = k / 4; ligne(c, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u - H2, "#2f6b35"); ligne(c, B[0] + (C[0] - B[0]) * u, B[1] + (C[1] - B[1]) * u, B[0] + (C[0] - B[0]) * u, B[1] + (C[1] - B[1]) * u - H2, "#2f6b35"); }
@@ -635,7 +635,7 @@
       if (m.terrasse) for (const [x, y] of [[px - 6, py - 1], [px - 3, py + 0.5], [px, py + 2]]) ligne(c, x, y, x, y - 5, "#7a4520");
       for (let k = 0; k < 2; k++) remplir(c, [[px + 1 + k, py + 5 + k * 2], [px + 7 + k, py + 8 + k * 2], [px + 7 + k, py + 9 + k * 2], [px + 1 + k, py + 6 + k * 2]], "#9a6a3c");
     }
-    if (m.roues) for (const u of [0.25, 0.52]) { const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u + lev; ovale(c, x, y - 1, 3, 3, null, (dx, dy) => (dx * dx + dy * dy > 5 ? "#23214a" : dx === 0 && dy === 0 ? "#9a9a9a" : "#4b3427")); }
+    if (m.roues) for (const u of [0.25, 0.52]) { const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u + lev; ovale(c, x, y - 1, 3, 3, null, (dx, dy) => (dx * dx + dy * dy > 5 ? "#23214a" : dx === 0 && dy === 0 ? "#8a98cc" : "#4b3427")); }
     // le toit à deux pans, faîtage dans la longueur, pignon sur le petit côté, débord
     const a = [A[0] - 1, A[1] - h + 1], b = [B[0] + 1, B[1] - h + 1.5], cc = [C[0] + 1, C[1] - h], dd = [D[0] - 1, D[1] - h];
     const fh = 8 + m.w * 2;
@@ -658,7 +658,7 @@
       for (let k = 0; k < 3; k++) for (let r = 0; r < 2; r++) {
         const u0 = 0.12 + k * 0.27, v0 = 0.18 + r * 0.38, du = 0.24, dv = 0.32;
         const q = [sur(u0, v0), sur(u0 + du, v0), sur(u0 + du, v0 + dv), sur(u0, v0 + dv)];
-        remplir(c, q, "#232a63"); contour(c, q, "#9a9a9a");
+        remplir(c, q, "#232a63"); contour(c, q, "#8a98cc");
         const m1 = sur(u0 + du / 2, v0), m2 = sur(u0 + du / 2, v0 + dv);
         ligne(c, m1[0], m1[1], m2[0], m2[1], "#3a5a8a");
         const re = sur(u0 + 0.05, v0 + dv - 0.08);
@@ -727,7 +727,7 @@
     if (PAS_BRAS[k]) { r[5] = r[5].replace(/^.rrbbrr.$/, PAS_BRAS[k][0]); }
     return { g: r, monte: k % 2 ? 1 : 0 };
   }
-  const PAL = { h: "#3b2416", s: "#f2c29b", a: "#9a9a9a", r: "#e03a3a", b: "#3a5fd0", n: "#7a4520" };
+  const PAL = { h: "#3b2416", s: "#f2c29b", a: "#8a98cc", r: "#e03a3a", b: "#3a5fd0", n: "#7a4520" };
   function dessinOvo(c, x, y, image) {
     const { g, monte } = marche(OVO, image);
     g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL[ch]) pixel(c, x - 4 + i, y - g.length + j - (j < 8 ? monte : 0), PAL[ch]); }));
@@ -815,7 +815,7 @@
   const POULE = [".r.....", "yeH..T.", ".HHHHT.", "..HWWH.", "..HHH..", "...l.l."];
   const POULE_PICORE = [".......", ".....T.", "rHHHHT.", "yeHWWH.", "..HHH..", "...l.l."];
   const POULE_PAS = POULE.slice(0, 5).concat(["..l..l."]);
-  const ROBES = [["#c96a3a", "#9a6a3c", "#7a4520"], ["#f3f0dc", "#c9c4b0", "#9a9a9a"], ["#3a3a6a", "#23214a", "#2a2c6a"], ["#b8b6cc", "#9a9a9a", "#6b6578"], ["#d9824f", "#b2552e", "#7a4520"]];
+  const ROBES = [["#c96a3a", "#9a6a3c", "#7a4520"], ["#f3f0dc", "#c9c4b0", "#8a98cc"], ["#3a3a6a", "#23214a", "#2a2c6a"], ["#b8b6cc", "#8a98cc", "#6b6578"], ["#d9824f", "#b2552e", "#7a4520"]];
   function dessinPoule(c, x, y, p, image) {
     const g = p.picore && image ? POULE_PICORE : p.marche && image ? POULE_PAS : POULE, [H0, W0, T0] = ROBES[p.robe];
     if (p.marche && image) x += p.gauche ? -1 : 1;
@@ -824,7 +824,7 @@
   }
   // les objets posés en aménageant
   function dessinObjet(c, e, x, y) {
-    if (e.type === "pierre") { ovale(c, x, y - 2, 4, 2, null, (dx, dy) => (dy < 0 && dx < 1 ? "#c9c9c4" : "#9a9a9a")); return; }
+    if (e.type === "pierre") { ovale(c, x, y - 2, 4, 2, null, (dx, dy) => (dy < 0 && dx < 1 ? "#c2cdec" : "#8a98cc")); return; }
     if (e.type === "dalle") { ovale(c, x, y, 4, 2, null, (dx, dy) => (Math.abs(dx) > 2 ? "#c9a06a" : "#e9e3cd")); return; }
     if (e.type === "pot") { remplir(c, [[x - 3, y - 6], [x + 3, y - 6], [x + 2, y], [x - 2, y]], "#c96a3a"); ovale(c, x, y - 8, 3, 2, "#4aa63e"); pixel(c, x - 1, y - 9, "#e04bb0"); return; }
     if (e.type === "banc") { remplir(c, [[x - 6, y - 4], [x + 2, y], [x + 6, y - 2], [x - 2, y - 6]], "#b9834f"); contour(c, [[x - 6, y - 4], [x + 2, y], [x + 6, y - 2], [x - 2, y - 6]], "#7a4520"); for (const [dx, dy] of [[-5, -3], [1, 0], [5, -2]]) ligne(c, x + dx, y + dy, x + dx, y + dy + 3, "#4b3427"); return; }
@@ -1051,7 +1051,7 @@
   }
   const MARCASSIN = [".rRrRr.", "rRrRrRr", "rRrRrRp", ".n.n.n."];
   const MARCASSIN_PAS = MARCASSIN.slice(0, 3).concat(["n.n..n."]);
-  const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#3e2210", N: "#1b1414", k: "#2a1d1b", b: "#6b5442", B: "#8a7258", e: "#c9b090", s: "#b8a090", r: "#b9834f", R: "#7a4520", p: "#9a9a9a" };
+  const PAL_BETES = { o: "#e8714a", w: "#f3f0dc", n: "#3e2210", N: "#1b1414", k: "#2a1d1b", b: "#6b5442", B: "#8a7258", e: "#c9b090", s: "#b8a090", r: "#b9834f", R: "#7a4520", p: "#8a98cc" };
   function dessinBete(c, x, y, g, gauche) {
     const L = g[0].length;
     g.forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_BETES[ch]) pixel(c, gauche ? x + Math.floor(L / 2) - i : x - Math.floor(L / 2) + i, y - g.length + j, PAL_BETES[ch]); }));
@@ -1691,13 +1691,13 @@
     const labo = parId.labo;
     if (laboActif() && labo.posSprite && labo.cheminee) {
       const lx = labo.posSprite[0] + labo.cheminee[0], ly = labo.posSprite[1] + labo.cheminee[1];
-      for (let k = 0; k < 5; k++) { const u = ((t / 2400) + k / 5) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 5), ly - Math.round(u * 24), 1 + Math.round(u * 3), 1 + Math.round(u * 2), u < 0.5 ? "#f3f0dc" : "#c9c9c4"); }
+      for (let k = 0; k < 5; k++) { const u = ((t / 2400) + k / 5) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 5), ly - Math.round(u * 24), 1 + Math.round(u * 3), 1 + Math.round(u * 2), u < 0.5 ? "#f3f0dc" : "#c2cdec"); }
     }
     // et de la cheminée de la maison quand le feu brûle dans le poêle
     const maison = parId.maison;
     if (H.cheminee && H.cheminee.feuActif() && maison.posSprite && maison.cheminee) {
       const lx = maison.posSprite[0] + maison.cheminee[0], ly = maison.posSprite[1] + maison.cheminee[1];
-      for (let k = 0; k < 6; k++) { const u = ((t / 2600) + k / 6) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 6), ly - Math.round(u * 18), 1 + Math.round(u * 2), 1 + Math.round(u * 1.5), u < 0.5 ? "#e9e3cd" : "#c9c9c4"); }
+      for (let k = 0; k < 6; k++) { const u = ((t / 2600) + k / 6) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 6), ly - Math.round(u * 18), 1 + Math.round(u * 2), 1 + Math.round(u * 1.5), u < 0.5 ? "#e9e3cd" : "#c2cdec"); }
     }
     // la pluie, quand il pleut vraiment (ou la pluie de joie de Lóló)
     const m = H.ciel.meteo || {};
@@ -1708,7 +1708,7 @@
     // des goélands qui traversent le ciel de temps en temps
     if (scene.goelands && t - scene.goelands < 9000) {
       const u = (t - scene.goelands) / 9000;
-      for (let k = 0; k < 3; k++) { const x = Math.round(W * (1.1 - u * 1.3) + k * 9), y = Math.round(18 + k * 5 + Math.sin(t / 200 + k) * 2), aile = Math.floor(t / 180 + k) % 2; pixel(ctx, x, y, "#f3f0dc"); pixel(ctx, x - 1, y - aile, "#f3f0dc"); pixel(ctx, x + 1, y - aile, "#f3f0dc"); pixel(ctx, x - 2, y - aile + 1, "#c9c9c4"); pixel(ctx, x + 2, y - aile + 1, "#c9c9c4"); }
+      for (let k = 0; k < 3; k++) { const x = Math.round(W * (1.1 - u * 1.3) + k * 9), y = Math.round(18 + k * 5 + Math.sin(t / 200 + k) * 2), aile = Math.floor(t / 180 + k) % 2; pixel(ctx, x, y, "#f3f0dc"); pixel(ctx, x - 1, y - aile, "#f3f0dc"); pixel(ctx, x + 1, y - aile, "#f3f0dc"); pixel(ctx, x - 2, y - aile + 1, "#c2cdec"); pixel(ctx, x + 2, y - aile + 1, "#c2cdec"); }
     }
     // la lumière du moment
     const teinte = { nuit: "rgba(20,18,64,0.3)", aube: "rgba(255,179,168,0.12)", crepuscule: "rgba(255,91,79,0.13)" }[periode];
