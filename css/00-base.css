@@ -477,3 +477,4 @@ label { font-size: 0.95rem; }
 html.chargement body { background: #1b1d4a; }
 html.chargement #ciel { display: none; }
 .pistes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px; margin-top: 6px; }
+.ligne-ips { display: grid; grid-template-columns: minmax(140px, 260px) minmax(0, 1fr); gap: 12px; align-items: center; max-width: 620px; } .ligne-ips input { accent-color: var(--fluo); padding: 0; }

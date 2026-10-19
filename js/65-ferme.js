@@ -1485,7 +1485,8 @@
     scene.ctx = scene.toile.getContext("2d");
     scene.ctx.imageSmoothingEnabled = false;
     [scene.ombres, scene.sh] = toileDe(W, Ht);
-    fondCle = null;
+    // (le fond et les dessins restent en mémoire d'une visite à l'autre, tant que la taille et le
+    // moment ne changent pas : revenir de la maison à la ferme est alors presque immédiat)
     const [sx, sy] = iso(scene.ovo.x, scene.ovo.y);
     scene.cam.x = sx - W / 2; scene.cam.y = hautCamera(sy - Ht / 2 - 10);
   }
@@ -1502,6 +1503,8 @@
     return [perso.lieu];
   }
   function aller(id) {
+    // sans animation : pas de marche, on y est
+    if (H.sansAnimation()) { const [x, y] = porte(parId[id]); Object.assign(scene.ovo, { x, y, trajet: null, lieu: id }); arriver(id); return; }
     const perso = scene.ovo, etapes = trajetVers(id), pts = [];
     for (let k = 0; k < etapes.length - 1; k++) {
       const c = chemins.find((c) => (c.a === etapes[k] && c.b === etapes[k + 1]) || (c.b === etapes[k] && c.a === etapes[k + 1]));
@@ -1533,9 +1536,9 @@
     if (!scene.mo || t - scene.moT > 1000 || t < scene.moT) { scene.mo = moment(); scene.moT = t; }
     const mo = scene.mo;
     drapeau = !!(H.lettres && H.lettres.aLire() > 0);
-    if (fondCle !== mo.periode + mo.cote + W) {
+    if (fondCle !== mo.periode + mo.cote + W + "x" + Ht) {
       nuit = mo.nuit; cote = mo.cote; periode = mo.periode;
-      peindreFond(); sprites.clear(); fondCle = mo.periode + mo.cote + W;
+      peindreFond(); sprites.clear(); fondCle = mo.periode + mo.cote + W + "x" + Ht;
     }
     const [sx, sy] = iso(perso.x, perso.y);
     scene.cam.x += (sx - W / 2 - scene.cam.x) * 0.06;

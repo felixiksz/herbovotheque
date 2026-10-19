@@ -297,6 +297,28 @@
   }
 
   // --- en-tête de fiche : nom, préparations, étagères, photo ---------------------
+  // de petites icônes en pixels : le crayon (changer la photo, renommer) et le cerveau (réviser)
+  const CRAYON = ["......kk.", ".....kyyk", "....kmkyk", "...kmmkk.", "..kmmmk..", ".kwmmk...", "kwwkk....", "kkk......"];
+  const CERVEAU = ["...kkkkk...", ".kkpPpPpkk.", "kpPppkpPppk", "kPpkPpkpPpk", "kppPpkpPpPk", "kPpkpPkppPk", ".kkpPpkpPk.", "...kkkkkpk.", "........kk."];
+  const icone = (motif, palette, n) => H.el("img.icone-fiche", { src: H.dessinPixel(motif, palette, n || 3), alt: "" });
+  const PAL_CRAYON = { k: "#23214a", y: "#f6ee55", m: "#ff8f2e", w: "#f3f0dc" }, PAL_GRIS = { k: "#8a88a0", y: "#c9c9c4", m: "#b8b6cc", w: "#e9e7f0" };
+  const PAL_CERVEAU = { k: "#23214a", p: "#f4a3b8", P: "#d07ab8" };
+
+  // le crayon sur la photo : envoyer une photo ou un dessin, choisir une photo libre, ou revenir
+  // au dessin botanique
+  function menuPhoto(p) {
+    let fermer;
+    const choix = (texte, fn) => H.el("button.bouton", { type: "button", onclick: () => { fermer(); fn(); } }, texte);
+    fermer = H.fenetre(H.el("div.menu-photo", null,
+      H.el("h2", null, "La photo " + H.duNom(p)),
+      H.el("div.pastilles", null,
+        choix("Envoyer une photo ou un dessin", () => ajouterPhoto(p)),
+        choix("Choisir parmi les photos libres", () => { const z = H.$(".photos-libres"); if (z) z.scrollIntoView({ behavior: "smooth", block: "start" }); }),
+        p.photo ? choix("Revenir au dessin botanique", () => { H.d.majPlante(p.id, (x) => delete x.photo); recharger(); }) : null
+      )
+    ), { classe: "menu-scene" });
+  }
+
   function enTete(p) {
     const illus = p.photo
       ? H.el("figure.photo-lofi", null, H.el("img", { src: p.photo.src, alt: "Photo " + H.duNom(p) }), H.el("span.date-photo", null, p.photo.date || ""))
@@ -388,16 +410,15 @@
         )
       ),
       H.el("div.fiche-haut", null,
-        H.el("div.fiche-illus", null, illus),
+        H.el("div.fiche-illus", null, illus,
+          H.el("button.crayon-photo", { type: "button", title: "Changer la photo", "aria-label": "Changer la photo", onclick: () => menuPhoto(p) }, icone(CRAYON, PAL_CRAYON))),
         H.el("div.fiche-noms", null,
-          H.el("h1.fiche-nom", null, p.nom),
+          H.el("h1.fiche-nom", null, p.nom,
+            H.el("button.crayon-nom", { type: "button", title: "Renommer", "aria-label": "Renommer", onclick: () => renommer(p) }, icone(CRAYON, PAL_GRIS))),
           p.latin ? H.el("p.fiche-latin", null, p.latin) : null,
           (p.valeurs || {}).nomsCommuns ? H.el("p.discret.fiche-communs", null, p.valeurs.nomsCommuns) : null,
           H.el("div.fiche-outils", null,
-            H.el("button.bouton.petit", { type: "button", onclick: () => renommer(p) }, "Renommer"),
-            H.el("button.bouton.petit", { type: "button", onclick: () => ajouterPhoto(p) }, p.photo ? "Changer la photo" : "Ajouter une photo ou un dessin"),
-            p.photo ? H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { H.d.majPlante(p.id, (x) => delete x.photo); recharger(); } }, "Retirer la photo") : null,
-            H.el("a.bouton.petit", { href: "#cartes/plante/" + encodeURIComponent(p.id) }, "Réviser cette plante")
+            H.el("a.icone-reviser", { href: "#cartes/plante/" + encodeURIComponent(p.id), title: "Réviser cette plante", "aria-label": "Réviser cette plante" }, icone(CERVEAU, PAL_CERVEAU))
           )
         )
       ),

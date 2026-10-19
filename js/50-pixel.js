@@ -291,7 +291,7 @@
     "...........k.k..",
     ".k........kTkTk.",
     "kTk.......kttttk",
-    ".kTk.....ktteetk",
+    ".kTk.....kttTTtk", // (les yeux fermés, toujours)
     "..kTk...kttttupk",
     "...kTkkkkttttuk.",
     "...kttTttTttuuk.",

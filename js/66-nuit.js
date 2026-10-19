@@ -335,7 +335,7 @@
   const bruit1 = (x, g) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return hsh(i, g) * (1 - u) + hsh(i + 1, g) * u; };
   // ce que le soir et la nuit font aux couleurs du jour (les ampoules des guirlandes restent chaudes)
   const TEINTE = { soir: { m: [0.66, 0.5, 0.72], a: [26, 8, 40] }, nuit: { m: [0.26, 0.3, 0.55], a: [10, 10, 26] } };
-  let cachePaysage = { cle: "" };
+  let cachePaysage = { cle: "" }, decorGarde = { cle: "" };
   function paysagePixels(R, p, moment) {
     const i0 = Math.floor(R.x0 / p), j0 = Math.floor(R.y0 / p);
     const W = Math.ceil(R.x1 / p) - i0 + 1, Hh = Math.ceil(R.y1 / p) - j0 + 1;
@@ -650,9 +650,16 @@
     }
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
   }
-  // les vitres de la maison (le dehors proche, derrière la baie et la petite fenêtre)
-  function fenetresDehors(m, t, moment, etat) {
-    for (const R of [BAIE, FENETRE_BAS]) { m.save(); cheminFenetre(m, R); m.clip(); dehorsBaie(m, t, moment, etat, R); m.restore(); }
+  // les vitres de la maison : elles restent transparentes, et laissent voir le vrai paysage de
+  // dehors (peint derrière la maison, avec sa pluie), comme le velux. Seul un léger reflet de vitre.
+  function fenetresDehors(m, t, moment) {
+    for (const R of [BAIE, FENETRE_BAS]) {
+      m.save(); cheminFenetre(m, R); m.clip();
+      m.clearRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4);
+      m.fillStyle = moment === "jour" ? "rgba(214,238,247,0.10)" : "rgba(40,50,110,0.12)";
+      m.fillRect(R.x, R.y, R.w, R.h);
+      m.restore();
+    }
   }
   // Poser une image : le dehors d'abord, puis la maison peinte (M) par-dessus. Rend ce qu'on voit
   // du dehors, et laisse la toile dans le repère du dessin.
@@ -661,9 +668,27 @@
     mondeRepere(ctx, v);
     const R = { x0: BOITE.x - v.px / v.K, y0: BOITE.y - v.py / v.K, x1: BOITE.x + (v.W - v.px) / v.K, y1: BOITE.y + (v.Hc - v.py) / v.K };
     dehorsMonde(ctx, t, moment, etat, R, v.taille / v.K);
+    pluieDehors(ctx, t, R, v.taille / v.K, moment);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(M, v.px, v.py);
     mondeRepere(ctx, v);
     return R;
+  }
+
+  // Quand il pleut vraiment (ou que Lóló fait tomber sa pluie de joie), on le voit dehors tout
+  // autour de la maison : un voile gris, et des gouttes en gros pixels qui tombent en biais.
+  function pluieDehors(ctx, t, R, p, moment) {
+    const m = H.ciel.meteo || {};
+    if (!((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage")) return;
+    const L = R.x1 - R.x0, Hh = R.y1 - R.y0, fort = m.type === "orage" ? 1.6 : 1;
+    ctx.fillStyle = moment === "jour" ? "rgba(96,108,130,0.22)" : "rgba(20,22,50,0.25)";
+    ctx.fillRect(R.x0, R.y0, L, Hh);
+    ctx.fillStyle = moment === "jour" ? "rgba(214,236,248,0.75)" : "rgba(150,170,220,0.55)";
+    const n = Math.max(24, Math.round((420 * fort * L * Hh) / 1.6e6)), cale = (v) => Math.round(v / p) * p;
+    for (let k = 0; k < n; k++) {
+      const v = (0.55 + hsh(k, 7) * 0.35) * fort, y0 = (hsh(k, 3) * Hh + t * v) % (Hh + 40), x = R.x0 + ((hsh(k, 5) * (L + 80) - y0 * 0.22) % (L + 80) + L + 80) % (L + 80) - 40;
+      const y = R.y0 + y0 - 20;
+      for (let s = 0; s < 4; s++) ctx.fillRect(cale(x - s * p * 0.25), cale(y + s * p), p, p);
+    }
   }
 
   // Le dehors, derrière la vitre : le ciel du moment, des arbres au loin, plus sombres et bleuis,
@@ -1238,13 +1263,14 @@
     ctx.beginPath(); cheminVelux(ctx); ctx.fillStyle = "#000"; ctx.fill();
     ctx.restore();
     const { x0, x1, prof } = VELUX;
-    ctx.beginPath(); ctx.moveTo(x0 - 4, veluxY(x0) + prof + 3); ctx.lineTo(x1 + 4, veluxY(x1) + prof + 3); ctx.lineTo(x1 + 8, veluxY(x1) + prof + 11); ctx.lineTo(x0 - 8, veluxY(x0) + prof + 11); ctx.closePath();
+    // (tous les bords suivent la pente du toit : le cadre et la fenêtre restent parallèles)
+    ctx.beginPath(); ctx.moveTo(x0 - 4, veluxY(x0 - 4) + prof + 3); ctx.lineTo(x1 + 4, veluxY(x1 + 4) + prof + 3); ctx.lineTo(x1 + 8, veluxY(x1 + 8) + prof + 11); ctx.lineTo(x0 - 8, veluxY(x0 - 8) + prof + 11); ctx.closePath();
     ctx.fillStyle = "#c49a6c"; ctx.fill(); ctx.stroke();
     ctx.lineWidth = 7; ctx.strokeStyle = "#c49a6c"; ctx.beginPath(); cheminVelux(ctx); ctx.stroke();
     ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
     for (const d of [-4, 3]) {
       ctx.beginPath();
-      ctx.moveTo(x0 - d, veluxY(x0) - d); ctx.lineTo(x1 + d, veluxY(x1) - d); ctx.lineTo(x1 + d, veluxY(x1) + prof + d); ctx.lineTo(x0 - d, veluxY(x0) + prof + d); ctx.closePath();
+      ctx.moveTo(x0 - d, veluxY(x0 - d) - d); ctx.lineTo(x1 + d, veluxY(x1 + d) - d); ctx.lineTo(x1 + d, veluxY(x1 + d) + prof + d); ctx.lineTo(x0 - d, veluxY(x0 - d) + prof + d); ctx.closePath();
       ctx.stroke();
     }
     const xm = (x0 + x1) / 2;
@@ -1689,7 +1715,8 @@
     ovo: () => ({ nom: "ovoProfil", e: 4.4, images: 4, arret: 4 }),
     luigi: () => ({ nom: "luigiProfil", e: 4.4, images: 4, arret: 4 }),
     lolo: (avecMeme) => ({ nom: avecMeme ? "loloBalade" : "loloSeule", e: 3.5, images: 4, arret: 0 }),
-    meme: () => ({ nom: "memePas", e: 3.5, images: 2, arret: 0 }),
+    // (Mémé fait la moitié de la taille de Lóló)
+    meme: () => ({ nom: "memePas", e: 4.5, images: 2, arret: 0 }),
   };
   const ETAGES = ["bas", "salon", "grenier"], VITESSE = 0.11, DUREE_ETAGE = 2600;
   let place = "table", trajet = null, placeDepuis = 0;
@@ -1709,7 +1736,7 @@
   }
   function partir(vers, ensuite) {
     if (trajet) return;
-    if (place === vers) { if (ensuite) ensuite(); return; }
+    if (place === vers || H.sansAnimation()) { place = vers; placeDepuis = performance.now(); if (ensuite) ensuite(); return; }
     const de = place;
     trajet = { t0: performance.now(), vers, ensuite, gens: ["ovo", "luigi"].map((qui, k) => ({ qui, retard: k * 450, segs: segments(qui, de, vers) })) };
     trajet.fin = Math.max(...trajet.gens.map((g) => g.retard + g.segs.reduce((n, x) => n + x.d, 0)));
@@ -1720,6 +1747,7 @@
   // Lóló, voyage sur son dos.
   function partirEnBalade(liste) {
     if (trajet) return;
+    if (H.sansAnimation()) { H.d.majLocal((l) => (l.compagnons = liste)); H.aller("balade/" + (liste.length ? liste.join("+") : "solo")); return; }
     const lolo = liste.includes("lolo"), avecMeme = liste.includes("meme");
     const marcheurs = ["ovo"].concat(liste.filter((q) => q === "luigi" || q === "lolo" || (q === "meme" && !lolo)));
     const gens = marcheurs.map((qui, k) => ({ qui, retard: k * 500, allure: ALLURE[qui](avecMeme), segs: segments(qui, qui === "lolo" || qui === "meme" ? "canape" : place, "porte") }));
@@ -1734,6 +1762,7 @@
   // Mémé qui sort par la chatière, ou qui rentre et remonte se coucher sur le canapé
   let memeVa = null, entreeMaison = 0, memeEssai = 0, fermerBalade = null;
   function memeTraverse(sortir) {
+    if (H.sansAnimation()) return;
     const g = { qui: "meme", retard: 0, allure: ALLURE.meme(), segs: sortir ? segments("meme", "canape", "chatiere") : segments("meme", "chatiere", "canape") };
     memeVa = { t0: performance.now(), sortir, gens: [g], fin: duree(g) };
   }
@@ -1821,7 +1850,7 @@
     const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
     const zones = [
       { id: "fenetre", x: BAIE.x, y: BAIE.y, w: BAIE.w, h: 110, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
-      { id: "meme", x: 282, y: 186, w: 34, h: 20, get nom() { return H.memeDehors() ? "La place de Mémé" : "Caresser Mémé"; }, agir: () => {
+      { id: "meme", x: 274, y: 188, w: 56, h: 26, get nom() { return H.memeDehors() ? "La place de Mémé" : "Caresser Mémé"; }, agir: () => {
         // sortie par la chatière : on ne sait pas ce qu'elle fait dehors
         if (H.memeDehors()) return H.dialogue.dire([{ qui: "ovo", nom: "La place de Mémé", texte: H.histoires.auHasard([
           "(La place de Mémé est vide, encore un peu tiède. Elle est sortie par la chatière.)",
@@ -1893,11 +1922,13 @@
     "..kTTTTttttttTTk..",
     "...kkkkkkkkkkkk...",
   ];
-  // (cellFixe : la taille d'une case quand la scène n'a pas la grille de la maison, en balade)
-  function memeEnBoule(ctx, x, y, t, cellFixe) {
-    const cd = cellFixe ? { cell: cellFixe, n: 1, g: cellFixe } : caseDessin();
+  // (cellFixe : la taille d'une case quand la scène n'a pas la grille de la maison, en balade ;
+  // fois : combien de cases de la maison pour une case du dessin ; Mémé fait la moitié de Lóló)
+  function memeEnBoule(ctx, x, y, t, cellFixe, fois) {
+    let cd = cellFixe ? { cell: cellFixe, n: 1, g: cellFixe } : caseDessin();
+    if (fois > 1) cd = { cell: cd.cell * fois, n: cd.n * fois, g: cd.g };
     const m = ctx.getTransform(), cell = cd.cell, ox = cellFixe ? 0 : m.e / pixK, oy = cellFixe ? 0 : m.f / pixK;
-    const grille = cellFixe ? MEME_DORT_GRAND : MEME_DORT, tete = cellFixe ? 8 : 5;
+    const grand = cellFixe || fois > 2, grille = grand ? MEME_DORT_GRAND : MEME_DORT, tete = grand ? 8 : 5;
     const L = grille[0].length, Hh = grille.length, inspire = Math.sin(t / 700) > 0.55;
     const X = Math.round((x + ox - (L * cell) / 2) / cell) * cell - ox, Y = Math.round((y + oy - Hh * cell * 0.6) / cell) * cell - oy;
     grille.forEach((ligne, j) => [...ligne].forEach((ch, i) => {
@@ -1920,6 +1951,42 @@
         }
       }
     }));
+  }
+
+  // Mémé couchée en rond, dessinée comme Lóló (en traits, puis passée aux gros pixels de la
+  // maison) : la moitié de sa taille, une chatte tigrée beige, le museau crème, le nez rose, les
+  // yeux toujours fermés, la queue enroulée devant ; son dos se soulève quand elle respire.
+  function memeCouchee(ctx, x, y, t) {
+    const souffle = 1 + Math.sin(t / 900) * 0.04, robe = "#c9ad8a", raie = "#6b5442", creme = "#f0e4d4";
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
+    // le corps en boule, et ses rayures
+    ctx.save();
+    ctx.translate(4, -9); ctx.scale(1, souffle);
+    ctx.beginPath(); ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = raie; ctx.lineWidth = 2.2;
+    for (const dx of [-8, -1, 6, 12]) { ctx.beginPath(); ctx.moveTo(dx, -9.5 + Math.abs(dx) * 0.08); ctx.quadraticCurveTo(dx + 2.5, -4, dx + 1, 0); ctx.stroke(); }
+    ctx.restore();
+    // la queue enroulée devant, rayée
+    ctx.beginPath(); ctx.moveTo(19, -4); ctx.quadraticCurveTo(18, 3, 4, 2.5); ctx.quadraticCurveTo(-8, 2, -12, -1);
+    ctx.lineWidth = 6.4; ctx.strokeStyle = ENCRE; ctx.stroke();
+    ctx.lineWidth = 3.8; ctx.strokeStyle = robe; ctx.stroke();
+    ctx.lineWidth = 1.8; ctx.strokeStyle = raie;
+    for (const qx of [12, 4, -4]) { ctx.beginPath(); ctx.moveTo(qx, 0.5); ctx.lineTo(qx - 0.5, 4); ctx.stroke(); }
+    // la tête, posée sur les pattes, à gauche
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-19, -14); ctx.lineTo(-17, -21); ctx.lineTo(-13, -15.5); ctx.closePath(); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-10, -15.5); ctx.lineTo(-6, -20.5); ctx.lineTo(-5, -13.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-12, -8.5, 8.5, 7, 0, 0, Math.PI * 2); ctx.fillStyle = robe; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-13, -5, 4.6, 3, 0, 0, Math.PI * 2); ctx.fillStyle = creme; ctx.fill();
+    ctx.fillStyle = "#f4a3b8"; ctx.beginPath(); ctx.ellipse(-13, -6.6, 1.4, 1, 0, 0, Math.PI * 2); ctx.fill();
+    // les yeux fermés : deux petits arcs
+    ctx.lineWidth = 1.3;
+    for (const ex of [-16, -9.5]) { ctx.beginPath(); ctx.arc(ex, -10, 1.8, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+    ctx.strokeStyle = raie; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-12, -15.2); ctx.lineTo(-12, -12.5); ctx.stroke();
+    ctx.restore();
   }
 
   // Lóló, la peluche, couché sur le flanc sur le lit comme sur les photos : robe caramel, longues
@@ -2164,7 +2231,9 @@
         vue = v;
         toile.width = v.W;
         toile.height = v.Hc;
-        decor = decorMaison(v.K, moment);
+        // (le décor reste en mémoire d'une visite à l'autre : rentrer à la maison va plus vite)
+        if (decorGarde.cle !== cleD) decorGarde = { cle: cleD, decor: decorMaison(v.K, moment) };
+        decor = decorGarde.decor;
         M = toileVide(decor); calque = toileVide(decor);
       }
       pixK = v.K;
@@ -2231,7 +2300,7 @@
       cc.save();
       cc.translate(DX + CANAPE_T.x, CANAPE_T.y);
       if (!farce && ici("lolo")) loloCouche(cc, 172, 200, t, loloRaconte);
-      if (!H.memeDehors() && ici("meme")) memeEnBoule(cc, 168, 203, t);
+      if (!H.memeDehors() && ici("meme")) memeCouchee(cc, 176, 206, t);
       if (place === "canape" && (surCanape || ici("luigi"))) {
         // sur le canapé, face à face, les jambes qui se balancent au-dessus du tapis
         if (ici("ovo")) assis(cc, "ovo", 240, 1, t, 2, loloRaconte, 210);
@@ -2991,7 +3060,7 @@
       b.anim = requestAnimationFrame(dessinerBalade);
       return;
     }
-    const dt = Math.min(Math.max(0.1, H.cadence(0) * 0.0015), (t - S.derniere) / 1000);
+    const dt = Math.min(Math.max(0.1, H.ips() ? 1.5 / H.ips() : 0.1), (t - S.derniere) / 1000);
     S.derniere = t;
     if (!b.pause) S.decalage += dt * 40;
     const avance = S.decalage;
@@ -3120,7 +3189,7 @@
     const avec = (q) => S.compagnons.includes(q);
     if (avec("lolo")) H.pixel.dessiner(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
-    if (avec("meme") && !avec("lolo") && !b.baignade) H.pixel.dessiner(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 2.4, b.pause ? 0 : Math.floor(t / 200) % 2);
+    if (avec("meme") && !avec("lolo") && !b.baignade) H.pixel.dessiner(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, b.pause ? 0 : Math.floor(t / 200) % 2);
     // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
     // sortis de l'eau : sur la plage, enroulé·es dans une serviette, on se frotte les cheveux
     if (b.baignade && b.sortieEau && t - b.sortieEau >= SORTIE_EAU) {
@@ -3131,7 +3200,7 @@
     if (avec("meme") && !avec("lolo") && b.baignade) {
       ctx.save();
       ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1.6;
-      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - 10, t, 2.4);
+      memeEnBoule(ctx, w * 0.5, sol(w * 0.5) - 10, t, 2.8);
       ctx.restore();
     }
     if (!b.baignade) {
@@ -3651,7 +3720,7 @@
       cc.restore();
       // Mémé, roulée en boule sur la couverture, sur nous aussi (hors du lit retourné, pour que
       // ses cases tombent pile sur les gros pixels)
-      memeEnBoule(cc, LIT.x - 122, LIT.y + 186, t);
+      memeCouchee(cc, LIT.x - 122, LIT.y + 190, t);
 
       // tout le monde reçoit la lumière de la nuit, comme le décor (et celle de la lune)
       {

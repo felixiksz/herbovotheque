@@ -140,23 +140,25 @@
   // Pour un appareil qui peine (ou un moment plus calme) : moins d'images par seconde, et des
   // pistes de bruitage qu'on coupe une par une. Gardé sur chaque appareil.
   function blocLeger() {
-    const anim = H.local.animations || "";
+    // le curseur des images par seconde : de « fluides » (60) à « éteintes » (0)
+    const CRANS = [0, 1, 2, 3, 5, 8, 10, 12, 15, 20, 24, 30, 60];
+    const nomIps = (i) => (i === 0 ? "Éteintes (on passe d’une scène à l’autre sans transition)" : i >= 60 ? "Fluides (60 images par seconde)" : i + " image" + (i > 1 ? "s" : "") + " par seconde");
+    const ips = H.ips(), cran = CRANS.reduce((m, v, k) => (Math.abs(v - ips) < Math.abs(CRANS[m] - ips) ? k : m), 0);
+    const valeurIps = H.el("span.valeur-volume", { style: { textAlign: "left" } }, nomIps(CRANS[cran]));
     return H.el("section.reglage", null,
       H.el("h2", null, "Jeu léger"),
-      H.el("p.discret", null, "Si le jeu rame, si les bulles mettent du temps à s’écrire ou si l’appareil chauffe, ralentis les animations : la ferme, la maison, les îles et la balade se redessinent moins souvent."),
+      H.el("p.discret", null, "Si le jeu rame, si les bulles mettent du temps à s’écrire ou si l’appareil chauffe, baisse le nombre d’images par seconde : la ferme, la maison, les îles et la balade se redessinent moins souvent. Tout à gauche, les animations s’éteignent."),
       H.el("h3", null, "Les animations"),
-      H.el("div.pastilles", null,
-        [["", "Fluides"], ["ralenties", "Ralenties"], ["immobiles", "Presque immobiles"]].map(([v, t]) =>
-          H.el("button.bouton.petit" + (anim === v ? ".actif" : ""), {
-            type: "button",
-            "aria-pressed": String(anim === v),
-            async onclick() {
-              await H.d.majLocal((l) => { if (v) l.animations = v; else delete l.animations; });
-              H.router();
-            },
-          }, t)
-        )
-      ),
+      H.el("div.ligne-ips", null,
+        H.el("input", {
+          type: "range", min: 0, max: CRANS.length - 1, step: 1, value: cran, "aria-label": "Images par seconde",
+          oninput(e) { valeurIps.textContent = nomIps(CRANS[+e.target.value]); },
+          async onchange(e) {
+            const v = CRANS[+e.target.value];
+            await H.d.majLocal((l) => { delete l.animations; if (v >= 60) delete l.ips; else l.ips = v; });
+          },
+        }),
+        valeurIps),
       H.el("h3", null, "Les pistes de bruitage"),
       H.el("p.discret", null, "Décoche celles que tu ne veux plus entendre."),
       H.el("div.pistes", null,

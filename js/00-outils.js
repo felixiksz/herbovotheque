@@ -252,9 +252,22 @@ window.H = window.H || {};
     ["grenouilles", "Grenouilles du bassin"], ["poules", "Poules"], ["meme", "Ronron de Mémé"], ["feu", "Feu dans le poêle"], ["pas", "Pas et galop"],
     ["sangliers", "Sangliers"], ["pluie", "Pluie"]];
   H.piste = (id) => !(H.local && H.local.pistesCoupees && H.local.pistesCoupees.includes(id));
-  // Les animations : « fluides », « ralenties » ou « presque immobiles » (moins d'images par
-  // seconde, pour un appareil qui peine). Renvoie l'écart minimal entre deux images.
-  H.cadence = (ms) => Math.max(ms, { ralenties: 100, immobiles: 400 }[(H.local && H.local.animations) || ""] || 0);
+  // Les animations : combien d'images par seconde (60 : fluides ; 0 : éteintes, on passe alors
+  // d'une scène à l'autre sans transition, et l'image ne se redessine qu'après un geste).
+  // H.cadence renvoie l'écart minimal entre deux images.
+  H.ips = () => {
+    const l = H.local || {};
+    if (l.ips != null) return l.ips;
+    return { ralenties: 10, immobiles: 3 }[l.animations] || 60;
+  };
+  H.sansAnimation = () => H.ips() === 0;
+  H.dernierGeste = 0;
+  for (const ev of ["pointerdown", "pointermove", "keydown", "hashchange", "resize"]) window.addEventListener(ev, () => (H.dernierGeste = performance.now()), { passive: true });
+  H.cadence = (ms) => {
+    const i = H.ips();
+    if (i === 0) return performance.now() - H.dernierGeste < 600 ? ms : 1e9;
+    return Math.max(ms, i >= 60 ? 0 : 1000 / i);
+  };
 
   // Petit bus d'évènements entre modules.
   const ecouteurs = {};

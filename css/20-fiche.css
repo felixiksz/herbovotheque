@@ -177,3 +177,14 @@ a.pastille-valeur:hover { background: var(--surligne); color: #23214a; }
 .lignes-liste input { flex: 1; }
 .suggestions-liste .pastille-valeur { cursor: pointer; font: inherit; font-size: 0.9rem; }
 .fiche-illus img.portrait-botanique { image-rendering: pixelated; border: 1px solid var(--filet); }
+
+/* les icônes de la fiche : le crayon sur la photo, le crayon gris après le nom, le cerveau */
+.fiche-illus { position: relative; }
+.icone-fiche { display: block; image-rendering: pixelated; }
+.crayon-photo { position: absolute; right: 6px; bottom: 6px; padding: 5px; background: var(--papier); border: 1.5px solid var(--encre); border-radius: 50%; cursor: pointer; line-height: 0; box-shadow: 2px 2px 0 rgba(35, 33, 74, 0.5); }
+.crayon-photo:hover { background: var(--fluo); }
+.crayon-nom { display: inline-block; vertical-align: middle; margin-left: 10px; padding: 2px; background: none; border: 0; cursor: pointer; opacity: 0.55; line-height: 0; }
+.crayon-nom:hover { opacity: 1; }
+.icone-reviser { display: inline-block; padding: 4px; border: 1.5px solid var(--encre); border-radius: 8px; line-height: 0; }
+.icone-reviser:hover { background: var(--fluo); }
+.menu-photo .pastilles { flex-direction: column; align-items: stretch; }

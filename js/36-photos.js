@@ -270,6 +270,9 @@
     const garder = H.el("button.bouton.petit", { type: "button", hidden: true }, "Garder celle-ci");
     const autre = H.el("button.bouton.petit", { type: "button" }, "Autre photo");
     const avant = H.el("button.bouton.petit", { type: "button", hidden: true }, "Photo précédente");
+    // n'importe quelle photo proposée peut devenir la photo de la fiche (à la place du dessin
+    // botanique ou de la photo d'un dessin)
+    const profil = H.el("button.bouton.petit", { type: "button", hidden: true }, "En photo de la fiche");
     let liste = null, i = -1, courante = null;
     function montrer(x) {
       courante = x;
@@ -298,6 +301,7 @@
       else credit.append(auteur + (licence ? " · " + licence : "") + " · ", lien);
       etat.textContent = "";
       garder.hidden = x.fichier === choisie(p, quoi);
+      profil.hidden = !!(H.d.plante(p.id).photo && H.d.plante(p.id).photo.libre === x.fichier);
     }
     // (les recherches se font au fur et à mesure : la première photo arrive vite, les suivantes
     // quand on demande une autre photo)
@@ -323,6 +327,13 @@
       montrer(liste[i]);
       avant.hidden = i <= 0;
     };
+    profil.onclick = () => {
+      if (!courante) return;
+      const m = courante.info.extmetadata || {};
+      H.d.majPlante(p.id, (x) => (x.photo = { src: urlFichier(courante.fichier, 720), date: "", libre: courante.fichier, credit: sansBalises((m.Artist || {}).value) }));
+      H.toast("Photo de la fiche : celle-ci");
+      if (recharger) recharger();
+    };
     garder.onclick = () => {
       if (!courante) return;
       H.d.majPlante(p.id, (x) => (x.photosLibres = Object.assign({}, x.photosLibres, { [quoi]: courante.fichier })));
@@ -342,7 +353,7 @@
         etat.textContent = "Photos indisponibles hors connexion.";
       }
     })();
-    return H.el("figure.cadre-photo", null, H.el("figcaption", null, titre), img, credit, etat, H.el("div.pastilles", null, avant, autre, garder));
+    return H.el("figure.cadre-photo", null, H.el("figcaption", null, titre), img, credit, etat, H.el("div.pastilles", null, avant, autre, garder, profil));
   }
 
   function section(p, recharger, illus) {
