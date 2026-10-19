@@ -92,3 +92,10 @@
 .pastille-choix.faux { background: #ffb3a8; text-decoration: line-through; }
 .pastille-choix.ecarte { opacity: 0.45; box-shadow: none; }
 .reponses .bouton.suggere { outline: 3px solid var(--fluo, #f3ee6a); outline-offset: 2px; }
+
+/* paramètres avancés des flashcartes */
+.reglages-cartes { display: flex; flex-direction: column; gap: 4px; }
+.reglage-carte { display: grid; grid-template-columns: minmax(0, 1fr) 6em minmax(0, 12em); gap: 10px; align-items: center; }
+.reglage-carte input { width: 100%; }
+.reglage-carte.change > span:first-child { font-weight: 700; }
+@media (max-width: 640px) { .reglage-carte { grid-template-columns: minmax(0, 1fr) 5em; } .reglage-carte > .discret { grid-column: 1 / -1; } }

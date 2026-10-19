@@ -152,6 +152,7 @@
           ),
           H.el("div.pastilles", null,
             H.el("label.discret", null, H.el("input", { type: "checkbox", checked: !!c.cartes, onchange: (e) => H.d.majSchema(() => (c.cartes = e.target.checked)) }), " en flashcartes"),
+            H.el("label.discret", null, H.el("input", { type: "checkbox", checked: !c.cachee, onchange: (e) => H.d.majSchema(() => { if (e.target.checked) delete c.cachee; else c.cachee = true; }) }), " sur la fiche"),
             H.el("select", {
               "aria-label": "Section",
               onchange(e) {

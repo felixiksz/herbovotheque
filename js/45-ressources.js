@@ -64,8 +64,9 @@
 
   const MAX_ENERGIE = 100;
   const REPOS_PAR_HEURE = 6;          // l'énergie remonte doucement toute seule
-  const CARTES_AVANT_PAUSE = 40;      // environ 20 minutes de révision
-  const DUREE_PAUSE = 2 * 3600e3;     // 2 heures de repos
+  // (40 cartes, environ 20 minutes de révision, puis 2 heures de repos : réglable dans les
+  // paramètres avancés des flashcartes)
+  const reglage = (cle, defaut) => (H.repetition ? H.repetition(cle) : defaut);
 
   function icone(id, echelle) {
     return H.dessinPixel(ICONES[id] || ICONES.graines, P, echelle || 3);
@@ -113,7 +114,7 @@
   H.ressources = {
     icone,
     MAX_ENERGIE,
-    CARTES_AVANT_PAUSE,
+    get CARTES_AVANT_PAUSE() { return reglage("cartesAvantPause", 40); },
     PAR_DEFAUT,
     energie,
     seance,
@@ -153,14 +154,14 @@
       gain[manque] = (gain[manque] || 0) + 1;
       gain.energie = note === 0 ? 1 : 3;
       s.cartes++;
-      if (s.cartes % 15 === 0) gain.crepe = 1;
+      if (s.cartes % Math.max(1, Math.round(reglage("crepeToutes", 15))) === 0) gain.crepe = 1;
       H.jeu.ressources = H.jeu.ressources || {};
       for (const [k, n] of Object.entries(gain)) {
         if (k === "energie") fixerEnergie(energie() + n);
         else H.jeu.ressources[k] = (H.jeu.ressources[k] || 0) + n;
       }
-      if (s.cartes >= CARTES_AVANT_PAUSE) {
-        s.pauseJusqua = H.maintenant() + DUREE_PAUSE;
+      if (s.cartes >= reglage("cartesAvantPause", 40) && reglage("pauseHeures", 2) > 0) {
+        s.pauseJusqua = H.maintenant() + reglage("pauseHeures", 2) * 3600e3;
         gain.pauseCommence = true;
       }
       modifie();

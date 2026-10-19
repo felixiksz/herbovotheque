@@ -36,7 +36,7 @@ python tools/version.py
 ## Le jeu
 
 - Ciel, saisons et météo du lieu choisi (Marseille par défaut, modifiable en voyage) ; la météo vient d’Open-Meteo, sans clé.
-- Flashcartes : raté / difficile / bien / facile ; une carte vue au moins 3 fois sous le seuil de réussite (80 % par défaut) devient « fragile » et revient plus souvent. Chaque catégorie rapporte la ressource choisie dans « Ce que rapportent les cartes ». Après 40 cartes, pause de deux heures (une crêpe au chocolat fondu permet de repartir tout de suite).
+- Flashcartes : raté / difficile / bien / facile ; une carte vue au moins 3 fois sous le seuil de réussite (80 % par défaut) devient « fragile » et revient plus souvent. Chaque catégorie rapporte la ressource choisie dans « Ce que rapportent les cartes ». Après 40 cartes, pause de deux heures (une crêpe au chocolat fondu permet de repartir tout de suite). Dans « Paramètres avancés » (onglet des Flashcartes, des deux côtés), tout se règle : attentes d’apprentissage, facilité, pénalités et bonus, rechute, attente maximale, hasard, cartes fragiles, crêpes et pauses (gardé dans la partie, `H.jeu.repetition`) ; et un accès aux rubriques des fiches (ajouter, retirer, renommer, cacher sur la fiche, en flashcartes).
 - Terrain : îles de jeu (pousse en temps réel, ressources) ou croquis de projet (à l’échelle, sans ressources, export de la liste des plantes et de l’image). Rien ne meurt : une plante mal placée pousse lentement et dit pourquoi.
 - Lóló (une fois son île découverte) : on l’appelle pour des astuces du jeu et les plantes en fleurs, à récolter et à semer du moment ; au village, on la touche pour lui parler.
 - La pluie (roll) boucle sans couture : le jeu retire les silences du début et de la fin et fond le raccord.

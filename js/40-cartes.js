@@ -153,45 +153,87 @@
   }
 
   // --- répétition espacée ----------------------------------------------------------
+  // Tous ses réglages se changent dans « Paramètres avancés » (gardés dans la partie, synchronisés) :
+  // [clé, nom, valeur d'origine, min, max, pas, unité, explication]
+  const REGLAGES = [
+    { titre: "Apprentissage (les cartes nouvelles ou ratées)", liste: [
+      ["rateMin", "Revoir une carte ratée après", 1, 0, 120, 1, "min"],
+      ["difficileMin", "Revoir une carte difficile après", 10, 1, 1440, 1, "min"],
+      ["diplomeBien", "Première attente après « Bien »", 1, 0.5, 30, 0.5, "jours"],
+      ["diplomeFacile", "Première attente après « Facile »", 4, 1, 60, 1, "jours"],
+    ] },
+    { titre: "Révisions (les cartes déjà apprises)", liste: [
+      ["easeDepart", "Facilité de départ", 2.5, 1.3, 5, 0.05, "×", "l’attente est multipliée par la facilité à chaque « Bien »"],
+      ["easeMin", "Facilité minimale", 1.3, 1.05, 3, 0.05, "×"],
+      ["multDifficile", "Après « Difficile », l’attente est multipliée par", 1.2, 1, 3, 0.05, "×"],
+      ["multFacile", "Après « Facile », en plus de la facilité", 1.3, 1, 3, 0.05, "×"],
+      ["penaliteDifficile", "« Difficile » baisse la facilité de", 0.15, 0, 1, 0.05, ""],
+      ["penaliteRate", "« Raté » baisse la facilité de", 0.2, 0, 1, 0.05, ""],
+      ["bonusFacile", "« Facile » monte la facilité de", 0.15, 0, 1, 0.05, ""],
+      ["rechuteMin", "Une carte apprise puis ratée revient après", 10, 1, 1440, 1, "min"],
+      ["rechuteGarde", "Puis elle garde de son attente", 50, 0, 100, 5, "%"],
+      ["intervalleMax", "Attente maximale", 3650, 7, 36500, 1, "jours"],
+      ["hasard", "Un peu de hasard dans les attentes", 5, 0, 30, 1, "%", "pour que les cartes apprises ensemble ne reviennent pas toutes le même jour"],
+    ] },
+    { titre: "Cartes fragiles", liste: [
+      ["seuilReussite", "Seuil de réussite", 80, 50, 100, 1, "%"],
+      ["fragileVues", "Une carte devient fragile après", 3, 1, 20, 1, "fois vue"],
+      ["fragileMult", "L’attente d’une carte fragile est raccourcie à", 70, 10, 100, 5, "%"],
+    ] },
+    { titre: "Séances", liste: [
+      ["crepeToutes", "Une crêpe au chocolat fondu toutes les", 15, 1, 200, 1, "cartes"],
+      ["cartesAvantPause", "Une pause après", 40, 5, 1000, 1, "cartes"],
+      ["pauseHeures", "La pause dure", 2, 0, 24, 0.25, "heures"],
+    ] },
+  ];
+  const DEFAUTS_REGLAGES = Object.fromEntries(REGLAGES.flatMap((g) => g.liste.map((r) => [r[0], r[2]])));
+  // (le seuil de réussite était déjà réglable avant, à part)
+  H.repetition = (cle) => {
+    if (cle === "seuilReussite") return H.jeu.seuilReussite || DEFAUTS_REGLAGES.seuilReussite;
+    const v = ((H.jeu && H.jeu.repetition) || {})[cle];
+    return v == null ? DEFAUTS_REGLAGES[cle] : v;
+  };
+  const RG = H.repetition;
   const etat = (id) => (H.jeu.cartes || {})[id];
   const taux = (s) => (s && s.vues ? s.reussites / s.vues : null);
-  const seuil = () => (H.jeu.seuilReussite || 80) / 100;
-  const estFragile = (s) => s && s.vues >= 3 && taux(s) < seuil();
+  const seuil = () => RG("seuilReussite") / 100;
+  const estFragile = (s) => s && s.vues >= RG("fragileVues") && taux(s) < seuil();
 
   function prochainEtat(s, note, maintenant) {
-    s = s ? Object.assign({}, s) : { ease: 2.5, intervalle: 0, reps: 0, vues: 0, reussites: 0, ratees: 0, apprentissage: true, notes: [] };
+    s = s ? Object.assign({}, s) : { ease: RG("easeDepart"), intervalle: 0, reps: 0, vues: 0, reussites: 0, ratees: 0, apprentissage: true, notes: [] };
     s.vues++;
     if (note > 0) s.reussites++;
     else s.ratees++;
     s.notes = (s.notes || []).concat(note).slice(-12);
     let attente;
     if (s.apprentissage) {
-      if (note === 0) attente = 1 * MIN;
-      else if (note === 1) attente = 10 * MIN;
+      if (note === 0) attente = RG("rateMin") * MIN;
+      else if (note === 1) attente = RG("difficileMin") * MIN;
       else {
         s.apprentissage = false;
-        s.intervalle = s.apresRechute || (note === 2 ? 1 : 4);
+        s.intervalle = s.apresRechute || (note === 2 ? RG("diplomeBien") : RG("diplomeFacile"));
         delete s.apresRechute;
         attente = s.intervalle * JOUR;
       }
     } else if (note === 0) {
-      s.ease = Math.max(1.3, s.ease - 0.2);
+      s.ease = Math.max(RG("easeMin"), s.ease - RG("penaliteRate"));
       s.apprentissage = true;
-      s.apresRechute = Math.max(1, Math.round(s.intervalle * 0.5));
+      s.apresRechute = Math.max(1, Math.round((s.intervalle * RG("rechuteGarde")) / 100));
       s.reps = 0;
-      attente = 10 * MIN;
+      attente = RG("rechuteMin") * MIN;
     } else {
       if (note === 1) {
-        s.ease = Math.max(1.3, s.ease - 0.15);
-        s.intervalle = Math.max(1, s.intervalle * 1.2);
+        s.ease = Math.max(RG("easeMin"), s.ease - RG("penaliteDifficile"));
+        s.intervalle = Math.max(1, s.intervalle * RG("multDifficile"));
       } else if (note === 2) {
         s.intervalle = Math.max(1, s.intervalle * s.ease);
       } else {
-        s.ease += 0.15;
-        s.intervalle = Math.max(1, s.intervalle * s.ease * 1.3);
+        s.ease += RG("bonusFacile");
+        s.intervalle = Math.max(1, s.intervalle * s.ease * RG("multFacile"));
       }
-      if (estFragile(s)) s.intervalle *= 0.7;
-      s.intervalle = Math.round(s.intervalle * (0.95 + Math.random() * 0.1) * 10) / 10;
+      if (estFragile(s)) s.intervalle *= RG("fragileMult") / 100;
+      const h = RG("hasard") / 100;
+      s.intervalle = Math.min(RG("intervalleMax"), Math.round(s.intervalle * (1 - h + Math.random() * 2 * h) * 10) / 10);
       s.reps++;
       attente = s.intervalle * JOUR;
     }
@@ -283,7 +325,55 @@
       { nom: "Réussite", el: statistiques() },
       { nom: "Mes cartes", el: cartesPerso() },
       { nom: "Ce qu’elles rapportent", el: recompenses() },
+      { nom: "Paramètres avancés", el: parametresAvances() },
     ], { cle: "cartes" }));
+  }
+
+  // Les paramètres avancés : la répétition espacée, les séances, et les rubriques des fiches
+  // (ajouter, retirer, renommer, cacher, choisir celles qui deviennent des flashcartes)
+  function parametresAvances() {
+    const zone = H.el("div.parametres-avances");
+    const dessiner = () => {
+      const perso = H.jeu.repetition || {};
+      zone.replaceChildren(
+        H.el("p.discret", null, "Ici, tout se règle : quand les cartes reviennent, ce qu’une réponse change, les séances. Les réglages sont gardés dans la partie et suivent sur tous les appareils."),
+        ...REGLAGES.flatMap((g) => [
+          H.el("h3", null, g.titre),
+          H.el("div.reglages-cartes", null, g.liste.map(([cle, nom, defaut, min, max, pas, unite, aide]) => H.el("label.reglage-carte" + (cle in perso || (cle === "seuilReussite" && H.jeu.seuilReussite && H.jeu.seuilReussite !== defaut) ? ".change" : ""), { title: aide || "" },
+            H.el("span", null, nom),
+            H.el("input", {
+              type: "number", min, max, step: pas, value: RG(cle),
+              onchange(e) {
+                const v = Math.min(max, Math.max(min, parseFloat(String(e.target.value).replace(",", ".")) || defaut));
+                if (cle === "seuilReussite") H.jeu.seuilReussite = v;
+                else {
+                  H.jeu.repetition = Object.assign({}, H.jeu.repetition);
+                  if (v === defaut) delete H.jeu.repetition[cle];
+                  else H.jeu.repetition[cle] = v;
+                }
+                H.d.changer("jeu");
+                dessiner();
+              },
+            }),
+            H.el("span.discret", null, unite + (RG(cle) !== defaut ? " (d’origine : " + String(defaut).replace(".", ",") + ")" : "")))))
+        ]),
+        H.el("p", null, H.el("button.bouton.petit.discret-bouton", {
+          type: "button",
+          onclick() {
+            if (!confirm("Revenir à tous les réglages d’origine des flashcartes ?")) return;
+            delete H.jeu.repetition;
+            delete H.jeu.seuilReussite;
+            H.d.changer("jeu");
+            dessiner();
+          },
+        }, "Revenir aux réglages d’origine")),
+        H.el("h3", null, "Les rubriques des fiches"),
+        H.el("p.discret", null, "Ajoute, retire, renomme ou range les rubriques des fiches, cache celles que tu ne veux pas voir, et choisis celles qui deviennent des flashcartes. Une rubrique ajoutée se remplit sur chaque fiche, et la recherche « partout » la lit comme le reste."),
+        H.el("p", null, H.el("button.bouton.petit", { type: "button", onclick: () => H.organiser("rubriques") }, "Organiser les rubriques des fiches"))
+      );
+    };
+    dessiner();
+    return zone;
   }
 
   function bandeauPause(s) {
@@ -426,14 +516,7 @@
       });
       det.appendChild(table);
     }
-    det.appendChild(H.el("p.discret", null, "Seuil de réussite : ",
-      H.el("input", {
-        type: "number", min: 50, max: 100, value: H.jeu.seuilReussite || 80, style: { width: "4.5em" },
-        onchange(e) {
-          H.jeu.seuilReussite = Math.min(100, Math.max(50, parseInt(e.target.value, 10) || 80));
-          H.d.changer("jeu");
-        },
-      }), " %. En dessous, une carte vue au moins 3 fois devient fragile et revient plus souvent."));
+    det.appendChild(H.el("p.discret", null, "Seuil de réussite : " + RG("seuilReussite") + " %. En dessous, une carte vue au moins " + RG("fragileVues") + " fois devient fragile et revient plus souvent (à régler dans « Paramètres avancés »)."));
     if (fragiles.length) {
       det.appendChild(H.el("h3", null, fragiles.length + " cartes fragiles"));
       det.appendChild(H.el("ul.liste-fragiles", null,
@@ -533,7 +616,7 @@
         }, H.RESSOURCES.filter((r) => r.id !== "crepe").map((r) => H.el("option", { value: r.id, selected: r.id === choisie }, r.nom)))
       ));
     });
-    det.appendChild(H.el("p.discret", null, "Chaque réponse rapporte la ressource de sa catégorie, une ressource du jardin en plus (celle qui manque le plus : terre, graines, eau, compost, outils ou soleil) et un peu d’énergie. Toutes les 15 cartes : une crêpe au chocolat fondu. Après " + H.ressources.CARTES_AVANT_PAUSE + " cartes, ƟvƟ fait une pause de deux heures."));
+    det.appendChild(H.el("p.discret", null, "Chaque réponse rapporte la ressource de sa catégorie, une ressource du jardin en plus (celle qui manque le plus : terre, graines, eau, compost, outils ou soleil) et un peu d’énergie. Toutes les " + RG("crepeToutes") + " cartes : une crêpe au chocolat fondu. Après " + RG("cartesAvantPause") + " cartes, ƟvƟ fait une pause de " + String(RG("pauseHeures")).replace(".", ",") + " h."));
     det.appendChild(grille);
     return det;
   }

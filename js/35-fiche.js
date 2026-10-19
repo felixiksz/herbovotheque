@@ -586,7 +586,7 @@
     // reste le même d'une plante à l'autre (pratique pour comparer)
     const onglets = [];
     const champsParSection = {};
-    for (const c of H.d.champs()) (champsParSection[c.section] = champsParSection[c.section] || []).push(c);
+    for (const c of H.d.champs().filter((x) => !x.cachee)) (champsParSection[c.section] = champsParSection[c.section] || []).push(c);
     for (const s of H.d.sections()) {
       const champs = champsParSection[s.id] || [];
       if (!champs.length) continue;
