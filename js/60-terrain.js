@@ -2995,7 +2995,7 @@
   // Une plante en petit, debout, dessinée selon sa famille (pour les pots de la serre, les récoltes
   // du labo…) : haut, sa hauteur en pixels ; st, son âge (1 : plantule, 2 : jeune, 3 : adulte).
   // Rend une toile, l'origine au pied, en bas au milieu.
-  function miniature(p, haut, st, fleur) {
+  function plantePetite(p, haut, st, fleur) {
     const m = hauteurM(p), eff = m <= 2 ? m : 2 + (m - 2) * 0.35;
     const d = planteDebout(p, { caseM: Math.max(0.02, (eff * 2 * HW * 0.55) / haut) }, st == null ? 3 : st, !!fleur);
     if (!d.couronne) return d.pied;
@@ -3006,5 +3006,5 @@
     return c;
   }
 
-  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait, miniature };
+  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait, plantePetite };
 })();

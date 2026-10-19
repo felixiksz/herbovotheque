@@ -402,7 +402,9 @@
     const exemple = { type: "devis", numero: "D-2026-001", date: Date.now(), echeance: Date.now() + 30 * JOUR, objet: "Création d’un jardin sec méditerranéen", remise: 0, acompte: e.acompte,
       lignes: [{ type: "titre", designation: "Plantes" }, { designation: "Lavande vraie (Lavandula angustifolia)", detail: "Pot de 1 L", quantite: 12, unite: "u.", prix: 6.5, tva: 10 }, { designation: "Romarin (Salvia rosmarinus)", detail: "Pot de 2 L", quantite: 6, unite: "u.", prix: 9, tva: 10 },
         { type: "titre", designation: "Main d’œuvre" }, { designation: "Préparation du sol et plantation", quantite: 7, unite: "h", prix: 45, tva: 20 }], client: null };
-    const rafraichir = () => { apercuF.contentDocument.open(); apercuF.contentDocument.write(pageImprimable(exemple)); apercuF.contentDocument.close(); };
+    const rafraichir = () => { const dd = apercuF.contentDocument; if (!dd) return; dd.open(); dd.write(pageImprimable(exemple)); dd.close(); };
+    // (l'onglet n'est pas encore affiché : l'aperçu se remplit quand il apparaît)
+    apercuF.addEventListener("load", () => { const dd = apercuF.contentDocument; if (dd && !dd.body.childElementCount) rafraichir(); });
     const choix = (cle, liste, apres) => H.el("div.pastilles", null, liste.map(([id, n, aide]) => H.el("button.bouton.petit" + (ent()[cle] === id ? ".actif" : ""), { type: "button", title: aide || "", onclick: (ev) => { majEnt((x) => (x[cle] = id)); ev.target.parentNode.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.target)); rafraichir(); if (apres) apres(); } }, n)));
     const colonne = (cle, nom) => H.el("label.case", null, H.el("input", { type: "checkbox", checked: !!e.colonnes[cle], onchange: (ev) => { majEnt((x) => (x.colonnes = Object.assign({}, x.colonnes, { [cle]: ev.target.checked }))); rafraichir(); } }), " " + nom);
     const logoBtn = H.el("button.bouton.petit", {
@@ -420,7 +422,6 @@
         inp.click();
       },
     }, e.logo ? "Changer le logo" : "Ajouter un logo");
-    setTimeout(rafraichir, 0);
     return H.el("div.modeles-devis", null,
       H.el("h3", null, "Le modèle"), choix("modele", MODELES),
       H.el("h3", null, "La couleur"), H.el("input", { type: "color", value: e.couleur, onchange: (ev) => { majEnt((x) => (x.couleur = ev.target.value)); rafraichir(); } }),

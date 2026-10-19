@@ -53,7 +53,7 @@
     c.width = 36; c.height = 46;
     const g = c.getContext("2d"), R0 = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
     g.imageSmoothingEnabled = false;
-    if (H.terrain && H.terrain.miniature) { const m = H.terrain.miniature(p, 30, 3, true); g.drawImage(m, Math.round(18 - m.width / 2), 36 - m.height + 2); }
+    if (H.terrain && H.terrain.plantePetite) { const m = H.terrain.plantePetite(p, 30, 3, true); g.drawImage(m, Math.round(18 - m.width / 2), 36 - m.height + 2); }
     // le panier : l'anse, puis le corps tressé
     const E = "#23214a";
     for (let x = 6; x <= 29; x++) { const y = 31 - Math.round(Math.sin(((x - 6) / 23) * Math.PI) * 9); R0(x, y, 1, 2, x % 3 ? "#9a6a3c" : "#7a4520"); }

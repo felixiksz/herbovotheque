@@ -273,15 +273,6 @@
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(pa.toile, pa.x0, pa.y0, pa.toile.width * p, pa.toile.height * p);
     ctx.restore();
-    // les reflets qui scintillent sur la mer
-    ctx.fillStyle = moment === "jour" ? "#f3f0dc" : moment === "soir" ? "#ffb3a8" : "#7f97f2";
-    for (let i = Math.floor(R.x0 / (p * 9)); i * p * 9 < R.x1; i++) {
-      const h = hsh(i, 77), ph = (t / 1400 + h * 7) % 1;
-      if (h > 0.45 || ph > 0.35) continue;
-      const x = Math.floor((i * 9 + hsh(i, 78) * 9) * p / p) * p, y = PAYS.horizon + p * (2 + Math.floor(hsh(i, 79) * (PAYS.mer - PAYS.horizon) / p * 0.9));
-      if (x > PAYS.ile.g && x < PAYS.ile.d && y > SOL_DEHORS - 4) continue;
-      ctx.fillRect(x, y, p * (2 + Math.floor(h * 6)), p);
-    }
     // de temps en temps, un ver de terre creuse sa galerie dans la terre de l'île
     const g0 = Math.max(R.x0, PAYS.ile.g + 40), g1 = Math.min(R.x1, PAYS.ile.d - 40);
     if (g1 > g0 && R.y1 > SOL_DEHORS + 40) {
@@ -308,7 +299,7 @@
     const accroches = { g: [[0, 150]], d: [[LARGE, 150]] };
     for (const a of ARBRES) {
       if (!a.pres) continue;
-      accroches[a.x < 0 ? "g" : "d"].push(a.cypres ? [a.x, bas - a.h * 0.62] : a.enY ? [a.x + a.h * 0.04, bas - a.h * 0.78] : [a.x + a.pe, bas - a.h + 4]);
+      accroches[a.x < 0 ? "g" : "d"].push(a.cypres ? [a.x, bas - a.h * 0.62] : (() => { const g = pinGeo(a); return [g.cx, g.haut + g.ep * 0.85]; })());
     }
     for (const cote of ["g", "d"]) {
       const pts = accroches[cote].sort((a, b) => (cote === "g" ? b[0] - a[0] : a[0] - b[0]));
@@ -329,6 +320,11 @@
       return { x, pres, h: pres ? 330 + hsh(x, 2) * 60 : 230 + hsh(x, 2) * 90, pe: (hsh(x, 4) - 0.5) * 24, rx: (pres ? 46 : 36) + hsh(x, 5) * 12, enY: hsh(x, 9) < 0.45 };
     }),
   ];
+  function pinGeo(a) {
+    const h = a.h, bas = SOL_DEHORS + 2, pench = (a.pe / Math.max(1, h)) * 3, fourche = 0.52 + hsh(a.x, 1) * 0.12;
+    const fx = a.x + pench * h * fourche, fy = bas - h * fourche, L = h * (0.5 + hsh(a.x, 2) * 0.12);
+    return { fx, fy, L, cx: fx + pench * h * 0.12, haut: bas - h, ep: h * 0.2 };
+  }
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
   const RGB = new Map();
   const rgb = (c) => { let v = RGB.get(c); if (!v) RGB.set(c, (v = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)))); return v; };
@@ -355,57 +351,64 @@
     const seuil = (i, j) => BAYER[((j + j0) & 3) * 4 + ((i + i0) & 3)];
     const tram = (i, j, f, a, b) => (f > seuil(i, j) ? b : a);
     const H_ = PAYS.horizon, unite = (v) => Math.max(1, Math.round(v / p));
-    // les montagnes au loin, bleuies par l'air, l'arête éclairée du côté du soleil
-    for (const [g, haut, corps, arete, ombre] of [[1, 150, "#a8d8ec", "#d6eef7", "#6fb6ee"], [3, 90, "#6fb6ee", "#a8d8ec", "#2f8fe0"]]) {
-      const mont = (x) => H_ - (haut * 0.45 + haut * 0.75 * bruit1(x / 260, g) + haut * 0.25 * bruit1(x / 70, g + 1));
-      for (let i = 0; i < W; i++) {
-        const x = X(i), top = mont(x), pente = mont(x + p) - mont(x - p);
-        for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(H_)); j++) {
-          const prof = Y(j) - top;
-          let c = corps;
-          if (prof < 2.5 * p) c = pente < 0 ? arete : corps;
-          else if (pente > 0.2 * p) c = tram(i, j, Math.min(1, prof / 30), corps, ombre);
-          else if (hsh(i + i0, (j + j0) >> 1) < 0.06) c = arete;
-          if (Y(j) > H_ - 14) c = tram(i, j, (Y(j) - (H_ - 14)) / 14, c, "#d6eef7");
-          pose(i, j, c);
+    // Les collines des calanques, vues depuis la plage vers les terres, un peu d'en haut (presque en
+    // isométrie) : très peu de ciel tout en haut, puis huit rangées qui défilent jusqu'au pied de
+    // la maison, de plus en plus pâles et bleutées au loin. Le calcaire en couches horizontales, ses
+    // corniches et sa falaise claire au pied ; la garrigue entre les gradins et sur les plateaux, de
+    // petits pins en rythme ; des vallons de garrigue sombre entre les rangées. Pas d'eau ici.
+    // (les couleurs sont celles du jour : le soir et la nuit les teintent, plus bas)
+    const C3 = { brume: [150, 192, 236], clair: [255, 246, 218], milieu: [238, 220, 184], sombre: [176, 150, 140], fond: [128, 108, 140], strate: [214, 192, 160], garrigue: [92, 148, 66], garrigueS: [46, 98, 52] };
+    const melC = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const degrade = (arrets, t) => { t = Math.max(0, Math.min(1, t)); for (let k = 1; k < arrets.length; k++) if (t <= arrets[k][0]) { const [t0, c0] = arrets[k - 1], [t1, c1] = arrets[k]; return melC(c0, c1, (t - t0) / (t1 - t0 || 1)); } return arrets[arrets.length - 1][1]; };
+    const bruit2 = (x, y, g) => { const a0 = Math.floor(x), b0 = Math.floor(y), fx = x - a0, fy = y - b0, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+      const A = hsh(a0 + b0 * 57, g), B = hsh(a0 + 1 + b0 * 57, g), Cc = hsh(a0 + (b0 + 1) * 57, g), D = hsh(a0 + 1 + (b0 + 1) * 57, g); return (A * (1 - u) + B * u) * (1 - v) + (Cc * (1 - u) + D * u) * v; };
+    const poseRVB = (i, j, c) => { if (!dans(i, j)) return; const k = (j * W + i) * 4; d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255; brille[j * W + i] = 0; };
+    {
+      const MIL = LARGE / 2, haut0 = Math.min(R.y0, -400), CIEL = haut0 + (SOL_DEHORS - haut0) * 0.07, PIED = SOL_DEHORS - 40, N = 8;
+      for (let k = 0; k < N; k++) {
+        const f = k / (N - 1), yb = CIEL + 28 + (PIED - CIEL - 28) * Math.pow(f, 1.05);
+        const Hc = 70 + 170 * f, P = 260 + 420 * f, dec = hsh(k, 71) * P, air = Math.pow(1 - f, 0.85) * (moment === "nuit" ? 0.6 : 0.78);
+        const teinte = (c) => melC(c, C3.brume, air);
+        const massif = (x) => {
+          const u = Math.abs(x - MIL) + (x < MIL ? 11 + k * 7 : 0) + dec;
+          const forme = 0.42 * bruit1(u / (P * 0.55), k + 15) + 0.2 * bruit1(u / (P * 0.18), k + 16) + 0.08 * bruit1(u / 26, k + 17) + 0.95 * Math.pow(bruit1(u / (P * 0.3), k + 18), 2.6);
+          return yb - Hc * (0.2 + 0.62 * forme);
+        };
+        const PLATEAU = Hc * 0.4;
+        for (let i = 0; i < W; i++) {
+          const x = X(i), top = massif(x);
+          const falaise = Hc * (0.16 + 0.16 * bruit1((Math.abs(x - MIL) + dec) / (P * 0.4), k + 50));
+          for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(yb + 90)); j++) {
+            const y = Y(j), dep = y - top, v = Math.min(1, dep / Math.max(1, yb - top));
+            if (y >= yb) { poseRVB(i, j, teinte(bruit2(x / 13, y / 8, k + 61) > 0.55 ? C3.garrigue : melC(C3.garrigueS, C3.fond, 0.35))); continue; }
+            let c = degrade([[0, C3.clair], [0.4, C3.milieu], [1, C3.fond]], Math.pow(v, 0.8));
+            if (yb - y < falaise) {
+              const fv = 1 - (yb - y) / falaise, sb2 = (yb - y) / 6 + bruit1(x / 45, k + 51) * 0.8;
+              c = melC(melC(C3.clair, C3.milieu, 0.3), C3.fond, Math.pow(fv, 2) * 0.7);
+              if (sb2 - Math.floor(sb2) < 0.25) c = melC(c, C3.strate, 0.55);
+              if ((yb - y) > falaise - p * 1.2) c = melC(c, C3.garrigueS, 0.5);
+            } else {
+              const sb = (yb - y) / 9 + bruit1(x / 37, k + 21) * 1.4, bande = Math.floor(sb), dansB = sb - bande;
+              const sommet = dep < (yb - top) * 0.12;
+              // (la garrigue s'efface avec la distance : au loin, on ne voit plus que le calcaire bleui)
+              const vert = !sommet && f > 0.2 && (bande % 3 !== 0 || dep < PLATEAU) && bruit2(x / 19, y / 9, k + 31) > 0.3 + (1 - f) * 0.25;
+              if (vert) c = melC(dansB < 0.35 ? C3.garrigueS : C3.garrigue, c, 0.2 + bruit2(x / 6, y / 5, k + 33) * 0.25);
+              else if (dansB > 0.82) c = melC(c, C3.fond, 0.3);
+              else if (dansB < 0.18) c = melC(c, C3.clair, 0.4);
+            }
+            if (dep < p * 1.1) c = melC(C3.fond, [30, 26, 46], 0.4);
+            poseRVB(i, j, teinte(c));
+          }
+          // de petits pins sur les plateaux, en rythme
+          if (k >= 3 && hsh(Math.floor((x + k * 37) / 26), k + 41) < 0.18 && ((Math.floor(x) % 26) + 26) % 26 < p) {
+            const r = 3 + f * 6;
+            for (let jj = J(top - r * 0.8); jj <= J(top + r * 0.4); jj++) for (let ii = I(x - r * 1.3); ii <= I(x + r * 1.3); ii++) {
+              const dx = (X(ii) - x) / (r * 1.3), dy = (Y(jj) - (top - r * 0.2)) / (r * 0.6);
+              // (jamais au-dessus de la crête : pas de taches sur le ciel)
+              if (dx * dx + dy * dy <= 1 && Y(jj) >= massif(X(ii)) + p) poseRVB(ii, jj, teinte(dy < -0.3 ? C3.garrigue : C3.garrigueS));
+            }
+          }
         }
-      }
-    }
-    // les calanques, à gauche : le calcaire clair en gradins, ses failles, ses strates, la garrigue
-    const cal = (x) => {
-      const k = Math.max(0, Math.min(1, (430 - x) / 160));
-      return H_ - k * (Math.round((50 + 120 * bruit1(x / 230, 5)) / 18) * 18 + 9 * bruit1(x / 26, 6));
-    };
-    for (let i = 0; i < W; i++) {
-      const x = X(i);
-      if (x > 430) continue;
-      const top = cal(x), pente = cal(x + p) - cal(x - p);
-      if (H_ - top < p) continue;
-      for (let j = Math.max(0, J(top)); j < Math.min(Hh, J(H_)); j++) {
-        const y = Y(j), prof = y - top;
-        let c = Math.abs(pente) > 1.5 * p ? (pente > 0 ? "#9a9a9a" : "#f3f0dc") : prof < 4 * p ? "#f3f0dc" : "#e9e3cd";
-        if ((i + i0) % 7 === 0 && hsh(i + i0, 3) < 0.6 && prof > 2 * p) c = "#9a9a9a";
-        else if ((i + i0) % 7 === 1 && hsh(i + i0, 3) < 0.6 && prof > 2 * p) c = "#c9c9c4";
-        if (Math.floor(prof / (3 * p)) % 4 === 3) c = tram(i, j, 0.5, c, "#c9c9c4");
-        if (prof < p * 1.2 && hsh(i + i0, 7) < 0.55) c = hsh(i + i0, 8) < 0.5 ? "#4aa63e" : "#2f6b35";
-        else if (prof < 6 * p && Math.abs(pente) < p && hsh(i + i0, j + j0) < 0.07) c = "#3f8a42";
-        pose(i, j, c);
-      }
-      if (hsh(i + i0, 7) < 0.4) pose(i, J(top) - 1, "#4aa63e");
-    }
-    // la mer, jusqu'à l'horizon : des bandes tramées, quelques traits d'écume
-    const MER_C = ["#d6eef7", "#a8d8ec", "#6fb6ee", "#2f8fe0", "#2f8fe0", "#0d8fae"];
-    for (let j = Math.max(0, J(H_)); j < Hh; j++) {
-      const y = Y(j), sousEau = y > PAYS.mer;
-      for (let i = 0; i < W; i++) {
-        if (plein(i, j)) continue;
-        let c;
-        if (!sousEau) {
-          const f = Math.max(0, Math.min(0.999, (y - H_) / (PAYS.mer - H_ + 30))) * (MER_C.length - 1), a = Math.floor(f);
-          c = tram(i, j, f - a, MER_C[a], MER_C[a + 1]);
-          if ((j + j0) % 3 === 0 && hsh((i + i0) >> 2, j + j0) < 0.05) c = "#d6eef7";
-        } else c = tram(i, j, Math.min(1, (y - PAYS.mer) / 90), "#0d8fae", "#26406a");
-        pose(i, j, c);
       }
     }
     // --- les petites formes en pixels ---
@@ -468,31 +471,36 @@
       }
       touffes(x, bas - h - 6, 12, 20, 999, false, f);
     }
-    // le labo, derrière à gauche : planches vertes, toit de tuiles, porte jaune, cheminée
+    // l'herbothèque, derrière à gauche : la tiny house sur roues, de profil, bois orangé à clin,
+    // toit de tuiles en terre cuite, porte verte et ses deux marches
     {
-      const x = -640, w = 230, hm = 160, f = 0.18, b = (c) => brume(c, f);
-      rect(x + 150, bas - hm - 118, 18, 70, b("#2c2a3e"));
-      for (let j = J(bas - hm); j < J(bas); j++) for (let i = I(x); i < I(x + w); i++) pose(i, j, b(Math.floor((Y(j) - (bas - hm)) / 12) % 2 ? "#6cbd5c" : "#4aa63e"));
-      for (let j = J(bas - hm - 92); j < J(bas - hm + 4); j++) {
-        const y = Y(j), dy = (bas - hm + 4 - y) / 96, demi = (w / 2 + 18) * (1 - dy);
-        for (let i = I(x + w / 2 - demi); i < I(x + w / 2 + demi); i++) pose(i, j, b(Math.floor((y - (bas - hm - 92)) / 10) % 2 ? "#e8714a" : "#b2552e"));
+      const x = -700, w = 270, hm = 130, roues = 26, mur = bas - roues - 10 - hm, toitH = 70, f = 0.16, b = (c) => brume(c, f);
+      rect(x - 6, bas - roues - 12, w + 12, 8, b("#2c2a3e")); rect(x + w + 6, bas - roues - 10, 34, 4, b("#2c2a3e"));
+      for (const u of [0.32, 0.5]) ovale(x + w * u, bas - roues, roues, roues, (i, j, dx, dy) => { const e = dx * dx + dy * dy; pose(i, j, b(e > 0.72 ? "#23214a" : e < 0.06 ? "#9a9a9a" : "#4a4560")); });
+      for (let j = J(mur); j < J(mur + hm); j++) { const y = Y(j), rang = Math.floor((y - mur) / 9); for (let i = I(x); i < I(x + w); i++) pose(i, j, b((y - mur) % 9 < 2 ? "#8a5c34" : rang % 2 ? "#b9834f" : "#c08a55")); }
+      rect(x, mur, 6, hm, b("#f3f0dc")); rect(x + w - 6, mur, 6, hm, b("#f3f0dc"));
+      for (const [fx, fw] of [[24, 58], [196, 46]]) { rect(x + fx - 4, mur + 22, fw + 8, 54, b("#f3f0dc")); rect(x + fx, mur + 26, fw, 46, b("#a8d8ec")); rect(x + fx + fw / 2 - 1.5, mur + 26, 3, 46, b("#f3f0dc")); }
+      rect(x + 107, mur + 18, 50, hm - 18, b("#4b3427")); rect(x + 110, mur + 21, 44, hm - 21, b("#2f6b35")); rect(x + 144, mur + 64, 5, 5, b("#f6ee55"));
+      for (let k = 0; k < 2; k++) rect(x + 104 - k * 8, mur + hm + k * 10, 60 + k * 16, 10, b(k ? "#9a6a3c" : "#b9834f"));
+      for (let j = J(mur - toitH); j < J(mur + 6); j++) {
+        const y = Y(j), u = (y - (mur - toitH)) / (toitH + 6), deb = 12 + u * 10, rang = Math.floor((y - (mur - toitH)) / 10), dansR = (y - (mur - toitH)) % 10;
+        for (let i = I(x - deb); i < I(x + w + deb); i++) { const xx = X(i); pose(i, j, b(dansR < 2 ? "#b2552e" : ((xx - x + rang * 9) % 18 + 18) % 18 < 2 ? "#c95a3a" : dansR < 5 ? "#ef8a5c" : "#e8714a")); }
       }
-      rect(x + 140, bas - 98, 42, 98, b("#e9b44c")); rect(x + 172, bas - 54, 5, 5, b("#2c2a3e"));
-      rect(x + 30, bas - hm + 34, 66, 52, b("#c49a6c")); rect(x + 36, bas - hm + 40, 54, 40, b("#a8d8ec")); rect(x + 62, bas - hm + 40, 3, 40, b("#c49a6c"));
-      rect(x + 40, bas - hm + 44, 8, 3, b("#f3f0dc"));
+      rect(x - 22, mur - toitH - 6, w + 44, 6, b("#b2552e"));
     }
     // la boîte aux lettres bleue, sur son piquet
     rect(-522, bas - 64, 6, 64, "#7a4520"); rect(-538, bas - 90, 38, 28, "#3d5ee8"); rect(-538, bas - 90, 38, 4, "#7f97f2"); rect(-504, bas - 104, 4, 16, "#ff5b4f");
-    // la roulotte jaune des flashcartes, derrière à droite, sur ses roues
+    // la roulotte des flashcartes, derrière à droite, de profil : la caisse jaune, une fenêtre ronde,
+    // la porte bleue, le toit en tonneau en terre cuite et ses grandes roues à rayons
     {
-      const x = 1040, w = 300, hb = 150, y0 = bas - 44 - hb, f = 0.1, b = (c) => brume(c, f);
-      for (let j = J(y0); j < J(y0 + hb); j++) for (let i = I(x - w / 2); i < I(x + w / 2); i++) pose(i, j, b(Y(j) > y0 + hb - 14 ? "#c99a3a" : (i + i0) % unite(30) === 0 ? "#c99a3a" : "#e9b44c"));
-      ovale(x, y0 + 4, w / 2 + 16, 64, (i, j, dx, dy) => { if (dy <= 0) pose(i, j, b(Math.floor((dx + 1) * 7) % 2 ? "#e8714a" : "#b2552e")); });
-      rect(x + 48, y0 + 38, 52, hb - 38, b("#3d5ee8")); rect(x + 54, y0 + 46, 40, 30, b("#7f97f2")); rect(x + 88, y0 + 96, 5, 5, b("#e9b44c"));
-      rect(x - 100, y0 + 38, 78, 56, b("#c49a6c")); rect(x - 94, y0 + 44, 66, 44, b("#a8d8ec")); rect(x - 90, y0 + 48, 10, 4, b("#f3f0dc"));
-      for (const dx of [-92, 92]) {
-        ovale(x + dx, bas - 26, 26, 26, (i, j, ux, uy) => pose(i, j, b(ux * ux + uy * uy > 0.55 ? "#2c2a3e" : ux * ux + uy * uy < 0.12 ? "#c49a6c" : (Math.abs(ux) < 0.12 || Math.abs(uy) < 0.12) ? "#7a4520" : "#4b3427")));
-      }
+      const x = 930, w = 250, hm = 120, r = 34, mur = bas - r * 2 - 8 - hm + 30, f = 0.1, b = (c) => brume(c, f);
+      rect(x - 4, bas - r - 14, w + 8, 8, b("#4b3427")); rect(x - 60, bas - r - 10, 58, 5, b("#7a4520"));
+      for (let j = J(mur); j < J(mur + hm); j++) { const y = Y(j); for (let i = I(x); i < I(x + w); i++) pose(i, j, b((y - mur) % 14 < 2 ? "#d49a22" : "#f2c23a")); }
+      rect(x, mur, w, 6, b("#c96a3a")); rect(x, mur + hm - 8, w, 8, b("#c96a3a"));
+      ovale(x + w * 0.3, mur + hm * 0.42, 20, 20, (i, j, dx, dy) => pose(i, j, b(dx * dx + dy * dy > 0.7 ? "#f3f0dc" : "#a8d8ec")));
+      rect(x + w * 0.62, mur + 18, 48, hm - 24, b("#3d5ee8")); rect(x + w * 0.62 + 36, mur + 60, 5, 5, b("#f6ee55"));
+      ovale(x + w / 2, mur + 4, w / 2 + 16, 62, (i, j, dx, dy) => { if (dy > 0) return; pose(i, j, b(dy > -0.12 ? "#b2552e" : Math.floor((dx + 1) * 9) % 2 ? "#e8714a" : "#d9653e")); });
+      for (const u of [0.22, 0.78]) ovale(x + w * u, bas - r, r, r, (i, j, dx, dy) => { const e = dx * dx + dy * dy, a = Math.atan2(dy, dx); if (e > 0.72) pose(i, j, b("#23214a")); else if (e < 0.06) pose(i, j, b("#9a9a9a")); else if (Math.abs(Math.sin(a * 4)) < 0.18) pose(i, j, b("#7a4520")); });
     }
     // le petit porche devant la porte, à gauche de la maison : la terrasse en planches, deux
     // poteaux, l'auvent de tuiles, et le bois sec rangé contre le mur, à l'abri
@@ -544,7 +552,6 @@
           const joint = (j + j0) % 3 === 0 || (xi + dec) % 5 === 0;
           c = joint ? "#4b3427" : hsh(col, r) < 0.5 ? "#9a9a9a" : "#c9c9c4";
         }
-        if (y > PAYS.mer) c = tram(i, j, 0.5, c, "#26406a");
         pose(i, j, c);
       }
       // les touffes d'herbe au-dessus du sol
@@ -584,6 +591,30 @@
     }
     // les arbres, au premier plan ; le soir, le dessous des pins des guirlandes brille
     const nuitLum = moment !== "jour";
+    // un pin parasol : le tronc penche, se divise en branches en éventail, sous une ombrelle large
+    // et plate faite de paquets d'aiguilles, le dessus éclairé, le dessous presque droit
+    function pinParasol(a, ecorce, lum) {
+      const g = pinGeo(a), h = a.h;
+      for (let k = 0; k < 24; k++) { const u = k / 24, u2 = (k + 1) / 24; trait(a.x + (g.fx - a.x) * u * (0.6 + 0.4 * u), bas - (bas - g.fy) * u, a.x + (g.fx - a.x) * u2 * (0.6 + 0.4 * u2), bas - (bas - g.fy) * u2, unite(11 - 4 * u), ecorce); }
+      const nb = 4 + Math.floor(hsh(a.x, 3) * 2);
+      for (let k = 0; k < nb; k++) {
+        const t = k / (nb - 1), bx = g.cx + (t - 0.5) * g.L * 1.5, by = g.haut + g.ep * (0.75 + hsh(a.x, k + 4) * 0.2);
+        const mx = g.fx + (bx - g.fx) * 0.45 + (hsh(a.x, k + 9) - 0.5) * 10, my = g.fy + (by - g.fy) * 0.55;
+        trait(g.fx, g.fy, mx, my, unite(6), ecorce); trait(mx, my, bx, by, unite(4), ecorce);
+      }
+      const n = 7 + Math.floor(hsh(a.x, 5) * 3);
+      for (let q = 0; q < n; q++) {
+        const t = q / (n - 1), px = g.cx + (t - 0.5) * g.L * 1.7 + (hsh(a.x, q + 20) - 0.5) * 14;
+        const dome = 1 - Math.pow((t - 0.5) * 2, 2), py = g.haut + g.ep * 0.55 - dome * g.ep * 0.45 + (hsh(a.x, q + 30) - 0.5) * 6;
+        const rx = g.L * (0.2 + hsh(a.x, q + 40) * 0.07), ry = g.ep * (0.42 + dome * 0.25);
+        ovale(px, py, rx, ry, (i, j, dx, dy) => {
+          if (dy > 0.45 + Math.abs(Math.sin((X(i) + a.x) / 9)) * 0.25) return;
+          if (lum && dy > 0.25) return pose(i, j, hsh(i + i0, j + j0) < 0.5 ? "#e9b44c" : "#ffc46b", true);
+          const hh = hsh(i + i0, j + j0), bord = dx * dx + dy * dy;
+          pose(i, j, dy < -0.35 && bord > 0.55 ? (hh < 0.5 ? "#9cc77a" : "#6cbd5c") : dy < -0.1 ? (hh < 0.3 ? "#4aa63e" : "#3f8a42") : dy < 0.2 ? "#2f6b35" : "#1e3d25");
+        });
+      }
+    }
     const couronne = (cx, cy, rx, ry, lumineux) => touffes(cx, cy, rx, ry, Math.round(cx * 7 + cy), lumineux);
     for (const a of ARBRES) {
       if (a.x < IG + 20 || a.x > ID - 20 || a.x < R.x0 - 120 || a.x > R.x1 + 120) continue;
@@ -600,21 +631,7 @@
         continue;
       }
       const ecorce = (i, j, e) => pose(i, j, e < 0 ? "#9a6a3c" : e > 0 ? "#4b3427" : "#7a4520");
-      if (a.enY) {
-        const t = a.h * 1.05, fx = a.x + t * 0.04, fy = bas - t * 0.42;
-        trait(a.x, bas, fx, fy, unite(8), ecorce);
-        for (const [cx, cy, l] of [[a.x - t * 0.3, bas - t * 0.84, 0.3], [a.x + t * 0.34, bas - t * 0.92, 0.34]]) {
-          trait(fx, fy, cx, cy + t * 0.02, unite(6), ecorce);
-          for (const [dx, ry, rr] of [[-0.5, 0.07, 0.45], [0, 0.09, 0.55], [0.48, 0.07, 0.45]]) couronne(cx + dx * t * l, cy, t * l * rr, ry * t, lum);
-        }
-        continue;
-      }
-      const tx = a.x + a.pe, ty = bas - a.h;
-      for (let s = 0; s <= 20; s++) {
-        const u = s / 20, x = a.x + a.pe * 0.4 * 2 * u * (1 - u) + a.pe * u * u, y = bas - a.h * u;
-        trait(x, y, x, y + a.h / 20 + 1, unite(8), ecorce);
-      }
-      for (const [dx, dy, rx, ry] of [[-0.6, 6, 0.7, 17], [0.55, 9, 0.75, 18], [0, -6, 0.72, 16], [-0.1, 12, 0.95, 14]]) couronne(tx + dx * a.rx, ty + dy, a.rx * rx, ry, lum);
+      pinParasol(a, ecorce, lum);
     }
     // le soir et la nuit, tout se teinte (sauf ce qui brille)
     const te = TEINTE[moment];
@@ -680,7 +697,7 @@
     const m = H.ciel.meteo || {};
     if (!((H.pluieMagique && H.pluieMagique()) || m.type === "pluie" || m.type === "orage")) return;
     const L = R.x1 - R.x0, Hh = R.y1 - R.y0, fort = m.type === "orage" ? 1.6 : 1;
-    ctx.fillStyle = moment === "jour" ? "rgba(96,108,130,0.22)" : "rgba(20,22,50,0.25)";
+    ctx.fillStyle = moment === "jour" ? "rgba(96,108,130,0.12)" : "rgba(20,22,50,0.18)";
     ctx.fillRect(R.x0, R.y0, L, Hh);
     ctx.fillStyle = moment === "jour" ? "rgba(214,236,248,0.75)" : "rgba(150,170,220,0.55)";
     const n = Math.max(24, Math.round((420 * fort * L * Hh) / 1.6e6)), cale = (v) => Math.round(v / p) * p;

@@ -1497,7 +1497,10 @@
   function aller(id) {
     // sans animation : pas de marche, on y est
     if (H.sansAnimation()) { const [x, y] = porte(parId[id]); Object.assign(scene.ovo, { x, y, trajet: null, lieu: id }); arriver(id); return; }
-    const perso = scene.ovo, etapes = trajetVers(id), pts = [];
+    const perso = scene.ovo;
+    // ƟvƟ se promenait ailleurs que sur les chemins : tout droit jusqu'à la porte
+    if (!perso.lieu) { const [x, y] = porte(parId[id]); return marcherVers(x, y, id); }
+    const etapes = trajetVers(id), pts = [];
     for (let k = 0; k < etapes.length - 1; k++) {
       const c = chemins.find((c) => (c.a === etapes[k] && c.b === etapes[k + 1]) || (c.b === etapes[k] && c.a === etapes[k + 1]));
       const sens = c.a === etapes[k];
@@ -1508,7 +1511,18 @@
     perso.but = id;
     if (!perso.trajet) arriver(id);
   }
+  // ƟvƟ va où l'on clique sur la ferme, tout droit (but : la maison où entrer en arrivant, ou rien)
+  function marcherVers(x, y, but) {
+    const perso = scene.ovo, d = Math.hypot(x - perso.x, y - perso.y), n = Math.max(1, Math.ceil(d / 0.12)), pts = [];
+    for (let k = 1; k <= n; k++) pts.push([perso.x + ((x - perso.x) * k) / n, perso.y + ((y - perso.y) * k) / n]);
+    perso.lieu = null;
+    perso.but = but || null;
+    perso.i = 0;
+    if (H.sansAnimation()) { Object.assign(perso, { x, y, trajet: null }); return arriver(perso.but); }
+    perso.trajet = pts;
+  }
   function arriver(id) {
+    if (!id) return;
     const m = parId[id];
     scene.ovo.lieu = id;
     H.d.majLocal((l) => (l.dernierLieu = id));
@@ -1878,6 +1892,12 @@
       };
       toile.addEventListener("pointerup", lacher);
       toile.addEventListener("pointerleave", () => { lacher(); if (scene) scene.pointeur = null; });
+      // ailleurs que sur une maison : ƟvƟ y va (tant que c'est sur l'île)
+      const promener = (p) => {
+        const [i, j] = versMonde(p.x, p.y);
+        if (i < 0.4 || j < 0.4 || i > N - 0.4 || j > N - 0.4) return;
+        marcherVers(i, j, null);
+      };
       toile.addEventListener("click", (e) => {
         if (scene.amenager) return;
         const p = pos(e);
@@ -1893,8 +1913,10 @@
           // sur téléphone : un premier toucher montre le nom, un second y va
           scene.pointeur = null;
           if (m && scene.choisi === m) { scene.choisi = null; aller(m.id); }
-          else scene.choisi = m;
+          else if (m) scene.choisi = m;
+          else { scene.choisi = null; promener(p); }
         } else if (m) aller(m.id);
+        else promener(p);
       });
       // la page n'a sa taille définitive qu'une fois affichée : on se remesure dès qu'elle change
       scene.surRedim = () => scene && (dimensionner(), dessiner(performance.now()));

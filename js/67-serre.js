@@ -42,8 +42,8 @@
     const E = "#23214a";
     g.imageSmoothingEnabled = false;
     // la plante, dessinée selon sa famille botanique, de la plantule à la plante en fleur
-    if (p && etape > 0 && H.terrain && H.terrain.miniature) {
-      const m = H.terrain.miniature(p, [0, 9, 18, 28][etape], etape, etape === 3);
+    if (p && etape > 0 && H.terrain && H.terrain.plantePetite) {
+      const m = H.terrain.plantePetite(p, [0, 9, 18, 28][etape], etape, etape === 3);
       g.drawImage(m, Math.round(18 - m.width / 2), 35 - m.height + 2);
     }
     // le pot : bord, corps qui s'affine, terre
