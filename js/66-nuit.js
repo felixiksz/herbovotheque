@@ -413,7 +413,7 @@
         if (plein(i, j)) continue;
         let c;
         if (!sousEau) {
-          const f = Math.min(0.999, (y - H_) / (PAYS.mer - H_ + 30)) * (MER_C.length - 1), a = Math.floor(f);
+          const f = Math.max(0, Math.min(0.999, (y - H_) / (PAYS.mer - H_ + 30))) * (MER_C.length - 1), a = Math.floor(f);
           c = tram(i, j, f - a, MER_C[a], MER_C[a + 1]);
           if ((j + j0) % 3 === 0 && hsh((i + i0) >> 2, j + j0) < 0.05) c = "#d6eef7";
         } else c = tram(i, j, Math.min(1, (y - PAYS.mer) / 90), "#0d8fae", "#26406a");
