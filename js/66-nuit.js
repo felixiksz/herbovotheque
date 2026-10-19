@@ -3971,7 +3971,11 @@
     afficher(c, params) {
       if (params[0] === "dormir") {
         const toile = H.el("canvas.scene-maison", { role: "img", "aria-label": "Tout le monde dort dans le même lit. Par la fenêtre, les étoiles ; la lumière de la nuit se pose sur le parquet." });
-        c.appendChild(H.el("div.page-maison", null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller")));
+        // en dormant, on peut éteindre (ou rallumer) les guirlandes du jardin
+        const libelle = () => (guirlandesAllumees() ? "Éteindre les guirlandes" : "Rallumer les guirlandes");
+        const guirlandes = H.el("button.sortie-maison.guirlandes-dodo", { type: "button" }, libelle());
+        guirlandes.onclick = async () => { await H.d.majLocal((l) => { l.guirlandesEteintes = !l.guirlandesEteintes; }); guirlandes.textContent = libelle(); };
+        c.appendChild(H.el("div.page-maison", null, toile, H.el("a.sortie-maison", { href: "#maison", title: "Se réveiller" }, "‹ Se réveiller"), guirlandes));
         H.musique.arreter();
         sceneDodo(toile);
         return;

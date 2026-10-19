@@ -155,6 +155,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
   background: rgba(35, 33, 74, 0.72); border-radius: 999px; padding: 3px 12px 4px;
 }
 .sortie-maison:hover, .sortie-maison:focus-visible { background: #23214a; outline: 2px solid #ff5b4f; }
+.sortie-maison.guirlandes-dodo { left: auto; right: 10px; border: 0; cursor: pointer; }
 .page-dodo p { font-size: 1.1rem; }
 .cadre-balade { border: 1px solid var(--filet); border-radius: 8px; overflow: hidden; }
 .toile-balade { display: block; width: 100%; /* (sa propre couche à l'écran : certaines tablettes faisaient clignoter toute la toile quand une bulle passait par-dessus) */ will-change: transform; transform: translateZ(0); }
