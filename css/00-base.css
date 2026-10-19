@@ -483,3 +483,7 @@ html.chargement #ciel { display: none; }
 .bouton-crayon { display: inline-flex; align-items: center; justify-content: center; padding: 4px; background: none; border: 1px solid transparent; border-radius: 999px; color: #8a88a0; cursor: pointer; line-height: 0; transition: color .15s, border-color .15s; }
 .bouton-crayon svg { width: 18px; height: 18px; }
 .bouton-crayon:hover, .bouton-crayon:focus-visible { color: var(--encre); border-color: rgba(35, 33, 74, 0.25); outline: none; }
+
+.chercher-entete { display: none; }
+:root[data-bureau] .chercher-entete { display: inline-flex; flex: 0 0 auto; background: none; border: 0; padding: 2px; cursor: pointer; color: #23214a; }
+.chercher-entete svg { width: 20px; height: 20px; }

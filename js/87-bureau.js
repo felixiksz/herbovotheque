@@ -12,6 +12,7 @@
     serre: "Serre",
     lettres: "Boîte aux lettres",
     taches: "To-do liste",
+    carnet: "Carnet",
     devis: "Devis et factures",
     terrain: "Les îles",
     reglages: "Réglages",
@@ -48,6 +49,8 @@
     ["lettres", "Lettres", [
       "............", "kkkkkkkkkkkk", "kwkwwwwwwkwk", "kwwkwwwwkwwk", "kwwwkwwkwwwk", "kwwwwccwwwwk",
       "kwwwkcckwwwk", "kwwkwwwwkwwk", "kwkwwwwwwkwk", "kkwwwwwwwwkk", "kkkkkkkkkkkk", "............"]],
+    ["carnet", "Carnet", [
+      "..kkkkkkkk..", ".kmkwwwwwwk.", ".kmkwkkkkwk.", ".kmkwwwwwwk.", ".kmkwkkkwwk.", ".kmkwwwwwwk.", ".kmkwkkkkwk.", ".kmkwwwwwwk.", ".kmkwkkwwwk.", ".kmkwwwwwwk.", "..kkkkkkkk..", "............"]],
     ["taches", "To-do", [
       "............", ".kkkkkkkkkk.", ".kwwwwwwwwk.", ".kwvwkkkkwk.", ".kvvwwwwwwk.", ".kwwwwwwwwk.", ".kwvwkkkkwk.", ".kvvwwwwwwk.", ".kwwwwwwwwk.", ".kwcwkkkkwk.", ".kwwwwwwwwk.", ".kkkkkkkkkk."]],
     ["devis", "Devis", [
@@ -133,7 +136,9 @@
     let h = H.$("#heure-entete");
     if (!h) {
       h = H.el("span#heure-entete.heure-entete");
-      H.$("#entete").appendChild(h);
+      // la loupe : chercher dans tout le jeu (aussi Ctrl K ou ⌘K)
+      H.$("#entete").append(H.el("button.chercher-entete", { type: "button", title: "Chercher partout (Ctrl K)", "aria-label": "Chercher partout", onclick: () => H.carnet && H.carnet.chercherPartout(),
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>' }), h);
     }
     h.textContent = new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
   }

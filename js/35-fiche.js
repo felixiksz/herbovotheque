@@ -416,7 +416,9 @@
           p.latin ? H.el("p.fiche-latin", null, p.latin) : null,
           (p.valeurs || {}).nomsCommuns ? H.el("p.discret.fiche-communs", null, p.valeurs.nomsCommuns) : null,
           H.el("div.fiche-outils", null,
-            H.el("a.bouton-trait", { href: "#cartes/plante/" + encodeURIComponent(p.id), title: "Réviser cette plante en flashcartes" }, icone(SVG_CERVEAU), H.el("span", null, "Réviser"))
+            H.el("a.bouton-trait", { href: "#cartes/plante/" + encodeURIComponent(p.id), title: "Réviser cette plante en flashcartes" }, icone(SVG_CERVEAU), H.el("span", null, "Réviser")),
+            H.carnet ? H.el("button.bouton-trait", { type: "button", title: "Retrouver cette fiche dans les favoris", onclick: (e) => { H.carnet.basculerFavori("fiche/" + encodeURIComponent(p.id), p.nom); e.currentTarget.lastChild.textContent = H.carnet.estFavori("fiche/" + encodeURIComponent(p.id)) ? "Favori" : "Mettre en favori"; e.currentTarget.firstChild.textContent = H.carnet.estFavori("fiche/" + encodeURIComponent(p.id)) ? "★" : "☆"; } },
+              H.el("span.icone-trait", null, H.carnet.estFavori("fiche/" + encodeURIComponent(p.id)) ? "★" : "☆"), H.el("span", null, H.carnet.estFavori("fiche/" + encodeURIComponent(p.id)) ? "Favori" : "Mettre en favori")) : null
           )
         )
       ),
@@ -626,6 +628,9 @@
       onglets.push({ nom: s.nom + (aVerif ? " •" : ""), el: det });
     }
     page.appendChild(H.bureau.onglets(onglets, { cle: "fiche" }));
+    // les pages du carnet, les tâches et les devis qui citent cette plante ([[son nom]])
+    const cite = H.carnet ? H.carnet.citations(p.nom) : [];
+    if (cite.length) page.appendChild(H.carnet.sectionCitees(cite));
     page.appendChild(etiquetteHerbier(p));
     return page;
   }
