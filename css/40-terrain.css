@@ -106,6 +106,8 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 .dialogue-corps { flex: 1; min-width: 0; position: relative; }
 .dialogue-nom { display: block; margin: 0 0 2px; font: 1.2rem/1.1 var(--menu-police); color: var(--menu-choix); letter-spacing: 0.02em; }
 .dialogue-texte { margin: 0; font: 1.4rem/1.25 var(--menu-police); letter-spacing: 0.01em; min-height: 2.5em; white-space: pre-wrap; }
+/* pendant la balade, la bulle se met en haut, dans le ciel : en bas, elle cachait les promeneurs */
+:root[data-vue="balade"] .dialogue { bottom: auto; top: calc(14px + env(safe-area-inset-top)); }
 .dialogue-suite { position: absolute; right: 0; bottom: -8px; font-size: 0.8rem; color: var(--menu-choix); animation: rebond 0.8s infinite; }
 @keyframes rebond { 50% { transform: translateY(3px); } }
 
