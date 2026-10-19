@@ -892,19 +892,20 @@
     conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, zoneToile, panneau);
     // le menu du bas, en quatre petits groupes : voir, avec qui, apprendre, l'île
     // (le passage en vue d'oiseau ou en relief est déjà dans la barre des outils, en haut)
-    const groupe = (titre, ...boutons) => { const b = boutons.filter(Boolean); return b.length ? H.el("div.groupe-pied", null, H.el("span.titre-groupe", null, titre), ...b) : null; };
+    // (chaque groupe a son emoji pour titre ; le nom reste lu par les lecteurs d'écran)
+    const groupe = (titre, nom, ...boutons) => { const b = boutons.filter(Boolean); return b.length ? H.el("div.groupe-pied", { role: "group", "aria-label": nom }, H.el("span.titre-groupe", { title: nom, "aria-hidden": "true" }, titre), ...b) : null; };
     conteneur.appendChild(H.el("div.pied-ile", null,
-      groupe("Voir",
+      groupe("👁️", "Voir",
         H.el("button.bouton.petit", { type: "button", "aria-label": "Dézoomer", title: "Dézoomer", onclick: () => zoomer(-1) }, "−"),
         H.el("button.bouton.petit", { type: "button", "aria-label": "Zoomer", title: "Zoomer", onclick: () => zoomer(1) }, "+")),
-      groupe("Avec qui",
+      groupe("❤️", "Avec qui",
         !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
         H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
         ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null,
         ile.secrete ? H.el("button.bouton.petit", { type: "button", onclick: () => emmenerAnimal(ile) }, "Emmener un animal sur une de mes îles") : null),
-      groupe("Apprendre",
+      groupe("🧠", "Apprendre",
         Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser ses plantes") : null),
-      groupe("L’île",
+      groupe("⚙️", "L’île",
         H.el("button.bouton.petit", { type: "button", onclick: () => exporterIle(ile) }, "Exporter…"),
         H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages"))
     ));

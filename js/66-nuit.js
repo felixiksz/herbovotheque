@@ -3409,6 +3409,7 @@
     const etat = H.ciel.etat();
     const alt = etat.soleil.alt;
     const nuit = alt < -4;
+    nuitBalade = nuit;
     const ici = rouge(avance);
     const haut = S.haut || 0, bas = S.bas || 0;
     ctx.setTransform(dpr, 0, 0, dpr, 0, dpr * haut);
@@ -3524,15 +3525,15 @@
     // les promeneurs, de profil : de vrais pas alternés
     const pas = (decale) => (b.pause ? 4 : (Math.floor(t / 170) + decale) % 4);
     const avec = (q) => S.compagnons.includes(q);
-    if (avec("lolo")) H.pixel.dessiner(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
+    if (avec("lolo")) persoBalade(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
-    if (avec("meme") && !avec("lolo") && !b.baignade) H.pixel.dessiner(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, b.pause ? 0 : Math.floor(t / 200) % 2);
+    if (avec("meme") && !avec("lolo") && !b.baignade) persoBalade(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, b.pause ? 0 : Math.floor(t / 200) % 2);
     // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
     // sortis de l'eau : sur la plage, enroulé·es dans une serviette, on se frotte les cheveux
     if (b.baignade && b.sortieEau && t - b.sortieEau >= SORTIE_EAU) {
       const frotte = Math.floor(t / 260) % 2;
-      H.pixel.dessiner(ctx, "ovoServiette", w * 0.36, sol(w * 0.36) - h * 0.055, 3, frotte, false);
-      if (avec("luigi")) H.pixel.dessiner(ctx, "luigiServiette", w * 0.43, sol(w * 0.43) - h * 0.055, 3, 1 - frotte, true);
+      persoBalade(ctx, "ovoServiette", w * 0.36, sol(w * 0.36) - h * 0.055, 3, frotte, false);
+      if (avec("luigi")) persoBalade(ctx, "luigiServiette", w * 0.43, sol(w * 0.43) - h * 0.055, 3, 1 - frotte, true);
     }
     if (avec("meme") && !avec("lolo") && b.baignade) {
       ctx.save();
@@ -3541,7 +3542,7 @@
       ctx.restore();
     }
     if (!b.baignade) {
-      if (avec("luigi")) H.pixel.dessiner(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
+      if (avec("luigi")) persoBalade(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
       if (b.assis) {
         // une pierre plate au bord du chemin, et ƟvƟ assis·e dessus, de dos
         const px = w * 0.42, py = sol(px) - h * 0.06;
@@ -3549,8 +3550,8 @@
         ctx.beginPath(); ctx.ellipse(px, py - 6, 26, 9, 0, Math.PI, 0); ctx.lineTo(px + 26, py); ctx.lineTo(px - 26, py); ctx.fill();
         ctx.fillStyle = nuit ? "#2a2c55" : "#b8a07e";
         ctx.fillRect(px - 26, py - 4, 52, 4);
-        H.pixel.dessiner(ctx, "ovoDosAssis", px, py - 12, 3, 0);
-      } else H.pixel.dessiner(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
+        persoBalade(ctx, "ovoDosAssis", px, py - 12, 3, 0);
+      } else persoBalade(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
     }
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
@@ -3639,6 +3640,31 @@
     }
     ctx.globalAlpha = 1;
   }
+  // les personnages de la balade : la nuit, dans la lumière de la lune (assombris et bleuis, comme
+  // tout le dehors), au lieu de rester éclairés comme en plein jour
+  let nuitBalade = false;
+  const persosNuit = new Map();
+  function persoBalade(ctx, nom, x, y, ech, image, miroir) {
+    if (!nuitBalade) return H.pixel.dessiner(ctx, nom, x, y, ech, image, miroir);
+    const cle = nom + "|" + image + "|" + (miroir ? 1 : 0) + "|" + ech;
+    let c = persosNuit.get(cle);
+    if (!c) {
+      const s0 = H.pixel.sprite(nom, image), w = Math.ceil(s0.width * ech) + 2, hh = Math.ceil(s0.height * ech) + 2;
+      c = document.createElement("canvas");
+      c.width = w; c.height = hh;
+      const g = c.getContext("2d");
+      H.pixel.dessiner(g, nom, w / 2, hh - 1, ech, image, miroir);
+      g.globalCompositeOperation = "source-atop";
+      g.fillStyle = "rgba(18,22,74,0.58)";
+      g.fillRect(0, 0, w, hh);
+      if (persosNuit.size > 80) persosNuit.clear();
+      persosNuit.set(cle, c);
+    }
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height + 1));
+    ctx.restore();
+  }
   function dessinerBaignade(ctx, b, t, w, h) {
     const eau = h * 0.66;
     // ƟvƟ regarde vers la droite ; Mesi, en face, regarde vers ƟvƟ
@@ -3656,7 +3682,7 @@
       ctx.rect(0, 0, w, eau);
       ctx.clip();
       // (on marche vers la gauche : tout le monde se tourne de ce côté)
-      H.pixel.dessiner(ctx, nom, x, y, 3, sortie ? Math.floor(t / 190) % 4 : 4, sortie ? true : miroir);
+      persoBalade(ctx, nom, x, y, 3, sortie ? Math.floor(t / 190) % 4 : 4, sortie ? true : miroir);
       ctx.restore();
       ronds(ctx, x, eau, t, ph);
     }
@@ -3671,7 +3697,7 @@
       ctx.beginPath();
       ctx.rect(0, 0, w, eau + 3);
       ctx.clip();
-      H.pixel.dessiner(ctx, "flamant", f.x, y, 3, 0, true);
+      persoBalade(ctx, "flamant", f.x, y, 3, 0, true);
       ctx.restore();
       ronds(ctx, f.x, eau, t, 3);
       if (!f.parle && f.x < w * 0.7 && !H.$(".dialogue")) {
