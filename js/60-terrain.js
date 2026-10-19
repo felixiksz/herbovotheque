@@ -913,6 +913,8 @@
     dessiner();
     dessinerCiel();
     toile.addEventListener("click", clic);
+    brancherGestesForme(toile);
+    chargerCalque(ile);
     // le nom et l'aperçu d'une plante : au survol avec la souris, ou au toucher sur téléphone
     toile.addEventListener("pointerdown", (e) => (vue.pointeur = e.pointerType));
     toile.addEventListener("pointermove", (e) => e.pointerType === "mouse" && montrerBulle(e));
@@ -954,6 +956,8 @@
 
   function dessinerOutils() {
     const ile = vue.ile;
+    // (avec l'outil de la forme, le doigt peint sur l'île au lieu de faire défiler la page)
+    if (vue.toile) vue.toile.style.touchAction = vue.outil === "forme" ? "none" : "";
     const liste = (ile.croquis
       ? [["regarder", "Regarder"], ["planter", "Planter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]]
       : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]])
@@ -1010,8 +1014,22 @@
       o.appendChild(H.el("span.cout", null, "Retire la plante ou l’aménagement de la case"));
     } else if (vue.outil === "forme") {
       const mode = vue.formeMode || "ajouter";
-      for (const [id, nom] of [["ajouter", "Ajouter de la terre"], ["enlever", "Enlever de la terre"]]) o.appendChild(H.el("button.bouton.petit" + (mode === id ? ".actif" : ""), { type: "button", onclick: () => { vue.formeMode = id; dessinerOutils(); } }, nom));
-      o.appendChild(H.el("span.cout", null, mode === "ajouter" ? "Clique au bord de l’île (ou dans un trou) pour y ajouter une case : l’île s’agrandit d’elle-même" : "Clique sur une case sans plante pour la rendre à la mer : baies, criques, presqu’îles…"));
+      const modes = [["ajouter", "Pinceau : terre"], ["enlever", "Gomme : mer"], ["contour", "Tracer le contour"]].concat(vue.calque ? [["deplacer", "Déplacer le dessin"]] : []);
+      for (const [id, nom] of modes) o.appendChild(H.el("button.bouton.petit" + (mode === id ? ".actif" : ""), { type: "button", onclick: () => { vue.formeMode = id; dessinerOutils(); } }, nom));
+      if (mode === "ajouter" || mode === "enlever") for (const n of [1, 2, 3]) o.appendChild(H.el("button.bouton.petit.discret-bouton" + ((vue.pinceau || 1) === n ? ".actif" : ""), { type: "button", title: "Taille du pinceau", onclick: () => { vue.pinceau = n; dessinerOutils(); } }, ["fin", "moyen", "large"][n - 1]));
+      if ((vue.formesAvant || []).length) o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: annulerForme }, "Annuler"));
+      o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: importerCalque }, vue.calque ? "Changer de dessin" : "Importer un dessin à décalquer"));
+      if (vue.calque) {
+        o.appendChild(H.el("label.option", null, "Transparence ", H.el("input", { type: "range", min: 0.15, max: 0.9, step: 0.05, value: vue.calque.opacite, oninput: (e) => { vue.calque.opacite = +e.target.value; dessiner(); }, onchange: garderCalque })));
+        o.appendChild(H.el("label.option", null, "Taille ", H.el("input", { type: "range", min: 2, max: Math.max(40, Math.max(ile.cols, ile.lignes) * 3), step: 0.5, value: vue.calque.l, oninput: (e) => { vue.calque.l = +e.target.value; dessiner(); }, onchange: garderCalque })));
+        o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: retirerCalque }, "Retirer le dessin"));
+      }
+      o.appendChild(H.el("span.cout", null, {
+        ajouter: "Glisse le doigt pour peindre de la terre, même au-delà du bord : l’île s’agrandit d’elle-même",
+        enlever: "Glisse le doigt pour rendre des cases à la mer (sauf là où poussent des plantes)",
+        contour: "Fais le tour de la forme voulue d’un seul trait : à l’intérieur la terre, à l’extérieur la mer",
+        deplacer: "Fais glisser le dessin pour le poser où il faut",
+      }[mode]));
     } else {
       o.appendChild(H.el("span.cout", null, "Clique sur une plante pour voir comment elle se porte"));
     }
@@ -1941,6 +1959,7 @@
     }
     if (ile.secrete && ile.mare) dessinerMare(ctx, ile, t);
     if (vue.choisie) { ctx.strokeStyle = "#ff7b00"; ctx.lineWidth = 2.5; ctx.strokeRect(vue.choisie.x * T + 1, vue.choisie.y * T + 1, T - 2, T - 2); }
+    dessinerCalqueEtTrace(ctx);
     ctx.restore();
 
     // ce qui se dresse, du fond vers le devant
@@ -2167,6 +2186,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(vue.fond, 0, 0);
     ctx.setTransform(k / T, 0, 0, k / T, vue.bx * k, vue.by * k);
+    dessinerCalqueEtTrace(ctx);
 
     // en repiquant une plante de la caisse : les cases libres où elle se plairait
     if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
@@ -2514,7 +2534,7 @@
       if (!H.$(".dialogue")) H.lolo.parler(vue.ile);
       return;
     }
-    if (vue.outil === "forme") return agir(c.x, c.y);
+    if (vue.outil === "forme") return;
     if (estVide(vue.ile, c.x, c.y)) return;
     marcherVers(c.x, c.y, () => agir(c.x, c.y));
   }
@@ -2630,24 +2650,211 @@
     ile.cases = bouger(ile.cases); ile.plantes = bouger(ile.plantes); ile.vides = bouger(ile.vides);
     for (const a of ile.animaux || []) { a.x += dx; a.y += dy; }
     ile.cols = Math.max(1, ile.cols + dx); ile.lignes = Math.max(1, ile.lignes + dy);
-    if (vue && vue.ile === ile) { vue.ovo.x += dx; vue.ovo.y += dy; if (vue.ovo.cible) { vue.ovo.cible.x += dx; vue.ovo.cible.y += dy; } }
+    if (vue && vue.ile === ile) {
+      vue.ovo.x += dx; vue.ovo.y += dy; if (vue.ovo.cible) { vue.ovo.cible.x += dx; vue.ovo.cible.y += dy; }
+      if (vue.calque) { vue.calque.x += dx; vue.calque.y += dy; vue.calqueBouge = true; }
+    }
   }
   // ajouter la case x, y (qui peut être juste au-delà du bord : l'île s'agrandit, et la nouvelle
   // rangée reste vide sauf cette case)
   function agrandir(ile, x, y) {
-    const vides = Object.assign({}, ile.vides);
-    ile.vides = vides;
+    ile.vides = Object.assign({}, ile.vides);
     if (x < 0 || y < 0) {
-      const dx = x < 0 ? 1 : 0, dy = y < 0 ? 1 : 0;
+      const dx = Math.max(0, -x), dy = Math.max(0, -y);
       decaler(ile, dx, dy);
-      for (let j = 0; j < ile.lignes; j++) for (let i = 0; i < ile.cols; i++) if ((dx && i === 0) || (dy && j === 0)) ile.vides[cle(i, j)] = 1;
+      for (let j = 0; j < ile.lignes; j++) for (let i = 0; i < ile.cols; i++) if (i < dx || j < dy) ile.vides[cle(i, j)] = 1;
       x += dx; y += dy;
     }
-    if (x >= ile.cols) { for (let j = 0; j < ile.lignes; j++) ile.vides[cle(ile.cols, j)] = 1; ile.cols++; }
-    if (y >= ile.lignes) { for (let i = 0; i < ile.cols; i++) ile.vides[cle(i, ile.lignes)] = 1; ile.lignes++; }
+    while (x >= ile.cols) { for (let j = 0; j < ile.lignes; j++) ile.vides[cle(ile.cols, j)] = 1; ile.cols++; }
+    while (y >= ile.lignes) { for (let i = 0; i < ile.cols; i++) ile.vides[cle(i, ile.lignes)] = 1; ile.lignes++; }
     delete ile.vides[cle(x, y)];
     majTaille(ile);
   }
+  // --- dessiner la forme : le pinceau, le contour tracé à main levée, le dessin à décalquer -----
+  // ce qu'il faut pour revenir en arrière (la forme, ses cases, ses plantes, ses animaux)
+  const copieForme = (ile) => JSON.parse(JSON.stringify({ cols: ile.cols, lignes: ile.lignes, vides: ile.vides || {}, cases: ile.cases || {}, plantes: ile.plantes || {}, animaux: ile.animaux || [], largeur: ile.largeur, longueur: ile.longueur }));
+  function memoriserForme() {
+    vue.formesAvant = (vue.formesAvant || []).concat([copieForme(vue.ile)]).slice(-12);
+  }
+  function annulerForme() {
+    const avant = (vue.formesAvant || []).pop();
+    if (!avant) return;
+    const ile = vue.ile, dx = 0;
+    Object.assign(ile, avant);
+    sauver(ile); dimensionner(); peindreFond(); dessinerOutils(); dessiner();
+  }
+  // la position d'un point sous le doigt, en cases (avec la virgule)
+  function caseFine(e) {
+    const rect = vue.toile.getBoundingClientRect();
+    if (vue.iso) return versCase((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
+    const k = T * vue.zoom;
+    return [(e.clientX - rect.left) / k - vue.bx, (e.clientY - rect.top) / k - vue.by];
+  }
+  // un coup de pinceau : un carré de cases sous le doigt, qu'on ajoute ou qu'on enlève
+  function coupDePinceau(fx, fy) {
+    const ile = vue.ile, r = (vue.pinceau || 1) - 1, ajoute = (vue.formeMode || "ajouter") === "ajouter";
+    let change = false;
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.abs(dx) + Math.abs(dy) > r * 1.5) continue;
+      let x = Math.floor(fx) + dx, y = Math.floor(fy) + dy;
+      if (ajoute) {
+        if (!estVide(ile, x, y)) continue;
+        const avantX = ile.cols, decX = x < 0 ? -x : 0, decY = y < 0 ? -y : 0;
+        agrandir(ile, x, y);
+        // (si l'île s'est décalée, les cases suivantes du même coup se décalent aussi)
+        if (decX || decY) { fx += decX; fy += decY; }
+        change = true;
+      } else {
+        if (estVide(ile, x, y) || (ile.plantes || {})[cle(x, y)]) continue;
+        ile.vides = Object.assign({}, ile.vides, { [cle(x, y)]: 1 });
+        change = true;
+      }
+    }
+    return change;
+  }
+  // le contour tracé à main levée : les cases dont le centre est dedans deviennent la terre, les
+  // autres la mer ; l'île prend l'emprise du contour (les plantes restent, sur leur case de terre)
+  function appliquerContour(trace) {
+    const ile = vue.ile;
+    const dedans = (x, y) => { let c = false; for (let i = 0, j = trace.length - 1; i < trace.length; j = i++) { const [xi, yi] = trace[i], [xj, yj] = trace[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+    const xs = trace.map((q) => q[0]), ys = trace.map((q) => q[1]);
+    const terre = new Set();
+    for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++) for (let x = Math.floor(Math.min(...xs)); x <= Math.ceil(Math.max(...xs)); x++) if (dedans(x + 0.5, y + 0.5)) terre.add(x + "," + y);
+    for (const k of Object.keys(ile.plantes || {})) terre.add(k);
+    if (terre.size < 1) return false;
+    const pts = [...terre].map((k) => k.split(",").map(Number));
+    const x0 = Math.min(...pts.map((q) => q[0])), y0 = Math.min(...pts.map((q) => q[1])), x1 = Math.max(...pts.map((q) => q[0])), y1 = Math.max(...pts.map((q) => q[1]));
+    decaler(ile, -x0, -y0);
+    ile.cols = x1 - x0 + 1; ile.lignes = y1 - y0 + 1;
+    const vides = {};
+    for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) if (!terre.has((x + x0) + "," + (y + y0))) vides[cle(x, y)] = 1;
+    ile.vides = vides;
+    majTaille(ile);
+    return true;
+  }
+  // les gestes de l'outil de la forme sur la toile : peindre en glissant, tracer un contour, déplacer le dessin
+  function brancherGestesForme(toile) {
+    let geste = null, repeint = 0;
+    const repeindreBientot = (fort) => {
+      const t = performance.now();
+      if (!fort && t - repeint < 140) return;
+      repeint = t;
+      dimensionner(); peindreFond(); dessiner();
+    };
+    toile.addEventListener("pointerdown", (e) => {
+      if (!vue || vue.outil !== "forme" || vue.ile.secrete) return;
+      const mode = vue.formeMode || "ajouter";
+      if (mode === "deplacer" && !vue.calque) return;
+      e.preventDefault();
+      toile.setPointerCapture(e.pointerId);
+      const [fx, fy] = caseFine(e);
+      geste = { mode, dernier: [fx, fy], bouge: false };
+      if (mode === "contour") { vue.trace = [[fx, fy]]; dessiner(); }
+      else if (mode === "ajouter" || mode === "enlever") { memoriserForme(); if (coupDePinceau(fx, fy)) repeindreBientot(true); }
+    });
+    toile.addEventListener("pointermove", (e) => {
+      if (!geste) return;
+      const [fx, fy] = caseFine(e), [ax, ay] = geste.dernier;
+      if (Math.hypot(fx - ax, fy - ay) < 0.2) return;
+      geste.bouge = true;
+      if (geste.mode === "contour") { vue.trace.push([fx, fy]); geste.dernier = [fx, fy]; dessiner(); return; }
+      if (geste.mode === "deplacer") { vue.calque.x += fx - ax; vue.calque.y += fy - ay; geste.dernier = [fx, fy]; dessiner(); return; }
+      // (entre deux positions, on peint aussi les cases traversées)
+      const n = Math.ceil(Math.hypot(fx - ax, fy - ay) / 0.5);
+      let change = false;
+      for (let i = 1; i <= n; i++) change = coupDePinceau(ax + ((fx - ax) * i) / n, ay + ((fy - ay) * i) / n) || change;
+      geste.dernier = caseFine(e);
+      if (change) repeindreBientot();
+    });
+    const fin = () => {
+      if (!geste) return;
+      const g = geste;
+      geste = null;
+      vue.ignorerClic = true;
+      setTimeout(() => vue && (vue.ignorerClic = false), 50);
+      if (g.mode === "contour") {
+        const trace = vue.trace || [];
+        vue.trace = null;
+        if (trace.length > 6) { memoriserForme(); if (appliquerContour(trace)) { sauver(vue.ile); H.bruit("plante"); } }
+        dimensionner(); peindreFond(); dessinerOutils(); dessiner();
+        return;
+      }
+      if (g.mode === "deplacer") { garderCalque(); return; }
+      rogner(vue.ile);
+      sauver(vue.ile);
+      if (vue.calqueBouge) garderCalque();
+      vue.casesBonnes = null;
+      repeindreBientot(true);
+      dessinerOutils();
+    };
+    toile.addEventListener("pointerup", fin);
+    toile.addEventListener("pointercancel", fin);
+  }
+  // le dessin à décalquer : une image (la photo d'un plan fait à la main), posée en transparence sur
+  // l'île, en cases ; gardée sur cet appareil seulement
+  const reglagesCalque = (ile) => ((H.local.calques || {})[ile.id]) || null;
+  function garderCalque() {
+    const c = vue.calque, id = vue.ile.id;
+    vue.calqueBouge = false;
+    H.d.majLocal((l) => { l.calques = Object.assign({}, l.calques); l.calques[id] = c ? { x: c.x, y: c.y, l: c.l, opacite: c.opacite } : undefined; if (!c) delete l.calques[id]; });
+  }
+  async function chargerCalque(ile) {
+    const r = reglagesCalque(ile);
+    if (!r) return;
+    const url = await H.kv.lire("calque:" + ile.id).catch(() => null);
+    if (!url || !vue || vue.ile !== ile) return;
+    const img = new Image();
+    img.onload = () => { if (vue && vue.ile === ile) { vue.calque = Object.assign({ img }, r); dessinerOutils(); dessiner(); } };
+    img.src = url;
+  }
+  function importerCalque() {
+    const inp = H.el("input", { type: "file", accept: "image/*" });
+    inp.onchange = async () => {
+      const f = inp.files[0];
+      if (!f) return;
+      const bmp = await createImageBitmap(f).catch(() => null);
+      if (!bmp) return H.toast("Cette image ne s’ouvre pas");
+      const k = Math.min(1, 1400 / Math.max(bmp.width, bmp.height)), c = H.el("canvas", { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+      c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+      const url = c.toDataURL("image/jpeg", 0.85), ile = vue.ile;
+      await H.kv.ecrire("calque:" + ile.id, url);
+      const img = new Image();
+      img.onload = () => {
+        const l = Math.max(ile.cols, ile.lignes);
+        vue.calque = { img, x: 0, y: 0, l, opacite: 0.5 };
+        garderCalque();
+        vue.formeMode = "contour";
+        dessinerOutils(); dessiner();
+        H.toast("Fais le tour de ton dessin d’un seul trait : l’île prendra sa forme.");
+      };
+      img.src = url;
+    };
+    inp.click();
+  }
+  function retirerCalque() {
+    vue.calque = null;
+    garderCalque();
+    dessinerOutils(); dessiner();
+  }
+  // dessiné à plat, dans le repère des cases (une case = T), en relief comme en vue d'oiseau
+  function dessinerCalqueEtTrace(ctx) {
+    const c = vue.calque;
+    if (c && c.img && vue.outil === "forme") {
+      ctx.save();
+      ctx.globalAlpha = c.opacite;
+      ctx.drawImage(c.img, c.x * T, c.y * T, c.l * T, (c.l * T * c.img.height) / c.img.width);
+      ctx.restore();
+    }
+    if (vue.trace && vue.trace.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = "#ff2e9a"; ctx.lineWidth = T * 0.12; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath();
+      vue.trace.forEach(([x, y], i) => (i ? ctx.lineTo(x * T, y * T) : ctx.moveTo(x * T, y * T)));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // les rangées et les colonnes du bord devenues entièrement vides disparaissent
   function rogner(ile) {
     const ligneVide = (j) => { for (let i = 0; i < ile.cols; i++) if (!estVide(ile, i, j)) return false; return true; };
