@@ -355,7 +355,7 @@
         // d'après la photo : une silhouette en pyramide, des étages de branches tout le long du
         // tronc, de plus en plus courts vers le haut ; chaque branche part à l'horizontale puis se
         // redresse franchement au bout, avec de petits rameaux qui pointent vers le haut
-        for (let y = 0; y < 52; y++) { pixel(c, 16, 57 - y, y % 3 === 0 ? "#2f6b35" : "#3f8a42"); pixel(c, 17, 57 - y, "#2f6b35"); }
+        for (let y = 0; y < 52; y++) { pixel(c, 16, 57 - y, "#45291a"); pixel(c, 17, 57 - y, "#2e1c12"); }
         // chaque étage : deux branches qui montent en biais et se redressent, couvertes d'aiguilles
         // (un pixel clair au-dessus de la branche, un sombre dessous), effilées au bout
         const etages = 8;
@@ -364,16 +364,17 @@
           for (const dir of [-1, 1]) {
             for (let s = 1; s <= l; s++) {
               const t = s / l, x = Math.round(16.5 + dir * s), y = Math.round(y0 - s * (0.28 + u * 0.25) - t * t * 2.5);
-              pixel(c, x, y, "#2f6b35");
-              if (t < 0.92) pixel(c, x, y - 1, s % 2 ? "#6cbd5c" : "#4aa63e");
-              if (t < 0.8) pixel(c, x, y + 1, "#1e3d25");
-              if (t > 0.25 && t < 0.7 && s % 2 === 0) { pixel(c, x, y - 2, "#4aa63e"); pixel(c, x, y + 2, "#173a26"); }
+              // la branche en bas, les aiguilles dressées au-dessus ; le tout plutôt foncé
+              pixel(c, x, y, "#2c1c12");
+              if (t < 0.95) pixel(c, x, y - 1, "#1e3d25");
+              if (t < 0.85) pixel(c, x, y - 2, s % 2 ? "#2f6b35" : "#24502f");
+              if (t > 0.15 && t < 0.7 && s % 2 === 0) pixel(c, x, y - 3, "#3a6e40");
             }
           }
         }
         // la pointe, avec son dernier petit étage
-        for (let u = 0; u < 6; u++) { pixel(c, 16, 7 - u, "#2f6b35"); pixel(c, 17, 7 - u, u % 2 ? "#4aa63e" : "#2f6b35"); }
-        for (const dir of [-1, 1]) for (let s = 1; s <= 3; s++) { pixel(c, Math.round(16.5 + dir * s), 6 - s, "#4aa63e"); pixel(c, Math.round(16.5 + dir * s), 7 - s, "#1e3d25"); }
+        for (let u = 0; u < 6; u++) { pixel(c, 16, 7 - u, "#1e3d25"); pixel(c, 17, 7 - u, u % 2 ? "#2f6b35" : "#1e3d25"); }
+        for (const dir of [-1, 1]) for (let s = 1; s <= 3; s++) { pixel(c, Math.round(16.5 + dir * s), 7 - s, "#2c1c12"); pixel(c, Math.round(16.5 + dir * s), 6 - s, "#24502f"); }
       });
       case "figuier": {
         // Le figuier : plusieurs troncs gris et lisses qui se divisent tout bas, une couronne large

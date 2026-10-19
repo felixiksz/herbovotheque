@@ -484,7 +484,7 @@
     // l'araucaria, derrière la maison : un tronc droit et ses étages de branches bien fournis
     {
       const x = -64, h = 760, f = 0.12;
-      trait(x, bas, x, bas - h, unite(9), (i, j, e) => pose(i, j, brume(e < 0 ? "#9a6a3c" : e > 0 ? "#4b3427" : "#7a4520", f)));
+      trait(x, bas, x, bas - h, unite(9), (i, j, e) => pose(i, j, brume(e < 0 ? "#5e3d28" : e > 0 ? "#2e1c12" : "#45291a", f)));
       // D'après la photo : des étages de branches bien séparés tout le long du tronc, de plus en
       // plus courts vers le haut. Chaque branche monte en biais, s'incurve et se redresse au bout ;
       // elle porte des rameaux couverts d'aiguilles serrées qui forment une longue fronde plate,
@@ -495,15 +495,13 @@
         for (let n = 0; n <= N; n++) {
           const t = n / N, [ax, ay] = pt(t), [bx, by] = pt(Math.min(1, t + 0.02));
           const tx = (bx - ax) || s * 0.01, ty = by - ay, l = Math.hypot(tx, ty) || 1, ux = tx / l, uy = ty / l;
-          const larg = L * 0.1 * Math.pow(Math.sin(Math.PI * (0.12 + 0.88 * t)), 0.75) * (1 - t * 0.35);
-          // les aiguilles des deux côtés, couchées vers le bout de la branche
-          for (const cote of [-1, 1]) {
-            const nx = -uy * cote, ny = ux * cote, haut = ny < 0;
-            const ex = ax + nx * larg + ux * larg * 0.7, ey = ay + ny * larg + uy * larg * 0.7;
-            if (hsh(n + k * 41, cote + s * 3) < 0.15) continue;
-            trait(ax, ay, ex, ey, 1, (i2, j2, e, v) => pose(i2, j2, brume(haut ? (v > 0.7 ? "#5f9a4e" : "#3f7a40") : v > 0.7 ? "#2a5e36" : "#173f2a", f)));
+          const larg = L * 0.13 * Math.pow(Math.sin(Math.PI * (0.12 + 0.88 * t)), 0.75) * (1 - t * 0.35);
+          // les rameaux d'aiguilles se dressent au-dessus de la branche, vers le haut et un peu vers le bout
+          if (hsh(n + k * 41, s + 3) > 0.12) {
+            const ex = ax + ux * larg * 0.45 + (hsh(n, k) - 0.5) * p, ey = ay - larg * 1.5;
+            trait(ax, ay, ex, ey, 1, (i2, j2, e, v) => pose(i2, j2, brume(v > 0.75 ? "#3a6e40" : v > 0.35 ? "#24502f" : "#173a26", f)));
           }
-          trait(ax, ay, bx, by, t < 0.5 ? 2 : 1, (i2, j2) => pose(i2, j2, brume(t < 0.25 ? "#5a3a26" : "#2f6b35", f)));
+          trait(ax, ay, bx, by, t < 0.5 ? 2 : 1, (i2, j2) => pose(i2, j2, brume(t < 0.3 ? "#3a2618" : "#1f4229", f)));
         }
       };
       const ETAGES = 11;

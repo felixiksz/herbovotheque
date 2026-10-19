@@ -1,7 +1,7 @@
-// L'écran d'accueil, là où l'on tape le mot de passe : une scène en pixels dans les calanques.
-// Le jour, des plantes médicinales en gros plan devant la mer ; la nuit, un jardin sauvage sous de
-// grands pins parasols, la lune sur l'eau et des lucioles. (Les fiches ne sont pas encore ouvertes : l'heure
-// du lever et du coucher vient d'une petite table pour Marseille.)
+// L'écran d'accueil, là où l'on tape le mot de passe, et l'écran de veille : des plantes
+// médicinales en silhouette, à la Roger Brown, devant les collines des calanques, le jour, le soir
+// et la nuit (des lucioles). (Les fiches ne sont pas encore ouvertes : l'heure du lever et du
+// coucher vient d'une petite table pour Marseille.)
 (function () {
   const H = (window.H = window.H || {});
   const HAUT = 160;
@@ -141,90 +141,106 @@
   }
 
   // --- la nuit : le jardin sauvage sous les pins ---
-  const NUIT = {
-    peindre(c) {
-      degrade(c, ["#0f0d3a", "#15124a", "#1b1d4a", "#232a63", "#3a3aa8", "#5b3c8f"], 0, 88);
-      for (let k = 0; k < W / 2.6; k++) P(c, (hash(k, 1) * W) | 0, (hash(1, k) * hash(k, 2) * 72) | 0, hash(k, 4) < 0.25 ? "#f6ee55" : "#d6eef7");
-      // la lune en croissant, à l'écart du titre
-      const lx = Math.round(W * 0.8), ly = 46;
-      for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { if (dx * dx + dy * dy > 36) continue; P(c, lx + dx, ly + dy, (dx - 3) * (dx - 3) + (dy + 1) * (dy + 1) < 28 ? "#232a63" : "#f3f0dc"); }
-      cap(c, W * 0.55, W * 0.86, 88, 26, "#2e3270", "#262a63");
-      calanques(c, 88, [[-0.05, 0.27, 30, 1], [0.19, 0.46, 22, 2], [0.41, 0.66, 16, 3]], { clair: "#4a4a82", moyen: "#3c3c74", ombre: "#2a2c6a", pins: ["#2e4a5a", "#26405a", "#20344e"], tronc: "#2a1d1b" }, 1);
-      mer(c, 88, 112, ["#3a3aa8", "#26406a", "#1e3358", "#1b1d4a"], "#3a5a8a");
-      for (let y = 90; y < 112; y++) { const l = 2 + ((y - 90) / 4) | 0; if (hash(y, 5) < 0.7) R(c, lx - l / 2 + Math.round(Math.sin(y) * 2), y, l, 1, "#a8d8ec"); }
-      // le jardin sauvage, au clair de lune
-      for (let y = 112; y < HAUT; y++) for (let x = 0; x < W; x++) P(c, x, y, hash(x, y) < 0.2 ? "#0c1f19" : hash(x >> 1, y) < 0.55 ? "#123024" : "#163a2a");
-      for (let x = 0; x < W; x++) P(c, x, 112, "#22403a");
-      const SOMBRE = { feuille: "#22403a", feuilleOmbre: "#1a3530", fleur: "#4a3480", fleurOmbre: "#33265e", fleurClair: "#7a54b8" };
-      for (const [y, d] of [[121, 11], [131, 13]]) for (let x = 4 + (y % 7); x < W; x += d + Math.round(hash(x, y) * 6)) lavande(c, x, y, SOMBRE);
-      herbesFolles(c);
-      // les grands pins parasols, en silhouette contre le ciel ; la lune éclaire le bord de leurs couronnes
-      const lune = [lx, ly];
-      pinParasol(c, Math.round(W * 0.06), Math.round(W * 0.14), 13, Math.max(30, W * 0.24), lune);
-      if (W > 150) pinParasol(c, Math.round(W * 0.98), Math.round(W * 0.9), 18, W * 0.17, lune);
-      if (W > 230) pinParasol(c, Math.round(W * 0.4), Math.round(W * 0.46), 30, W * 0.1, lune);
-    },
-    animer(c, t) {
-      for (let k = 0; k < 14; k++) {
-        const x = (hash(k, 1) * W + Math.sin(t / 900 + k * 2) * 12) | 0, y = (114 + hash(1, k) * 44 + Math.cos(t / 700 + k) * 6) | 0;
-        const v = Math.sin(t / 400 + k * 1.7);
-        if (v > -0.2) { P(c, x, y, "#f6ee55"); if (v > 0.6) { P(c, x + 1, y, "#e9b44c"); P(c, x, y - 1, "#e9b44c"); } }
+  // Les plantes en silhouette, à la Roger Brown : une rangée de plantes médicinales en ombres nettes
+  // (fenouil, lavande, achillée, graminées), chacune selon sa famille, qui se balancent doucement
+  // devant les collines des calanques ; une brume claire monte du vallon derrière elles ; une seule
+  // couleur vive pour les fleurs ; la nuit, des lucioles. Jamais de gris : ombres bleues, lumière chaude.
+  const SIL = (() => {
+    const hsh = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+    const bruit = (x, g) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return hsh(i, g) * (1 - u) + hsh(i + 1, g) * u; };
+    const mel = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const deg = (arr, t) => { t = Math.max(0, Math.min(1, t)); for (let k = 1; k < arr.length; k++) if (t <= arr[k][0]) { const [t0, c0] = arr[k - 1], [t1, c1] = arr[k]; return mel(c0, c1, (t - t0) / (t1 - t0 || 1)); } return arr[arr.length - 1][1]; };
+    const MOM = {
+      jour: { ciel: [[0, [44, 100, 200]], [1, [168, 212, 244]]], lum: [255, 236, 190], lumF: 0, loin: [150, 196, 244], pres: [56, 104, 196], val: 1, sil: "#1c3424" },
+      soir: { ciel: [[0, [74, 50, 150]], [0.6, [236, 116, 120]], [1, [255, 196, 128]]], lum: [255, 168, 116], lumF: 0.3, loin: [246, 162, 168], pres: [96, 64, 156], val: 0.85, sil: "#24183a" },
+      nuit: { ciel: [[0, [10, 10, 44]], [1, [40, 54, 130]]], lum: [70, 96, 190], lumF: 0.5, loin: [62, 80, 168], pres: [20, 26, 92], val: 0.5, sil: "#08120e" },
+    };
+    const K = { clair: [255, 240, 196], milieu: [240, 220, 182], fond: [80, 100, 196], strate: [170, 180, 240], garrigue: [86, 150, 64], garrigueS: [34, 92, 70] };
+    function collines(d, m) {
+      const pose = (x, y, c) => { const k = (y * W + x) * 4, o = ((TRAME[(y & 3) * 4 + (x & 3)] + 0.5) / 16 - 0.5) * 10; d.data[k] = c[0] + o; d.data[k + 1] = c[1] + o; d.data[k + 2] = c[2] + o; d.data[k + 3] = 255; };
+      const CIEL = 20, PIED = 150, N = 6;
+      for (let y = 0; y < HAUT; y++) { const c = deg(m.ciel, y / CIEL); for (let x = 0; x < W; x++) pose(x, y, c); }
+      for (let k = 0; k < N; k++) {
+        const f = k / (N - 1), yb = CIEL + 4 + (PIED - CIEL - 4) * Math.pow(f, 1.05), Hc = 6 + 26 * f, P = 50 + 90 * f, air = Math.pow(1 - f, 0.75) * 0.85;
+        const bleu = mel(m.pres, m.loin, Math.pow(1 - f, 0.8)), v = (0.72 + 0.28 * (1 - f)) * m.val;
+        const teinte = (c) => { let r = mel([c[0] * v, c[1] * v, c[2] * v], bleu, air); if (m.lumF) r = mel(r, m.lum, m.lumF * 0.4 * (1 - f)); return r; };
+        for (let x = 0; x < W; x++) {
+          const u = Math.abs(x - W / 2) + k * 11 + 148, top = yb - Hc * (0.22 + 0.5 * bruit(u / (P * 0.5), k + 15) + 0.6 * Math.pow(bruit(u / (P * 0.3), k + 18), 2.4) + 0.1 * bruit(u / 12, k + 19)) + (bruit(x / 40, k + 77) - 0.5) * 4;
+          for (let y = Math.max(0, Math.floor(top)); y < HAUT; y++) {
+            const dep = y - top, vv = Math.min(1, dep / Math.max(1, yb - top));
+            let c;
+            if (y >= yb) c = hsh(x >> 1, (y >> 1) + k * 7) > 0.55 ? K.garrigue : K.garrigueS;
+            else {
+              c = deg([[0, K.clair], [0.4, K.milieu], [1, K.fond]], Math.pow(vv, 0.8));
+              const sb = (yb - y) / 3 + bruit(x / 14, k + 21) * 1.4, b = Math.floor(sb);
+              if (dep > 1 && b % 3 !== 0 && hsh(x >> 1, y + k * 13) > 0.32) c = hsh(x, y + k) < 0.35 ? K.garrigueS : K.garrigue;
+              else if (sb - b > 0.8) c = mel(c, K.fond, 0.3);
+            }
+            if (dep < 1) c = mel(K.fond, [36, 40, 120], 0.5);
+            pose(x, y, teinte(c));
+          }
+        }
       }
-      for (let k = 0; k < 6; k++) if (Math.sin(t / 250 + k * 3) > 0.7) P(c, (hash(k, 13) * W) | 0, (hash(13, k) * 60) | 0, "#f3f0dc");
-    },
-  };
-
-  // --- le jour : les plantes médicinales en gros plan ---
-  const JOUR = {
-    peindre(c) {
-      degrade(c, ["#6fb6ee", "#a8d8ec", "#d6eef7", "#f3ead8"], 0, 72);
-      calanques(c, 72, [[-0.08, 0.35, 26, 4], [0.27, 0.59, 18, 6], [0.51, 0.82, 24, 8], [0.77, 1.1, 14, 2]], { clair: "#e4e0d8", moyen: "#d6d2cc", ombre: "#b4bad6", pins: ["#a8c4a0", "#94b29a", "#84a29a"], tronc: "#9a8a7a" }, -1);
-      mer(c, 72, 92, ["#d6eef7", "#a8d8ec", "#4ab8cc", "#3aa8c4"], "#f3f0dc");
-      for (let y = 92; y < HAUT; y++) for (let x = 0; x < W; x++) { const v = hash(x, y); P(c, x, y, v < 0.18 ? "#1e3d25" : v < 0.5 ? "#2f6b35" : v < 0.85 ? "#3f8a42" : "#c96a3a"); }
-      for (let x = 0; x < W; x += 2) { const hh = 6 + ((hash(x, 2) * 10) | 0); for (let j = 0; j < hh; j++) P(c, x + Math.round((j / hh) * (hash(x, 3) - 0.5) * 4), 104 - j, j > hh - 3 ? "#6cbd5c" : "#3f8a42"); }
-      const X = (f) => Math.round(f * W);
-      // le fenouil : de grandes tiges et des ombelles jaunes
-      for (const [f, h] of [[0.12, 66], [0.2, 54], [0.81, 70], [0.9, 58]]) {
-        const x = X(f);
-        for (let y = 0; y < h; y++) { const xx = x + Math.round(Math.sin(y / 14) * 2); P(c, xx, HAUT - y, "#7a9a3a"); if (y % 9 === 4) { P(c, xx + 1, HAUT - y, "#9cc77a"); P(c, xx + 2, HAUT - y - 1, "#9cc77a"); } }
-        const tx = x + Math.round(Math.sin(h / 14) * 2), ty = HAUT - h;
-        for (let r = -7; r <= 7; r++) { const yy = ty - 3 + Math.round((r * r) / 14); ovale(c, tx + r, yy, 1, 1, hash(r, x) < 0.5 ? "#f6ee55" : "#e9b44c"); if (r % 2) for (let k = 0; k < 3; k++) P(c, tx + Math.round(r * (k / 3)), ty - Math.round(((yy - ty) * k) / 3) + 2 - k, "#7a9a3a"); }
+      // la brume claire du vallon, derrière les plantes
+      // (la nuit, une brume bleu profond, jamais grisée)
+      const nuit = m === MOM.nuit, brume = nuit ? [44, 64, 156] : mel(mel(m.loin, K.clair, 0.45), m.lum, 0.25), amax = nuit ? 0.6 : 0.82;
+      for (let y = 70; y < HAUT; y++) { const a = Math.min(amax, Math.pow((y - 70) / 90, 0.9) * 0.9); for (let x = 0; x < W; x++) { const k = (y * W + x) * 4; for (let q = 0; q < 3; q++) d.data[k + q] += (brume[q] - d.data[k + q]) * a; } }
+    }
+    function plantes(g, m, t) {
+      const sil = m.sil, PL = [["ombelle", 64, "#f6ee55"], ["epi", 46, "#8a58cc"], ["gram", 34, "#c99a5a"], ["corymbe", 56, "#f3f0dc"], ["epi", 40, "#8a58cc"], ["gram", 30, "#c99a5a"]];
+      const n = Math.max(6, Math.round(W / 22));
+      for (let q = 0; q < n; q++) {
+        const [sorte, h0, fleur] = PL[q % PL.length], h = h0 * (0.9 + hsh(q, 3) * 0.2), x0 = ((q + 0.5) / n) * W, bal = Math.sin(t / 1300 + q * 0.8) * 2;
+        const tige = (x, y, l) => { g.fillStyle = sil; g.fillRect(x | 0, y | 0, l || 2, 1); };
+        const haut = (u) => [x0 + bal * u * u, HAUT - h * u];
+        for (let k = 0; k <= h; k++) {
+          const [x, y] = haut(k / h); tige(x, y);
+          if (sorte !== "gram" && k % 7 === 3 && k < h - 6) for (const s of [-1, 1]) for (let e = 1; e <= 6; e++) tige(x + s * e - (s < 0 ? 1 : 0), y - e * 0.7 + (e > 4 ? e - 4 : 0), e < 4 ? 2 : 1);
+          if (sorte === "gram" && k % 5 === 2 && k < h * 0.7) { const s = (k / 5) % 2 ? 1 : -1; for (let e = 1; e <= 8; e++) tige(x + s * e * 0.7, y - e, 1); }
+        }
+        const [tx, ty] = haut(1);
+        if (sorte === "ombelle") for (let r = -6; r <= 6; r++) { const yy = ty - 2 + (r * r) / 12; g.fillStyle = sil; for (let k = 0; k < 4; k++) g.fillRect((tx + (r * k) / 4) | 0, (ty - ((ty - yy) * k) / 4) | 0, 1, 1); g.fillStyle = fleur; g.fillRect((tx + r) | 0, (yy - 1) | 0, 1, 1); }
+        else if (sorte === "epi") { g.fillStyle = fleur; for (let k = 0; k < 10; k++) g.fillRect((tx + (k % 2 ? 1 : -1)) | 0, (ty + k) | 0, 1, 1); }
+        else if (sorte === "corymbe") { g.fillStyle = fleur; for (let r = -4; r <= 4; r++) { g.fillRect((tx + r) | 0, (ty - 2 + Math.abs(r) * 0.3) | 0, 1, 1); g.fillRect((tx + r) | 0, (ty - 1 + Math.abs(r) * 0.3) | 0, 1, 1); } }
+        else { g.fillStyle = fleur; for (let k = 0; k < 6; k++) { g.fillRect((tx - 2 + k * 0.6) | 0, (ty - k) | 0, 1, 1); g.fillRect((tx + 2 - k * 0.6) | 0, (ty - k) | 0, 1, 1); } }
       }
-      // l'immortelle, argentée, aux bouquets jaune d'or
-      for (const f of [0.27, 0.36, 0.69]) {
-        const x = X(f);
-        for (let k = -6; k <= 6; k += 2) for (let y = 0; y < 18 - Math.abs(k); y++) P(c, x + k + Math.round((y / 18) * k * 0.3), HAUT - y - 10, y % 3 ? "#b8c4a8" : "#9aa88a");
-        for (const [dx, dy] of [[-5, -26], [0, -30], [5, -27], [-2, -24], [3, -23]]) ovale(c, x + dx, HAUT + dy, 2, 1, (a, b) => (hash(a + dx, b + x) < 0.5 ? "#f6c400" : "#e9b44c"));
+      if (m === MOM.nuit) for (let k = 0; k < 14; k++) {
+        const x = (hsh(k, 3) * W + Math.sin(t / 2000 + k) * 14) | 0, y = (70 + hsh(k, 4) * 80 + Math.sin(t / 1400 + k * 2) * 8) | 0;
+        if (Math.sin(t / 500 + k * 5) > 0) { g.fillStyle = "#f6ee55"; g.fillRect(x, y, 1, 1); g.fillStyle = "rgba(246,238,85,0.35)"; g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); }
       }
-      // le thym en coussins fleuris, la sauge, des coquelicots
-      for (const f of [0.05, 0.44, 0.59, 0.96]) { const x = X(f); ovale(c, x, HAUT - 6, 11, 6, (dx, dy) => (hash(x + dx, dy) < 0.32 ? "#d07ab8" : hash(dx, x + dy) < 0.5 ? "#6b7a5a" : "#556a4a")); }
-      for (const f of [0.5, 0.76]) { const x = X(f); for (let k = 0; k < 7; k++) { const a = -Math.PI + (k / 6) * Math.PI; for (let s = 0; s < 10; s++) ovale(c, x + Math.round(Math.cos(a) * s), HAUT - 12 + Math.round(Math.sin(a) * s * 0.8), 1, 1, s > 7 ? "#b4c8b0" : "#8fa88a"); } }
-      for (const [f, h] of [[0.4, 34], [0.55, 40], [0.63, 30], [0.17, 28]]) { const x = X(f); for (let y = 0; y < h; y++) P(c, x + Math.round(Math.sin(y / 6)), HAUT - y, "#4a8a3a"); const yy = HAUT - h; ovale(c, x, yy, 3, 2, "#e5333f"); P(c, x, yy, "#3e2210"); P(c, x - 1, yy - 2, "#ff5b4f"); }
-    },
-    animer(c, t) {
-      for (let k = 0; k < 10; k++) { const x = ((hash(k, 4) * W + t / 120) % W) | 0, y = 78 + ((hash(4, k) * 12) | 0); if (Math.sin(t / 350 + k) > 0.4) R(c, x, y, 2, 1, "#f3f0dc"); }
-      const u = (t / 6000) % 1, bx = Math.round(W * 0.2 + W * 0.6 * u + Math.sin(t / 180) * 6), by = Math.round(110 + Math.sin(t / 260) * 10);
-      P(c, bx, by, "#f6c400"); P(c, bx + 1, by, "#3e2210"); P(c, bx, by - 1, "#d6eef7");
-    },
-  };
+      if (m === MOM.nuit) for (let k = 0; k < 24; k++) { const x = (hsh(k, 8) * W) | 0, y = (hsh(k, 9) * 16) | 0; if (Math.sin(t / 700 + k * 3) > -0.3) { g.fillStyle = "#f3f0dc"; g.fillRect(x, y, 1, 1); } }
+    }
+    return {
+      moment: () => momentAccueil(),
+      peindre(c, mo) { const d = c.createImageData(W, HAUT); collines(d, MOM[mo]); c.putImageData(d, 0, 0); },
+      animer(c, t, mo) { plantes(c, MOM[mo], t); },
+    };
+  })();
+  // le moment de la journée : le soir une heure autour du lever et du coucher du soleil
+  function momentAccueil() {
+    const d = new Date(), h = d.getHours() + d.getMinutes() / 60, m = d.getMonth();
+    if (Math.abs(h - COUCHER[m]) < 0.8 || Math.abs(h - LEVER[m]) < 0.6) return "soir";
+    return h < LEVER[m] || h >= COUCHER[m] ? "nuit" : "jour";
+  }
 
   // Peint la scène (jour ou nuit) dans une toile à la forme de l'écran, et l'anime tant que
   // continuer() le permet. Renvoie de quoi arrêter l'animation.
   function lancerScene(toile, nuit, continuer) {
-    const S = nuit ? NUIT : JOUR;
+    const mo = momentAccueil();
     W = Math.max(70, Math.min(360, Math.round((HAUT * innerWidth) / Math.max(1, innerHeight))));
     toile.width = W; toile.height = HAUT;
     const fond = document.createElement("canvas");
     fond.width = W; fond.height = HAUT;
-    S.peindre(fond.getContext("2d"));
+    SIL.peindre(fond.getContext("2d"), mo);
     const c = toile.getContext("2d");
     c.drawImage(fond, 0, 0);
+    SIL.animer(c, 0, mo);
     let anim = null;
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       let avant = 0;
       const tour = (t) => {
         if (!continuer()) return;
-        if (t - avant > H.cadence(110)) { avant = t; c.drawImage(fond, 0, 0); S.animer(c, t); }
+        if (t - avant > H.cadence(110)) { avant = t; c.drawImage(fond, 0, 0); SIL.animer(c, t, mo); }
         anim = requestAnimationFrame(tour);
       };
       anim = requestAnimationFrame(tour);
