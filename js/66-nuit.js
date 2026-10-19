@@ -483,22 +483,40 @@
     const bas = SOL_DEHORS + 2, brume = (c, f) => { const v = rgb(c), b = rgb("#d6eef7"); return "#" + v.map((x, k) => Math.round(x + (b[k] - x) * f).toString(16).padStart(2, "0")).join(""); };
     // l'araucaria, derrière la maison : un tronc droit et ses étages de branches bien fournis
     {
-      const x = -64, h = 760, f = 0.22;
+      const x = -64, h = 760, f = 0.12;
       trait(x, bas, x, bas - h, unite(9), (i, j, e) => pose(i, j, brume(e < 0 ? "#9a6a3c" : e > 0 ? "#4b3427" : "#7a4520", f)));
-      // des étages de branches, l'un sur deux décalé : chaque branche part du tronc, pend un peu,
-      // et porte des touffes d'aiguilles de plus en plus grosses vers le bout, qui remonte
-      for (let k = 0; k < 14; k++) {
-        const u = k / 13, y = bas - h * (0.22 + 0.76 * u), L = (150 * (1 - u * 0.78) + 20) * (0.85 + hsh(k, 61) * 0.3);
-        for (const s of [-1, 1]) {
-          const tombe = 18 + hsh(k, s + 63) * 14;
-          trait(x, y, x + s * L * 0.9, y + tombe * 0.7, 1, (i, j) => pose(i, j, brume("#4b3427", f)));
-          for (let q = 0.25; q <= 1.0001; q += 0.16) {
-            const bx = x + s * q * L, by = y + Math.sin(q * Math.PI * 0.8) * tombe - (q > 0.85 ? (q - 0.85) * 40 : 0);
-            touffes(bx, by, 9 + q * 9, 6 + q * 4, k * 31 + Math.round(q * 10) + s * 7, false, f);
+      // D'après la photo : des étages de branches bien séparés tout le long du tronc, de plus en
+      // plus courts vers le haut. Chaque branche monte en biais, s'incurve et se redresse au bout ;
+      // elle porte des rameaux couverts d'aiguilles serrées qui forment une longue fronde plate,
+      // large vers le milieu et effilée au bout, comme une plume : claire dessus, sombre dessous.
+      const fronde = (x0, y0, L, angle, courbe, k, s) => {
+        const pt = (t) => { const a = angle - courbe * t * t; return [x0 + s * Math.cos(a) * L * t, y0 - Math.sin(a) * L * t]; };
+        const N = Math.max(8, Math.round(L / p));
+        for (let n = 0; n <= N; n++) {
+          const t = n / N, [ax, ay] = pt(t), [bx, by] = pt(Math.min(1, t + 0.02));
+          const tx = (bx - ax) || s * 0.01, ty = by - ay, l = Math.hypot(tx, ty) || 1, ux = tx / l, uy = ty / l;
+          const larg = L * 0.1 * Math.pow(Math.sin(Math.PI * (0.12 + 0.88 * t)), 0.75) * (1 - t * 0.35);
+          // les aiguilles des deux côtés, couchées vers le bout de la branche
+          for (const cote of [-1, 1]) {
+            const nx = -uy * cote, ny = ux * cote, haut = ny < 0;
+            const ex = ax + nx * larg + ux * larg * 0.7, ey = ay + ny * larg + uy * larg * 0.7;
+            if (hsh(n + k * 41, cote + s * 3) < 0.15) continue;
+            trait(ax, ay, ex, ey, 1, (i2, j2, e, v) => pose(i2, j2, brume(haut ? (v > 0.7 ? "#5f9a4e" : "#3f7a40") : v > 0.7 ? "#2a5e36" : "#173f2a", f)));
           }
+          trait(ax, ay, bx, by, t < 0.5 ? 2 : 1, (i2, j2) => pose(i2, j2, brume(t < 0.25 ? "#5a3a26" : "#2f6b35", f)));
         }
+      };
+      const ETAGES = 11;
+      for (let k = 0; k < ETAGES; k++) {
+        const u = k / (ETAGES - 1), y = bas - h * (0.16 + 0.8 * u), L = (175 * Math.pow(1 - u, 0.9) + 30) * (0.9 + hsh(k, 61) * 0.2);
+        const angle = 0.42 + u * 0.3, courbe = -0.35 - u * 0.15;
+        for (const s of [-1, 1]) fronde(x, y, L, angle + (hsh(k, s + 63) - 0.5) * 0.1, courbe, k, s);
+        // et une branche vue de face, plus courte, qui pointe vers nous (en raccourci)
+        if (k % 2 === 0 && k < ETAGES - 2) fronde(x, y + 4, L * 0.35, 1.25, -0.4, k + 50, hsh(k, 70) < 0.5 ? -1 : 1);
       }
-      touffes(x, bas - h - 6, 12, 20, 999, false, f);
+      // la pointe, droite, avec son dernier petit étage
+      fronde(x, bas - h + 4, 34, 1.45, 0, 99, 1);
+      for (const s of [-1, 1]) fronde(x, bas - h + 26, 26, 0.75, -0.3, 98, s);
     }
     // l'herbothèque, derrière à gauche : la tiny house sur roues, de profil, bois orangé à clin,
     // toit de tuiles en terre cuite, porte verte et ses deux marches
