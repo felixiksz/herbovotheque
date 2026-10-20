@@ -233,7 +233,7 @@
         return;
       }
       const montrees = pressees.slice(0, 4), reste = pressees.length - montrees.length;
-      boite.replaceChildren(
+      boite.replaceChildren(...[
         H.el("div.postits-tete", null,
           H.el("a.postits-titre", { href: "#taches", title: "Ouvrir la to-do liste" }, "To-do"),
           H.el("button.postits-replier", { type: "button", title: "Replier les post-it", "aria-label": "Replier les post-it", onclick: basculer }, "–")),
@@ -246,7 +246,8 @@
               H.el("span", null, t.titre)),
             quand ? H.el("span.postit-quand", null, quand) : null);
         }),
-        reste > 0 ? H.el("a.postit-reste", { href: "#taches" }, "et " + reste + " autre" + (reste > 1 ? "s" : "") + "…") : null);
+        reste > 0 ? H.el("a.postit-reste", { href: "#taches" }, "et " + reste + " autre" + (reste > 1 ? "s" : "") + "…") : null,
+      ].filter(Boolean));
     };
     remplir();
     H.sur("donnees", () => boite.isConnected && remplir());
