@@ -38,7 +38,8 @@
   }
   const enfants = (id) => toutes().filter((p) => (p.parent || null) === (id || null)).sort((a, b) => (a.ordre || a.creeLe) - (b.ordre || b.creeLe));
   const chemin = (p) => { const c = []; let q = p; while (q && q.parent && c.length < 20) { q = page(q.parent); if (q && !q.supprime) c.unshift(q); else break; } return c; };
-  const texteDe = (p) => [p.titre].concat((p.blocs || []).flatMap((b) => [b.texte, b.contenu, b.gauche, b.droite, b.legende].concat((b.lignes || []).flat()))).filter(Boolean).join("\n");
+  const texteDe = (p) => [p.titre].concat((p.blocs || []).flatMap((b) => [b.texte, b.contenu, b.gauche, b.droite, b.legende].concat((b.lignes || []).flat())),
+    (p.relations || []).map((r) => "[[" + r + "]]"), (p.commentaires || []).filter((c) => !c.supprime).map((c) => c.texte)).filter(Boolean).join("\n");
 
   // --- les noms reliés : [[un nom]] ----------------------------------------------------------
   const norme = (t) => H.sansAccents(String(t || "").trim());
@@ -111,7 +112,57 @@
     ["puce", "Liste à puces", "- "], ["num", "Liste numérotée", "1. "], ["todo", "Case à cocher", "[] "],
     ["citation", "Citation", "> "], ["encadre", "Encadré", "!> "], ["toggle", "Partie dépliable", ">> "],
     ["separateur", "Séparateur", "---"], ["image", "Image", ""], ["tableau", "Tableau", ""], ["colonnes", "Deux colonnes", ""],
+    ["vue", "Vue des pages", ""],
   ];
+  // les propriétés d'une page : une date, un statut, et des relations (« Liée à »)
+  const STATUTS = ["", "À faire", "En cours", "Fait"];
+  const DISPOSITIONS = [["liste", "Liste"], ["tableau", "Tableau"], ["galerie", "Galerie"], ["calendrier", "Calendrier"]];
+  const dateCourte = (d) => (d ? new Date(d + "T12:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "");
+  // les pages que montre une vue : les sous-pages de la page, celles d'une étiquette, ou toutes
+  function pagesDeVue(b, p) {
+    const src = b.source || "sous-pages";
+    let liste = src === "toutes" ? toutes() : src.startsWith("etiquette:") ? toutes().filter((q) => (q.etiquettes || []).includes(src.slice(10))) : enfants(p.id);
+    return liste.filter((q) => q.id !== p.id).sort((a, c) => (a.date || "").localeCompare(c.date || "") || (c.modifieLe || 0) - (a.modifieLe || 0));
+  }
+  // l'aperçu d'une page dans une galerie : sa première image, ou ses premiers mots
+  const apercuPage = (q) => { const im = (q.blocs || []).find((x) => x.type === "image" && x.src); if (im) return H.el("img", { src: im.src, alt: "" }); const t = (q.blocs || []).map((x) => x.texte || "").join(" ").trim(); return H.el("p.discret", null, t.slice(0, 110) + (t.length > 110 ? "…" : "")); };
+  function vuePages(b, p, changer) {
+    const zone = H.el("div.vue-pages");
+    const dessinerVue = () => {
+      const liste = pagesDeVue(b, p), dispo = b.disposition || "liste", lien = (q) => H.el("a", { href: "#carnet/" + q.id }, q.titre || "Sans titre");
+      const etiqs = Object.keys(indexEtiquettes());
+      const choixSource = H.el("select", { onchange: (e) => { b.source = e.target.value; changer(); dessinerVue(); } },
+        H.el("option", { value: "sous-pages", selected: (b.source || "sous-pages") === "sous-pages" }, "Les sous-pages de cette page"),
+        H.el("option", { value: "toutes", selected: b.source === "toutes" }, "Toutes les pages"),
+        ...etiqs.map((e) => H.el("option", { value: "etiquette:" + e, selected: b.source === "etiquette:" + e }, "Les pages #" + e)));
+      const choixDispo = H.el("div.pastilles", null, ...DISPOSITIONS.map(([id, nom]) => H.el("button.bouton.petit" + (dispo === id ? ".actif" : ""), { type: "button", onclick: () => { b.disposition = id; changer(); dessinerVue(); } }, nom)));
+      let corps;
+      if (!liste.length) corps = H.el("p.discret", null, "Pas encore de page ici.");
+      else if (dispo === "tableau") corps = H.el("table.tableau-carnet.tableau-vue", null,
+        H.el("tr", null, ["Page", "Statut", "Date", "Étiquettes", "Modifiée"].map((t) => H.el("th", null, t))),
+        ...liste.map((q) => H.el("tr", null, H.el("td", null, lien(q)), H.el("td", null, q.statut || ""), H.el("td", null, dateCourte(q.date)),
+          H.el("td", null, (q.etiquettes || []).map((e) => "#" + e).join(" ")), H.el("td", null, new Date(q.modifieLe || q.creeLe).toLocaleDateString("fr-FR")))));
+      else if (dispo === "galerie") corps = H.el("div.galerie-vue", null, ...liste.map((q) => H.el("a.carte-vue", { href: "#carnet/" + q.id }, apercuPage(q), H.el("b", null, q.titre || "Sans titre"), q.statut ? H.el("span.discret", null, q.statut) : null)));
+      else if (dispo === "calendrier") {
+        // un mois : les pages à leur date (ou, sans date, au jour de leur création)
+        const base = b.mois ? new Date(b.mois + "-01T12:00") : new Date(), an = base.getFullYear(), mo = base.getMonth();
+        const premier = (new Date(an, mo, 1).getDay() + 6) % 7, jours = new Date(an, mo + 1, 0).getDate();
+        const parJour = {};
+        for (const q of liste) { const d = q.date || new Date(q.creeLe || q.modifieLe).toISOString().slice(0, 10); const [y, m, j] = d.split("-").map(Number); if (y === an && m === mo + 1) (parJour[j] = parJour[j] || []).push(q); }
+        const decaler = (n) => { const d = new Date(an, mo + n, 1); b.mois = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); changer(); dessinerVue(); };
+        const cases = [];
+        for (let k = 0; k < premier; k++) cases.push(H.el("div.jour-vue.vide"));
+        for (let j = 1; j <= jours; j++) cases.push(H.el("div.jour-vue", null, H.el("span.num-jour", null, String(j)), ...(parJour[j] || []).map(lien)));
+        corps = H.el("div.calendrier-vue", null,
+          H.el("div.tete-calendrier", null, H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => decaler(-1) }, "‹"),
+            H.el("b", null, base.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })), H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => decaler(1) }, "›")),
+          H.el("div.grille-calendrier", null, ...["lun", "mar", "mer", "jeu", "ven", "sam", "dim"].map((d) => H.el("div.nom-jour", null, d)), ...cases));
+      } else corps = H.el("ul.liste-vue", null, ...liste.map((q) => H.el("li", null, lien(q), q.statut ? H.el("span.discret", null, " · " + q.statut) : null, q.date ? H.el("span.discret", null, " · " + dateCourte(q.date)) : null)));
+      zone.replaceChildren(H.el("div.reglages-vue", null, choixSource, choixDispo), corps);
+    };
+    dessinerVue();
+    return zone;
+  }
   const TEXTUELS = new Set(["p", "h1", "h2", "h3", "puce", "num", "todo", "citation", "encadre", "toggle"]);
   const COULEURS_ENCADRE = ["#fff3c4", "#dcefd6", "#d8e6fb", "#f7dde6", "#efe3d3"];
 
@@ -322,6 +373,7 @@
             b.lignes[0].length > 1 ? H.el("button.bouton-crayon", { type: "button", title: "Retirer la dernière colonne", onclick: () => { b.lignes.forEach((r) => r.pop()); changer(); dessinerT(); } }, "− colonne") : null)));
           break;
         }
+        case "vue": ligne.appendChild(vuePages(b, p, changer)); break;
         case "colonnes":
           ligne.append(H.el("div.colonnes-carnet", null,
             editable("texte-bloc", () => b.gauche || "", { vide: "Colonne de gauche", changer: (v) => { b.gauche = v; changer(); } }),
@@ -343,6 +395,52 @@
       H.el("input.ajout-etiquette", { placeholder: "+ étiquette", list: "liste-etiquettes", onkeydown: (ev) => { if (ev.key === "Enter" && ev.target.value.trim()) { const e = ev.target.value.trim().replace(/^#/, "").toLowerCase().replace(/\s+/g, "-"); p.etiquettes = [...new Set((p.etiquettes || []).concat(e))]; garder(p); dessinerEtiq(); } } }),
       H.el("datalist#liste-etiquettes", null, Object.keys(indexEtiquettes()).map((e) => H.el("option", { value: e }))));
     dessinerEtiq();
+    // les propriétés : la date, le statut, les relations vers d'autres pages, plantes, jardins, clients
+    const proprietes = H.el("div.proprietes-page");
+    const dessinerProps = () => {
+      const relations = H.el("span.relations-page", null, ...(p.relations || []).map((r) => H.el("span.etiquette-page", null, H.el("a", { href: cible(r) ? "#" + cible(r).hash : "#carnet" }, r),
+        H.el("button", { type: "button", "aria-label": "Retirer la relation", onclick: () => { p.relations = p.relations.filter((x) => x !== r); garder(p); dessinerProps(); } }, "×"))),
+        H.el("input.ajout-etiquette", { placeholder: "+ relier", list: "liste-reliables", onkeydown: (ev) => { if (ev.key === "Enter" && ev.target.value.trim()) { p.relations = Array.from(new Set((p.relations || []).concat(ev.target.value.trim()))); garder(p); dessinerProps(); } } }),
+        H.el("datalist#liste-reliables", null, nomsReliables().slice(0, 400).map((x) => H.el("option", { value: x.nom }))));
+      proprietes.replaceChildren(
+        H.el("label.propriete", null, H.el("b", null, "Date"), H.el("input", { type: "date", value: p.date || "", onchange: (e) => { p.date = e.target.value || undefined; garder(p); } })),
+        H.el("label.propriete", null, H.el("b", null, "Statut"), H.el("select", { onchange: (e) => { p.statut = e.target.value || undefined; garder(p); } }, STATUTS.map((s) => H.el("option", { value: s, selected: (p.statut || "") === s }, s || "—")))),
+        H.el("div.propriete", null, H.el("b", null, "Liée à"), relations));
+    };
+    dessinerProps();
+    // les commentaires, au bas de la page
+    const qui = H.monde === "mesi" ? "Mesi" : "ƟvƟ";
+    const commentaires = H.el("section.commentaires-carnet");
+    const dessinerComm = () => {
+      const champ = H.el("textarea", { rows: 2, placeholder: "Un commentaire…" });
+      const liste = (p.commentaires || []).filter((c) => !c.supprime);
+      commentaires.replaceChildren(H.el("h3", null, "Commentaires" + (liste.length ? " (" + liste.length + ")" : "")),
+        ...liste.map((c) => H.el("div.commentaire", null, H.el("b", null, c.qui), H.el("span.discret", null, " · " + new Date(c.le).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })),
+          H.el("button.bouton-crayon", { type: "button", title: "Retirer le commentaire", onclick: () => { c.supprime = true; garder(p); dessinerComm(); } }, "×"), H.el("p", { html: rendre(c.texte) }))),
+        H.el("div.ajout-commentaire", null, champ, H.el("button.bouton.petit", { type: "button", onclick: () => { const t = champ.value.trim(); if (!t) return; p.commentaires = (p.commentaires || []).concat({ id: uid("com"), qui, texte: t, le: H.maintenant() }); garder(p); dessinerComm(); } }, "Commenter")));
+    };
+    dessinerComm();
+    // les pièces jointes (un PDF, un plan, une photo…) : gardées dans la page, 1,5 Mo au plus chacune
+    const pieces = H.el("section.pieces-carnet");
+    const dessinerPieces = () => {
+      const liste = (p.pieces || []).filter((x) => !x.supprime);
+      const taille = (n) => n > 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1e3)) + " ko";
+      pieces.replaceChildren(H.el("h3", null, "Pièces jointes" + (liste.length ? " (" + liste.length + ")" : "")),
+        ...liste.map((x) => H.el("div.piece", null, H.el("a", { href: x.data, download: x.nom }, x.nom), H.el("span.discret", null, " · " + taille(x.taille)),
+          H.el("button.bouton-crayon", { type: "button", title: "Retirer", onclick: async () => { if (!(await H.confirmer("Retirer « " + x.nom + " » de la page ?"))) return; x.supprime = true; delete x.data; garder(p); dessinerPieces(); } }, "×"))),
+        H.el("button.bouton.petit", { type: "button", onclick: () => {
+          const inp = H.el("input", { type: "file" });
+          inp.onchange = () => {
+            const f = inp.files[0]; if (!f) return;
+            if (f.size > 1.5e6) return H.toast("Ce fichier est trop lourd (1,5 Mo au plus) : il ralentirait la synchronisation.");
+            const lec = new FileReader();
+            lec.onload = () => { p.pieces = (p.pieces || []).concat({ id: uid("pj"), nom: f.name, type: f.type, taille: f.size, data: lec.result, le: H.maintenant() }); garder(p); dessinerPieces(); };
+            lec.readAsDataURL(f);
+          };
+          inp.click();
+        } }, "Joindre un fichier"));
+    };
+    dessinerPieces();
     const fav = estFavori("carnet/" + p.id);
     const outils = H.el("div.outils-page",
       null,
@@ -357,10 +455,11 @@
     const sous = enfants(p.id), cite = p.titre ? citations(p.titre) : [];
     return H.el("article.page-carnet", null,
       H.el("nav.fil-ariane", null, H.el("a", { href: "#carnet" }, "Carnet"), ...chemin(p).flatMap((q) => [" / ", H.el("a", { href: "#carnet/" + q.id }, q.titre || "Sans titre")])),
-      titre, etiquettes, outils, zoneBlocs,
+      titre, etiquettes, proprietes, outils, zoneBlocs,
       H.el("button.ajout-bloc", { type: "button", onclick: () => inserer(p.blocs.length, bloc("p")) }, "+ Ajouter un bloc"),
       sous.length ? H.el("section.sous-pages", null, H.el("h3", null, "Sous-pages"), H.el("ul", null, sous.map((s) => H.el("li", null, H.el("a", { href: "#carnet/" + s.id }, s.titre || "Sans titre"))))) : null,
-      cite.length ? sectionCitees(cite) : null);
+      cite.length ? sectionCitees(cite) : null,
+      pieces, commentaires);
   }
   function sectionCitees(liste) {
     return H.el("section.citations-carnet", null, H.el("h3", null, "Cité dans"),

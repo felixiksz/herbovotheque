@@ -193,6 +193,34 @@
 .etiquette-carnet small { color: color-mix(in srgb, var(--encre) 45%, transparent); }
 .lien-corbeille { color: var(--encre-douce); }
 .page-carnet { max-width: 760px; }
+/* les propriétés d'une page (date, statut, relations), les vues, les commentaires, les pièces jointes */
+.proprietes-page { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; margin: 2px 0 10px; font-size: 0.95rem; }
+.proprietes-page .propriete { display: contents; }
+.proprietes-page .propriete > b { font-weight: normal; color: var(--encre-douce); }
+.proprietes-page input[type="date"], .proprietes-page select { justify-self: start; }
+.relations-page { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vue-pages { border: 1px solid var(--filet); padding: 8px 10px; margin: 4px 0; }
+.reglages-vue { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.liste-vue { list-style: none; padding: 0; margin: 0; }
+.liste-vue li { padding: 2px 0; }
+.galerie-vue { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.carte-vue { display: grid; gap: 4px; padding: 6px; border: 1px solid var(--filet); text-decoration: none; color: inherit; }
+.carte-vue img { width: 100%; height: 90px; object-fit: cover; }
+.carte-vue p { margin: 0; font-size: 0.85rem; }
+.tete-calendrier { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; text-transform: capitalize; }
+.grille-calendrier { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.nom-jour { font-size: 0.8rem; color: var(--encre-douce); text-align: center; }
+.jour-vue { min-height: 54px; border: 1px solid var(--filet); padding: 2px 4px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.jour-vue.vide { border-color: transparent; }
+.jour-vue .num-jour { color: var(--encre-douce); }
+.commentaires-carnet, .pieces-carnet { margin-top: 26px; padding-top: 10px; border-top: 1px solid var(--filet); }
+.commentaires-carnet h3, .pieces-carnet h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: .05em; color: var(--encre-douce); }
+.commentaire { padding: 6px 0; border-bottom: 1px dashed var(--filet); }
+.commentaire p { margin: 4px 0 0; }
+.ajout-commentaire { display: grid; gap: 6px; margin-top: 8px; }
+.ajout-commentaire textarea { width: 100%; }
+.ajout-commentaire .bouton { justify-self: start; }
+.piece { padding: 3px 0; }
 .fil-ariane { font-size: 0.85rem; color: var(--encre-douce); margin-bottom: 6px; }
 .fil-ariane a { color: inherit; }
 .titre-carnet { font: 400 2.2rem/1.25 var(--titre); margin: 4px 0 6px; outline: none; }
