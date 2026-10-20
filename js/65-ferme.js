@@ -2084,7 +2084,19 @@
     }
   }
 
-  H.ferme = { scene: () => scene, fond: () => fond, aUnBassin: () => casesBassin().length > 0,
+  // le paysage du fond (le ciel, les calanques, la mer), au moment présent, pour d'autres écrans
+  // (les jardins en relief) : peint à part, sans toucher à celui de la ferme
+  const paysages = new Map();
+  function paysage() {
+    const mo = moment(), cle = mo.periode + mo.cote;
+    if (!paysages.has(cle)) {
+      const avant = [fond, fc, nuit, cote, periode, W, Ht];
+      nuit = mo.nuit; cote = mo.cote; periode = mo.periode; W = 320; Ht = 180;
+      try { peindreFond(); paysages.set(cle, fond); } finally { [fond, fc, nuit, cote, periode, W, Ht] = avant; }
+    }
+    return paysages.get(cle);
+  }
+  H.ferme = { scene: () => scene, fond: () => fond, paysage, aUnBassin: () => casesBassin().length > 0,
     // les bêtes de la nuit, pour qu'on les voie aussi passer depuis la maison
     betes: { RENARD, RENARD_PAS, SANGLIER, SANGLIER_PAS, MARCASSIN, MARCASSIN_PAS, HERISSON, HERISSON_PAS, PAL_BETES, PAL_BASSIN } };
   H.vues.village = {

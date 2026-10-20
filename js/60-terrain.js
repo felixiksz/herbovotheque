@@ -1941,9 +1941,21 @@
     ctx.clearRect(0, 0, vue.fond.width, vue.fond.height);
     ctx.fillStyle = "#8fc3dc";
     ctx.fillRect(0, 0, vue.fond.width, vue.fond.height);
+    // au fond, les mêmes calanques que derrière la ferme, au moment présent : l'horizon au tiers
+    // du haut, le ciel prolongé au-dessus, la mer en dessous (en gros pixels entiers, sans flou)
+    const pay = H.ferme && H.ferme.paysage && H.ferme.paysage();
+    if (pay) {
+      const k = Math.max(1, Math.ceil(vue.fond.width / pay.width)), hz = Math.round(vue.fond.height * 0.3), y0 = hz - 90 * k;
+      const bord = (y) => { const d = pay.getContext("2d").getImageData(0, y, 1, 1).data; return "rgb(" + d[0] + "," + d[1] + "," + d[2] + ")"; };
+      ctx.fillStyle = bord(0); ctx.fillRect(0, 0, vue.fond.width, Math.max(0, y0));
+      ctx.fillStyle = bord(pay.height - 1); ctx.fillRect(0, y0 + pay.height * k - 1, vue.fond.width, vue.fond.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(pay, Math.round((vue.fond.width - pay.width * k) / 2), y0, pay.width * k, pay.height * k);
+      ctx.imageSmoothingEnabled = true;
+    }
     ctx.setTransform(z, 0, 0, z, 0, 0);
     const W = vue.fond.width / z, Hh = vue.fond.height / z;
-    for (let i = 0; i < 18; i++) H.aqua.tache(ctx, r, r() * W, r() * Hh, 40 + r() * 80, 30 + r() * 60, i % 2 ? "#6aa9c9" : "#bfe0ec", { alpha: 0.05, couches: 8 });
+    if (!pay) for (let i = 0; i < 18; i++) H.aqua.tache(ctx, r, r() * W, r() * Hh, 40 + r() * 80, 30 + r() * 60, i % 2 ? "#6aa9c9" : "#bfe0ec", { alpha: 0.05, couches: 8 });
     // les deux tranches du bloc : un liseré d'herbe, la terre et ses cailloux, puis la roche
     const C = ile.cols, Lg = ile.lignes;
     const tranche = (a, b, clair) => {
