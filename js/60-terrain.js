@@ -974,7 +974,6 @@
         if (vue) vue.lolo.course = c;
       });
     }
-    if (!ile.croquis) vue.minuteurMesi = setInterval(visiteSpontanee, 60e3);
     if (ile.secrete && !H.jeu.vu.ileSecrete) {
       H.jeu.vu.ileSecrete = H.maintenant();
       H.d.changer("jeu");
@@ -3226,6 +3225,7 @@
       ? "Ouf, je suis un peu fatigué·e… Une petite pause, ou quelques flashcartes pour reprendre des forces ?"
       : "Il me manque " + manque.join(" et ") + ". Quelques flashcartes et on s’y remet !" }]);
     H.bruit("erreur");
+    if (fatigue) prevoirCrepe();
     return false;
   }
 
@@ -3376,23 +3376,9 @@
     actions.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.fiche.carte(p.id) }, "Voir la fiche"));
     P.appendChild(actions);
     dessiner();
-    if (!ile.croquis && Math.random() < 0.3) appelerMesi(false, p);
   }
 
   // --- Mesi et ses « bâtons » (la MTC, sa spécialité) ----------------------------------
-  function astuceMTC(p) {
-    const v = p.valeurs || {};
-    if (!v.mtcSaveur && !v.mtc) return null;
-    const premiere = String(v.mtc || "").split("\n").map((l) => l.replace(/^[•\-–#\s]+/, "").replace(/\*\*/g, "").trim()).filter(Boolean)[0] || "";
-    const phrases = [];
-    if (v.mtcSaveur) phrases.push({ qui: "luigi", texte: "En médecine chinoise, saveur et nature " + H.duNom(p) + " : " + v.mtcSaveur.toLowerCase().replace(/\s*-\s*/g, ", ").replace(/^saveurs?\s*:?\s*/, "") + "." });
-    if (premiere) {
-      phrases.push({ qui: "luigi", texte: "Dans sa fiche MTC, on lit :" });
-      citer(premiere).forEach((texte) => phrases.push({ qui: "luigi", texte }));
-    }
-    return phrases;
-  }
-
   // Les lignes de la rubrique MTC d'une plante, sans la mise en forme (renvois suivis).
   const lignesMTC = (p, champ) => H.lignesFiche(p, champ || "mtc");
   // une longue ligne de fiche, découpée en bulles d'environ 240 signes, sans couper une phrase
@@ -3563,12 +3549,30 @@
     ctx.restore();
   }
 
-  // De temps en temps, Mesi appelle au loin pendant qu'ƟvƟ jardine.
-  function visiteSpontanee() {
-    if (!vue || vue.luigi || document.visibilityState === "hidden" || Math.random() > 0.25) return;
-    const ids = Object.values(vue.ile.plantes || {}).map((x) => x.p);
-    const p = ids.length ? H.d.plante(ids[Math.floor(Math.random() * ids.length)]) : null;
-    appelerMesi(false, p);
+  // Mesi ne vient que quand on l'appelle, ou quand ƟvƟ n'a plus d'énergie : quelques minutes plus
+  // tard, elle arrive avec une crêpe au chocolat fondu (s'il en reste dans les ressources)
+  function prevoirCrepe() {
+    if (!vue || vue.ile.croquis || vue.crepePrevue || H.ressources.quantite("crepe") < 1) return;
+    vue.crepePrevue = setTimeout(apporterCrepe, (2 + Math.random()) * 60e3);
+  }
+  function apporterCrepe() {
+    if (!vue) return;
+    // (pas pendant une autre conversation, ni si Mesi est déjà là : un peu plus tard)
+    if (vue.luigi || vue.hongrois || H.$(".dialogue") || document.visibilityState === "hidden") { vue.crepePrevue = setTimeout(apporterCrepe, 20e3); return; }
+    vue.crepePrevue = null;
+    if (H.ressources.quantite("crepe") < 1 || H.ressources.energie() > 20) return;
+    H.jouerCriDe(H.monde === "mesi" ? "ovo" : "mesi");
+    const fin = () => H.dialogue.dire([{ qui: "luigi", texte: "ƟvƟ ! Je t’ai vu·e de loin, tu avais l’air épuisé·e… Tiens, une crêpe au chocolat fondu, toute chaude." }])
+      .then(() => {
+        if (!H.ressources.mangerCrepe()) return;
+        H.bruit("recolte");
+        if (H.journal) H.journal.noter("crepe", "Mesi m’a apporté une crêpe au chocolat fondu au jardin");
+        H.toast("+30 d’énergie");
+        return H.dialogue.dire([{ qui: "ovo", texte: H.histoires.auHasard(["Mmmh… Merci Mesi, tu es le·la meilleur·e.", "J’ai du chocolat jusqu’aux lunettes.", "Je repars plein·e d’énergie !"]) }]);
+      })
+      .then(() => partirMesi());
+    vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite: fin, occupe: true };
+    if (document.visibilityState === "hidden") { vue.luigi.x = vue.luigi.cible.x; vue.luigi.cible = null; vue.luigi.ensuite = null; fin(); }
   }
 
   // Lóló arrive au galop (Mémé sur le dos), raconte, puis repart.
@@ -3594,7 +3598,7 @@
     if (vue && document.visibilityState === "hidden") vue.luigi = null;
   }
 
-  function appelerMesi(demande, plante) {
+  function appelerMesi(demande) {
     // pendant le tour en hongrois, Mesi est déjà là, à côté d'ƟvƟ : pas de deuxième Mesi
     if (vue.hongrois || vue.mesiSuit) {
       if (demande && !H.$(".dialogue")) {
@@ -3617,36 +3621,7 @@
         vue.luigi.occupe = true;
         consulterMesi().then(() => partirMesi());
       };
-    } else {
-      // visite spontanée : Mesi appelle au loin, ƟvƟ choisit de lui parler ou de lui faire un câlin
-      if (H.maintenant() - (H.local.derniereVisiteMesi || 0) < 10 * 60e3) return;
-      if (H.$(".dialogue")) return;
-      const astuce = plante && astuceMTC(plante);
-      H.d.majLocal((l) => (l.derniereVisiteMesi = H.maintenant()));
-      H.jouerCriDe(H.monde === "mesi" ? "ovo" : "mesi");
-      H.dialogue.dire([{
-        qui: "luigi",
-        nom: "Mesi, au loin",
-        texte: "ƟvƟ ! Hé, ƟvƟ ! Tu as un moment ?",
-        choix: [{ valeur: "parler", libelle: "Parler avec Mesi" }, { valeur: "calin", libelle: "Lui faire un câlin et des bisous" }],
-      }]).then((choix) => {
-        if (!choix || !vue || vue.luigi) return;
-        const fin = choix === "calin"
-          ? () => calin().then(() => partirMesi())
-          : () => (astuce
-            // (Mesi demande d'abord la permission)
-            ? H.dialogue.dire([{ qui: "luigi", texte: "Est-ce que je peux bâtonsplainer ?", choix: [{ valeur: "oui", libelle: "Vas-y !" }, { valeur: null, libelle: "Pas maintenant" }] }]).then((r) => (r === "oui" ? H.dialogue.dire(astuce) : null))
-            : consulterMesi()).then(() => partirMesi());
-        vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite: fin, occupe: true };
-        if (document.visibilityState === "hidden") {
-          vue.luigi.x = vue.luigi.cible.x;
-          vue.luigi.cible = null;
-          vue.luigi.ensuite = null;
-          fin();
-        }
-      });
-      return;
-    }
+    } else return;
     H.d.majLocal((l) => (l.derniereVisiteMesi = H.maintenant()));
     vue.luigi = { x: -1, y: vue.ovo.y, cible: { x: Math.max(0, vue.ovo.x - 1), y: vue.ovo.y }, ensuite };
     if (document.visibilityState === "hidden") {
@@ -3869,7 +3844,7 @@
     quitter() {
       if (vue) {
         cancelAnimationFrame(vue.anim);
-        clearInterval(vue.minuteurMesi);
+        clearTimeout(vue.crepePrevue);
       }
       H.sons.boucle("pas", false);
       delete document.documentElement.dataset.ile;
