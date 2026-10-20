@@ -3530,7 +3530,13 @@
         ctx.fillRect(px - 26, py - 4, 52, 4);
         persoBalade(ctx, "ovoDosAssis", px, py - 12, 3, 0);
       } else persoBalade(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
+      // la nuit, les humain·es ont une lampe frontale ; allumée, elle éclaire le chemin devant
+      if (nuit) {
+        if (avec("luigi")) lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t);
+        if (!b.assis) lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t);
+      }
     }
+    if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
     poses(S.devant, b, 1.3, (x, taille) => arbreBalade(ctx, x, h * 1.04, taille, moA, dpr) || pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
@@ -3622,6 +3628,40 @@
   // tout le dehors), au lieu de rester éclairés comme en plein jour
   let nuitBalade = false;
   const persosNuit = new Map();
+  // La lampe frontale : un petit boîtier sur le front, et, allumée, un faisceau qui part vers
+  // l'avant et descend sur le chemin, chaud au centre (le filtre en gros pixels le trame en jolies
+  // couleurs) ; il tremble à peine au rythme des pas
+  function lampeFrontale(ctx, nom, x, y, allumee, sol, h, t) {
+    const s0 = H.pixel.sprite(nom, 0), ech = 3, front = y - s0.height * ech + 2.5 * ech, lx = x + s0.width * ech * 0.32;
+    ctx.save();
+    ctx.fillStyle = "#23214a";
+    ctx.fillRect(Math.round(lx - 3), Math.round(front - 2), 5, 4);
+    ctx.fillStyle = allumee ? "#fff6d8" : "#6b6aa0";
+    ctx.fillRect(Math.round(lx), Math.round(front - 1), 2, 2);
+    if (allumee) {
+      // le faisceau plonge vers le chemin, quelques pas devant : trois couches, la plus étroite la
+      // plus vive, pour des bords doux
+      const tremble = Math.sin(t / 170) * 1.2, loin = lx + h * 0.62, bas = sol(loin) - 1;
+      ctx.globalCompositeOperation = "lighter";
+      for (const [ouvre, a] of [[0.2, 0.16], [0.12, 0.2], [0.05, 0.28]]) {
+        const g = ctx.createLinearGradient(lx, front, loin, bas);
+        g.addColorStop(0, "rgba(255,246,216," + a * 2 + ")"); g.addColorStop(0.5, "rgba(255,214,160," + a + ")"); g.addColorStop(1, "rgba(255,170,190,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(lx + 1, front);
+        ctx.lineTo(loin, bas - h * ouvre + tremble);
+        ctx.lineTo(loin, bas + h * ouvre * 0.25 + tremble);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // la tache de lumière sur le chemin, là où le faisceau touche le sol
+      const tx = lx + h * 0.5, ty = sol(tx) - 1, r = ctx.createRadialGradient(tx, ty, 1, tx, ty, h * 0.15);
+      r.addColorStop(0, "rgba(255,236,190,0.5)"); r.addColorStop(1, "rgba(255,180,160,0)");
+      ctx.fillStyle = r;
+      ctx.beginPath(); ctx.ellipse(tx, ty, h * 0.15, h * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
   function persoBalade(ctx, nom, x, y, ech, image, miroir) {
     if (!nuitBalade) return H.pixel.dessiner(ctx, nom, x, y, ech, image, miroir);
     const cle = nom + "|" + image + "|" + (miroir ? 1 : 0) + "|" + ech;
@@ -3790,6 +3830,12 @@
       const toile = H.el("canvas.toile-balade", { "aria-label": "Balade le long des calanques" });
       const bain = H.el("button.bouton", { type: "button", hidden: true, onclick: () => baignade() }, "Aller se baigner");
       const sortir = H.el("button.bouton", { type: "button", hidden: true, onclick: () => sortirDeLeau() }, "Sortir de l’eau");
+      const lampe = H.el("button.bouton", { type: "button", hidden: true, onclick: () => {
+        if (!balade) return;
+        balade.lampe = !balade.lampe;
+        lampe.textContent = balade.lampe ? "Éteindre la lampe frontale" : "Allumer la lampe frontale";
+        H.bruit && H.bruit("clic");
+      } }, "Allumer la lampe frontale");
       const fin = H.el("div.pastilles.fin-balade", { hidden: true },
         bouton("Continuer la balade", () => { fin.hidden = true; deroulerBalade(compagnons); }),
         bouton("Rentrer à la maison", () => H.aller("maison"))
@@ -3797,9 +3843,9 @@
       c.append(H.el("div.cadre-balade", { "aria-label": titre },
         toile,
         H.el("a.sortie-maison", { href: "#maison", title: "Rentrer à la maison" }, "‹ Maison"),
-        H.el("div.pastilles.actions-balade", null, bain, sortir, fin)
+        H.el("div.pastilles.actions-balade", null, lampe, bain, sortir, fin)
       ));
-      balade = { toile, fin, bain, sortir, s: scene(toile, compagnons) };
+      balade = { toile, fin, bain, sortir, boutonLampe: lampe, s: scene(toile, compagnons) };
       if (H.ciel.etat().soleil.alt < 0) H.sons.criquets(true);
       dessinerBalade();
       setTimeout(() => balade && deroulerBalade(compagnons), 700);
