@@ -846,6 +846,32 @@
     ctx.restore();
   }
 
+
+  // --- les icônes en pixels de l'écran des îles (12 × 12, dans le style du bureau) ---------------
+  const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", y: "#f6ee55", n: "#b9834f", N: "#7a4520" };
+  const ICONES_ILE = {
+    oeil: ["............", "............", "...kkkkkk...", ".kkwwwwwwkk.", "kwwwbbbbwwwk", "kwwbbkkbbwwk", "kwwbbkkbbwwk", "kwwwbbbbwwwk", ".kkwwwwwwkk.", "...kkkkkk...", "............", "............"],
+    plus: ["............", "............", "....kkkk....", "....kwwk....", "..kkkwwkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkwwkkk..", "....kwwk....", "....kkkk....", "............", "............"],
+    moins: ["............", "............", "............", "............", "..kkkkkkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkkkkkk..", "............", "............", "............", "............"],
+    cerveau: ["............", "...kkkkkk...", "..kmmMmmmk..", ".kmmmMmMmmk.", ".kmMmMmmMmk.", "kmmMmmMmmmmk", "kmmmMmmMmMmk", ".kmMmmMmmmk.", ".kmmMmmMmmk.", "..kkkkkkkk..", "....kmmk....", "....kkkk...."],
+    exporter: ["..kkkkkk....", "..kwwwwkk...", "..kwwwwkwk..", "..kwwwwkkkk.", "..kwwwwwwwk.", "..kwwwvwwwk.", "..kwwwvvwwk.", "..kwvvvvvwk.", "..kwwwvvwwk.", "..kwwwvwwwk.", "..kwwwwwwwk.", "..kkkkkkkkk."],
+    reglages: ["....kkkk....", ".kk.kyyk.kk.", ".kykkyykkyk.", "..kyyyyyyk..", "kkyykkkkyykk", "kyyykwwkyyyk", "kyyykwwkyyyk", "kkyykkkkyykk", "..kyyyyyyk..", ".kykkyykkyk.", ".kk.kyyk.kk.", "....kkkk...."],
+    patte: ["............", "..kk....kk..", ".knnk..knnk.", ".knnk..knnk.", "..kk.kk.kk..", "....knnk....", "...knnnnk...", "..knnnnnnk..", "..knnnnnnk..", "...knnnnk...", "....kkkk....", "............"],
+  };
+  const imagesIcones = {};
+  function imageIcone(nom) {
+    if (!imagesIcones[nom]) {
+      const c = document.createElement("canvas");
+      c.width = c.height = 12;
+      const g = c.getContext("2d");
+      ICONES_ILE[nom].forEach((l, j) => [...l].forEach((ch, i) => { if (PAL_ICONE[ch]) { g.fillStyle = PAL_ICONE[ch]; g.fillRect(i, j, 1, 1); } }));
+      imagesIcones[nom] = c.toDataURL("image/png");
+    }
+    return imagesIcones[nom];
+  }
+  // un bouton-icône : l'image en pixels, le nom au survol (et pour les lecteurs d'écran)
+  const boutonIcone = (src, nom, onclick, lien) => H.el(lien ? "a.bouton-icone" : "button.bouton-icone", Object.assign({ title: nom, "aria-label": nom }, lien ? { href: lien } : { type: "button", onclick }), H.el("img", { src, alt: "" }));
+
   // --- vue : une île -----------------------------------------------------------------
   let vue = null; // état de l'île affichée
 
@@ -886,29 +912,26 @@
     conteneur.appendChild(H.el("div.terrain-tete", null,
       H.el("a.bouton.discret-bouton", { href: "#terrain" }, "Archipel"),
       H.el("h1", null, ile.nom),
-      (echelle = H.el("span.discret.echelle-ile", null, texteEchelle(ile)))
+      (echelle = H.el("span.discret.echelle-ile", null, texteEchelle(ile))),
+      // l'île : réviser ses plantes, l'exporter, ses réglages
+      H.el("div.actions-ile", null,
+        Object.keys(ile.plantes || {}).length ? boutonIcone(imageIcone("cerveau"), "Réviser les plantes de l’île", null, "#cartes/ile/" + encodeURIComponent(ile.id)) : null,
+        boutonIcone(imageIcone("exporter"), "Exporter (la liste des plantes, ou le croquis)", () => exporterIle(ile)),
+        boutonIcone(imageIcone("reglages"), "Réglages de l’île", () => reglagesIle(ile)))
     ));
     vue.echelle = echelle;
-    conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, zoneToile, panneau);
-    // le menu du bas, en quatre petits groupes : voir, avec qui, apprendre, l'île
-    // (le passage en vue d'oiseau ou en relief est déjà dans la barre des outils, en haut)
-    // (chaque groupe a son emoji pour titre ; le nom reste lu par les lecteurs d'écran)
-    const groupe = (titre, nom, ...boutons) => { const b = boutons.filter(Boolean); return b.length ? H.el("div.groupe-pied", { role: "group", "aria-label": nom }, H.el("span.titre-groupe", { title: nom, "aria-hidden": "true" }, titre), ...b) : null; };
-    conteneur.appendChild(H.el("div.pied-ile", null,
-      groupe("👁️", "Voir",
-        H.el("button.bouton.petit", { type: "button", "aria-label": "Dézoomer", title: "Dézoomer", onclick: () => zoomer(-1) }, "−"),
-        H.el("button.bouton.petit", { type: "button", "aria-label": "Zoomer", title: "Zoomer", onclick: () => zoomer(1) }, "+")),
-      groupe("❤️", "Avec qui",
-        !ile.croquis ? H.el("button.bouton.petit", { type: "button", onclick: () => appelerMesi(true) }, "Appeler Mesi") : null,
-        H.lolo && H.lolo.disponible() ? H.el("button.bouton.petit", { type: "button", onclick: appelerLolo }, "Appeler Lóló") : null,
-        ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null,
-        ile.secrete ? H.el("button.bouton.petit", { type: "button", onclick: () => emmenerAnimal(ile) }, "Emmener un animal sur une de mes îles") : null),
-      groupe("🧠", "Apprendre",
-        Object.keys(ile.plantes || {}).length ? H.el("a.bouton.petit", { href: "#cartes/ile/" + encodeURIComponent(ile.id), title: "Des flashcartes sur les plantes de cette île, pour quand on est fatigué·e" }, "Réviser ses plantes") : null),
-      groupe("⚙️", "L’île",
-        H.el("button.bouton.petit", { type: "button", onclick: () => exporterIle(ile) }, "Exporter…"),
-        H.el("button.bouton.petit", { type: "button", onclick: () => reglagesIle(ile) }, "Réglages"))
-    ));
+    // de chaque côté de l'île, deux barres d'icônes : à gauche la vue (relief ou oiseau, zoom), à
+    // droite ceux qu'on peut appeler
+    const barreVue = H.el("div.barre-ile.barre-vue", null,
+      (vue.boutonVue = boutonIcone(imageIcone("oeil"), vue.iso ? "Vue d’oiseau (touche V)" : "Vue en relief (touche V)", () => basculerVue())),
+      boutonIcone(imageIcone("plus"), "Zoomer", () => zoomer(1)),
+      boutonIcone(imageIcone("moins"), "Dézoomer", () => zoomer(-1)));
+    const barreAmis = H.el("div.barre-ile.barre-amis", null,
+      !ile.croquis ? boutonIcone(H.pixel.portrait("luigi", 2), H.monde === "mesi" ? "Appeler ƟvƟ" : "Appeler Mesi", () => appelerMesi(true)) : null,
+      H.lolo && H.lolo.disponible() ? boutonIcone(H.pixel.portrait("lolo", 2), "Appeler Lóló", appelerLolo) : null,
+      ile.secrete ? boutonIcone(imageIcone("patte"), "Emmener un animal sur une de mes îles", () => emmenerAnimal(ile)) : null,
+      ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null);
+    conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, H.el("div.cadre-toile-ile", null, zoneToile, barreVue, barreAmis), panneau);
     Object.assign(vue, { toile, ciel, infoCiel, outils, options, panneau, zoneToile });
 
     dessinerOutils();
@@ -948,7 +971,7 @@
   function basculerVue() {
     vue.iso = !vue.iso;
     H.d.majLocal((l) => (l.vueDessus = !vue.iso));
-    if (vue.boutonVue) vue.boutonVue.textContent = vue.iso ? "Vue d’oiseau" : "Vue en relief";
+    if (vue.boutonVue) { const n = vue.iso ? "Vue d’oiseau (touche V)" : "Vue en relief (touche V)"; vue.boutonVue.title = n; vue.boutonVue.setAttribute("aria-label", n); }
     dessinerOutils();
     dimensionner(); peindreFond(); dessiner();
   }
@@ -970,7 +993,7 @@
     liste.forEach(([id, nom]) =>
       vue.outils.appendChild(H.el("button.bouton.petit.outil" + (vue.outil === id ? ".actif" : ""), { type: "button", "aria-pressed": String(vue.outil === id), onclick: () => { vue.outil = id; dessinerOutils(); } }, nom))
     );
-    vue.outils.appendChild(H.el("button.bouton.petit.outil.bascule-vue", { type: "button", title: "Touche V", onclick: basculerVue }, vue.iso ? "Vue d’oiseau" : "Vue en relief"));
+
     // options de l'outil
     const o = vue.options;
     o.innerHTML = "";

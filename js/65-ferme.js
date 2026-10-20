@@ -1123,11 +1123,13 @@
       const age = (H.maintenant() - f.le) / FOUILLE_DUREE;
       if (age >= 1 || age < 0) continue;
       const [px, py] = iso(f.x, f.y), x0 = Math.round(px) - cx, y0 = Math.round(py) + 4 - cy;
-      // une plaque sombre et irrégulière, des mottes plus claires ; elle se morcelle en vieillissant
+      // de la terre fraîchement retournée, en mottes brunes (pas un trou noir) ; elle se morcelle en
+      // vieillissant. (son motif dépend de la trace, pas de la place à l'écran : il ne bouge plus
+      // quand la caméra se déplace)
       ovale(c, x0, y0, 7, 3, null, (dx, dy) => {
-        const v = hash(x0 + dx + f.g, y0 + dy), bord = (dx * dx) / 49 + (dy * dy) / 9;
+        const v = hash(dx + f.g, dy + f.g * 3), bord = (dx * dx) / 49 + (dy * dy) / 9;
         if (v < age * 0.9 + bord * 0.5) return null;
-        return v > 0.93 ? "#7a4520" : v > 0.6 ? "#3e2210" : "#2a1d1b";
+        return v > 0.88 ? "#b9834f" : v > 0.6 ? "#9a6a3c" : v > 0.35 ? "#7a4520" : "#5a3a26";
       });
     }
   }
