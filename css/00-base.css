@@ -261,13 +261,10 @@ label { font-size: 0.95rem; }
 :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton.discret-bouton { border-color: transparent; box-shadow: none; background: none; text-decoration: underline; }
 .panneau.fenetre-pixel.large { width: min(900px, 100%); }
 /* Les pages du bureau prennent le même habit que les fenêtres : tout en police pixel (agrandie pour
-   que ses minuscules aient la hauteur de celles d'avant), les titres en gras pixel, les boutons et
-   les champs carrés. Seuls les objets écrits à la main le restent : les étiquettes des sachets et de
-   l'herbier, les lettres, les titres des livres, les noms des pots. */
+   que ses minuscules aient la hauteur de celles d'avant), les boutons et les champs carrés. Seuls les
+   grands titres des pages et les lettres restent écrits à la main. */
 :root :is(.contenu-vue, .contenu-ordi), :root :is(.contenu-vue, .contenu-ordi) * { font-family: var(--menu-police); font-size-adjust: 0.5; letter-spacing: 0.02em; }
-:root :is(.contenu-vue, .contenu-ordi) :is(h1, h2, .titre-carnet) { font-weight: normal; text-shadow: 1px 0 0 currentColor; line-height: 1.25; }
-:root :is(.contenu-vue, .contenu-ordi) h1 { font-size: 1.9rem; } :root :is(.contenu-vue, .contenu-ordi) h2 { font-size: 1.6rem; }
-:root :is(.contenu-vue, .contenu-ordi) :is(.sachet-nom, .etiquette-herbier .titre-etiquette, .lettre-papier .lettre-texte, .lettre-papier .lettre-texte *, .lettre-date, .lettre-signature, .titre-livre, .livre .titre, .nom-pot) { font-family: var(--titre); font-size-adjust: none; letter-spacing: 0.01em; text-shadow: none; }
+:root :is(.contenu-vue, .contenu-ordi) :is(h1, h2, .titre-carnet, .lettre-papier .lettre-texte, .lettre-papier .lettre-texte *, .lettre-date, .lettre-signature) { font-family: var(--titre); font-size-adjust: none; letter-spacing: 0.01em; font-weight: normal; text-shadow: none; }
 :root :is(.contenu-vue, .contenu-ordi) .bouton-trait { font-size: 1.1rem; border: 2px solid var(--encre); border-radius: 0; background: var(--papier); box-shadow: 2px 2px 0 var(--encre); padding: 2px 8px 3px; }
 :root[data-theme="nuit"] :is(.contenu-vue, .contenu-ordi) .bouton-trait { box-shadow: 2px 2px 0 #0b0a24; }
 /* les petites questions (« Sûr·e ? ») : une fenêtre étroite, un peu plus bas */
