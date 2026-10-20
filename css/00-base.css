@@ -544,5 +544,21 @@ html.chargement #ciel { display: none; }
 .bouton-crayon:hover, .bouton-crayon:focus-visible { color: var(--encre); border-color: rgba(35, 33, 74, 0.25); outline: none; }
 
 .chercher-entete { display: none; }
+/* une seule barre de menus : sur les pages du bureau, celle de gauche (le menu du haut disparaît) ;
+   sur un jardin, qui n'a pas la barre de gauche, celui du haut reste */
+:root[data-bureau] #menu { display: none; }
+.carnet-entete { display: none; }
+:root:is([data-bureau], [data-ile]) .carnet-entete { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; font: 1.3rem/1.15 var(--menu-police); color: #23214a; text-decoration: none; padding: 0 6px; }
+:root:is([data-bureau], [data-ile]) .carnet-entete:hover, :root:is([data-bureau], [data-ile]) .carnet-entete:focus-visible { background: var(--bleu-choix); color: #fff; outline: none; }
+.carnet-entete .icone-pixel { width: 20px; height: 20px; image-rendering: pixelated; }
+/* la note rapide : une icône carnet toujours dans le coin (en bas à droite ; sur la ferme, sous ses icônes) */
+.note-rapide-bouton { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 45;
+  width: 46px; height: 46px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: var(--menu-fond); border: 0; box-shadow: 0 0 0 2px var(--menu-cerne), 4px 4px 0 2px rgba(15, 16, 53, 0.55); }
+.note-rapide-bouton .icone-pixel { width: 28px; height: 28px; image-rendering: pixelated; }
+.note-rapide-bouton:hover, .note-rapide-bouton:focus-visible { background: #2c2f6e; outline: 2px solid var(--menu-choix); outline-offset: 2px; }
+:root:not([data-vue]) .note-rapide-bouton, :root[data-vue="dodo"] .note-rapide-bouton { display: none; }
+:root[data-vue="village"] .note-rapide-bouton { bottom: auto; top: calc(66px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); }
+.note-rapide textarea { width: 100%; }
 :root:is([data-bureau], [data-ile]) .chercher-entete { display: inline-flex; flex: 0 0 auto; background: none; border: 0; padding: 2px; cursor: pointer; color: #23214a; }
 .chercher-entete svg { width: 20px; height: 20px; }

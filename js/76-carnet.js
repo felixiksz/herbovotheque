@@ -580,7 +580,39 @@
     conteneur.replaceChildren(H.el("div.carnet", null, colonne(), H.el("div.contenu-carnet", null, corps)));
   }
 
-  H.carnet = { citations, sectionCitees, chercherPartout, estFavori, basculerFavori, indexEtiquettes, rendre };
+  // --- la note rapide : de partout, en un geste (l'icône carnet dans le coin de l'écran, ou Ctrl J),
+  // pour noter avant d'oublier, même les mains pleines de terre (le micro du clavier marche aussi).
+  // Chaque note va en haut de la page « Notes rapides », sous sa date ; on la range plus tard.
+  const ID_NOTES = "page-notes-rapides";
+  function noteRapide() {
+    if (!H.jeu || H.$(".note-rapide")) return;
+    const champ = H.el("textarea", { rows: 5, placeholder: "Ce qu’il ne faut pas oublier…" });
+    let fermer;
+    const garderNote = (e) => {
+      if (e) e.preventDefault();
+      const t = champ.value.trim();
+      if (!t) return fermer();
+      const avant = page(ID_NOTES), maintenant = H.maintenant();
+      const quand = new Date().toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+      const p = Object.assign({ id: ID_NOTES, parent: null, etiquettes: [], creeLe: maintenant }, avant, { titre: (avant && avant.titre) || "Notes rapides", supprime: false,
+        blocs: [bloc("h3", quand)].concat(t.split(/\n+/).map((l) => bloc("p", l)), avant && avant.supprime ? [] : (avant && avant.blocs) || []) });
+      garder(p);
+      fermer();
+      H.toast("Noté dans le carnet, page « Notes rapides ».");
+    };
+    champ.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) garderNote(e); });
+    const corps = H.el("form.note-rapide", { onsubmit: garderNote },
+      H.el("h2", null, "Note rapide"),
+      champ,
+      H.el("div.boutons-bas", null,
+        H.el("a.bouton.discret-bouton", { href: "#carnet/" + ID_NOTES, onclick: () => fermer() }, "Voir les notes"),
+        H.el("button.bouton", { type: "submit" }, "Garder")));
+    fermer = H.fenetre(corps, { classe: "petite" });
+    setTimeout(() => champ.focus(), 0);
+  }
+  document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "j" && H.jeu) { e.preventDefault(); noteRapide(); } });
+
+  H.carnet = { citations, sectionCitees, chercherPartout, estFavori, basculerFavori, indexEtiquettes, rendre, noteRapide };
   H.vues.carnet = {
     afficher(c, params) { conteneur = c; dessiner(params); },
     mettreAJour(params) { if (aEnregistrer) { garder(aEnregistrer); aEnregistrer = null; } dessiner(params); },

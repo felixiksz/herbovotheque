@@ -78,6 +78,10 @@
     return H.el("img.icone-pixel", { src: cacheIcones[cle], alt: "", width: 36, height: 36 });
   }
 
+  // la note rapide, toujours dans un coin de l'écran (un geste, et on écrit)
+  document.body.appendChild(H.el("button.note-rapide-bouton", { type: "button", title: "Note rapide (Ctrl J)", "aria-label": "Note rapide", onclick: () => H.carnet && H.carnet.noteRapide() },
+    icone(ICONES.find((x) => x[0] === "carnet")[2])));
+
   // dans le menu du haut, les réglages en icône : le même rouage gris
   const lienReglages = document.querySelector("#menu .menu-reglages");
   if (lienReglages) { lienReglages.title = "Réglages"; lienReglages.replaceChildren(icone(ICONES.find((x) => x[0] === "reglages")[2])); }
@@ -147,6 +151,12 @@
     let h = H.$("#heure-entete");
     if (!h) {
       h = H.el("span#heure-entete.heure-entete");
+      // le carnet : la dernière page ouverte (ou le carnet), en un clic
+      const carnet = H.el("a.carnet-entete", { href: "#carnet", title: "Le carnet (sa dernière page)", onclick: (e) => {
+        const r = (H.local.recents || []).find((x) => /^carnet\//.test(x.hash));
+        if (r) { e.preventDefault(); location.hash = "#" + r.hash; }
+      } }, icone(ICONES.find((x) => x[0] === "carnet")[2]), H.el("span", null, "Carnet"));
+      H.$("#entete").append(carnet);
       // la loupe : chercher dans tout le jeu (aussi Ctrl K ou ⌘K)
       H.$("#entete").append(H.el("button.chercher-entete", { type: "button", title: "Chercher partout (Ctrl K)", "aria-label": "Chercher partout", onclick: () => H.carnet && H.carnet.chercherPartout(),
         html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>' }), h);
