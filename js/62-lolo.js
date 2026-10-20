@@ -14,18 +14,18 @@
     "Sur le terrain, l’outil « Soleil et sol » peint les coins d’ombre et les sols différents. Les plantes y font très attention !",
     "Une plante mal placée ne meurt jamais : elle pousse lentement, et elle te dit pourquoi quand tu la regardes.",
     "Les plantes prêtes à récolter sont entourées de rose. La récolte donne des graines et du compost.",
-    "Quand il pleut vraiment à Marseille, la pluie arrose tes îles toute seule. Hiii, pratique !",
-    "Une île « croquis » sert à dessiner un vrai jardin à l’échelle, sans ressources. Tu peux en exporter la liste des plantes et l’image.",
+    "Quand il pleut vraiment à Marseille, la pluie arrose tes jardins toute seule. Hiii, pratique !",
+    "Un jardin « croquis » sert à dessiner un vrai projet à l’échelle, sans ressources. Tu peux en exporter la liste des plantes et l’image.",
     "Pailler garde l’eau deux semaines, le purin fortifie la plante, et un rayon de soleil la fait pousser d’un coup.",
     "Tu peux dessiner toi-même le modèle d’une plante, de côté, de dessus et de face : « Dessiner son modèle », dans sa fiche.",
     "Le placard à tisanes garde tes mélanges. Le rôle de chaque plante peut même devenir une flashcarte.",
-    "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton île.",
+    "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton jardin.",
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",
     "Relie ton Mac et ton iPhone dans les Réglages pour retrouver partout le même herbier.",
     "Quand le petit drapeau rose de la boîte aux lettres est levé, une lettre de Mesi t’attend. Tu peux lui répondre, ou programmer une lettre pour plus tard.",
     "Dans une fiche, « Stock dans l’herbothèque » note si un bocal est plein, à moitié, presque vide ou vide. Je te dirai quand c’est la saison pour aller en recueillir !",
     "Dans l’herbothèque, coche « seulement les bocaux presque vides ou vides » pour voir ce qu’il faut aller cueillir.",
-    "Dans la serre, sème au bon mois : ça lève deux fois plus vite. Les bébés plantes se repiquent ensuite sur tes îles pour presque rien.",
+    "Dans la serre, sème au bon mois : ça lève deux fois plus vite. Les bébés plantes se repiquent ensuite dans tes jardins pour presque rien.",
     "Le curcuma, le gingembre et les autres frileuses se plaisent dans la serre. Garde-les au chaud !",
     "La nuit, les flashcartes et le terrain dorment. Viens plutôt te balader avec moi, ou lire dans la cabane à la bougie.",
     "Au labo, les récoltes deviennent des préparations : séchage, teinture, macérat, distillation… Quand c’est prêt, le bocal de l’herbothèque se remplit.",
@@ -186,11 +186,11 @@
     const mois = H.MOIS_LONGS[new Date().getMonth()];
     const r = [];
     if (quoi === "fleurs") {
-      if (ici.length) r.push("Sur cette île, en fleurs en ce moment : " + liste(ici, 5) + " !");
+      if (ici.length) r.push("Dans ce jardin, en fleurs en ce moment : " + liste(ici, 5) + " !");
       if (ailleurs.length) r.push("Dans la nature, en fleurs en " + mois + " : " + liste(ailleurs, 6) + ".");
       if (!r.length) r.push("En " + mois + ", rien ne fleurit d’après tes fiches.");
     } else if (quoi === "recolte") {
-      if (ici.length) r.push("Sur cette île, à récolter en ce moment : " + liste(ici, 5) + " !");
+      if (ici.length) r.push("Dans ce jardin, à récolter en ce moment : " + liste(ici, 5) + " !");
       // les bocaux à remplir dont c'est justement la saison
       const aRefaire = ici.concat(ailleurs).filter((p) => H.d.aRemplir(p));
       if (aRefaire.length) {
@@ -202,7 +202,7 @@
       if (ailleurs.length) r.push("À cueillir dans la nature en " + mois + " : " + liste(ailleurs, 6) + ".");
       if (!r.length) r.push("En " + mois + ", rien n’est à récolter d’après tes fiches.");
     } else {
-      if (ici.length) r.push("Sur cette île, à ressemer en ce moment : " + liste(ici, 5) + ".");
+      if (ici.length) r.push("Dans ce jardin, à ressemer en ce moment : " + liste(ici, 5) + ".");
       if (ailleurs.length) r.push("À semer en " + mois + " : " + liste(ailleurs, 6) + ". Dans la serre, au bon mois, ça lève deux fois plus vite !");
       if (!r.length) r.push("En " + mois + ", rien n’est à semer d’après tes fiches.");
     }
@@ -271,7 +271,7 @@
       c.appendChild(H.el("section.reglage", null,
         H.el("h2", null, "Les surprises du 24 février"),
         H.el("p", null, actif
-          ? "L’aperçu est activé sur cet appareil : l’île de Lóló et Mémé est visible dans l’archipel."
+          ? "L’aperçu est activé sur cet appareil : le jardin de Lóló et Mémé est visible avec les autres jardins."
           : "Sur cet appareil, tout reste caché jusqu’au 24 février."),
         H.el("div.pastilles", null,
           H.el("button.bouton" + (actif ? "" : ".actif"), {

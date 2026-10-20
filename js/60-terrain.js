@@ -505,15 +505,16 @@
   }
 
   function archipel(conteneur) {
+    renommerJardinSecret();
     // (la fenêtre s'appelle déjà « Les îles » : pas de titre, un bouton et une ligne d'aide en pixels)
     conteneur.appendChild(H.el("div.archipel-tete", null,
-      H.el("button.bouton-pixel", { type: "button", onclick: nouvelleIle }, "Nouvelle île"),
-      H.el("p.aide-pixel", null, "Chaque île est un jardin. Les îles de jeu poussent en temps réel ; les croquis servent d’esquisse pour un vrai projet, à l’échelle.")
+      H.el("button.bouton-pixel", { type: "button", onclick: nouvelleIle }, "Nouveau jardin"),
+      H.el("p.aide-pixel", null, "Les jardins de jeu poussent en temps réel ; les croquis servent d’esquisse pour un vrai projet, à l’échelle.")
     ));
     const grille = H.el("div.archipel");
     const liste = iles().filter((i) => i.id !== ILE_SECRETE || ileSecreteOuverte());
     if (!liste.length) {
-      grille.appendChild(H.el("p.discret", null, "Pas encore d’île. Clique sur « Nouvelle île » pour dessiner ton premier jardin."));
+      grille.appendChild(H.el("p.discret", null, "Pas encore de jardin. Clique sur « Nouveau jardin » pour dessiner le premier."));
     }
     liste.forEach((ile) => {
       grille.appendChild(H.el("a.carte-ile", { href: "#terrain/" + encodeURIComponent(ile.id) },
@@ -525,10 +526,10 @@
       ));
     });
     if (!ileSecreteOuverte()) {
-      grille.appendChild(H.el("div.carte-ile.brume", { title: "Une île se cache dans la brume" },
+      grille.appendChild(H.el("div.carte-ile.brume", { title: "Un jardin se cache dans la brume" },
         H.el("span.brume-dessin", { "aria-hidden": "true" }),
         H.el("span.infos-ile", null,
-          H.el("span.nom-ile", null, "Une île dans la brume"),
+          H.el("span.nom-ile", null, "Un jardin dans la brume"),
           H.el("span.mesures-ile", null, "Reviens le 24 février…"))
       ));
     } else if (!(H.jeu.iles || {})[ILE_SECRETE] || ((H.jeu.iles[ILE_SECRETE].version || 1) < VERSION_ILE_SECRETE && !H.jeu.iles[ILE_SECRETE].supprime)) {
@@ -552,10 +553,10 @@
   const cadeaux = () => Object.values(H.jeu.cadeaux || {}).filter((c) => c && !c.supprime);
   function etiquetteIle(ile) {
     const c = ile.cadeau && (H.jeu.cadeaux || {})[ile.cadeau];
-    if (c && !c.supprime) return c.recuLe ? "offerte à " + NOMS[c.pour] + " ✓" : "surprise pour " + NOMS[c.pour] + " · " + dateLisible(c.le);
+    if (c && !c.supprime) return c.recuLe ? "offert à " + NOMS[c.pour] + " ✓" : "surprise pour " + NOMS[c.pour] + " · " + dateLisible(c.le);
     if (ile.aOffrir) return "surprise à offrir";
     if (ile.offertePar) return "cadeau de " + NOMS[ile.offertePar];
-    return ile.croquis ? "croquis" : "île de jeu";
+    return ile.croquis ? "croquis" : "jardin de jeu";
   }
   // la copie du cadeau : l'île telle qu'elle est, et les fiches de toutes ses plantes
   function emballer(ile, c) {
@@ -605,7 +606,7 @@
     H.d.changer("jeu");
     const qui = c.de === "mesi" ? "luigi" : "ovo";
     await H.dialogue.dire([
-      { brut: true, qui, texte: "Surprise ! Je t’ai préparé une île en secret : « " + ile.nom + " »." },
+      { brut: true, qui, texte: "Surprise ! Je t’ai préparé un jardin en secret : « " + ile.nom + " »." },
     ].concat(c.mot ? [{ brut: true, qui, texte: c.mot }] : []).concat(nouvelles ? [{ brut: true, qui, texte: nouvelles > 1 ? "Ses " + nouvelles + " plantes sont aussi dans ton herbothèque, maintenant." : "Sa plante est aussi dans ton herbothèque, maintenant." }] : []));
     H.aller("terrain/" + encodeURIComponent(id));
   }
@@ -628,7 +629,7 @@
       return boite;
     };
     const echelle = choix([["0.25", "25 cm"], ["0.5", "50 cm"], ["1", "1 m"], ["2", "2 m"]], "0.5");
-    const type = choix([["jeu", "Île de jeu", "elle pousse en temps réel"], ["croquis", "Croquis de projet", "à l’échelle, sans ressources"], ["surprise", "Île surprise", "à offrir à " + NOMS[autre()] + ", à la date de ton choix"]], "jeu");
+    const type = choix([["jeu", "Jardin de jeu", "il pousse en temps réel"], ["croquis", "Croquis de projet", "à l’échelle, sans ressources"], ["surprise", "Jardin surprise", "à offrir à " + NOMS[autre()] + ", à la date de ton choix"]], "jeu");
     const expo = choix(EXPOS.map((e) => [e, e]), EXPOS[0]);
     const options = (H.d.champ("sol") || {}).options || [];
     const defaut = ["Calcaire", "Caillouteux", "Sec", "Bien drainé"];
@@ -647,7 +648,7 @@
         e.preventDefault();
         const n = nom.value.trim();
         const L = parseFloat(largeur.value), l = parseFloat(longueur.value), k = parseFloat(echelle.valeur());
-        if (!n) return (msg.textContent = "Donne un nom à l’île.");
+        if (!n) return (msg.textContent = "Donne un nom au jardin.");
         if (!(L > 0 && l > 0)) return (msg.textContent = "Indique des dimensions en mètres.");
         const cols = Math.round(L / k), lignes = Math.round(l / k);
         if (cols > 80 || lignes > 80) return (msg.textContent = "C’est trop grand pour cette échelle : choisis des cases plus grandes (maximum 80 cases de côté).");
@@ -663,7 +664,7 @@
         H.aller("terrain/" + encodeURIComponent(ile.id));
       },
     },
-      H.el("h2", null, "Nouvelle île"),
+      H.el("h2", null, "Nouveau jardin"),
       H.el("label.champ-pixel", null, H.el("span", null, "Nom"), nom),
       H.el("div.ligne-pixel", null,
         H.el("label.champ-pixel", null, H.el("span", null, "Largeur (m)"), largeur),
@@ -675,7 +676,7 @@
       H.el("div.champ-pixel", null, H.el("span", null, "Sol de départ"), sols, H.el("p.aide-menu", null, "Par défaut, un sol de garrigue. Tu pourras ensuite peindre des zones différentes.")),
       H.el("label.champ-pixel", null, H.el("span", null, "Notes"), notes),
       msg,
-      H.el("button.bouton", { type: "submit" }, "Créer l’île")
+      H.el("button.bouton", { type: "submit" }, "Créer le jardin")
     );
     fermer = H.fenetre(formulaire, { classe: "menu-scene.menu-large" });
     majCases();
@@ -685,10 +686,16 @@
   // L'île de Lóló et Mémé : un chemin en forme de cœur, au milieu un bassin (papyrus, nénuphars,
   // grenouilles, canards), et tout autour beaucoup de romarin et de thym.
   const VERSION_ILE_SECRETE = 3;
+  const NOM_JARDIN_SECRET = "Le jardin de Lóló et Mémé";
+  function renommerJardinSecret() {
+    const s = (H.jeu && H.jeu.iles || {})[ILE_SECRETE];
+    if (s && s.nom === "L’île de Lóló et Mémé") s.nom = NOM_JARDIN_SECRET;
+  }
+  H.sur("donnees", renommerJardinSecret);
   function creerIleSecrete() {
     const cols = 22, lignes = 20;
     const ile = {
-      id: ILE_SECRETE, nom: "L’île de Lóló et Mémé", largeur: 11, longueur: 10, caseM: 0.5, cols, lignes,
+      id: ILE_SECRETE, nom: NOM_JARDIN_SECRET, largeur: 11, longueur: 10, caseM: 0.5, cols, lignes,
       croquis: false, secrete: true, version: VERSION_ILE_SECRETE, expo: "Plein soleil", sol: ["Calcaire", "Limoneux", "Bien drainé"],
       notes: "", cases: {}, plantes: {}, creeLe: H.maintenant(),
     };
@@ -882,7 +889,7 @@
   function ouvrirIle(conteneur, id) {
     const ile = (H.jeu.iles || {})[id];
     if (!ile || ile.supprime || (ile.secrete && !ileSecreteOuverte())) {
-      conteneur.appendChild(H.el("p", null, "Cette île n’existe pas (ou pas encore). ", H.el("a", { href: "#terrain" }, "Retour à l’archipel")));
+      conteneur.appendChild(H.el("p", null, "Ce jardin n’existe pas (ou pas encore). ", H.el("a", { href: "#terrain" }, "Retour aux jardins")));
       return;
     }
     const maintenant = H.maintenant();
@@ -906,7 +913,7 @@
 
     const ciel = H.el("canvas.ciel-ile", { height: 70 });
     const infoCiel = H.el("p.info-ciel");
-    const toile = H.el("canvas.toile-ile", { "aria-label": "Plan de l’île " + ile.nom });
+    const toile = H.el("canvas.toile-ile", { "aria-label": "Plan du jardin " + ile.nom });
     const zoneToile = H.el("div.zone-toile", null, toile);
     const outils = H.el("div.outils-terrain");
     const options = H.el("div.options-outil");
@@ -914,14 +921,14 @@
     let echelle = null;
 
     conteneur.appendChild(H.el("div.terrain-tete", null,
-      H.el("a.bouton.discret-bouton", { href: "#terrain" }, "Archipel"),
+      H.el("a.bouton.discret-bouton", { href: "#terrain" }, "Jardins"),
       H.el("h1", null, ile.nom),
       (echelle = H.el("span.discret.echelle-ile", null, texteEchelle(ile))),
       // l'île : réviser ses plantes, l'exporter, ses réglages
       H.el("div.actions-ile", null,
-        Object.keys(ile.plantes || {}).length ? boutonIcone(imageIcone("cerveau"), "Réviser les plantes de l’île", null, "#cartes/ile/" + encodeURIComponent(ile.id)) : null,
+        Object.keys(ile.plantes || {}).length ? boutonIcone(imageIcone("cerveau"), "Réviser les plantes du jardin", null, "#cartes/ile/" + encodeURIComponent(ile.id)) : null,
         boutonIcone(imageIcone("exporter"), "Exporter (la liste des plantes, ou le croquis)", () => exporterIle(ile)),
-        boutonIcone(imageIcone("reglages"), "Réglages de l’île", () => reglagesIle(ile)))
+        boutonIcone(imageIcone("reglages"), "Réglages du jardin", () => reglagesIle(ile)))
     ));
     vue.echelle = echelle;
     // de chaque côté de l'île, deux barres d'icônes : à gauche la vue (relief ou oiseau, zoom), à
@@ -933,7 +940,7 @@
     const barreAmis = H.el("div.barre-ile.barre-amis", null,
       !ile.croquis ? boutonIcone(H.pixel.portrait("luigi", 2), H.monde === "mesi" ? "Appeler ƟvƟ" : "Appeler Mesi", () => appelerMesi(true)) : null,
       H.lolo && H.lolo.disponible() ? boutonIcone(H.pixel.portrait("lolo", 2), "Appeler Lóló", appelerLolo) : null,
-      ile.secrete ? boutonIcone(imageIcone("patte"), "Emmener un animal sur une de mes îles", () => emmenerAnimal(ile)) : null,
+      ile.secrete ? boutonIcone(imageIcone("patte"), "Emmener un animal dans un de mes jardins", () => emmenerAnimal(ile)) : null,
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null);
     conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, H.el("div.cadre-toile-ile", null, zoneToile, barreVue, barreAmis), panneau);
     Object.assign(vue, { toile, ciel, infoCiel, outils, options, panneau, zoneToile });
@@ -966,7 +973,7 @@
       H.jeu.vu.ileSecrete = H.maintenant();
       H.d.changer("jeu");
       H.sons.bornes("galop").then((b) => setTimeout(() => vue && H.dialogue.dire([
-        { qui: "lolo", texte: "Hiii ! Bienvenue sur notre île, ƟvƟ !" },
+        { qui: "lolo", texte: "Hiii ! Bienvenue dans notre jardin, ƟvƟ !" },
         { qui: "meme", texte: "Rrrrrrrr… rrrrrrrr… (Mémé ouvre un œil, sourit, et le referme.)" },
         { qui: "lolo", texte: (H.base.messageIle || "Joyeux anniversaire ! On t’a préparé un petit coin de fleurs rien que pour toi.") },
       ]), b.fin * 1000 + 300));
@@ -998,7 +1005,7 @@
       jardin: ile.croquis
         ? [["regarder", "Regarder"], ["planter", "Planter"], ["retirer", "Retirer"]]
         : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["retirer", "Retirer"]],
-      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"]].concat(ile.secrete ? [] : [["forme", "Forme de l’île"]]),
+      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"]].concat(ile.secrete ? [] : [["forme", "Forme du jardin"]]),
     };
     const mode = modes.chantier.some(([id]) => id === vue.outil) ? "chantier" : "jardin";
     const changerMode = (m) => { if (m !== mode) { vue.outil = modes[m][0][0]; dessinerOutils(); } };
@@ -1027,13 +1034,13 @@
         const bebes = H.serre.bebes();
         if (bebes.length) o.appendChild(ligne("Un bébé de la serre :",
           ...bebes.map(([id, n]) => { const q = H.d.plante(id); return q ? H.el("button.bouton.petit" + (vue.depuisSerre && vue.plante === id ? ".actif" : ""), { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; dessinerOutils(); } }, q.nom + (n > 1 ? " (" + n + ")" : "")) : null; }).filter(Boolean),
-          H.el("button.bouton.petit", { type: "button", title: "Le sol de l’île, et où chaque bébé se plairait", onclick: fenetreCaisse }, "Où les repiquer ?")));
+          H.el("button.bouton.petit", { type: "button", title: "Le sol du jardin, et où chaque bébé se plairait", onclick: fenetreCaisse }, "Où les repiquer ?")));
       }
       if (!ile.croquis && p) {
         o.appendChild(ligne("Coût :", vue.depuisSerre
           ? H.el("span.cout", null, "repiquer un bébé " + H.nomPhrase(p) + " ", pastillesCout(H.serre.coutRepiquage))
           : H.el("span.cout", null, "planter " + H.duNom(p) + " ", pastillesCout(coutPlantation(p)))));
-      } else if (!p) o.appendChild(H.el("div.ligne-option", null, H.el("span.cout", null, "Choisis une plante, puis clique sur une case de l’île.")));
+      } else if (!p) o.appendChild(H.el("div.ligne-option", null, H.el("span.cout", null, "Choisis une plante, puis clique sur une case du jardin.")));
     } else if (vue.outil === "amenager") {
       Object.entries(TUILES).forEach(([id, t]) =>
         o.appendChild(H.el("button.bouton.petit" + (vue.tuile === id ? ".actif" : ""), { type: "button", onclick: () => { vue.tuile = id; dessinerOutils(); } }, t.nom))
@@ -1042,7 +1049,7 @@
     } else if (vue.outil === "zones") {
       EXPOS.forEach((e) => o.appendChild(H.el("button.bouton.petit" + (vue.zone.expo === e ? ".actif" : ""), { type: "button", onclick: () => { vue.zone.expo = e; dessinerOutils(); } }, e)));
       const options = (H.d.champ("sol") || {}).options || [];
-      const det = H.el("details.zone-sols", null, H.el("summary.discret", null, vue.zone.sol.length ? "Sol : " + vue.zone.sol.join(", ") : "Sol : celui de l’île"));
+      const det = H.el("details.zone-sols", null, H.el("summary.discret", null, vue.zone.sol.length ? "Sol : " + vue.zone.sol.join(", ") : "Sol : celui du jardin"));
       det.appendChild(H.el("div.choix-options", null, options.map((s) => H.el("label.option", null, H.el("input", { type: "checkbox", checked: vue.zone.sol.includes(s), onchange: (e) => { vue.zone.sol = e.target.checked ? vue.zone.sol.concat(s) : vue.zone.sol.filter((x) => x !== s); } }), " " + s))));
       o.appendChild(det);
       o.appendChild(H.el("label.option", null, H.el("input", { type: "checkbox", checked: !!vue.voirZones, onchange: (e) => { vue.voirZones = e.target.checked; dessiner(); } }), " montrer les zones"));
@@ -1065,7 +1072,7 @@
         o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: retirerCalque }, "Retirer le dessin"));
       }
       o.appendChild(H.el("span.cout", null, {
-        ajouter: "Glisse le doigt pour peindre de la terre, même au-delà du bord : l’île s’agrandit d’elle-même",
+        ajouter: "Glisse le doigt pour peindre de la terre, même au-delà du bord : le jardin s’agrandit de lui-même",
         enlever: "Glisse le doigt pour rendre des cases à la mer (sauf là où poussent des plantes)",
         contour: "Fais le tour de la forme voulue d’un seul trait : à l’intérieur la terre, à l’extérieur la mer",
         deplacer: "Fais glisser le dessin pour le poser où il faut",
@@ -2753,15 +2760,15 @@
   // emmener un canard, une grenouille, un papillon ou une libellule sur une de ses îles
   function emmenerAnimal(depuis) {
     const mesIles = iles().filter((i) => !i.secrete && !i.supprime);
-    if (!mesIles.length) return H.toast("Crée d’abord une île à toi.");
+    if (!mesIles.length) return H.toast("Crée d’abord un jardin à toi.");
     let fermer;
     const type = H.el("select", null, Object.entries(NOMS_ANIMAUX).map(([id, nom]) => H.el("option", { value: id }, nom.replace(/^(le |la |l’)/, ""))));
     const vers = H.el("select", null, mesIles.map((i) => H.el("option", { value: i.id }, i.nom)));
     const corps = H.el("div", null,
       H.el("h2", null, "Emmener un animal"),
-      H.el("p.discret", null, "Les canards et les grenouilles vont près de l’eau (s’il y a une mare sur l’île), les papillons et les libellules volettent partout."),
+      H.el("p.discret", null, "Les canards et les grenouilles vont près de l’eau (s’il y a une mare dans le jardin), les papillons et les libellules volettent partout."),
       H.el("label", null, "Quel animal ? ", type),
-      H.el("p", null, H.el("label", null, "Sur quelle île ? ", vers)),
+      H.el("p", null, H.el("label", null, "Dans quel jardin ? ", vers)),
       H.el("div.boutons-bas", null, H.el("button.bouton", {
         type: "button",
         onclick() {
@@ -2999,7 +3006,7 @@
         garderCalque();
         vue.formeMode = "contour";
         dessinerOutils(); dessiner();
-        H.toast("Fais le tour de ton dessin d’un seul trait : l’île prendra sa forme.");
+        H.toast("Fais le tour de ton dessin d’un seul trait : le jardin prendra sa forme.");
       };
       img.src = url;
     };
@@ -3237,7 +3244,7 @@
     let fermer;
     const corps = H.el("div.fenetre-caisse", null,
       H.el("h2", null, "Ta caisse et le sol"),
-      H.el("p.discret", null, "Le sol de l’île : " + texteListe(ile.sol) + " · " + (ile.expo || "Plein soleil").toLowerCase() + ". Chaque case peut avoir le sien (outil « Soleil et sol »)."),
+      H.el("p.discret", null, "Le sol du jardin : " + texteListe(ile.sol) + " · " + (ile.expo || "Plein soleil").toLowerCase() + ". Chaque case peut avoir le sien (outil « Soleil et sol »)."),
       bebes.length ? H.el("ul.liste-caisse", null, bebes.map(([id, n]) => {
         const p = H.d.plante(id);
         if (!p) return null;
@@ -3245,7 +3252,7 @@
         return H.el("li", null,
           H.el("b", null, p.nom + " × " + n),
           H.el("span", null, "Sol : " + texteListe(v.sol) + " · exposition : " + texteListe(v.exposition) + (v.arrosage ? " · arrosage " + v.arrosage.toLowerCase() : "")),
-          H.el("span" + (bonnes.length ? ".bon" : ".pas-bon"), null, bonnes.length ? "Se plairait sur " + bonnes.length + (bonnes.length > 1 ? " cases" : " case") + " de cette île." : "Ne se plairait nulle part ici sans changer le sol ou l’ombre."),
+          H.el("span" + (bonnes.length ? ".bon" : ".pas-bon"), null, bonnes.length ? "Se plairait sur " + bonnes.length + (bonnes.length > 1 ? " cases" : " case") + " de ce jardin." : "Ne se plairait nulle part ici sans changer le sol ou l’ombre."),
           H.el("div.pastilles", null,
             bonnes.length ? H.el("button.bouton.petit", { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; vue.outil = "planter"; fermer(); dessinerOutils(); dessiner(); } }, "Montrer où, et la repiquer") : null,
             conseilsSolPlante(ile, p)));
@@ -3708,7 +3715,7 @@
     const quantites = {};
     for (const pl of Object.values(ile.plantes || {})) quantites[pl.p] = (quantites[pl.p] || 0) + 1;
     const plantes = Object.keys(quantites).map((id) => H.d.plante(id)).filter(Boolean).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-    if (!plantes.length) return H.toast("Pas encore de plantes sur cette île");
+    if (!plantes.length) return H.toast("Pas encore de plantes dans ce jardin");
     H.exporterPlantes(plantes, H.slug(ile.nom), quantites, "Les plantes de « " + ile.nom + " »");
   }
 
@@ -3755,33 +3762,33 @@
   // offrir l'île en surprise : la date, le petit mot ; on peut changer d'avis avant le jour
   function sectionOffrir(ile, fermer) {
     const c = ile.cadeau && (H.jeu.cadeaux || {})[ile.cadeau];
-    if (c && !c.supprime && c.recuLe) return H.el("p.discret", null, "Offerte à " + NOMS[c.pour] + " le " + dateLisible(c.le) + ". Elle l’a reçue.");
+    if (c && !c.supprime && c.recuLe) return H.el("p.discret", null, "Offert à " + NOMS[c.pour] + " le " + dateLisible(c.le) + ". Bien arrivé !");
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
     const date = H.el("input", { type: "date", min: jourIso(new Date()), value: c && !c.supprime ? c.le : jourIso(demain) });
-    const mot = H.el("textarea", { rows: 2, placeholder: "Un petit mot, qui arrivera avec l’île" });
+    const mot = H.el("textarea", { rows: 2, placeholder: "Un petit mot, qui arrivera avec le jardin" });
     mot.value = (c && !c.supprime && c.mot) || "";
     const msg = H.el("p.discret.erreur", { role: "alert" });
     return H.el("fieldset.offrir-ile", null,
-      H.el("legend", null, "Offrir cette île en surprise à " + NOMS[autre()]),
+      H.el("legend", null, "Offrir ce jardin en surprise à " + NOMS[autre()]),
       H.el("p.discret", null, c && !c.supprime
-        ? "Elle arrivera chez " + NOMS[c.pour] + " le " + dateLisible(c.le) + ". D’ici là, tes retouches la suivent."
-        : "Le jour venu, l’île arrivera chez " + NOMS[autre()] + ", avec les fiches de ses plantes. Tu peux la retoucher jusque-là."),
+        ? "Il arrivera chez " + NOMS[c.pour] + " le " + dateLisible(c.le) + ". D’ici là, tes retouches le suivent."
+        : "Le jour venu, le jardin arrivera chez " + NOMS[autre()] + ", avec les fiches de ses plantes. Tu peux le retoucher jusque-là."),
       H.el("label", null, "Le jour", date),
       H.el("label", null, "Le petit mot", mot),
       msg,
       H.el("div.boutons-bas", null,
         c && !c.supprime ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => {
-          if (!confirm("Garder l’île pour toi, finalement ?")) return;
+          if (!confirm("Garder le jardin pour toi, finalement ?")) return;
           H.jeu.cadeaux = Object.assign({}, H.jeu.cadeaux, { [c.id]: { id: c.id, supprime: true, modifieLe: H.maintenant() } });
           delete ile.cadeau; ile.aOffrir = true; sauver(ile); fermer(); H.router();
         } }, "Ne plus l’offrir") : null,
         H.el("button.bouton", { type: "button", onclick: () => {
-          if (!date.value) return (msg.textContent = "Choisis le jour où elle arrivera.");
+          if (!date.value) return (msg.textContent = "Choisis le jour où il arrivera.");
           if (date.value < jourIso(new Date())) return (msg.textContent = "Ce jour est déjà passé.");
           offrir(ile, date.value, mot.value.trim());
-          H.toast("Surprise prête : elle arrivera chez " + NOMS[autre()] + " le " + dateLisible(date.value) + ".");
+          H.toast("Surprise prête : il arrivera chez " + NOMS[autre()] + " le " + dateLisible(date.value) + ".");
           fermer(); H.router();
-        } }, c && !c.supprime ? "Mettre à jour la surprise" : "Offrir l’île")
+        } }, c && !c.supprime ? "Mettre à jour la surprise" : "Offrir le jardin")
       )
     );
   }
@@ -3801,14 +3808,14 @@
         H.router();
       },
     },
-      H.el("h2", null, "Réglages de l’île"),
+      H.el("h2", null, "Réglages du jardin"),
       H.el("label", null, "Nom", nom),
       H.el("label", null, "Notes", notes),
       H.el("p.discret", null, ile.largeur + " × " + ile.longueur + " m, " + ile.cols + " × " + ile.lignes + " cases, sol de départ : " + (ile.sol || []).join(", ").toLowerCase()),
       ile.mot ? H.el("p", null, H.el("em", null, "Le mot de " + NOMS[ile.offertePar] + " : « " + ile.mot + " »")) : null,
       (!ile.secrete && !ile.croquis && !ile.offertePar) ? sectionOffrir(ile, () => fermer()) : null,
       H.el("div.boutons-bas", null,
-        !ile.secrete ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { if (confirm("Supprimer l’île « " + ile.nom + " » ?")) { H.jeu.iles[ile.id] = { id: ile.id, supprime: true, modifieLe: H.maintenant() }; H.d.changer("jeu"); fermer(); H.aller("terrain"); } } }, "Supprimer l’île") : null,
+        !ile.secrete ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { if (confirm("Supprimer le jardin « " + ile.nom + " » ?")) { H.jeu.iles[ile.id] = { id: ile.id, supprime: true, modifieLe: H.maintenant() }; H.d.changer("jeu"); fermer(); H.aller("terrain"); } } }, "Supprimer le jardin") : null,
         H.el("button.bouton", { type: "submit" }, "Enregistrer")
       )
     ));

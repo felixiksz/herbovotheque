@@ -210,7 +210,7 @@
     let fermer;
     const corps = H.el("div.editeur-dessin", null,
       H.el("h2", null, "Le modèle " + H.duNom(p)),
-      H.el("p.discret", null, "Dessine la plante case par case. La vue de dessus peut servir pour la vue d’oiseau de tes îles (coche la case en bas) ; en relief, sur les îles, chaque plante garde son dessin botanique automatique."),
+      H.el("p.discret", null, "Dessine la plante case par case. La vue de dessus peut servir pour la vue d’oiseau de tes jardins (coche la case en bas) ; en relief, dans les jardins, chaque plante garde son dessin botanique automatique."),
       vignettes,
       (cadre = H.el("div.cadre-dessin", null, toile)),
       pastillesCouleurs,
@@ -220,7 +220,7 @@
         // choisit pas d'y montrer le sien)
         p.dessinCarte ? H.el("label.discret.case-dessin-iles", null,
           H.el("input", { type: "checkbox", checked: !!p.dessinSurIles, onchange: (ev) => { const oui = ev.target.checked; H.d.majPlante(p.id, (x) => { if (oui) x.dessinSurIles = true; else delete x.dessinSurIles; }); } }),
-          " Montrer mon dessin sur les îles (vue d’oiseau)") : null,
+          " Montrer mon dessin dans les jardins (vue d’oiseau)") : null,
         p.dessinCarte || p.dessinCote || p.dessinFace ? H.el("button.bouton.discret-bouton", {
           type: "button",
           onclick() {

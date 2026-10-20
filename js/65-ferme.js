@@ -66,7 +66,7 @@
       t: { clair: "#6cbd5c", ombre: "#3f8a42", planche: "#4aa63e", trait: "#1e3d25", toitC: "#e8714a", toitO: "#b2552e", porte: "#e9b44c" } },
     { id: "serre", hash: "serre", nom: "Serre", i: 17, j: 13, w: 3, d: 4, h: 11, genre: "serre" },
     { id: "lettres", hash: "lettres", nom: "Boîte aux lettres", i: 9, j: 17, w: 1, d: 1, h: 0, genre: "boite" },
-    { id: "ponton", hash: "terrain", nom: "Ponton vers les îles", i: 25, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
+    { id: "ponton", hash: "terrain", nom: "Ponton vers les jardins", i: 25, j: 18, w: 1, d: 1, h: 0, genre: "ponton" },
     { id: "poules", nom: "Poulailler", i: 16, j: 8, w: 2, d: 1, h: 7, genre: "poulailler" },
     { id: "bois", nom: "Bois sec", i: 13, j: 14, w: 1, d: 1, h: 6, genre: "bois" },
   ];
@@ -1648,7 +1648,7 @@
     H.d.majLocal((l) => (l.dernierLieu = id));
     // pour le récit de la journée
     const JOURNAL = { herbo: "je suis allé·e à l’herbothèque", cartes: "je suis passé·e à la cabane à flashcartes", labo: "je suis allé·e au labo",
-      serre: "je suis allé·e à la serre", lettres: "j’ai regardé le courrier", ponton: "je suis parti·e sur les îles", poules: "je suis allé·e voir les poules" };
+      serre: "je suis allé·e à la serre", lettres: "j’ai regardé le courrier", ponton: "je suis parti·e dans les jardins", poules: "je suis allé·e voir les poules" };
     if (JOURNAL[id] && H.journal) H.journal.noter("lieu:" + id, JOURNAL[id]);
     if (m && m.hash) H.aller(m.hash);
     if (id === "poules") poulailler();

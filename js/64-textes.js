@@ -154,7 +154,7 @@
         sommaire.appendChild(H.el("a.bouton.petit", { href: "#textes", onclick: (e) => { e.preventDefault(); document.getElementById(id).scrollIntoView({ behavior: "smooth" }); } }, s.nom));
         c.appendChild(H.el("section.reglage", { id },
           H.el("h2", null, s.nom, " ", etat),
-          s.surprise ? H.el("p.discret", null, "Surprise du 24 février : ƟvƟ ne les verra qu’une fois l’île de Lóló et Mémé découverte.") : null,
+          s.surprise ? H.el("p.discret", null, "Surprise du 24 février : ƟvƟ ne les verra qu’une fois le jardin de Lóló et Mémé découvert.") : null,
           s.type === "liste" ? editeurListe(s) : editeurHistoires(s),
           H.el("div.pastilles", null, H.el("button.bouton.petit.discret-bouton", {
             type: "button",

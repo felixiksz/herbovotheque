@@ -152,7 +152,7 @@
       conteneur.innerHTML = "";
       conteneur.appendChild(H.el("div.herbo-tete", null,
         H.el("h1", null, "Serre"),
-        H.el("p.aide-pixel.intro-serre", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite sur tes îles, moins cher et déjà jeunes.")
+        H.el("p.aide-pixel.intro-serre", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite dans tes jardins, moins cher et déjà jeunes.")
       ));
       zone = H.el("div");
       conteneur.appendChild(zone);
@@ -202,7 +202,7 @@
             const p = H.d.plante(id);
             return p ? H.el("div.pot", null, H.el("img", { src: dessinPot(p, 3), alt: "" }), H.el("span.nom-pot", null, p.nom), H.el("span.etat-pot", null, n > 1 ? n + " bébés plantes" : "1 bébé plante")) : null;
           })),
-          H.el("a.bouton-pixel.repiquer", { href: "#terrain" }, "Aller repiquer sur une île"))
+          H.el("a.bouton-pixel.repiquer", { href: "#terrain" }, "Aller repiquer dans un jardin"))
       : H.el("p.aide-pixel", null, "Vide pour l’instant. Les bébés plantes prêtes y attendent d’être repiquées avec l’outil « Planter » du terrain."));
 
     // les frileuses

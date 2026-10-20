@@ -147,7 +147,7 @@
     const valeurIps = H.el("span.valeur-volume", { style: { textAlign: "left" } }, nomIps(CRANS[cran]));
     return H.el("section.reglage", null,
       H.el("h2", null, "Jeu léger"),
-      H.el("p.discret", null, "Si le jeu rame, si les bulles mettent du temps à s’écrire ou si l’appareil chauffe, baisse le nombre d’images par seconde : la ferme, la maison, les îles et la balade se redessinent moins souvent. Tout à gauche, les animations s’éteignent."),
+      H.el("p.discret", null, "Si le jeu rame, si les bulles mettent du temps à s’écrire ou si l’appareil chauffe, baisse le nombre d’images par seconde : la ferme, la maison, les jardins et la balade se redessinent moins souvent. Tout à gauche, les animations s’éteignent."),
       H.el("h3", null, "Les animations"),
       H.el("div.ligne-ips", null,
         H.el("input", {
@@ -462,9 +462,9 @@
     return H.el("section.reglage", null,
       H.el("h2", null, H.fixe("Mesi")),
       H.el("h3", null, "Quel monde ?"),
-      H.el("p.discret", null, H.fixe("Jusqu’à Noël, tu peux tester le monde d’ƟvƟ, ou jouer dans ton monde à toi : la pharmacopée chinoise, tes propres îles, et des formules au lieu des tisanes. Les deux mondes restent séparés, chacun avec sa sauvegarde.")),
+      H.el("p.discret", null, H.fixe("Jusqu’à Noël, tu peux tester le monde d’ƟvƟ, ou jouer dans ton monde à toi : la pharmacopée chinoise, tes propres jardins, et des formules au lieu des tisanes. Les deux mondes restent séparés, chacun avec sa sauvegarde.")),
       H.el("p.pastilles", null, choixMonde("ovo", H.fixe("Le monde d’ƟvƟ")), choixMonde("mesi", "Mon monde")),
-      H.el("p.discret", null, H.fixe("Cet appareil est relié avec le jeton de Mesi : ta partie (herbier, îles, ferme…) se retrouve sur tous tes appareils, à part de celle d’ƟvƟ. Avec ƟvƟ, seules les lettres et les textes du jeu s’échangent.")),
+      H.el("p.discret", null, H.fixe("Cet appareil est relié avec le jeton de Mesi : ta partie (herbier, jardins, ferme…) se retrouve sur tous tes appareils, à part de celle d’ƟvƟ. Avec ƟvƟ, seules les lettres et les textes du jeu s’échangent.")),
       H.el("p", null, H.el("a.bouton.petit", { href: "#textes" }, "Relire et corriger les textes du jeu"), " ", H.el("a.bouton.petit", { href: "#lettres" }, "Boîte aux lettres")),
       H.el("label.case", null,
         H.el("input", {
@@ -478,7 +478,7 @@
             });
           },
         }),
-        " Voir dès maintenant l’île de Lóló et Mémé sur cet appareil (la surprise du 24 février)."),
+        " Voir dès maintenant le jardin de Lóló et Mémé sur cet appareil (la surprise du 24 février)."),
       H.el("h3", null, "Les accès"),
       H.el("p.discret", null, "Chaque personne reçoit son propre jeton à accès fin (sur github.com : Settings, Developer settings, Fine-grained tokens, limité au dépôt herbovotheque, « Contents » en lecture et écriture). Ajoute-le ici avec son rôle avant de le donner. Seule son empreinte est gardée, chiffrée."),
       liste,

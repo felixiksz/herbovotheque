@@ -72,7 +72,7 @@
     conteneur.innerHTML = "";
     conteneur.appendChild(H.el("div.herbo-tete", null,
       H.el("h1", null, "Labo"),
-      H.el("p.discret", null, "Les récoltes des îles et les cueillettes arrivent ici. On les fait sécher, macérer ou distiller, et quand c’est prêt, on remplit les bocaux de l’herbothèque. On y infuse aussi les tisanes du placard.")
+      H.el("p.discret", null, "Les récoltes des jardins et les cueillettes arrivent ici. On les fait sécher, macérer ou distiller, et quand c’est prêt, on remplit les bocaux de l’herbothèque. On y infuse aussi les tisanes du placard.")
     ));
 
     // les récoltes en attente
@@ -80,7 +80,7 @@
     const ongletRecoltes = [
       recoltes.length
         ? H.el("div.grille-pots", null, recoltes.map(([id, n]) => { const p = H.d.plante(id); return H.el("a.pot.recolte", { href: "#fiche/" + encodeURIComponent(id), title: "La fiche " + H.duNom(p) }, H.el("img", { src: iconeRecolte(p), alt: "" }), H.el("span.nom-pot", null, p.nom), H.el("span.etat-pot", null, n > 1 ? n + " récoltes" : "1 récolte")); }))
-        : H.el("p.discret", null, "Pas encore de récolte. Récolte une plante sur une île, ou va cueillir dans la nature."),
+        : H.el("p.discret", null, "Pas encore de récolte. Récolte une plante dans un jardin, ou va cueillir dans la nature."),
       H.el("div.pastilles", null,
         H.el("button.bouton.petit", { type: "button", onclick: cueillir }, "Aller cueillir dans la nature (" + H.quantiteTexte("energie", COUT_CUEILLETTE.energie) + ")")),
     ];
@@ -178,7 +178,7 @@
     const l = labo();
     const dispo = Object.entries(l.recoltes).filter(([id, n]) => n > 0 && H.d.plante(id)).map(([id]) => H.d.plante(id));
     if (!dispo.length) {
-      H.dialogue.dire([{ qui: "ovo", texte: "Il me faut d’abord une récolte : sur une île, ou en allant cueillir dans la nature." }]);
+      H.dialogue.dire([{ qui: "ovo", texte: "Il me faut d’abord une récolte : dans un jardin, ou en allant cueillir dans la nature." }]);
       return;
     }
     const corps = H.el("div.choix-labo");
