@@ -224,6 +224,8 @@ label { font-size: 0.95rem; }
   position: relative;
 }
 .panneau .fermer { position: absolute; top: 10px; right: 10px; }
+/* (un long titre de fenêtre passe à la ligne avant « Fermer », sans le chevaucher) */
+.panneau > .fermer + * > h2:first-child { padding-right: 84px; }
 /* (une fenêtre garde son encre, même posée sur une scène sombre comme les îles) */
 .panneau { color: var(--encre); }
 :root[data-ile] .panneau:not(.menu-scene) .discret, :root[data-ile] .panneau:not(.menu-scene) legend { color: var(--encre-douce); }

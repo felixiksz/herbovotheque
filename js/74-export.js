@@ -83,9 +83,11 @@
       th { text-align: left; font-size: 8.5pt; padding: 5px 6px; }
       td { padding: 5px 6px; vertical-align: top; }
       td.premier { font-weight: 700; }
-      .pied { margin-top: 18px; font-size: 8pt; opacity: .6; }` +
+      td, th { hyphens: auto; -webkit-hyphens: auto; }
+      .pied { margin-top: 18px; font-size: 8pt; opacity: .6; }
+      ${CSS_FEUILLE}` +
       // (un tableau très large : la page se couche, et le texte se resserre)
-      (large ? `@page { size: A4 landscape; } table { font-size: 8.5pt; } td, th { padding: 4px 5px; }` : "");
+      (large ? `@page { size: A4 landscape; } table { font-size: 8.5pt; } td, th { padding: 4px 5px; } @media screen { body { width: 297mm; min-height: 210mm; } }` : "");
     const STYLE_CSS = {
       classique: `h1 { font-size: 22pt; color: ${couleur}; border-bottom: 1.5px solid ${couleur}; padding-bottom: 4px; }
         th { text-transform: uppercase; letter-spacing: .04em; color: ${couleur}; border-bottom: 1.5px solid ${couleur}; }
@@ -129,6 +131,16 @@
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + echapper(doc.titre) + "</title><style>" + polices + communs + (STYLE_CSS[style] || STYLE_CSS.classique) + "</style></head><body>" + html + "</body></html>";
   }
 
+  // à l'écran, la feuille A4 avec ses marges, et la feuille entière dans la largeur de l'aperçu
+  const CSS_FEUILLE = `@media screen {
+      html { background: #e9e6dc; padding: 14px 0; }
+      body { background-color: #fff; width: 210mm; min-height: 297mm; margin: 0 auto; border: solid transparent; border-width: 20mm 18mm; box-shadow: 0 1px 6px #23214a33; }
+    }`;
+  function ajusterApercu(f) {
+    const ajuster = () => { const d = f.contentDocument, w = d && d.body && d.body.offsetWidth; if (w && f.clientWidth) d.documentElement.style.zoom = Math.min(1, (f.clientWidth - 28) / w); };
+    ajuster(); setTimeout(ajuster, 300);
+  }
+
   function imprimerHtml(html) {
     const f = document.createElement("iframe");
     Object.assign(f.style, { position: "fixed", width: "0", height: "0", border: "0", right: "0", bottom: "0" });
@@ -145,14 +157,19 @@
     const nom = (doc.nomFichier || (H.slug ? H.slug(doc.titre) : "export"));
     let style = (H.local && H.local.stylePdf) || "pixel";
     const apercu = H.el("iframe.apercu-export", { title: "Aperçu du PDF" });
-    const montrer = () => { apercu.contentDocument.open(); apercu.contentDocument.write(pagePdf(doc, style)); apercu.contentDocument.close(); };
+    const montrer = () => {
+      const d = apercu.contentDocument;
+      d.open(); d.write(pagePdf(doc, style)); d.close();
+      ajusterApercu(apercu);
+    };
     const styles = H.el("div.pastilles", null, STYLES.map(([id, n, aide]) => H.el("button.bouton.petit" + (id === style ? ".actif" : ""), {
       type: "button", title: aide,
       onclick(ev) { style = id; if (H.d && H.d.majLocal) H.d.majLocal((l) => (l.stylePdf = id)); styles.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.currentTarget)); montrer(); },
     }, n)));
     let fermer;
     const corps = H.el("div.fenetre-export", null,
-      H.el("h2", null, "Exporter « " + doc.titre + " »"),
+      // (« Exporter les plantes de « Jardin » » : pas de guillemets dans les guillemets)
+      H.el("h2", null, /«/.test(doc.titre) ? "Exporter " + doc.titre.charAt(0).toLowerCase() + doc.titre.slice(1) : "Exporter « " + doc.titre + " »"),
       H.el("div.pastilles", null,
         H.el("button.bouton", { type: "button", onclick: () => { H.telecharger(nom + ".txt", texte(doc), "text/plain;charset=utf-8"); fermer(); } }, "En texte (.txt)"),
         H.el("button.bouton", { type: "button", onclick: () => { H.telecharger(nom + ".csv", csv(doc), "text/csv;charset=utf-8"); fermer(); } }, "En tableau (.csv)"),
@@ -167,6 +184,6 @@
     return fermer;
   }
 
-  H.export = { STYLES, texte, csv, pagePdf, imprimerHtml };
+  H.export = { STYLES, texte, csv, pagePdf, imprimerHtml, CSS_FEUILLE, ajusterApercu };
   H.exporter = exporter;
 })();

@@ -158,6 +158,7 @@
       @font-face { font-family: "Beth Ellen"; src: url("${base}fonts/beth-ellen.woff2") format("woff2"); }
       @page { size: A4; margin: 20mm 18mm 20mm; }
       * { box-sizing: border-box; }
+      ${H.export ? H.export.CSS_FEUILLE : ""}
       body { margin: 0; color: #23214a; font: 10.5pt/1.45 ${police}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .haut { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; ${e.logoPlace === "droite" ? "flex-direction: row-reverse;" : ""} }
       .logo { max-height: 70px; max-width: 200px; }
@@ -228,7 +229,7 @@
   function apercu(doc) {
     const f = H.el("iframe.apercu-devis", { title: "Aperçu" });
     const fermer = H.fenetre(H.el("div.fenetre-apercu", null, f, H.el("div.boutons-bas", null, H.el("button.bouton", { type: "button", onclick: () => imprimer(doc) }, "Enregistrer en PDF ou imprimer"))), { classe: "large" });
-    setTimeout(() => { f.contentDocument.open(); f.contentDocument.write(pageImprimable(doc)); f.contentDocument.close(); }, 0);
+    setTimeout(() => { f.contentDocument.open(); f.contentDocument.write(pageImprimable(doc)); f.contentDocument.close(); H.export.ajusterApercu(f); }, 0);
     return fermer;
   }
 
@@ -497,7 +498,7 @@
     const exemple = { type: "devis", numero: "D-2026-001", date: Date.now(), echeance: Date.now() + 30 * JOUR, objet: "Création d’un jardin sec méditerranéen", remise: 0, acompte: e.acompte,
       lignes: [{ type: "titre", designation: "Plantes" }, { designation: "Lavande vraie (Lavandula angustifolia)", detail: "Pot de 1 L", quantite: 12, unite: "u.", prix: 6.5, tva: 10 }, { designation: "Romarin (Salvia rosmarinus)", detail: "Pot de 2 L", quantite: 6, unite: "u.", prix: 9, tva: 10 },
         { type: "soustotal", designation: "" }, { type: "titre", designation: "Main d’œuvre" }, { designation: "Préparation du sol et plantation", quantite: 7, unite: "h", prix: 45, tva: 20 }], client: null };
-    const rafraichir = () => { const dd = apercuF.contentDocument; if (!dd) return; dd.open(); dd.write(pageImprimable(exemple)); dd.close(); };
+    const rafraichir = () => { const dd = apercuF.contentDocument; if (!dd) return; dd.open(); dd.write(pageImprimable(exemple)); dd.close(); H.export.ajusterApercu(apercuF); };
     // (l'onglet n'est pas encore affiché : l'aperçu se remplit quand il apparaît)
     apercuF.addEventListener("load", () => { const dd = apercuF.contentDocument; if (dd && !dd.body.childElementCount) rafraichir(); });
     const choix = (cle, liste, apres) => H.el("div.pastilles", null, liste.map(([id, n, aide]) => H.el("button.bouton.petit" + (ent()[cle] === id ? ".actif" : ""), { type: "button", title: aide || "", onclick: (ev) => { majEnt((x) => (x[cle] = id)); ev.target.parentNode.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === ev.target)); rafraichir(); if (apres) apres(); } }, n)));
