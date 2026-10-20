@@ -1280,8 +1280,9 @@
     // les pas lourds des sangliers, tant qu'ils marchent ; la laie suivie de ses marcassins fait
     // plus de bruit
     if (v.espece === "sanglier" && H.sons && H.sons.jouer && t >= v.pause && v.u > 0.02 && v.u < 1 && t > (v.prochainBruit || 0)) {
-      H.sons.jouer("sanglier", (0.3 + 0.1 * v.petits) * 0.5);
-      v.prochainBruit = t + 4400;
+      // (bien plus doux : on les devine passer, ils ne couvrent plus tout)
+      H.sons.jouer("sanglier", (0.3 + 0.1 * v.petits) * 0.2);
+      v.prochainBruit = t + 6500;
     }
     // arrivée au pied du pin : elle fouille quelques secondes, et la terre reste retournée
     if (v.fouille && !v.fouille.fait && v.u >= v.fouille.u) {
@@ -1807,10 +1808,16 @@
     if (lo.course) {
       const pos = H.sons.position(lo.course, performance.now());
       if (pos) {
-        const k = pos.x / 100;
-        lo.x = lo.x0 + (perso.x - 1.6 - lo.x0) * k; lo.y = lo.y0 + (perso.y + 0.4 - lo.y0) * k;
+        // (par un vrai chemin, autour des maisons, et pas tout droit à travers)
+        if (!lo.galop) {
+          const pts = passage([Math.max(0.3, lo.x0), lo.y0], libre(perso.x - 1.6, perso.y + 0.4), true), cum = [0];
+          if (lo.x0 < 0.3) pts.unshift([lo.x0, lo.y0]);
+          for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+          lo.galop = { pts, cum, long: cum[cum.length - 1] };
+        }
+        [lo.x, lo.y] = point(lo.galop, Math.min(1, pos.x / 100));
         lo.marche = pos.enCourse;
-        if (!pos.enCourse) lo.course = null;
+        if (!pos.enCourse) { lo.course = null; lo.galop = null; }
       }
     } else if (lo.x != null && majBroute(lo, perso, t)) {
       // il broute, ou il rejoint ƟvƟ au trot
@@ -1840,6 +1847,26 @@
     const soir = (H.ciel.etat().soleil.alt < 3 && new Date().getHours() >= 15) || H.ciel.nuitCalme();
     const pm = porte(parId.maison);
     if (soir && !scene.mesiVa) objets.push({ prof: pm[0] + pm[1] - 0.6 + 0.5, mesi: true });
+    // Devant ou derrière une maison : la seule somme x + y ne suffit pas (quelqu'un qui passe
+    // derrière une maison, mais assez sur le côté, était dessiné par-dessus, comme s'il la
+    // traversait). Pour chaque maison qu'il recoupe à l'écran, on le range avant elle s'il est
+    // derrière (ni devant sa face de droite ni devant celle de gauche), après elle sinon.
+    {
+      const posDe = (o) => o.p ? [o.p.x, o.p.y] : o.ovo ? [perso.x, perso.y] : o.lolo ? [lo.x, lo.y] : o.poule ? [o.poule.x, o.poule.y] : o.meme ? [o.meme.x, o.meme.y]
+        : o.mesiVa ? o.mesiVa.pos : o.mesi ? [pm[0] - 0.6, pm[1] + 0.5] : o.e ? [o.e.i, o.e.j] : o.jonc ? [o.jonc[0], o.jonc[1]] : o.grenouille ? [o.grenouille.x, o.grenouille.y] : o.x != null ? [o.x, o.y] : null;
+      const bats = MAISONS.filter((m) => m.genre !== "ponton").map((m) => ({ m, prof: m.i + m.w + m.j + m.d, g: (m.i - m.j - m.d) * 8 - 6, d: (m.i + m.w - m.j) * 8 + 6 }));
+      for (const o of objets) {
+        if (o.m) continue;
+        const P = posDe(o);
+        if (!P || !isFinite(P[0] + P[1])) continue;
+        const sx = (P[0] - P[1]) * 8;
+        for (const b of bats) {
+          if (sx < b.g || sx > b.d) continue;
+          if (P[0] < b.m.i + b.m.w && P[1] < b.m.j + b.m.d) { if (o.prof >= b.prof) o.prof = b.prof - 0.005; }
+          else if (o.prof <= b.prof) o.prof = b.prof + 0.005;
+        }
+      }
+    }
     objets.sort((a, b) => a.prof - b.prof);
     // les ombres portées, comme celles d'un modèle en relief
     {
