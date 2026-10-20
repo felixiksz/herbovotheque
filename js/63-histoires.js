@@ -97,50 +97,6 @@
     ] },
   ];
 
-  // Balade en solo : de petites pensées sur ce qu'on voit et entend
-  function pensees() {
-    const s = H.ciel.etat();
-    // (la nuit dès le coucher du soleil ; juste avant, le soir doré)
-    const nuit = s.soleil.alt < 0, soir = !nuit && s.soleil.alt < 8;
-    const lune = H.ciel.nomPhase(s.lune.phase);
-    // chaque pensée dit ce dont elle a besoin à l'écran (la mer, les collines, un pin, un olivier) :
-    // la balade ne la dit que si on le voit à ce moment-là
-    const P = (texte, ...besoin) => ({ texte, besoin });
-    const base = soir
-      ? [
-          P("Le soleil descend derrière les collines. Les calanques deviennent roses.", "collines"),
-          P("La mer prend des reflets dorés, puis mauves.", "mer"),
-          P("Les cigales se taisent. Un premier grillon commence, timidement."),
-          P("ƟvƟ s’assoit sur une pierre tiède pour regarder le soleil se coucher."),
-          P("Le vent du soir apporte une odeur de pin et de sel."),
-          P("Les pins deviennent des silhouettes noires sur le ciel orange.", "Pin sylvestre"),
-        ]
-      : nuit
-      ? [
-          P("Le chemin longe la mer. On entend les vagues respirer contre les rochers.", "mer"),
-          P("Au-dessus des calanques, le ciel est plein d’étoiles. Ce soir, c’est la " + lune + ".", "collines"),
-          P("Un grillon chante quelque part dans le thym. Puis un autre lui répond."),
-          P("L’air sent le pin et la lavande. Toute la ferme dort, sauf la petite bougie de la cabane de lecture."),
-          P("ƟvƟ s’assoit un moment sur une pierre encore tiède du soleil de la journée."),
-          P("Une étoile filante traverse le ciel. Vite, un vœu !"),
-          P("Le vent du soir fait bouger doucement les oliviers. Respirer, lentement.", "Olivier"),
-          P("La lune éclaire le chemin. Les cailloux brillent un peu."),
-        ]
-      : [
-          P("Le chemin longe la mer, entre les pins et les rochers blancs.", "mer", "Pin sylvestre"),
-          P("Les calanques brillent au soleil. L’eau est d’un bleu presque vert.", "mer"),
-          P("Une abeille s’affaire dans le romarin en fleurs. Elle ne s’arrête jamais."),
-          P("Le vent apporte une odeur de thym et de sel."),
-          P("ƟvƟ s’assoit un moment à l’ombre d’un pin pour regarder la mer.", "mer", "Pin sylvestre"),
-          P("ƟvƟ s’assoit un moment sur une pierre chaude, au bord du chemin."),
-          P("Les collines s’étagent jusqu’au loin, de plus en plus bleues.", "collines"),
-          P("Un olivier tout tordu, sans doute très vieux. Ses feuilles brillent d’argent.", "Olivier"),
-          P("Un lézard file entre deux pierres chaudes."),
-        ];
-    // (toutes, dans le désordre : la balade choisit celles qui vont avec ce qu'on voit)
-    return base.sort(() => Math.random() - 0.5).map((p) => ({ qui: "ovo", nom: "Balade", texte: p.texte, besoin: p.besoin }));
-  }
-
   const auHasard = (liste) => liste[Math.floor(Math.random() * liste.length)];
 
   // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
@@ -153,7 +109,6 @@
       return T("histoiresMesi", LUIGI);
     },
     DEFAUTS: { histoiresLolo: LOLO, histoiresMesi: LUIGI },
-    pensees,
     auHasard,
   };
 })();
