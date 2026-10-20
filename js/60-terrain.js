@@ -850,7 +850,8 @@
   // --- les icônes en pixels de l'écran des îles (12 × 12, dans le style du bureau) ---------------
   const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", y: "#f6ee55", n: "#b9834f", N: "#7a4520" };
   const ICONES_ILE = {
-    oeil: ["............", "............", "...kkkkkk...", ".kkwwwwwwkk.", "kwwwbbbbwwwk", "kwwbbkkbbwwk", "kwwbbkkbbwwk", "kwwwbbbbwwwk", ".kkwwwwwwkk.", "...kkkkkk...", "............", "............"],
+    oiseau: ["............", "............", ".......kkk..", "......kbbbk.", "......kbkbyy", "..kkkkkbbbk.", ".kbbbbbbbbk.", "kbbBBBbbbk..", ".kbbBBBbbk..", "..kkkbbbk...", "....k..k....", "...kk..kk..."],
+    relief: [".....kk.....", "...kkvvkk...", ".kkvvvvvvkk.", "kvvvvvvvvvvk", "knkkvvvvkkNk", "knnnkkkkNNNk", "knnnnnNNNNNk", ".kknnnNNNkk.", "...kknNkk...", ".....kk.....", "............", "............"],
     plus: ["............", "............", "....kkkk....", "....kwwk....", "..kkkwwkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkwwkkk..", "....kwwk....", "....kkkk....", "............", "............"],
     moins: ["............", "............", "............", "............", "..kkkkkkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkkkkkk..", "............", "............", "............", "............"],
     cerveau: ["............", "...kkkkkk...", "..kmmMmmmk..", ".kmmmMmMmmk.", ".kmMmMmmMmk.", "kmmMmmMmmmmk", "kmmmMmmMmMmk", ".kmMmmMmmmk.", ".kmmMmmMmmk.", "..kkkkkkkk..", "....kmmk....", "....kkkk...."],
@@ -923,7 +924,7 @@
     // de chaque côté de l'île, deux barres d'icônes : à gauche la vue (relief ou oiseau, zoom), à
     // droite ceux qu'on peut appeler
     const barreVue = H.el("div.barre-ile.barre-vue", null,
-      (vue.boutonVue = boutonIcone(imageIcone("oeil"), vue.iso ? "Vue d’oiseau (touche V)" : "Vue en relief (touche V)", () => basculerVue())),
+      (vue.boutonVue = boutonIcone(imageIcone(vue.iso ? "oiseau" : "relief"), vue.iso ? "Vue d’oiseau (touche V)" : "Vue en relief (touche V)", () => basculerVue())),
       boutonIcone(imageIcone("plus"), "Zoomer", () => zoomer(1)),
       boutonIcone(imageIcone("moins"), "Dézoomer", () => zoomer(-1)));
     const barreAmis = H.el("div.barre-ile.barre-amis", null,
@@ -971,7 +972,8 @@
   function basculerVue() {
     vue.iso = !vue.iso;
     H.d.majLocal((l) => (l.vueDessus = !vue.iso));
-    if (vue.boutonVue) { const n = vue.iso ? "Vue d’oiseau (touche V)" : "Vue en relief (touche V)"; vue.boutonVue.title = n; vue.boutonVue.setAttribute("aria-label", n); }
+    // (l'icône montre la vue où l'on va : l'oiseau depuis le relief, le relief depuis la vue d'oiseau)
+    if (vue.boutonVue) { const n = vue.iso ? "Vue d’oiseau (touche V)" : "Vue en relief (touche V)"; vue.boutonVue.title = n; vue.boutonVue.setAttribute("aria-label", n); vue.boutonVue.querySelector("img").src = imageIcone(vue.iso ? "oiseau" : "relief"); }
     dessinerOutils();
     dimensionner(); peindreFond(); dessiner();
   }
