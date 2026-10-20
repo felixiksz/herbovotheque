@@ -3122,6 +3122,8 @@
       dessinsArbres.set(cle, d);
     }
     if (!d) return false;
+    const vus = balade && balade.s && balade.s.arbresVus;
+    if (vus && x > -20 && x < ctx.canvas.width / k + 20) vus.add(nom);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(d, Math.round(x - d.width / k / 2), Math.round(base - d.height / k), d.width / k, d.height / k);
@@ -3129,6 +3131,7 @@
     return true;
   }
   function pinPlat(ctx, x, base, t, couleur, dessous, tronc) {
+    if (balade && balade.s && balade.s.arbresVus) balade.s.arbresVus.add("Pin sylvestre");
     // un pin sur trois environ pousse en Y : le tronc se sépare en deux, et la couronne aussi
     if (Math.round(t) % 3 === 0) return pinEnY(ctx, x, base, t, couleur, dessous, tronc);
     ctx.strokeStyle = tronc;
@@ -3412,6 +3415,12 @@
     const nuit = alt < 0;
     nuitBalade = nuit;
     const ici = rouge(avance);
+    // (ce qu'on voit à l'écran, pour que les pensées en parlent à bon escient : la mer, dès que la
+    // rangée de collines la plus lointaine s'est enfoncée ; les collines, tant qu'il en reste ;
+    // les arbres dessinés à l'image d'avant)
+    b.vus = S.arbresVus || new Set(); S.arbresVus = new Set();
+    b.merVue = presenceRangee(0, avance) < 0.4;
+    b.collinesVues = presenceRangee(RANGEES_B - 1, avance) > 0.4;
     const haut = S.haut || 0, bas = S.bas || 0;
     ctx.setTransform(dpr, 0, 0, dpr, 0, dpr * haut);
     // le ciel : bleu franc le jour, les vraies couleurs de l'aube et du couchant, violet la nuit
@@ -3780,7 +3789,7 @@
     if (avec("lolo")) intro.push({ qui: "lolo", texte: "Hiii ! Une balade ! On marche côte à côte, au pas, tranquilles." });
     if (avec("meme") && avec("lolo")) intro.push({ qui: "meme", texte: "Mrrr… (Mémé se réveille, s’étire et se met debout sur le dos de Lóló : elle voyage sans même avoir à bouger.)" });
     else if (avec("meme")) intro.push({ qui: "meme", texte: "Mrrrou ! (Mémé trottine devant, la queue en l’air, les yeux toujours fermés. Elle connaît le chemin par cœur.)" });
-    if (!intro.length) intro.push({ qui: "ovo", nom: "Balade", texte: "ƟvƟ part seul·e sur le petit chemin, entre les pins et la mer." });
+    if (!intro.length) intro.push({ qui: "ovo", nom: "Balade", texte: "ƟvƟ part seul·e sur le petit chemin des calanques." });
     await direUneFois(intro);
     if (!balade) return;
     if (avec("luigi")) {
@@ -3791,8 +3800,15 @@
       // (quand ƟvƟ s'assoit un moment, on s'arrête : on la voit de dos, assis·e sur une pierre,
       // face à la mer, le temps de la pensée)
       // (les pensées pas encore eues pendant cette balade)
-      for (const ligne of pasEncoreDit(histoires().pensees())) {
+      const visible = (l) => (l.besoin || []).every((x) => x === "mer" ? balade.merVue : x === "collines" ? balade.collinesVues : balade.vus && balade.vus.has(x));
+      balade.dits = balade.dits || new Set();
+      let dites = 0;
+      for (const ligne of histoires().pensees()) {
         if (!balade) return;
+        if (dites >= 4) break;
+        if (balade.dits.has(ligne.texte) || !visible(ligne)) continue;
+        balade.dits.add(ligne.texte);
+        dites++;
         const assis = /s’assoit/.test(ligne.texte);
         if (assis) { balade.assis = true; balade.pause = true; }
         await H.dialogue.dire([ligne]);
