@@ -2966,7 +2966,7 @@
     const haut = Math.round((Htot - h) * 0.55), bas = Htot - h - haut;
     toile.style.height = Htot + "px";
     ecran.width = Math.ceil(w * dpr); ecran.height = Math.ceil(Htot * dpr);
-    const nuit = H.ciel.etat().soleil.alt < -4;
+    const nuit = H.ciel.etat().soleil.alt < 0;
     const rEt = H.alea("etoiles-balade");
     const etoiles = Array.from({ length: 70 + Math.round(haut / 3) }, () => [rEt() * w, rEt() * rEt() * (h * 0.5 + haut) - haut, rEt() * 0.6 + 0.35]);
     const tirage = (graine, n) => {
@@ -3408,7 +3408,8 @@
     const avance = S.decalage;
     const etat = H.ciel.etat();
     const alt = etat.soleil.alt;
-    const nuit = alt < -4;
+    // (la nuit commence dès que le soleil est couché, comme pour le reste du jeu)
+    const nuit = alt < 0;
     nuitBalade = nuit;
     const ici = rouge(avance);
     const haut = S.haut || 0, bas = S.bas || 0;
@@ -3724,7 +3725,7 @@
     const s = H.ciel.etat();
     const mois = s.date.getMonth() + 1;
     const froid = [11, 12, 1, 2, 3, 4].includes(mois);
-    const nuit = s.soleil.alt < -4;
+    const nuit = s.soleil.alt < 0;
     const lignes = [{ qui: "ovo", texte: nuit ? "Un bain de minuit dans la crique, sous la lune !" : "L’eau est turquoise au pied des rochers rouges. J’y vais !" }];
     const avec = (q) => b.s.compagnons.includes(q);
     if (avec("luigi")) {
@@ -3824,7 +3825,7 @@
         H.el("div.pastilles.actions-balade", null, bain, sortir, fin)
       ));
       balade = { toile, fin, bain, sortir, s: scene(toile, compagnons) };
-      if (H.ciel.etat().soleil.alt < -4) H.sons.criquets(true);
+      if (H.ciel.etat().soleil.alt < 0) H.sons.criquets(true);
       dessinerBalade();
       setTimeout(() => balade && deroulerBalade(compagnons), 700);
     },

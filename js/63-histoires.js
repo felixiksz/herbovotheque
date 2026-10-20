@@ -100,9 +100,18 @@
   // Balade en solo : de petites pensées sur ce qu'on voit et entend
   function pensees() {
     const s = H.ciel.etat();
-    const nuit = s.soleil.alt < -4;
+    // (la nuit dès le coucher du soleil ; juste avant, le soir doré)
+    const nuit = s.soleil.alt < 0, soir = !nuit && s.soleil.alt < 8;
     const lune = H.ciel.nomPhase(s.lune.phase);
-    const base = nuit
+    const base = soir
+      ? [
+          "Le soleil descend derrière les collines. Les calanques deviennent roses.",
+          "La mer prend des reflets dorés, puis mauves.",
+          "Les cigales se taisent. Un premier grillon commence, timidement.",
+          "ƟvƟ s’assoit sur une pierre tiède pour regarder le soleil se coucher.",
+          "Le vent du soir apporte une odeur de pin et de sel.",
+        ]
+      : nuit
       ? [
           "Le chemin longe la mer. On entend les vagues respirer contre les rochers.",
           "Au-dessus des calanques, le ciel est plein d’étoiles. Ce soir, c’est la " + lune + ".",
