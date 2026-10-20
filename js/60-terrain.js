@@ -960,6 +960,7 @@
     brancherZoomGestes(zoneToile);
     brancherGestesForme(toile);
     chargerCalque(ile);
+    prechargerPhotos(ile);
     // le nom et l'aperçu d'une plante : au survol avec la souris, ou au toucher sur téléphone
     toile.addEventListener("pointerdown", (e) => (vue.pointeur = e.pointerType));
     toile.addEventListener("pointermove", (e) => e.pointerType === "mouse" && montrerBulle(e));
@@ -2649,6 +2650,25 @@
     return apercus.get(p.id);
   }
   let bulle = null, minuteurBulle = null;
+  // l'image de la bulle : le dessin tout de suite, puis la photo dès qu'elle est arrivée (les photos
+  // libres viennent de loin et mettent parfois quelques secondes : la bulle restait vide)
+  function imageBulle(p, cleBulle) {
+    const photo = H.photos && H.photos.vignette(p, 160);
+    if (!apercus.has(p.id)) apercus.set(p.id, dessinAuto(p));
+    const img = H.el("img", { src: dessinMain(p) || apercus.get(p.id), alt: "" });
+    if (photo) { const pre = new Image(); pre.onload = () => { if (bulle && bulle.dataset.cle === cleBulle) img.src = photo; }; pre.src = photo; }
+    return img;
+  }
+  // (les photos des plantes d'un jardin, chargées dès qu'on l'ouvre)
+  function prechargerPhotos(ile) {
+    if (!H.photos) return;
+    const vues = new Set();
+    for (const pl of Object.values(ile.plantes || {})) {
+      const q = H.d.plante(pl.p), u = q && !vues.has(q.id) && H.photos.vignette(q, 160);
+      if (q) vues.add(q.id);
+      if (u) new Image().src = u;
+    }
+  }
   function cacherBulle() {
     clearTimeout(minuteurBulle);
     if (bulle) bulle.hidden = true;
@@ -2694,7 +2714,7 @@
       bulle.dataset.cle = cleBulle;
       bulle.innerHTML = "";
       bulle.append(...[
-        H.el("img", { src: apercuPlante(p), alt: "" }),
+        imageBulle(p, cleBulle),
         H.el("span.nom-bulle", null, p.nom),
         p.latin ? H.el("em.latin-bulle", null, p.latin) : null,
         etat ? H.el("span.etat-bulle", null, etat) : null
