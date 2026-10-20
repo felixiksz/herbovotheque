@@ -3563,8 +3563,8 @@
       } else persoBalade(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
       // la nuit, les humain·es ont une lampe frontale ; allumée, elle éclaire le chemin devant
       if (nuit) {
-        if (avec("luigi")) lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t);
-        if (!b.assis) lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t);
+        if (avec("luigi")) lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t, pas(2));
+        if (!b.assis) lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
       }
     }
     if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
@@ -3582,7 +3582,6 @@
     if (b.attenteCrique && !b.baignade && !parle) {
       if (!b.criqueDepuis) {
         b.criqueDepuis = t;
-        if (cheminee.froid()) direUneFois([{ qui: "ovo", texte: "La crique est belle… mais l’eau est bien trop froide aujourd’hui pour se baigner. On continue !" }]);
       }
       if (t - b.criqueDepuis > (cheminee.froid() ? 1500 : 14000)) { b.attenteCrique = false; b.pause = false; }
     }
@@ -3662,8 +3661,21 @@
   // La lampe frontale : un petit boîtier sur le front, et, allumée, un faisceau qui part vers
   // l'avant et descend sur le chemin, chaud au centre (le filtre en gros pixels le trame en jolies
   // couleurs) ; il tremble à peine au rythme des pas
-  function lampeFrontale(ctx, nom, x, y, allumee, sol, h, t) {
-    const s0 = H.pixel.sprite(nom, 0), ech = 3, front = y - s0.height * ech + 2.5 * ech, lx = x + s0.width * ech * 0.32;
+  // (le front, image par image : on cherche le haut de la tête dans le dessin, qui monte et descend
+  // avec les pas ; la lampe et son faisceau suivent)
+  const fronts = new Map();
+  function hautTete(nom, image) {
+    const cle = nom + "|" + image;
+    if (!fronts.has(cle)) {
+      const s0 = H.pixel.sprite(nom, image), d = s0.getContext("2d").getImageData(0, 0, s0.width, s0.height).data;
+      let haut = 0;
+      search: for (let j = 0; j < s0.height; j++) for (let i = 0; i < s0.width; i++) if (d[(j * s0.width + i) * 4 + 3] > 0) { haut = j; break search; }
+      fronts.set(cle, { haut, h: s0.height, w: s0.width });
+    }
+    return fronts.get(cle);
+  }
+  function lampeFrontale(ctx, nom, x, y, allumee, sol, h, t, image) {
+    const f = hautTete(nom, image || 0), ech = 3, front = y - (f.h - f.haut) * ech + 2.5 * ech, lx = x + f.w * ech * 0.32;
     ctx.save();
     ctx.fillStyle = "#23214a";
     ctx.fillRect(Math.round(lx - 3), Math.round(front - 2), 5, 4);
@@ -3672,7 +3684,7 @@
     if (allumee) {
       // le faisceau plonge vers le chemin, quelques pas devant : trois couches, la plus étroite la
       // plus vive, pour des bords doux
-      const tremble = Math.sin(t / 170) * 1.2, loin = lx + h * 0.62, bas = sol(loin) - 1;
+      const tremble = (front - (y - (f.h - hautTete(nom, 0).haut) * ech + 2.5 * ech)) * 2.5, loin = lx + h * 0.62, bas = sol(loin) - 1;
       ctx.globalCompositeOperation = "lighter";
       for (const [ouvre, a] of [[0.2, 0.16], [0.12, 0.2], [0.05, 0.28]]) {
         const g = ctx.createLinearGradient(lx, front, loin, bas);
@@ -3749,12 +3761,6 @@
       persoBalade(ctx, "flamant", f.x, y, 3, 0, true);
       ctx.restore();
       ronds(ctx, f.x, eau, t, 3);
-      if (!f.parle && f.x < w * 0.7 && !H.$(".dialogue")) {
-        f.parle = true;
-        const repliques = [{ qui: "flamant", texte: "Flma-mala-lamama !" }, { qui: "ovo", texte: "Fala-la-lamala !" }];
-        if (b.s.compagnons.includes("luigi")) repliques.push({ qui: "luigi", texte: "Fla-fla-mala !" });
-        direUneFois(repliques);
-      }
       if (f.x < -60) {
         f.x = null;
         f.prochain = t + 20000 + Math.random() * 25000;
@@ -3770,21 +3776,8 @@
     if (H.journal) H.journal.noter("baignade", "je me suis baigné·e dans la mer");
     b.pause = true;
     b.bain.hidden = true;
-    const s = H.ciel.etat();
-    const mois = s.date.getMonth() + 1;
-    const froid = [11, 12, 1, 2, 3, 4].includes(mois);
-    const nuit = s.soleil.alt < 0;
-    const lignes = [{ qui: "ovo", texte: nuit ? "Un bain de minuit dans la crique, sous la lune !" : "L’eau est turquoise au pied des rochers rouges. J’y vais !" }];
-    const avec = (q) => b.s.compagnons.includes(q);
-    if (avec("luigi")) {
-      lignes.push({ qui: "luigi", texte: froid ? "Brrr, elle est fraîche ! Allez, à trois… un, deux… trois !" : "Elle est trop bonne ! On fait la planche ?" });
-      lignes.push({ qui: "ovo", texte: froid ? "AAAH ! Elle est glacée… et c’est trop bien." : "On voit les petits poissons entre les rochers !" });
-    }
-    if (avec("lolo")) lignes.push({ qui: "lolo", texte: "Vas-y, je garde tes affaires sur la terre rouge." });
-    if (avec("meme")) lignes.push({ qui: "meme", texte: "Mrrrou. (Mémé refuse de mouiller une seule moustache.)" });
-    // (en solo, la baignade se fait en silence)
-    if (!b.s.compagnons.length) lignes.length = 0;
-    await direUneFois(lignes);
+    // (la balade est silencieuse : seulement les bruits de l'eau)
+    await new Promise((r) => setTimeout(r, 1200));
     if (balade === b) b.sortir.hidden = false;
   }
 
@@ -3798,54 +3791,31 @@
     b.sortieEau = performance.now();
     await new Promise((r) => setTimeout(r, SORTIE_EAU + 600));
     if (balade !== b) return;
-    // … puis on rentre directement se réchauffer à la maison
-    const lignes = [{ qui: "ovo", texte: "Brrr ! Vite, une serviette, et on rentre se réchauffer à la maison !" }];
-    if (b.s.compagnons.includes("luigi")) lignes.push({ qui: "luigi", texte: "Je nous prépare un tilleul bien chaud. Allez, on rentre !" });
-    await H.dialogue.dire(lignes);
-    if (balade === b) H.aller("maison");
+    // … puis on choisit : reprendre le chemin, ou rentrer
+    if (b.continuer) b.continuer.hidden = false;
   }
 
-  // Pendant une balade, une même réplique ne revient pas : on garde ce qui a déjà été dit, et
-  // on ne le redit plus (l'introduction quand on continue, les pensées, la crique, le flamant)
-  function pasEncoreDit(lignes) {
-    const b = balade;
-    if (!b) return lignes;
-    b.dits = b.dits || new Set();
-    const neuves = lignes.filter((l) => !b.dits.has(l.texte));
-    for (const l of neuves) b.dits.add(l.texte);
-    return neuves;
-  }
-  async function direUneFois(lignes) {
-    const neuves = pasEncoreDit(lignes);
-    if (neuves.length) await H.dialogue.dire(neuves);
-  }
-
+  // La balade est un moment calme, avec qui que ce soit : pas une bulle, seulement les bruits (les
+  // pas, la mer, les grillons). En solo, une fois, au bout d'un moment, ƟvƟ s'assoit sur une
+  // pierre, de dos, face au paysage, puis repart.
   async function deroulerBalade(compagnons) {
-    const avec = (q) => compagnons.includes(q);
-    const intro = [];
-    if (avec("luigi")) intro.push({ qui: "luigi", texte: "On va voir la mer ?" });
-    if (avec("lolo")) intro.push({ qui: "lolo", texte: "Hiii ! Une balade ! On marche côte à côte, au pas, tranquilles." });
-    if (avec("meme") && avec("lolo")) intro.push({ qui: "meme", texte: "Mrrr… (Mémé se réveille, s’étire et se met debout sur le dos de Lóló : elle voyage sans même avoir à bouger.)" });
-    else if (avec("meme")) intro.push({ qui: "meme", texte: "Mrrrou ! (Mémé trottine devant, la queue en l’air, les yeux toujours fermés. Elle connaît le chemin par cœur.)" });
-    if (intro.length) await direUneFois(intro);
-    if (!balade) return;
-    if (avec("luigi")) {
-      await raconter("luigi", !avec("meme"));
-    }
-    if (balade && avec("lolo")) await raconter("lolo", !avec("meme"));
-    if (balade && !avec("luigi") && !avec("lolo")) {
-      // En solo, pas un mot : c'est un moment pour respirer. Une seule fois, au bout d'un moment,
-      // ƟvƟ s'assoit sur une pierre, de dos, face au paysage, puis repart.
-      const b0 = balade;
-      if (b0.fin) b0.fin.hidden = false;
-      await new Promise((r) => setTimeout(r, 45000));
-      if (balade !== b0 || b0.baignade) return;
-      b0.assis = true; b0.pause = true;
-      await new Promise((r) => setTimeout(r, 12000));
-      if (balade === b0) { b0.assis = false; b0.pause = false; }
-      return;
-    }
-    if (balade && balade.fin) balade.fin.hidden = false;
+    const b0 = balade;
+    if (!b0) return;
+    if (b0.fin) b0.fin.hidden = false;
+    if (compagnons.length) return;
+    await new Promise((r) => setTimeout(r, 45000));
+    if (balade !== b0 || b0.baignade || b0.attenteCrique) return;
+    b0.assis = true; b0.pause = true;
+    await new Promise((r) => setTimeout(r, 12000));
+    if (balade === b0) { b0.assis = false; b0.pause = false; }
+  }
+  // reprendre le chemin, après la baignade
+  function continuerBalade() {
+    const b = balade;
+    if (!b) return;
+    Object.assign(b, { baignade: null, sortieEau: null, pause: false, attenteCrique: false, assis: false, flamant: null });
+    b.sortir.hidden = true;
+    if (b.continuer) b.continuer.hidden = true;
   }
 
   H.vues.balade = {
@@ -3867,16 +3837,15 @@
         lampe.textContent = balade.lampe ? "Éteindre la lampe frontale" : "Allumer la lampe frontale";
         H.bruit && H.bruit("clic");
       } }, "Allumer la lampe frontale");
-      const fin = H.el("div.pastilles.fin-balade", { hidden: true },
-        bouton("Continuer la balade", () => { fin.hidden = true; deroulerBalade(compagnons); }),
-        bouton("Rentrer à la maison", () => H.aller("maison"))
-      );
+      const continuer = bouton("Continuer la balade", () => continuerBalade());
+      continuer.hidden = true;
+      const fin = H.el("div.pastilles.fin-balade", { hidden: true }, continuer, bouton("Rentrer à la maison", () => H.aller("maison")));
       c.append(H.el("div.cadre-balade", { "aria-label": titre },
         toile,
         H.el("a.sortie-maison", { href: "#maison", title: "Rentrer à la maison" }, "‹ Maison"),
         H.el("div.pastilles.actions-balade", null, lampe, bain, sortir, fin)
       ));
-      balade = { toile, fin, bain, sortir, boutonLampe: lampe, s: scene(toile, compagnons) };
+      balade = { toile, fin, bain, sortir, continuer, boutonLampe: lampe, s: scene(toile, compagnons) };
       if (H.ciel.etat().soleil.alt < 0) H.sons.criquets(true);
       dessinerBalade();
       setTimeout(() => balade && deroulerBalade(compagnons), 700);

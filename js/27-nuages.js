@@ -5,12 +5,13 @@
 // fois en petits pixels, puis gardé.
 (function () {
   const H = window.H;
+  // (des tons voisins dans chaque rangée, et peu d'écart entre le haut et l'ombre : un nuage doux)
   const TONS = {
-    jour: { haut: ["#fff6d8", "#f3f0dc", "#ffd2c0", "#ffe08a"], milieu: ["#f6c8d8", "#d6eef7", "#ffb3a8", "#e9e3f5"], ombre: ["#c2cdec", "#b48ad8", "#a8b8e0", "#8a98cc"] },
-    aube: { haut: ["#ffd2c0", "#ffe08a", "#fff6d8", "#ffb3a8"], milieu: ["#f4a3b8", "#ffb3a8", "#d07ab8", "#f6c8d8"], ombre: ["#8a98cc", "#9a84c4", "#b48ad8", "#7f97f2"] },
-    soir: { haut: ["#ffd23a", "#ff9a5a", "#ffd2c0", "#ffe08a"], milieu: ["#e86a8a", "#d07ab8", "#ff7b6a", "#f4a3b8"], ombre: ["#8a58cc", "#5b3c8f", "#6a4aa0", "#3a3aa8"] },
-    nuit: { haut: ["#c2cdec", "#a8b4e0", "#d6e0f7", "#8a98cc"], milieu: ["#5b62a8", "#6a6ab8", "#4a4f96", "#7a84c4"], ombre: ["#2a2c6a", "#363a80", "#26286a", "#3a3aa8"] },
-    couvert: { haut: ["#a8b4e0", "#9a84c4", "#c2cdec", "#8a98cc"], milieu: ["#5b5fa8", "#6a5aa0", "#4a4f96", "#7a84c4"], ombre: ["#3a3a7a", "#2e3270", "#4a3a80", "#26286a"] },
+    jour: { haut: ["#fff8ec", "#fff3e4", "#fdf0f0", "#fff6dc"], milieu: ["#f9e6ec", "#f2ecf8", "#fbe8e0", "#eef0fa"], ombre: ["#e0e2f4", "#e4dcf2", "#dae2f2", "#e6e0f0"] },
+    aube: { haut: ["#ffe6d8", "#fff0d8", "#ffe4dc", "#ffecd0"], milieu: ["#f8cfdc", "#fbd6d0", "#f2cde0", "#f6d4d8"], ombre: ["#d4cbe8", "#d0d0ec", "#dacbe6", "#cdd2ea"] },
+    soir: { haut: ["#ffdca0", "#ffd2a8", "#ffd8b4", "#ffe0a8"], milieu: ["#f6b4c4", "#f2b0c8", "#f8bab4", "#f4b8cc"], ombre: ["#c4a4dc", "#bca8dc", "#c8a8d8", "#b8acdc"] },
+    nuit: { haut: ["#a8b2dc", "#aeb6e0", "#a4aed8", "#b0b8e0"], milieu: ["#8a92c8", "#868ec6", "#8e94ca", "#848cc4"], ombre: ["#6c72b0", "#6a70ae", "#7076b2", "#686eac"] },
+    couvert: { haut: ["#9aa2d2", "#a0a6d4", "#9ca0ce", "#a2a8d6"], milieu: ["#7e84bc", "#8288be", "#7c80b8", "#8086bc"], ombre: ["#62689e", "#666aa0", "#60669c", "#6a6ea4"] },
   };
   const hasard = (s) => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
   const sprites = new Map();
@@ -52,9 +53,7 @@
       // (la lumière vient d'en haut : le haut de chaque boule, et tout le haut du nuage, s'éclairent)
       const hauteur = Math.min((y - (q.b[1] - q.b[2])) / (2 * q.b[2]), y / base + 0.15), a = r();
       const rangee = y > base - 2 ? tons.ombre : hauteur < 0.38 ? tons.haut : hauteur < 0.72 ? tons.milieu : tons.ombre;
-      let col = rangee[Math.floor(a * rangee.length)];
-      if (a < 0.08) col = tons.ombre[0];
-      if (a > 0.95 && rangee !== tons.ombre) col = tons.haut[0];
+      const col = rangee[Math.floor(a * rangee.length)];
       // (le bord du nuage s'effiloche un peu : quelques touches tombent juste à côté)
       touche(x + (q.d > 0.85 ? Math.round((r() - 0.5) * 2) : 0), y, 2, 2, col);
     }

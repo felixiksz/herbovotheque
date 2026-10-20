@@ -692,7 +692,8 @@
 
   // L'île de Lóló et Mémé : un chemin en forme de cœur, au milieu un bassin (papyrus, nénuphars,
   // grenouilles, canards), et tout autour beaucoup de romarin et de thym.
-  const VERSION_ILE_SECRETE = 3;
+  // (version 4 : la forme redessinée par Mesi, voir 59-jardin-lolo-meme.js)
+  const VERSION_ILE_SECRETE = 4;
   const NOM_JARDIN_SECRET = "Le jardin de Lóló et Mémé";
   function renommerJardinSecret() {
     const s = (H.jeu && H.jeu.iles || {})[ILE_SECRETE];
@@ -700,6 +701,21 @@
   }
   H.sur("donnees", renommerJardinSecret);
   function creerIleSecrete() {
+    // d'après le modèle redessiné par Mesi, s'il est là : sa forme, ses chemins, son bassin, ses plantes
+    const M = H.JARDIN_LOLO_MEME;
+    if (M) {
+      const maintenant = H.maintenant();
+      const ile = {
+        id: ILE_SECRETE, nom: NOM_JARDIN_SECRET, largeur: M.largeur, longueur: M.longueur, caseM: M.caseM, cols: M.cols, lignes: M.lignes,
+        croquis: false, secrete: true, version: VERSION_ILE_SECRETE, expo: M.expo, sol: M.sol.slice(),
+        notes: "", cases: {}, plantes: {}, vides: {}, mare: Object.assign({}, M.mare), lolo: Object.assign({}, M.lolo), creeLe: maintenant,
+      };
+      for (const k of M.vides) ile.vides[k] = true;
+      for (const [k, t] of Object.entries(M.cases)) ile.cases[k] = { t };
+      for (const [k, id] of Object.entries(M.plantes)) if (H.d.plante(id)) ile.plantes[k] = { p: id, le: maintenant, c: 100, eau: 80, maj: maintenant };
+      sauver(ile);
+      return;
+    }
     const cols = 22, lignes = 20;
     const ile = {
       id: ILE_SECRETE, nom: NOM_JARDIN_SECRET, largeur: 11, longueur: 10, caseM: 0.5, cols, lignes,
@@ -2945,7 +2961,11 @@
       return neuf;
     };
     ile.cases = bouger(ile.cases); ile.plantes = bouger(ile.plantes); ile.vides = bouger(ile.vides);
+    if (ile.relief) ile.relief = bouger(ile.relief);
     for (const a of ile.animaux || []) { a.x += dx; a.y += dy; }
+    // (le bassin et la place de Lóló suivent aussi)
+    if (ile.mare) ile.mare = Object.assign({}, ile.mare, { cx: ile.mare.cx + dx, cy: ile.mare.cy + dy });
+    if (ile.lolo) ile.lolo = Object.assign({}, ile.lolo, { x: ile.lolo.x + dx, y: ile.lolo.y + dy });
     ile.cols = Math.max(1, ile.cols + dx); ile.lignes = Math.max(1, ile.lignes + dy);
     if (vue && vue.ile === ile) {
       vue.ovo.x += dx; vue.ovo.y += dy; if (vue.ovo.cible) { vue.ovo.cible.x += dx; vue.ovo.cible.y += dy; }
