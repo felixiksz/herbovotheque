@@ -1,6 +1,7 @@
 /* Base : polices, couleurs, papier aquarelle, touches fluo, mode nuit */
 
-@font-face { font-family: "Beth Ellen"; src: url("../fonts/beth-ellen.woff2") format("woff2"); font-display: swap; }
+/* (le titre attend un instant sa police manuscrite plutôt que de s'afficher dans une autre) */
+@font-face { font-family: "Beth Ellen"; src: url("../fonts/beth-ellen.woff2") format("woff2"); font-display: block; }
 @font-face { font-family: "Kumar One"; src: url("../fonts/kumar-one.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Suez One"; src: url("../fonts/suez-one.woff2") format("woff2"); font-display: swap; }
 /* VT323 : la police pixel des menus des scènes (le Ɵ, qu'elle n'a pas, vient de Suez One) */
