@@ -233,9 +233,11 @@
         { valeur: "fleurs", libelle: "Qu’est-ce qui fleurit ?" },
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
+        { valeur: "visite", libelle: "Une visite guidée du jeu" },
         { valeur: null, libelle: "Merci Lóló !" },
       ]);
       if (!q) break;
+      if (q === "visite") return visite();
       let repliques = [];
       if (q === "astuce") {
         if (dejaDites.length >= astuces().length) dejaDites = [];
@@ -258,7 +260,53 @@
   // Lóló et Mémé sont là dès le début ; seule leur île apparaît le 24 février.
   const disponible = () => true;
 
-  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME } };
+  // --- la visite guidée : Lóló fait le tour de tout le jeu, lieu après lieu (proposée au tout
+  // début ; on la retrouve dans le menu de Lóló, et dans les réglages)
+  function etapesVisite() {
+    const mesi = H.monde === "mesi";
+    return [
+      ["village", [
+        "Hiii ! Suis-moi, je te montre tout. Ici, c’est la ferme. Clique sur une maison pour y entrer, ou n’importe où pour y marcher.",
+        "En haut à droite : la truelle pour aménager la ferme, la pousse pour aller aux jardins, le rouage pour les réglages.",
+        "Le petit carnet juste en dessous, c’est pour noter vite quelque chose, même les mains pleines de terre. En bas à gauche, les post-it de ta to-do liste : tu peux les cocher direct !",
+      ]],
+      ["herbotheque", ["L’herbothèque : toutes les fiches des plantes, rangées sur les étagères. Clique sur un bocal pour ouvrir sa fiche."]],
+      ["cartes", ["Les flashcartes ! Chaque bonne réponse rapporte des ressources pour les jardins. Et toutes les quinze cartes… une crêpe au chocolat fondu !"]],
+      ["terrain", ["Tes jardins. En mode Jardin, on plante, on arrose, on récolte. En mode Chantier, on aménage, on change la forme du jardin ou son relief."]],
+      ["serre", ["La serre : on sème dans les pots, et les bébés plantes vont dans la caisse, prêts à repiquer dans les jardins."]],
+      ["labo", ["Le labo : les récoltes deviennent des préparations, et on remplit les bocaux de l’herbothèque."]],
+      ["tisanes", [mesi ? "Tes formules, avec le rôle de chaque substance." : "Le placard à tisanes : tes mélanges, avec ce que fait chaque plante."]],
+      ["lettres", ["La boîte aux lettres, pour écrire des lettres, même des lettres qui arrivent plus tard."]],
+      ["carnet", ["Le carnet : des pages pour tes chantiers et tes idées, avec des vues, des commentaires, des pièces jointes. Ctrl K pour chercher partout dans le jeu !"]],
+      ["taches", ["La to-do liste, avec des rappels qui sonnent au bon moment."]],
+      ["devis", ["Les devis et les factures, pour tes clients."]],
+      ["maison", ["Et la maison ! Le canapé, le goûter, le dodo… et la porte, pour partir en balade."]],
+      ["village", ["Voilà, tu sais tout ! Hiii ! Tu peux me redemander la visite quand tu veux : clique sur moi à la ferme, ou va dans les réglages."]],
+    ];
+  }
+  let visiteEnCours = false;
+  async function visite() {
+    if (visiteEnCours) return;
+    visiteEnCours = true;
+    H.d.majLocal((l) => (l.visiteProposee = true));
+    try {
+      for (const [lieu, textes] of etapesVisite()) {
+        if (!location.hash.startsWith("#" + lieu)) { H.aller(lieu); await new Promise((r) => setTimeout(r, 900)); }
+        const r = await H.dialogue.dire(textes.map((texte, i) => i === textes.length - 1 ? { qui: "lolo", texte, choix: [{ valeur: "suite", libelle: "Suite" }, { valeur: null, libelle: "Arrêter la visite" }] } : { qui: "lolo", texte }));
+        if (lieu === "village" && textes.length === 1) break;
+        if (!r) { await H.dialogue.dire([{ qui: "lolo", texte: "D’accord ! Si tu veux la reprendre, clique sur moi à la ferme. Hiii !" }]); break; }
+      }
+    } finally { visiteEnCours = false; }
+  }
+  // au tout premier lancement, sur la ferme : Lóló propose la visite (une seule fois)
+  function proposerVisite() {
+    if (!H.local || H.local.visiteProposee || visiteEnCours || H.$(".dialogue")) return;
+    H.d.majLocal((l) => (l.visiteProposee = true));
+    H.dialogue.dire([{ qui: "lolo", texte: "Hiii ! Bienvenue ! Moi c’est Lóló, et voici Mémé. Je te fais visiter ?", choix: [{ valeur: "oui", libelle: "Oui, visite !" }, { valeur: null, libelle: "Plus tard" }] }])
+      .then((r) => (r ? visite() : H.dialogue.dire([{ qui: "lolo", texte: "D’accord ! Quand tu veux, clique sur moi à la ferme, ou va dans les réglages." }])));
+  }
+
+  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, visite, proposerVisite, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME } };
 })();
 
 // Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,

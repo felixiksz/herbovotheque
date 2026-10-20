@@ -504,7 +504,10 @@
     afficher(c) {
       c.appendChild(H.el("h1", null, "Réglages"));
       // comme les préférences d'un vieux Mac : la liste des sections à gauche
-      const blocs = [blocLieu(), blocTheme(), blocLeger(), blocMiaou(), blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
+      const visite = H.el("section.reglage", null, H.el("h2", null, "Visite guidée"),
+        H.el("p.discret", null, "Lóló refait le tour de tout le jeu, lieu après lieu."),
+        H.el("button.bouton", { type: "button", onclick: () => H.lolo && H.lolo.visite() }, "Revoir la visite avec Lóló"));
+      const blocs = [blocLieu(), blocTheme(), blocLeger(), blocMiaou(), visite, blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
       c.appendChild(H.bureau.onglets(blocs.map((b) => ({ nom: b.querySelector("h2").textContent, el: b })), { cle: "reglages", lateral: true }));
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },

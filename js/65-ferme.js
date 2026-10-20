@@ -2165,6 +2165,8 @@
       dimensionner();
       appliquerPlan(true);
       peindreSol(); peindreSol2();
+      // (au tout premier lancement, Lóló propose de faire visiter)
+      setTimeout(() => scene && H.lolo && H.lolo.proposerVisite && H.lolo.proposerVisite(), 2500);
       const [sx, sy] = iso(px, py);
       scene.cam.x = largeCamera(sx - W / 2); scene.cam.y = hautCamera(sy - Ht / 2 - 10);
       // Lóló : la première fois de la visite, il arrive au galop ; ensuite il est là, à côté d'ƟvƟ
