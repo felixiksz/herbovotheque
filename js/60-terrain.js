@@ -848,7 +848,7 @@
 
 
   // --- les icônes en pixels de l'écran des îles (12 × 12, dans le style du bureau) ---------------
-  const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", y: "#f6ee55", n: "#b9834f", N: "#7a4520" };
+  const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", y: "#f6ee55", g: "#c6c8dc", G: "#8d90b0", n: "#b9834f", N: "#7a4520" };
   const ICONES_ILE = {
     oiseau: ["............", "............", ".......kkk..", "......kbbbk.", "......kbkbyy", "..kkkkkbbbk.", ".kbbbbbbbbk.", "kbbBBBbbbk..", ".kbbBBBbbk..", "..kkkbbbk...", "....k..k....", "...kk..kk..."],
     relief: [".....kk.....", "...kkvvkk...", ".kkvvvvvvkk.", "kvvvvvvvvvvk", "knkkvvvvkkNk", "knnnkkkkNNNk", "knnnnnNNNNNk", ".kknnnNNNkk.", "...kknNkk...", ".....kk.....", "............", "............"],
@@ -856,7 +856,7 @@
     moins: ["............", "............", "............", "............", "..kkkkkkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkkkkkk..", "............", "............", "............", "............"],
     cerveau: ["............", "...kkkkkk...", "..kmmMmmmk..", ".kmmmMmMmmk.", ".kmMmMmmMmk.", "kmmMmmMmmmmk", "kmmmMmmMmMmk", ".kmMmmMmmmk.", ".kmmMmmMmmk.", "..kkkkkkkk..", "....kmmk....", "....kkkk...."],
     exporter: ["..kkkkkk....", "..kwwwwkk...", "..kwwwwkwk..", "..kwwwwkkkk.", "..kwwwwwwwk.", "..kwwwvwwwk.", "..kwwwvvwwk.", "..kwvvvvvwk.", "..kwwwvvwwk.", "..kwwwvwwwk.", "..kwwwwwwwk.", "..kkkkkkkkk."],
-    reglages: ["....kkkk....", ".kk.kyyk.kk.", ".kykkyykkyk.", "..kyyyyyyk..", "kkyykkkkyykk", "kyyykwwkyyyk", "kyyykwwkyyyk", "kkyykkkkyykk", "..kyyyyyyk..", ".kykkyykkyk.", ".kk.kyyk.kk.", "....kkkk...."],
+    reglages: ["....kkkk....", ".kk.kggk.kk.", ".kgkkggkkgk.", "..kggggggk..", "kkggkkkkgGkk", "kgggk..kgGGk", "kgggk..kgGGk", "kkggkkkkGGkk", "..kgGGGGGk..", ".kGkkGGkkGk.", ".kk.kGGk.kk.", "....kkkk...."],
     patte: ["............", "..kk....kk..", ".knnk..knnk.", ".knnk..knnk.", "..kk.kk.kk..", "....knnk....", "...knnnnk...", "..knnnnnnk..", "..knnnnnnk..", "...knnnnk...", "....kkkk....", "............"],
   };
   const imagesIcones = {};
@@ -934,6 +934,7 @@
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null);
     conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, H.el("div.cadre-toile-ile", null, zoneToile, barreVue, barreAmis), panneau);
     Object.assign(vue, { toile, ciel, infoCiel, outils, options, panneau, zoneToile });
+    if (window.ResizeObserver) { const ro = new ResizeObserver(() => hauteurZone()); ro.observe(outils); ro.observe(options); }
 
     dessinerOutils();
     dimensionner();
@@ -1116,14 +1117,39 @@
     dessiner();
   }
 
+  // L'île prend toute la place de l'écran : la zone descend jusqu'en bas de la fenêtre, et la toile
+  // la remplit (du ciel ou de la mer en plus autour de l'île). On renvoie la largeur et la hauteur à
+  // remplir (rien pour l'export, qui garde l'île seule avec sa petite bordure).
+  function placeZone(w) {
+    const z = vue.zoneToile;
+    if (!z || vue.pourExport || !z.isConnected) return [0, 0];
+    hauteurZone();
+    // (la toile prend sa largeur d'abord : une barre de défilement en bas mange un peu de hauteur)
+    vue.toile.style.width = w + "px";
+    return [z.clientWidth, z.clientHeight];
+  }
+  // (la hauteur de la zone suit aussi ce qui change au-dessus : les options de l'outil)
+  function hauteurZone() {
+    const z = vue && vue.zoneToile;
+    if (!z || !z.isConnected) return;
+    const haut = z.getBoundingClientRect().top + window.scrollY;
+    z.style.maxHeight = "none";
+    z.style.height = Math.max(280, Math.round(window.innerHeight - haut - 14)) + "px";
+  }
+  let attenteTaille = 0;
+  window.addEventListener("resize", () => {
+    clearTimeout(attenteTaille);
+    attenteTaille = setTimeout(() => { if (vue && vue.toile && vue.toile.isConnected) { dimensionner(); peindreFond(); dessiner(); } }, 200);
+  });
+
   function dimensionner() {
     if (vue.iso) return dimensionnerIso();
     const ile = vue.ile;
-    // (la toile remplit toute la largeur de la zone d'affichage : l'île au milieu, de la mer autour)
-    const zw = vue.zoneToile ? vue.zoneToile.clientWidth : 0;
-    const casesX = Math.max(ile.cols + BORD * 2, Math.ceil(zw / (T * vue.zoom))), casesY = ile.lignes + BORD * 2;
+    // (la toile remplit toute la zone d'affichage : l'île au milieu, de la mer autour)
+    const [zw, zh] = placeZone((ile.cols + BORD * 2) * T * vue.zoom);
+    const casesX = Math.max(ile.cols + BORD * 2, Math.ceil(zw / (T * vue.zoom))), casesY = Math.max(ile.lignes + BORD * 2, Math.floor(zh / (T * vue.zoom)));
     vue.bx = (casesX - ile.cols) / 2; vue.by = (casesY - ile.lignes) / 2;
-    const w = casesX * T * vue.zoom, h = casesY * T * vue.zoom;
+    const w = casesX * T * vue.zoom, h = Math.max(casesY * T * vue.zoom, zh);
     const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 3);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
@@ -1812,9 +1838,10 @@
     vue.ox = MARGE + ile.lignes * HW;
     vue.oy = MARGE + haut;
     let w = ((ile.cols + ile.lignes) * HW + 2 * MARGE) * vue.zoom, h = (vue.oy + (ile.cols + ile.lignes) * QH + PROF + MARGE) * vue.zoom;
-    // (la toile remplit toute la largeur de la zone d'affichage : du ciel de chaque côté de l'île)
-    const zw = vue.zoneToile ? vue.zoneToile.clientWidth : 0;
+    // (la toile remplit toute la zone d'affichage : du ciel autour de l'île)
+    const [zw, zh] = placeZone(w);
     if (zw > w) { vue.ox += (zw - w) / 2 / vue.zoom; w = zw; }
+    if (zh > h) { vue.oy += (zh - h) / 2 / vue.zoom; h = zh; }
     const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 3);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
@@ -2261,6 +2288,20 @@
       }
     }
 
+    // les paniers de la récolte du jour sur le bord de devant, et les pots à repiquer qui flottent
+    // devant l'angle de devant (comme en relief)
+    paniersIle(ile).forEach((b, i) => {
+      const q = H.d.plante(b.p), [bx, by] = placePanier(ile, i);
+      if (q) { ctx.save(); ctx.translate(Math.round(bx * T), Math.round(by * T)); ctx.scale(2, 2); panierRecolte(ctx, 0, 0, q, b.n); ctx.restore(); }
+    });
+    vue.potsOiseau = [];
+    potsDeLaCaisse(ile).forEach((q, i) => {
+      const pq = H.d.plante(q.id);
+      if (!pq) return;
+      vue.potsOiseau.push(q);
+      ctx.save(); ctx.translate(Math.round(q.x * T), Math.round(q.y * T)); ctx.scale(1.7, 1.7); potFlottant(ctx, 0, 0, pq, vue.outil === "planter" && vue.depuisSerre && vue.plante === q.id, performance.now(), i); ctx.restore();
+    });
+
     // Lóló et Mémé sur leur île
     if (ile.secrete) {
       const maintenant = performance.now();
@@ -2541,19 +2582,27 @@
   }
 
   function clic(e) {
+    // d'abord les pots à repiquer et les paniers de la récolte, au bord de l'île
+    const rect = vue.toile.getBoundingClientRect(), ile = vue.ile;
+    let pot, b;
     if (vue.iso) {
-      const rect = vue.toile.getBoundingClientRect(), lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
-      const pot = (vue.potsFlottants || []).find((q) => lx >= q.g && lx <= q.d && ly >= q.h && ly <= q.b);
-      if (pot) {
-        const q = H.d.plante(pot.id);
-        vue.plante = pot.id; vue.depuisSerre = true; vue.outil = "planter";
-        dessinerOutils(); dessiner();
-        if (q) H.toast("Clique sur une case pour y repiquer " + H.leNom(q) + " (en vert, là où elle se plairait).");
-        return;
-      }
-      const ile = vue.ile, b = paniersIle(ile).find((x, i) => { const [bx, by] = proj(...placePanier(ile, i)); return Math.abs(lx - bx) < 14 && ly > by - 26 && ly < by + 4; });
-      if (b) { const q = H.d.plante(b.p); if (q) H.toast("Dans ce panier : " + (b.n > 1 ? b.n + " récoltes" : "une récolte") + " " + H.duNom(q) + ", déjà parties au labo."); return; }
+      const lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
+      pot = (vue.potsFlottants || []).find((q) => lx >= q.g && lx <= q.d && ly >= q.h && ly <= q.b);
+      b = paniersIle(ile).find((x, i) => { const [bx, by] = proj(...placePanier(ile, i)); return Math.abs(lx - bx) < 14 && ly > by - 26 && ly < by + 4; });
+    } else {
+      // (en vue d'oiseau, en cases : le pot avec sa plantule au-dessus, le panier avec son anse)
+      const fx = (e.clientX - rect.left) / (T * vue.zoom) - vue.bx, fy = (e.clientY - rect.top) / (T * vue.zoom) - vue.by;
+      pot = (vue.potsOiseau || []).find((q) => Math.abs(fx - q.x) < 0.5 && fy > q.y - 1 && fy < q.y + 0.45);
+      b = paniersIle(ile).find((x, i) => { const [bx, by] = placePanier(ile, i); return Math.abs(fx - bx) < 0.45 && fy > by - 0.85 && fy < by + 0.15; });
     }
+    if (pot) {
+      const q = H.d.plante(pot.id);
+      vue.plante = pot.id; vue.depuisSerre = true; vue.outil = "planter";
+      dessinerOutils(); dessiner();
+      if (q) H.toast("Clique sur une case pour y repiquer " + H.leNom(q) + " (en vert, là où elle se plairait).");
+      return;
+    }
+    if (b) { const q = H.d.plante(b.p); if (q) H.toast("Dans ce panier : " + (b.n > 1 ? b.n + " récoltes" : "une récolte") + " " + H.duNom(q) + ", déjà parties au labo."); return; }
     const c = caseCliquee(e);
     if (!c) return;
     if (vue.pointeur && vue.pointeur !== "mouse") montrerBulle(e, 2600);
@@ -3569,9 +3618,10 @@
 
   function exporterImage(ile) {
     // le croquis s'exporte en plan, vu de dessus, à l'échelle
-    if (vue.iso) {
-      vue.iso = false; dimensionner(); peindreFond();
-      try { exporterImage(ile); } finally { vue.iso = true; dimensionner(); peindreFond(); dessiner(); }
+    if (vue.iso || !vue.pourExport) {
+      const iso = vue.iso;
+      vue.iso = false; vue.pourExport = true; dimensionner(); peindreFond();
+      try { exporterImage(ile); } finally { vue.iso = iso; vue.pourExport = false; dimensionner(); peindreFond(); dessiner(); }
       return;
     }
     const c = H.aqua.toile(vue.toile.width, vue.toile.height + 60 * vue.dpr);

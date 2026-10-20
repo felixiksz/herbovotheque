@@ -58,6 +58,9 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
   border-radius: 6px;
   background: #8fc3dc;
   -webkit-overflow-scrolling: touch;
+  /* (une barre de défilement fine, aux couleurs de la mer) */
+  scrollbar-width: thin;
+  scrollbar-color: #5a7cc8 #a8d8ec;
 }
 .toile-ile { display: block; cursor: pointer; touch-action: pan-x pan-y; }
 
