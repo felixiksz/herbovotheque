@@ -356,8 +356,11 @@
     return e.pret ? e.img : null;
   }
 
+  // le modèle dessiné à la main (vue de dessus) : seulement si on a choisi de le montrer sur les
+  // îles ; sinon chaque plante garde son dessin botanique
+  const dessinMain = (p) => (p.dessinSurIles && p.dessinCarte) || null;
   function dessinPlante(p, st, fleur, rayonCases) {
-    if (p.dessinCarte && st >= 2) {
+    if (dessinMain(p) && st >= 2) {
       const img = imageDessin(p);
       if (img) {
         return memo("main|" + p.id + "|" + p.dessinCarte.length + "|" + st + "|" + rayonCases, () => {
@@ -2538,7 +2541,7 @@
   function apercuPlante(p) {
     const photo = H.photos && H.photos.vignette(p, 160);
     if (photo) return photo;
-    if (p.dessinCarte) return p.dessinCarte;
+    if (dessinMain(p)) return dessinMain(p);
     if (!apercus.has(p.id)) apercus.set(p.id, dessinAuto(p));
     return apercus.get(p.id);
   }
@@ -2547,17 +2550,42 @@
     clearTimeout(minuteurBulle);
     if (bulle) bulle.hidden = true;
   }
+  // le pot à repiquer ou le panier de récolte sous le pointeur (au bord de l'île), dans les deux vues
+  function bordTouche(e) {
+    const rect = vue.toile.getBoundingClientRect(), ile = vue.ile;
+    if (vue.iso) {
+      const lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
+      return {
+        pot: (vue.potsFlottants || []).find((q) => lx >= q.g && lx <= q.d && ly >= q.h && ly <= q.b),
+        b: paniersIle(ile).find((x, i) => { const [bx, by] = proj(...placePanier(ile, i)); return Math.abs(lx - bx) < 14 && ly > by - 26 && ly < by + 4; }),
+      };
+    }
+    // (en vue d'oiseau, en cases : le pot avec sa plantule au-dessus, le panier avec son anse)
+    const fx = (e.clientX - rect.left) / (T * vue.zoom) - vue.bx, fy = (e.clientY - rect.top) / (T * vue.zoom) - vue.by;
+    return {
+      pot: (vue.potsOiseau || []).find((q) => Math.abs(fx - q.x) < 0.5 && fy > q.y - 1 && fy < q.y + 0.45),
+      b: paniersIle(ile).find((x, i) => { const [bx, by] = placePanier(ile, i); return Math.abs(fx - bx) < 0.45 && fy > by - 0.85 && fy < by + 0.15; }),
+    };
+  }
   function montrerBulle(e, duree) {
-    const c = caseCliquee(e);
+    const { pot, b } = bordTouche(e);
+    const c = pot || b ? null : caseCliquee(e);
     const pl = c && (vue.ile.plantes || {})[cle(c.x, c.y)];
-    const p = pl && H.d.plante(pl.p);
+    const p = pl ? H.d.plante(pl.p) : pot ? H.d.plante(pot.id) : b ? H.d.plante(b.p) : null;
     if (!p) return cacherBulle();
     if (!bulle) {
       bulle = H.el("div.bulle-plante", { role: "tooltip", hidden: true });
       document.body.appendChild(bulle);
     }
-    const st = stade(vue.ile, pl);
-    const etat = vue.ile.croquis ? null : NOMS_STADES[st] + (fleurie(p, vue.ile, pl) ? ", en fleur" : "") + (aRecolter(p, vue.ile, pl) ? ", à récolter" : "");
+    let etat;
+    if (pot) {
+      const n = potsDeLaCaisse(vue.ile).filter((q) => q.id === pot.id).length;
+      etat = (n > 1 ? n + " bébés" : "Un bébé") + " à repiquer, de la caisse de la serre";
+    } else if (b) etat = "Dans le panier : " + (b.n > 1 ? b.n + " récoltes" : "une récolte") + ", déjà parties au labo";
+    else {
+      const st = stade(vue.ile, pl);
+      etat = vue.ile.croquis ? null : NOMS_STADES[st] + (fleurie(p, vue.ile, pl) ? ", en fleur" : "") + (aRecolter(p, vue.ile, pl) ? ", à récolter" : "");
+    }
     const cleBulle = p.id + "|" + etat;
     if (bulle.dataset.cle !== cleBulle) {
       bulle.dataset.cle = cleBulle;
@@ -2583,18 +2611,7 @@
 
   function clic(e) {
     // d'abord les pots à repiquer et les paniers de la récolte, au bord de l'île
-    const rect = vue.toile.getBoundingClientRect(), ile = vue.ile;
-    let pot, b;
-    if (vue.iso) {
-      const lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
-      pot = (vue.potsFlottants || []).find((q) => lx >= q.g && lx <= q.d && ly >= q.h && ly <= q.b);
-      b = paniersIle(ile).find((x, i) => { const [bx, by] = proj(...placePanier(ile, i)); return Math.abs(lx - bx) < 14 && ly > by - 26 && ly < by + 4; });
-    } else {
-      // (en vue d'oiseau, en cases : le pot avec sa plantule au-dessus, le panier avec son anse)
-      const fx = (e.clientX - rect.left) / (T * vue.zoom) - vue.bx, fy = (e.clientY - rect.top) / (T * vue.zoom) - vue.by;
-      pot = (vue.potsOiseau || []).find((q) => Math.abs(fx - q.x) < 0.5 && fy > q.y - 1 && fy < q.y + 0.45);
-      b = paniersIle(ile).find((x, i) => { const [bx, by] = placePanier(ile, i); return Math.abs(fx - bx) < 0.45 && fy > by - 0.85 && fy < by + 0.15; });
-    }
+    const { pot, b } = bordTouche(e);
     if (pot) {
       const q = H.d.plante(pot.id);
       vue.plante = pot.id; vue.depuisSerre = true; vue.outil = "planter";

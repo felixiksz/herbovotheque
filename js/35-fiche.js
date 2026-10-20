@@ -432,7 +432,7 @@
       H.el("div.fiche-preps.fiche-carte", null,
         H.el("h3", null, "Sur la carte du terrain"),
         H.el("div.ligne-carte", null,
-          H.el("img.apercu-carte", { src: p.dessinCarte || (H.terrain ? H.terrain.dessinAuto(p) : ""), alt: "" }),
+          H.el("img.apercu-carte", { src: (p.dessinSurIles && p.dessinCarte) || (H.terrain ? H.terrain.dessinAuto(p) : ""), alt: "" }),
           H.el("button.bouton.petit", { type: "button", onclick: () => H.dessinerPlante(p.id, recharger) }, p.dessinCarte || p.dessinFace || p.dessinCote ? "Modifier son modèle" : "Dessiner son modèle")
         )
       ),
