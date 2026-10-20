@@ -269,7 +269,8 @@
       const racine = document.documentElement;
       racine.style.setProperty("--ciel-haut", t.haut);
       racine.style.setProperty("--ciel-bas", t.bas);
-      const nuit = H.local.theme === "nuit" || (H.local.theme === "auto" && s.soleil.alt < -4);
+      // (en automatique, tout passe en sombre dès que le soleil se couche)
+      const nuit = H.local.theme === "nuit" || (H.local.theme === "auto" && s.soleil.alt < 0);
       racine.dataset.theme = nuit ? "nuit" : "jour";
       racine.dataset.saison = s.saison;
       racine.dataset.meteo = (s.meteo && s.meteo.type) || "clair";

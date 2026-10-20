@@ -144,18 +144,27 @@
   };
 
   // Fenêtre par-dessus la page ; renvoie une fonction pour la fermer.
+  // Une fenêtre par-dessus, comme celles du bureau : une barre de titre (la case × pour fermer, le
+  // titre au milieu, repris du premier titre du contenu), puis le contenu, tout en police pixel.
+  // (les anciens menus de scène prennent le même habit ; « menu-large » devient « large »)
   H.fenetre = function (contenu, opts) {
     opts = opts || {};
+    const classes = (opts.classe || "").split(".").filter(Boolean).map((c) => (c === "menu-large" ? "large" : c)).filter((c) => c !== "menu-scene");
     const voile = H.el("div.voile");
-    const panneau = H.el("div.panneau" + (opts.classe ? "." + opts.classe : ""), { role: "dialog", "aria-modal": "true" });
+    const panneau = H.el("div.panneau.fenetre-pixel" + classes.map((c) => "." + c).join(""), { role: "dialog", "aria-modal": "true" });
     const fermer = () => {
       voile.remove();
       document.removeEventListener("keydown", echap);
       opts.surFermer && opts.surFermer();
     };
     const echap = (e) => e.key === "Escape" && fermer();
-    panneau.appendChild(H.el("button.bouton.discret-bouton.fermer", { type: "button", onclick: fermer, "aria-label": "Fermer" }, "Fermer"));
-    panneau.appendChild(contenu);
+    const h2 = contenu.querySelector("h2"), titre = h2 ? h2.textContent : opts.titre || "";
+    if (h2) h2.remove();
+    if (titre) panneau.setAttribute("aria-label", titre);
+    panneau.appendChild(H.el("div.titre-fenetre-pixel", null,
+      H.el("button.fermer-fenetre-pixel", { type: "button", onclick: fermer, "aria-label": "Fermer", title: "Fermer (Échap)" }, "×"),
+      H.el("span.titre-texte", null, titre)));
+    panneau.appendChild(H.el("div.corps-fenetre", null, contenu));
     voile.appendChild(panneau);
     voile.addEventListener("click", (e) => e.target === voile && fermer());
     document.addEventListener("keydown", echap);

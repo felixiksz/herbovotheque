@@ -2578,7 +2578,7 @@
   }
   function fenetreBalade() {
     let fermer;
-    const corps = H.el("div", null, H.el("h2", null, "Faire une balade"), choixCompagnons());
+    const corps = H.el("div", null, H.el("h2", null, "Faire une balade"), H.el("p", null, H.el("b", null, "Avec qui ?")), choixCompagnons());
     fermer = fermerBalade = H.fenetre(corps, { classe: "menu-scene" });
     return fermer;
   }

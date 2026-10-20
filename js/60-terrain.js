@@ -3243,15 +3243,15 @@
     let fermer;
     const corps = H.el("div.fenetre-caisse", null,
       H.el("h2", null, "Ta caisse et le sol"),
-      H.el("p.discret", null, "Le sol du jardin : " + texteListe(ile.sol) + " · " + (ile.expo || "Plein soleil").toLowerCase() + ". Chaque case peut avoir le sien (outil « Soleil et sol »)."),
+      H.el("p.discret", null, H.el("b", null, "Le sol du jardin : "), texteListe(ile.sol) + " · " + (ile.expo || "Plein soleil").toLowerCase() + ". Chaque case peut avoir le sien (outil « Soleil et sol »)."),
       bebes.length ? H.el("ul.liste-caisse", null, bebes.map(([id, n]) => {
         const p = H.d.plante(id);
         if (!p) return null;
         const v = p.valeurs || {}, bonnes = casesQuiConviennent(ile, p);
         return H.el("li", null,
           H.el("b", null, p.nom + " × " + n),
-          H.el("span", null, "Sol : " + texteListe(v.sol) + " · exposition : " + texteListe(v.exposition) + (v.arrosage ? " · arrosage " + v.arrosage.toLowerCase() : "")),
-          H.el("span" + (bonnes.length ? ".bon" : ".pas-bon"), null, bonnes.length ? "Se plairait sur " + bonnes.length + (bonnes.length > 1 ? " cases" : " case") + " de ce jardin." : "Ne se plairait nulle part ici sans changer le sol ou l’ombre."),
+          H.el("span", null, H.el("b", null, "Sol : "), texteListe(v.sol) + " · ", H.el("b", null, "exposition : "), texteListe(v.exposition), v.arrosage ? H.el("span", null, " · ", H.el("b", null, "arrosage "), v.arrosage.toLowerCase()) : null),
+          H.el("b" + (bonnes.length ? ".bon" : ".pas-bon"), null, bonnes.length ? "Se plairait sur " + bonnes.length + (bonnes.length > 1 ? " cases" : " case") + " de ce jardin." : "Ne se plairait nulle part ici sans changer le sol ou l’ombre."),
           H.el("div.pastilles", null,
             bonnes.length ? H.el("button.bouton.petit", { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; vue.outil = "planter"; fermer(); dessinerOutils(); dessiner(); } }, "Montrer où, et la repiquer") : null,
             conseilsSolPlante(ile, p)));

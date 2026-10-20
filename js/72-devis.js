@@ -228,7 +228,7 @@
   }
   function apercu(doc) {
     const f = H.el("iframe.apercu-devis", { title: "Aperçu" });
-    const fermer = H.fenetre(H.el("div.fenetre-apercu", null, f, H.el("div.boutons-bas", null, H.el("button.bouton", { type: "button", onclick: () => imprimer(doc) }, "Enregistrer en PDF ou imprimer"))), { classe: "large" });
+    const fermer = H.fenetre(H.el("div.fenetre-apercu", null, f, H.el("div.boutons-bas", null, H.el("button.bouton", { type: "button", onclick: () => imprimer(doc) }, "Enregistrer en PDF ou imprimer"))), { classe: "large", titre: "Aperçu " + (doc.type === "facture" ? "de la facture" : "du devis") });
     setTimeout(() => { f.contentDocument.open(); f.contentDocument.write(pageImprimable(doc)); f.contentDocument.close(); H.export.ajusterApercu(f); }, 0);
     return fermer;
   }

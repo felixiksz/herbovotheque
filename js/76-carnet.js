@@ -504,7 +504,7 @@
       if (e.key === "ArrowUp") { e.preventDefault(); actif = Math.max(0, actif - 1); montrer(); }
       if (e.key === "Enter" && res[actif]) { e.preventDefault(); fermer(); location.hash = res[actif].hash; }
     });
-    fermer = H.fenetre(H.el("div.palette-recherche", null, champ, liste), { classe: "large" });
+    fermer = H.fenetre(H.el("div.palette-recherche", null, champ, liste), { classe: "large", titre: "Chercher partout" });
     montrer();
     setTimeout(() => champ.focus(), 30);
   }
