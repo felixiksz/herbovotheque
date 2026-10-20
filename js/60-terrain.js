@@ -945,6 +945,7 @@
     dessiner();
     dessinerCiel();
     toile.addEventListener("click", clic);
+    brancherZoomGestes(zoneToile);
     brancherGestesForme(toile);
     chargerCalque(ile);
     // le nom et l'aperçu d'une plante : au survol avec la souris, ou au toucher sur téléphone
@@ -1117,14 +1118,52 @@
     H.d.majLocal((l) => (l.plantesRecentes = [id].concat((l.plantesRecentes || []).filter((x) => x !== id)).slice(0, 8)));
   }
 
-  function zoomer(sens) {
+  // (cx, cy : le point de l'écran qui reste sous le pointeur ou entre les doigts ; sinon le milieu)
+  function zoomer(sens, cx, cy) {
     const niveaux = [0.5, 0.75, 1, 1.5, 2];
-    const i = niveaux.indexOf(vue.zoom);
+    const i = niveaux.indexOf(vue.zoom), avant = vue.zoom;
     vue.zoom = niveaux[Math.max(0, Math.min(niveaux.length - 1, (i < 0 ? 2 : i) + sens))];
+    if (vue.zoom === avant) return;
+    const z = vue.zoneToile, rz = z && z.getBoundingClientRect(), rt = vue.toile.getBoundingClientRect();
+    if (cx == null && rz) { cx = rz.left + rz.width / 2; cy = rz.top + rz.height / 2; }
+    const fx = rt.width ? (cx - rt.left) / rt.width : 0.5, fy = rt.height ? (cy - rt.top) / rt.height : 0.5;
     H.d.majLocal((l) => (l.zoomTerrain = vue.zoom));
     dimensionner();
     peindreFond();
     dessiner();
+    if (z) {
+      z.scrollLeft = fx * vue.toile.offsetWidth - (cx - rz.left);
+      z.scrollTop = fy * vue.toile.offsetHeight - (cy - rz.top);
+    }
+  }
+  // la molette avec Ctrl (ou ⌘), et le pincement du pavé tactile (qui arrive comme une molette
+  // avec Ctrl) : un cran de zoom par geste ; la molette seule fait toujours défiler l'île
+  function brancherZoomGestes(zone) {
+    let cumul = 0, dernier = 0;
+    zone.addEventListener("wheel", (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      cumul += e.deltaY * (e.deltaMode === 1 ? 30 : 1);
+      const t = performance.now();
+      if (Math.abs(cumul) < 40 || t - dernier < 220) return;
+      dernier = t;
+      zoomer(cumul < 0 ? 1 : -1, e.clientX, e.clientY);
+      cumul = 0;
+    }, { passive: false });
+    // deux doigts sur l'écran : on pince pour dézoomer, on écarte pour zoomer
+    let pince = null;
+    const ecart = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    zone.addEventListener("touchstart", (e) => { if (e.touches.length === 2) pince = { d: ecart(e.touches) }; }, { passive: true });
+    zone.addEventListener("touchmove", (e) => {
+      if (!pince || e.touches.length !== 2) return;
+      if (e.cancelable) e.preventDefault();
+      const d = ecart(e.touches), q = d / pince.d;
+      if (q > 1.3 || q < 0.77) {
+        zoomer(q > 1 ? 1 : -1, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
+        pince.d = d;
+      }
+    }, { passive: false });
+    zone.addEventListener("touchend", (e) => { if (e.touches.length < 2) pince = null; });
   }
 
   // L'île prend toute la place de l'écran : la zone descend jusqu'en bas de la fenêtre, et la toile
@@ -1183,28 +1222,53 @@
     ctx.scale(k / T, k / T);
     const BX = vue.bx, BY = vue.by, W = ile.cols + BX * 2, Hh = ile.lignes + BY * 2;
     for (let i = 0; i < 18; i++) H.aqua.tache(ctx, r, r() * W * T, r() * Hh * T, 40 + r() * 80, 30 + r() * 60, i % 2 ? "#6aa9c9" : "#bfe0ec", { alpha: 0.05, couches: 8 });
-    const sable = H.aqua.rectArrondi((BX - 0.6) * T, (BY - 0.6) * T, (ile.cols + 1.2) * T, (ile.lignes + 1.2) * T, T * 1.2, 8);
-    H.aqua.lavis(ctx, r, sable, "#ead6a6", { alpha: 0.2, couches: 12, bord: 0.05 });
+    // la plage tout autour : d'un seul lavis pour une île rectangulaire ; pour une île de forme
+    // libre, elle suit le bord, case par case (une bande de sable arrondie autour de chaque case de
+    // terre, toutes fondues ensemble)
+    const libre = !!(ile.vides && Object.keys(ile.vides).length);
+    const terre = new Path2D();
+    if (libre) {
+      const plage = new Path2D();
+      for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
+        if (estVide(ile, x, y)) continue;
+        plage.roundRect((BX + x - 0.6) * T, (BY + y - 0.6) * T, 2.2 * T, 2.2 * T, T * 0.6);
+        terre.rect((BX + x) * T, (BY + y) * T, T, T);
+      }
+      ctx.fillStyle = "#ead6a6";
+      ctx.globalAlpha = 0.9;
+      ctx.fill(plage);
+      ctx.globalAlpha = 1;
+    } else {
+      const sable = H.aqua.rectArrondi((BX - 0.6) * T, (BY - 0.6) * T, (ile.cols + 1.2) * T, (ile.lignes + 1.2) * T, T * 1.2, 8);
+      H.aqua.lavis(ctx, r, sable, "#ead6a6", { alpha: 0.2, couches: 12, bord: 0.05 });
+      terre.rect(BX * T, BY * T, ile.cols * T, ile.lignes * T);
+    }
     // la terre nue de l'île : un seul grand lavis continu, sans damier
     const herbe = TEINTES_SAISON[saison] || "#9cc77a", terreNue = teintesSol(ile.sol).base;
     ctx.fillStyle = terreNue[0];
-    ctx.fillRect(BX * T, BY * T, ile.cols * T, ile.lignes * T);
+    ctx.fill(terre);
+    ctx.save();
+    ctx.clip(terre);
     const n = Math.ceil((ile.cols * ile.lignes) / 6);
     for (let i = 0; i < n; i++) {
       const x = (BX + r() * ile.cols) * T, y = (BY + r() * ile.lignes) * T;
       H.aqua.tache(ctx, r, x, y, T * (0.8 + r() * 1.6), T * (0.6 + r() * 1.2), terreNue[1 + (i % 3)], { alpha: 0.03, couches: 6 });
     }
     ctx.restore();
+    ctx.restore();
     for (let y = 0; y < ile.lignes; y++) {
       for (let x = 0; x < ile.cols; x++) {
         const c = caseDe(ile, x, y);
-        if (c.t === "vide") { ctx.fillStyle = "#8fc3dc"; ctx.fillRect((x + BX) * k - 0.5, (y + BY) * k - 0.5, k + 1, k + 1); continue; }
-        if (c.t === "sol") continue;
+        if (c.t === "vide" || c.t === "sol") continue;
         const tex = textureTuile(c.t, saison, H.hash(cle(x, y)) % 3);
         ctx.drawImage(tex, (x + BX) * k, (y + BY) * k, k + 0.5, k + 0.5);
       }
     }
-    // quadrillage très fin, pour l'échelle
+    // quadrillage très fin, pour l'échelle (sur la terre seulement)
+    ctx.save();
+    ctx.scale(k / T, k / T);
+    ctx.clip(terre);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.strokeStyle = "rgba(43,38,34,0.06)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1217,6 +1281,7 @@
       ctx.lineTo((ile.cols + BX) * k, (y + BY) * k);
     }
     ctx.stroke();
+    ctx.restore();
   }
 
   // --- la vue en relief (isométrique), comme la ferme -------------------------------
@@ -2159,8 +2224,16 @@
       l.paniersIles = tous;
     });
   }
-  // la place du panier n° i : sur le bord de devant, à gauche, l'un à côté de l'autre
-  const placePanier = (ile, i) => [0.6 + i * 1.05, ile.lignes - 0.32];
+  // la place du panier n° i : sur le bord de devant, à gauche, l'un à côté de l'autre ; sur une île
+  // de forme libre, sur les cases de terre de la côte de devant (la mer juste en dessous)
+  function placePanier(ile, i) {
+    if (!ile.vides || !Object.keys(ile.vides).length) return [0.6 + i * 1.05, ile.lignes - 0.32];
+    const cote = [];
+    for (let y = ile.lignes - 1; y >= 0; y--) for (let x = 0; x < ile.cols; x++) if (!estVide(ile, x, y) && estVide(ile, x, y + 1)) cote.push([x, y]);
+    if (!cote.length) return [0.6 + i * 1.05, ile.lignes - 0.32];
+    const [x, y] = cote[i % cote.length];
+    return [x + 0.6, y + 0.68];
+  }
   function panierRecolte(ctx, sx, sy, p, n) {
     const x0 = Math.round(sx - 6), y0 = Math.round(sy - 6), px = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); };
     const fleur = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length];
