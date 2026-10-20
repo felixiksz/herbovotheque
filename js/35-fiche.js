@@ -461,7 +461,7 @@
         H.el("label", null, "Nom", nom),
         H.el("label", null, "Nom latin", latin),
         H.el("div.boutons-bas", null,
-          H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { if (confirm("Supprimer la fiche « " + p.nom + " » ?")) { H.d.supprimerPlante(p.id); fermer(); H.aller("herbotheque"); } } }, "Supprimer la fiche"),
+          H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { H.confirmer("Supprimer la fiche « " + p.nom + " » ?").then((ok) => { if (ok) { H.d.supprimerPlante(p.id); fermer(); H.aller("herbotheque"); } }); } }, "Supprimer la fiche"),
           H.el("button.bouton", { type: "submit" }, "Enregistrer")
         )
       )

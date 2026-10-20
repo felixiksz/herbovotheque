@@ -50,7 +50,7 @@
         H.el("div.org-tete", null, nom, H.el("span.discret", null, detail)),
         H.el("div.pastilles", null,
           i > 0 ? petit("Monter dans le menu « Ranger »", () => { deplacer(rgs, i, -1); rangementsModifies(); redessiner(); }, { discret: true }) : null,
-          rgs.length > 1 ? petit("Supprimer", () => { if (confirm("Supprimer le rangement « " + rg.nom + " » ?")) { rgs.splice(i, 1); rangementsModifies(); redessiner(); } }, { discret: true }) : null
+          rgs.length > 1 ? petit("Supprimer", () => { H.confirmer("Supprimer le rangement « " + rg.nom + " » ?").then((ok) => { if (ok) { rgs.splice(i, 1); rangementsModifies(); redessiner(); } }); }, { discret: true }) : null
         )
       );
       // l'ordre des étagères d'un rangement automatique, à régler à la main
@@ -83,7 +83,7 @@
             H.el("span.discret", null, et.plantes.length + " plantes"),
             k > 0 ? petit("Monter", () => { deplacer(rg.etageres, k, -1); rangementsModifies(); if (H.herbotheque) H.herbotheque.redessiner(); redessiner(); }, { discret: true }) : null,
             k < rg.etageres.length - 1 ? petit("Descendre", () => { deplacer(rg.etageres, k, 1); rangementsModifies(); if (H.herbotheque) H.herbotheque.redessiner(); redessiner(); }, { discret: true }) : null,
-            petit("Retirer", () => { if (confirm("Retirer l’étagère « " + et.nom + " » ? Les fiches restent dans l’herbothèque.")) { rg.etageres.splice(k, 1); rangementsModifies(); redessiner(); } }, { discret: true })
+            petit("Retirer", () => { H.confirmer("Retirer l’étagère « " + et.nom + " » ? Les fiches restent dans l’herbothèque.").then((ok) => { if (ok) { rg.etageres.splice(k, 1); rangementsModifies(); redessiner(); } }); }, { discret: true })
           ));
         });
         const nouvelle = H.el("input", { type: "text", placeholder: "Nouvelle étagère" });
@@ -171,8 +171,8 @@
               });
               redessiner();
             }, { discret: true }),
-            petit("Retirer", () => {
-              if (!confirm("Retirer la rubrique « " + c.nom + " » de toutes les fiches ? (Le texte des fiches de base reste disponible si tu la recrées avec le même nom.)")) return;
+            petit("Retirer", async () => {
+              if (!(await H.confirmer("Retirer la rubrique « " + c.nom + " » de toutes les fiches ? (Le texte des fiches de base reste disponible si tu la recrées avec le même nom.)"))) return;
               H.d.majSchema(() => {
                 schema.champs.splice(schema.champs.indexOf(c), 1);
                 schema.retires.push(c.id);
@@ -250,8 +250,8 @@
         ),
         H.el("div.pastilles", null,
           petit("Monter", () => { H.d.majSchema(() => deplacer(preps, i, -1)); redessiner(); }, { discret: true }),
-          petit("Retirer", () => {
-            if (!confirm("Retirer la préparation « " + p.nom + " » ?")) return;
+          petit("Retirer", async () => {
+            if (!(await H.confirmer("Retirer la préparation « " + p.nom + " » ?"))) return;
             H.d.majSchema((s) => {
               s.preparations.splice(i, 1);
               s.retires.push(p.id);

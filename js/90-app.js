@@ -157,7 +157,8 @@
       document.removeEventListener("keydown", echap);
       opts.surFermer && opts.surFermer();
     };
-    const echap = (e) => e.key === "Escape" && fermer();
+    // (Échap ne ferme que la fenêtre du dessus, quand une question s'ouvre par-dessus une autre)
+    const echap = (e) => { if (e.key !== "Escape") return; const v = document.querySelectorAll(".voile"); if (v[v.length - 1] === voile) fermer(); };
     const h2 = contenu.querySelector("h2"), titre = h2 ? h2.textContent : opts.titre || "";
     if (h2) h2.remove();
     if (titre) panneau.setAttribute("aria-label", titre);
@@ -171,6 +172,21 @@
     document.body.appendChild(voile);
     return fermer;
   };
+
+  // une question avant un geste qu'on ne peut pas défaire, dans une petite fenêtre du jeu (à la
+  // place de la boîte grise du navigateur) : « Annuler » ou « Oui » ; Échap annule, Entrée confirme
+  H.confirmer = (question, opts) => new Promise((resolve) => {
+    opts = opts || {};
+    let fait = false, fermer = null;
+    const fin = (v) => { if (fait) return; fait = true; resolve(v); if (fermer) fermer(); };
+    const oui = H.el("button.bouton", { type: "submit" }, opts.oui || "Oui");
+    const corps = H.el("form.confirmer", { onsubmit: (e) => { e.preventDefault(); fin(true); } },
+      H.el("h2", null, opts.titre || "Sûr·e ?"),
+      H.el("p", null, question),
+      H.el("div.boutons-bas", null, H.el("button.bouton.discret-bouton", { type: "button", onclick: () => fin(false) }, opts.non || "Annuler"), oui));
+    fermer = H.fenetre(corps, { classe: "petite", surFermer: () => { if (!fait) { fait = true; resolve(false); } } });
+    setTimeout(() => oui.focus(), 0);
+  });
 
   H.$("#form-verrou").addEventListener("submit", async (e) => {
     e.preventDefault();

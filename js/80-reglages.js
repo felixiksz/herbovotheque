@@ -214,7 +214,7 @@
           }
           msg.textContent = "Vérification…";
           const t = await H.synchro
-            .relier(j, () => confirm("C’est le tout premier jeton relié au jeu : il devient celui de Mesi, qui pourra ensuite ajouter les autres. C’est bien l’appareil de Mesi ?"))
+            .relier(j, () => H.confirmer("C’est le tout premier jeton relié au jeu : il devient celui de Mesi, qui pourra ensuite ajouter les autres. C’est bien l’appareil de Mesi ?"))
             .catch(() => ({ ok: false, message: "Pas de connexion" }));
           msg.textContent = t.message;
           if (!t.ok) return;
@@ -392,7 +392,7 @@
               try {
                 const paquet = JSON.parse(await input.files[0].text());
                 const d = await H.chiffre.ouvrir(paquet, H.cle);
-                if (!confirm("Remplacer l’herbier et la progression de cet appareil par cette sauvegarde ?")) return;
+                if (!(await H.confirmer("Remplacer l’herbier et la progression de cet appareil par cette sauvegarde ?"))) return;
                 H.herbier = d.herbier;
                 H.jeu = d.jeu;
                 H.herbier.modifieLe = H.jeu.modifieLe = H.maintenant();
@@ -427,7 +427,7 @@
             u.empreinte !== H.local.empreinte ? H.el("button.bouton.petit.discret-bouton", {
               type: "button",
               async onclick() {
-                if (!confirm("Retirer l’accès de « " + u.nom + " » ? Son jeton ne pourra plus synchroniser.")) return;
+                if (!(await H.confirmer("Retirer l’accès de « " + u.nom + " » ? Son jeton ne pourra plus synchroniser."))) return;
                 const r = await H.synchro.retirerAcces(u.empreinte).catch((e) => ({ ok: false, message: e.message }));
                 msg.textContent = r.ok ? "Accès retiré." : r.message;
                 charger();

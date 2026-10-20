@@ -122,8 +122,8 @@
         liste.appendChild(ligne(l, "Pour " + NOMS[l.pour], (attente ? "arrivera le " : "arrivée le ") + date(arrivee(l)) + (l.lu ? " · lue" : ""),
           attente ? H.el("button.lien-discret.annuler-mail", {
             type: "button",
-            onclick() {
-              if (!confirm("Annuler cette lettre programmée ?")) return;
+            async onclick() {
+              if (!(await H.confirmer("Annuler cette lettre programmée ?"))) return;
               enregistrer(Object.assign({}, l, { supprime: true }));
               dessiner();
             },

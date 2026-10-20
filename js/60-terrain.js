@@ -3286,7 +3286,7 @@
     vue.panneau.hidden = false;
     vue.panneau.innerHTML = "";
     vue.panneau.append(
-      H.el("button.bouton.petit.discret-bouton.fermer-panneau", { type: "button", onclick: () => { vue.panneau.hidden = true; vue.choisie = null; dessiner(); } }, "Fermer"),
+      H.el("button.bouton.petit.discret-bouton.fermer-panneau", { type: "button", title: "Fermer", "aria-label": "Fermer", onclick: () => { vue.panneau.hidden = true; vue.choisie = null; dessiner(); } }, "×"),
       H.el("h3", null, TUILES[c.t].nom),
       H.el("p", null, expoIci(vue.ile, x, y) + (expoIci(vue.ile, x, y) !== c.expo ? " (à l’ombre d’un arbre)" : "") + " · sol " + (c.sol.length ? c.sol.join(", ").toLowerCase() : "non précisé"))
     );
@@ -3319,7 +3319,7 @@
     const pourcent = Math.round(Math.min(1, ev.facteur) * 100);
     const humeur = pourcent >= 90 ? "Elle se plaît beaucoup ici" : pourcent >= 65 ? "Elle se plaît bien ici" : pourcent >= 40 ? "Elle pousse, mais sans enthousiasme" : "Elle n’est pas vraiment à son aise";
     P.append(...[
-      H.el("button.bouton.petit.discret-bouton.fermer-panneau", { type: "button", onclick: () => { P.hidden = true; vue.choisie = null; dessiner(); } }, "Fermer"),
+      H.el("button.bouton.petit.discret-bouton.fermer-panneau", { type: "button", title: "Fermer", "aria-label": "Fermer", onclick: () => { P.hidden = true; vue.choisie = null; dessiner(); } }, "×"),
       H.el("h3.nom-plante-ile", null, p.nom),
       H.el("p.discret", null,
         (ile.croquis ? "Adulte" : NOMS_STADES[st].replace(/^./, (c) => c.toUpperCase()) + " · " + Math.round(pl.c) + " %") +
@@ -3788,8 +3788,8 @@
       H.el("label", null, "Le petit mot", mot),
       msg,
       H.el("div.boutons-bas", null,
-        c && !c.supprime ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => {
-          if (!confirm("Garder le jardin pour toi, finalement ?")) return;
+        c && !c.supprime ? H.el("button.bouton.discret-bouton", { type: "button", onclick: async () => {
+          if (!(await H.confirmer("Garder le jardin pour toi, finalement ?"))) return;
           H.jeu.cadeaux = Object.assign({}, H.jeu.cadeaux, { [c.id]: { id: c.id, supprime: true, modifieLe: H.maintenant() } });
           delete ile.cadeau; ile.aOffrir = true; sauver(ile); fermer(); H.router();
         } }, "Ne plus l’offrir") : null,
@@ -3826,7 +3826,7 @@
       ile.mot ? H.el("p", null, H.el("em", null, "Le mot de " + NOMS[ile.offertePar] + " : « " + ile.mot + " »")) : null,
       (!ile.secrete && !ile.croquis && !ile.offertePar) ? sectionOffrir(ile, () => fermer()) : null,
       H.el("div.boutons-bas", null,
-        !ile.secrete ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { if (confirm("Supprimer le jardin « " + ile.nom + " » ?")) { H.jeu.iles[ile.id] = { id: ile.id, supprime: true, modifieLe: H.maintenant() }; H.d.changer("jeu"); fermer(); H.aller("terrain"); } } }, "Supprimer le jardin") : null,
+        !ile.secrete ? H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { H.confirmer("Supprimer le jardin « " + ile.nom + " » ?").then((ok) => { if (ok) { H.jeu.iles[ile.id] = { id: ile.id, supprime: true, modifieLe: H.maintenant() }; H.d.changer("jeu"); fermer(); H.aller("terrain"); } }); } }, "Supprimer le jardin") : null,
         H.el("button.bouton", { type: "submit" }, "Enregistrer")
       )
     ));

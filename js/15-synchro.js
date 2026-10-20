@@ -277,7 +277,7 @@
           H.synchro.lancer();
           return { ok: true, message: "Jeton relié : " + utilisateur.nom + "." };
         }
-        if (!acces && confirmerPremier()) {
+        if (!acces && (await confirmerPremier())) {
           const emp = await empreinte(jeton);
           await ecrireDistant({ acces: { utilisateurs: { [emp]: { nom: "Mesi", role: "mesi", ajouteLe: H.maintenant() } }, modifieLe: H.maintenant() } }, parent);
           await verifierAcces(await tete());

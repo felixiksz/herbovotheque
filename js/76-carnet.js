@@ -352,7 +352,7 @@
       H.el("button.bouton-trait", { type: "button", onclick: () => deplacer(p) }, "Déplacer"),
       H.el("button.bouton-trait", { type: "button", onclick: () => enModele(p) }, "En faire un modèle"),
       H.el("button.bouton-trait", { type: "button", onclick: () => exporterPage(p) }, "Exporter"),
-      H.el("button.bouton-trait", { type: "button", onclick: () => { if (!confirm("Mettre « " + (p.titre || "Sans titre") + " » et ses sous-pages à la corbeille ?")) return; jeter(p); H.aller("carnet"); } }, "Corbeille"));
+      H.el("button.bouton-trait", { type: "button", onclick: async () => { if (!(await H.confirmer("Mettre « " + (p.titre || "Sans titre") + " » et ses sous-pages à la corbeille ?"))) return; jeter(p); H.aller("carnet"); } }, "Corbeille"));
     redessiner();
     const sous = enfants(p.id), cite = p.titre ? citations(p.titre) : [];
     return H.el("article.page-carnet", null,
@@ -556,7 +556,7 @@
       H.el("h1.titre-carnet", null, "Corbeille"),
       jetees.length ? H.el("ul.liste-docs", null, jetees.map((p) => H.el("li.doc-devis", null, H.el("strong", null, p.titre || "Sans titre"), H.el("span.discret", null, p.supprimeLe ? "jetée le " + new Date(p.supprimeLe).toLocaleDateString("fr-FR") : ""),
         H.el("button.bouton.petit", { type: "button", onclick: () => { p.supprime = false; if (p.parent && (!page(p.parent) || page(p.parent).supprime)) p.parent = null; garder(p, true); dessiner(["corbeille"]); } }, "Remettre"),
-        H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { if (!confirm("Supprimer pour de bon « " + (p.titre || "Sans titre") + " » ?")) return; H.jeu.pages = Object.assign({}, H.jeu.pages, { [p.id]: { id: p.id, supprime: true, vide: true, modifieLe: H.maintenant() } }); H.d.changer("jeu"); dessiner(["corbeille"]); } }, "Supprimer pour de bon"))))
+        H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: async () => { if (!(await H.confirmer("Supprimer pour de bon « " + (p.titre || "Sans titre") + " » ?"))) return; H.jeu.pages = Object.assign({}, H.jeu.pages, { [p.id]: { id: p.id, supprime: true, vide: true, modifieLe: H.maintenant() } }); H.d.changer("jeu"); dessiner(["corbeille"]); } }, "Supprimer pour de bon"))))
         : H.el("p.discret", null, "La corbeille est vide."));
   }
   function accueil() {

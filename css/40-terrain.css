@@ -302,16 +302,19 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 .bulle-plante {
   position: fixed; z-index: 60; pointer-events: none;
   display: grid; grid-template-columns: 56px auto; column-gap: 10px; align-items: center;
-  max-width: 260px; padding: 8px 12px 8px 8px;
+  max-width: 280px; padding: 8px 12px 8px 8px;
   background: var(--papier); color: var(--encre);
-  border: 1px solid var(--encre); border-radius: 6px;
-  box-shadow: 3px 3px 0 rgba(35, 33, 74, 0.25);
+  border: 1.5px solid var(--encre); border-radius: 3px;
+  box-shadow: 4px 4px 0 rgba(35, 33, 74, 0.85);
+  font: 1.2rem/1.2 var(--menu-police); letter-spacing: 0.02em;
 }
+:root[data-theme="nuit"] .bulle-plante { box-shadow: 4px 4px 0 rgba(0, 0, 10, 0.6); }
 .bulle-plante[hidden] { display: none; }
 .bulle-plante img { grid-row: 1 / span 3; width: 56px; height: 56px; object-fit: contain; image-rendering: auto; }
-.bulle-plante .nom-bulle { font-weight: 600; line-height: 1.2; }
-.bulle-plante .latin-bulle { font-size: 0.8rem; opacity: 0.75; line-height: 1.2; }
-.bulle-plante .etat-bulle { font-family: var(--terrain); font-size: 0.7rem; opacity: 0.85; margin-top: 2px; }
+.bulle-plante .nom-bulle { font-size: 1.3rem; line-height: 1.15; text-shadow: 1px 0 0 currentColor; }
+.bulle-plante .latin-bulle { font-size: 1.05rem; color: #4a4880; line-height: 1.15; }
+.bulle-plante .etat-bulle { font-size: 1.05rem; margin-top: 2px; }
+:root[data-theme="nuit"] .bulle-plante .latin-bulle { color: #c9c4e6; }
 
 /* les scènes en plein écran (ferme, balade) : pas d'en-tête, pas de papier autour */
 :root:is([data-vue="village"], [data-vue="balade"]) #entete, :root:is([data-vue="village"], [data-vue="balade"]) #ciel { display: none !important; }
@@ -534,7 +537,18 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root .panneau-case .jauge { border: 2px solid #23214a; border-radius: 0; height: 10px; background: #fffdf4; }
 :root .panneau-case .bouton { font: 1.15rem/1 var(--menu-police); background: #fffdf4; color: #23214a; border: 2px solid #23214a; border-radius: 0; box-shadow: 2px 2px 0 #23214a; padding: 4px 9px 5px; }
 :root .panneau-case .bouton.actif, :root .panneau-case .bouton:hover { background: #f3ee6a; }
-:root .panneau-case .fermer-panneau { box-shadow: none; border-color: transparent; background: transparent; text-decoration: underline; }
+:root .panneau-case { border-width: 1.5px; border-radius: 3px; box-shadow: 6px 6px 0 rgba(35, 33, 74, 0.85); }
+:root .panneau-case .fermer-panneau { width: 24px; height: 24px; min-height: 0; padding: 0 0 2px; display: grid; place-items: center; font: 1.25rem/1 var(--menu-police); border: 1.5px solid #23214a; background: #fffdf4; box-shadow: none; text-decoration: none; }
+:root .panneau-case .fermer-panneau:hover { background: #f3ee6a; }
+:root .panneau-case :is(.nom-plante-ile, h3, h4, b, strong, label, dt) { text-shadow: 1px 0 0 currentColor; font-weight: normal; }
+/* la nuit, le panneau passe en sombre comme les fenêtres */
+:root[data-theme="nuit"] .panneau-case { background: var(--papier); color: var(--encre); border-color: var(--encre); box-shadow: 6px 6px 0 rgba(0, 0, 10, 0.6); }
+:root[data-theme="nuit"] .panneau-case :is(.nom-plante-ile, h3, p, li, .jauges) { color: var(--encre); }
+:root[data-theme="nuit"] .panneau-case .discret { color: #c9c4e6; }
+:root[data-theme="nuit"] .panneau-case .jauge { border-color: var(--encre); background: var(--papier-fonce); }
+:root[data-theme="nuit"] .panneau-case .bouton, :root[data-theme="nuit"] .panneau-case .fermer-panneau { background: var(--papier); color: var(--encre); border-color: var(--encre); box-shadow: 2px 2px 0 #0b0a24; }
+:root[data-theme="nuit"] .panneau-case .bouton.actif, :root[data-theme="nuit"] .panneau-case .bouton:hover { background: #f3ee6a; color: #23214a; }
+:root[data-theme="nuit"] .panneau-case .fermer-panneau { box-shadow: none; }
 
 /* Les menus de la maison et du dodo, comme les autres menus des scènes : un bloc d'encre cerné de
    corail, la police pixel en crème, le petit curseur ▶ jaune devant le choix survolé. */

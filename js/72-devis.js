@@ -377,7 +377,7 @@
       totauxZone,
       champ("Notes sur le document", notes),
       H.el("div.boutons-bas", null,
-        H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { if (confirm("Supprimer ce document ?")) { doc.supprime = true; sauver(); ouvert = null; dessiner(); } } }, "Supprimer"),
+        H.el("button.bouton.discret-bouton", { type: "button", onclick: () => { H.confirmer("Supprimer ce document ?").then((ok) => { if (ok) { doc.supprime = true; sauver(); ouvert = null; dessiner(); } }); } }, "Supprimer"),
         H.el("button.bouton.petit", { type: "button", onclick: () => nouveau(doc.type, doc) }, "Dupliquer"),
         doc.type === "devis" ? H.el("button.bouton.petit", { type: "button", onclick: () => { doc.statut = "Accepté"; sauver(); nouveau("facture", doc); } }, "En faire une facture") : null,
         H.el("button.bouton.petit", { type: "button", onclick: () => apercu(doc) }, "Aperçu"),
@@ -431,7 +431,7 @@
         H.el("button.bouton.petit", { type: "button", onclick: () => exporterListe("Mes clients", "clients", ["Nom", "Contact", "Adresse", "E-mail", "Téléphone", "Notes"], (c) => [c.nom, c.contact || "", c.adresse || "", c.email || "", c.telephone || "", c.notes || ""]) }, "Exporter")),
       H.el("ul.liste-docs", null, coll("clients").sort((a, b) => a.nom.localeCompare(b.nom)).map((c) => H.el("li.doc-devis", { onclick: () => nouveauClient(() => liste(), c) },
         H.el("strong", null, c.nom), H.el("span.discret", null, (c.adresse || "").split("\n").join(", ")), H.el("span.discret", null, c.email || ""),
-        H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: (ev) => { ev.stopPropagation(); if (confirm("Supprimer " + c.nom + " ?")) { c.supprime = true; garder("clients", c); liste(); } } }, "×")))));
+        H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: (ev) => { ev.stopPropagation(); H.confirmer("Supprimer " + c.nom + " ?").then((ok) => { if (ok) { c.supprime = true; garder("clients", c); liste(); } }); } }, "×")))));
     liste();
     return zone;
   }

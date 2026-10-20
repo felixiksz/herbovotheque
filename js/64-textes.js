@@ -100,8 +100,8 @@
             }, "Écouter"),
             H.el("button.bouton.petit.discret-bouton", {
               type: "button",
-              onclick() {
-                if (!confirm("Supprimer l’histoire « " + h.titre + " » ?")) return;
+              async onclick() {
+                if (!(await H.confirmer("Supprimer l’histoire « " + h.titre + " » ?"))) return;
                 const reste = valeur(s.cle, s.defaut()).filter((_, j) => j !== i);
                 if (!reste.length) return H.toast("Il faut garder au moins une histoire");
                 fixer(s.cle, reste);
@@ -158,8 +158,8 @@
           s.type === "liste" ? editeurListe(s) : editeurHistoires(s),
           H.el("div.pastilles", null, H.el("button.bouton.petit.discret-bouton", {
             type: "button",
-            onclick() {
-              if (!confirm("Effacer les corrections de « " + s.nom + " » et revenir au texte d’origine ?")) return;
+            async onclick() {
+              if (!(await H.confirmer("Effacer les corrections de « " + s.nom + " » et revenir au texte d’origine ?"))) return;
               retablir(s.cle);
               H.router();
             },

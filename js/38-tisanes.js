@@ -189,8 +189,8 @@
         existe
           ? H.el("button.bouton.discret-bouton", {
               type: "button",
-              onclick() {
-                if (!confirm((M() ? "Jeter la formule « " : "Jeter le mélange « ") + t.nom + " » ?")) return;
+              async onclick() {
+                if (!(await H.confirmer((M() ? "Jeter la formule « " : "Jeter le mélange « ") + t.nom + " » ?"))) return;
                 enregistrer({ id: t.id, supprime: true });
                 fermer();
                 H.router();

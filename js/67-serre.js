@@ -189,7 +189,7 @@
         prete ? H.el("div.pastilles", null,
           H.el("button.bouton.petit.actif", { type: "button", onclick: () => mettreEnCaisse(i) }, "Mettre en caisse"),
           frileuse(p) ? H.el("button.bouton.petit", { type: "button", onclick: () => garder(i) }, "Garder dans la serre") : null
-        ) : H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { if (confirm("Vider ce pot ?")) { s.pots[i] = null; sauver(); dessiner(); } } }, "Vider")
+        ) : H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { H.confirmer("Vider ce pot ?").then((ok) => { if (ok) { s.pots[i] = null; sauver(); dessiner(); } }); } }, "Vider")
       ));
     });
     const ongletSemis = grille;

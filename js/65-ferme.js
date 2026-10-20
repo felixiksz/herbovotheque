@@ -2007,7 +2007,7 @@
         H.el("span.titre-outils-ferme", null, "Bâtiments et arbres :"),
         outil("bouger", "Déplacer"),
         outil("tourner", "Tourner"),
-        H.el("button.bouton.petit", { type: "button", onclick: () => { if (confirm("Remettre tous les bâtiments et les arbres à leur place d’origine ?")) revenirOrigine(); } }, "Ferme d’origine")),
+        H.el("button.bouton.petit", { type: "button", onclick: () => { H.confirmer("Remettre tous les bâtiments et les arbres à leur place d’origine ?").then((ok) => { if (ok) { revenirOrigine(); } }); } }, "Ferme d’origine")),
       H.el("div.pastilles", null,
         outil("deplacer", "Déplacer"),
         outil("gomme", "Gomme"),

@@ -360,8 +360,8 @@
         ]),
         H.el("p", null, H.el("button.bouton.petit.discret-bouton", {
           type: "button",
-          onclick() {
-            if (!confirm("Revenir à tous les réglages d’origine des flashcartes ?")) return;
+          async onclick() {
+            if (!(await H.confirmer("Revenir à tous les réglages d’origine des flashcartes ?"))) return;
             delete H.jeu.repetition;
             delete H.jeu.seuilReussite;
             H.jeu.repetitionModifieLe = H.maintenant();
