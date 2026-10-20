@@ -38,6 +38,13 @@
   // Une île de forme libre : les cases de son rectangle qui ne font pas partie de l'île (ile.vides)
   // sont du vide, où l'on voit le ciel ou la mer ; au-delà du rectangle, c'est vide aussi.
   const estVide = (ile, x, y) => x < 0 || y < 0 || x >= ile.cols || y >= ile.lignes || !!(ile.vides && ile.vides[cle(x, y)]);
+  // Le relief : un niveau par case (ile.relief : « x,y » → { n, mur }), un cran d'environ 30 cm,
+  // jusqu'à six crans ; ce qui tient la différence de niveau est un talus d'herbe et de terre, ou un
+  // muret de pierres sèches (les terrasses). En relief, un cran fait HZ pixels de haut.
+  const HZ = 7, NIVEAU_MAX = 6;
+  const niveau = (ile, x, y) => { const r = ile.relief && ile.relief[cle(x, y)]; return r && !estVide(ile, x, y) ? r.n || 0 : 0; };
+  const muret = (ile, x, y) => !!(ile.relief && (ile.relief[cle(x, y)] || {}).mur);
+  const niveauMax = (ile) => Object.values(ile.relief || {}).reduce((m, r) => Math.max(m, (r && r.n) || 0), 0);
   function texteEchelle(ile) {
     return ile.largeur + " × " + ile.longueur + " m · une case = " + (ile.caseM < 1 ? ile.caseM * 100 + " cm" : ile.caseM + " m") + (ile.croquis ? " · croquis" : "");
   }
@@ -1003,14 +1010,14 @@
   function dessinerOutils() {
     const ile = vue.ile;
     // (avec l'outil de la forme, le doigt peint sur l'île au lieu de faire défiler la page)
-    if (vue.toile) vue.toile.style.touchAction = vue.outil === "forme" ? "none" : "";
+    if (vue.toile) vue.toile.style.touchAction = vue.outil === "forme" || vue.outil === "relief" ? "none" : "";
     // deux modes, une seule rangée d'outils à la fois : le jardin (ce qu'on fait tous les jours) et
     // le chantier (ce qui transforme l'île)
     const modes = {
       jardin: ile.croquis
         ? [["regarder", "Regarder"], ["planter", "Planter"], ["retirer", "Retirer"]]
         : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["retirer", "Retirer"]],
-      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"], ["forme", "Forme du jardin"]],
+      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"], ["forme", "Forme du jardin"], ["relief", "Relief"]],
     };
     const mode = modes.chantier.some(([id]) => id === vue.outil) ? "chantier" : "jardin";
     const changerMode = (m) => { if (m !== mode) { vue.outil = modes[m][0][0]; dessinerOutils(); } };
@@ -1064,6 +1071,14 @@
       o.appendChild(H.el("span.cout", null, "Les plantes prêtes à récolter sont entourées de fluo · " + cout({ energie: 2 })));
     } else if (vue.outil === "retirer") {
       o.appendChild(H.el("span.cout", null, "Retire la plante ou l’aménagement de la case"));
+    } else if (vue.outil === "relief") {
+      const mode = vue.reliefMode || "monter", style = vue.reliefStyle || "talus";
+      for (const [id, nom] of [["monter", "Monter d’un cran"], ["descendre", "Descendre d’un cran"], ["aplanir", "Aplanir"]])
+        o.appendChild(H.el("button.bouton.petit" + (mode === id ? ".actif" : ""), { type: "button", onclick: () => { vue.reliefMode = id; dessinerOutils(); } }, nom));
+      o.appendChild(H.el("span.cout", null, " Bord :"));
+      for (const [id, nom] of [["talus", "Talus"], ["muret", "Muret en pierres sèches"]])
+        o.appendChild(H.el("button.bouton.petit" + (style === id ? ".actif" : ""), { type: "button", onclick: () => { vue.reliefStyle = id; dessinerOutils(); } }, nom));
+      o.appendChild(H.el("span.cout", null, "Glisse le doigt sur les cases à monter ou à descendre (un cran ≈ 30 cm, six au plus). Des crans réguliers font une pente ; un muret fait une terrasse."));
     } else if (vue.outil === "forme") {
       const mode = vue.formeMode || "ajouter";
       const modes = [["ajouter", "Pinceau : terre"], ["enlever", "Gomme : mer"], ["contour", "Tracer le contour"]].concat(vue.calque ? [["deplacer", "Déplacer le dessin"]] : []);
@@ -1293,6 +1308,23 @@
     }
     ctx.stroke();
     ctx.restore();
+    // le relief, comme sur une carte : les cases hautes un peu plus claires, et un trait là où le
+    // niveau change (double, en pierre, pour un muret ; simple, en terre, pour un talus)
+    if (niveauMax(ile)) {
+      for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
+        const n = niveau(ile, x, y);
+        if (n) { ctx.fillStyle = "rgba(255,236,190," + Math.min(0.32, 0.06 * n) + ")"; ctx.fillRect((x + BX) * k, (y + BY) * k, k, k); }
+        for (const [dx, dy] of [[1, 0], [0, 1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (estVide(ile, nx, ny) || niveau(ile, nx, ny) === n) continue;
+          const haut = n > niveau(ile, nx, ny) ? [x, y] : [nx, ny], mur = muret(ile, haut[0], haut[1]);
+          ctx.fillStyle = mur ? "#5b5fa8" : "#7a4520";
+          const ep = mur ? Math.max(2, k * 0.12) : Math.max(1, k * 0.06);
+          if (dx) ctx.fillRect((nx + BX) * k - ep / 2, (y + BY) * k, ep, k);
+          else ctx.fillRect((x + BX) * k, (ny + BY) * k - ep / 2, k, ep);
+        }
+      }
+    }
   }
 
   // --- la vue en relief (isométrique), comme la ferme -------------------------------
@@ -1303,6 +1335,20 @@
   const HW = T * 0.62, QH = HW / 2, PROF = T * 0.9, MARGE = T * 0.8;
   const proj = (x, y) => [vue.ox + (x - y) * HW, vue.oy + (x + y) * QH];
   const versCase = (lx, ly) => { const u = (lx - vue.ox) / HW, w = (ly - vue.oy) / QH; return [(u + w) / 2, (w - u) / 2]; };
+  // (ce qui se tient sur une case se tient à sa hauteur)
+  const projH = (x, y) => { const q = proj(x, y); return [q[0], q[1] - niveau(vue.ile, Math.floor(x), Math.floor(y)) * HZ]; };
+  // la case qu'on voit sous un point de l'écran, relief compris : on suit le regard depuis le haut,
+  // la première case dont la hauteur atteint le regard est celle qu'on touche
+  function caseSous(lx, ly) {
+    const ile = vue.ile, m = niveauMax(ile);
+    if (!m) return versCase(lx, ly);
+    for (let t = m * HZ; t >= 0; t--) {
+      const a = versCase(lx, ly + t), cx = Math.floor(a[0]), cy = Math.floor(a[1]);
+      if (estVide(ile, cx, cy)) continue;
+      if (niveau(ile, cx, cy) * HZ >= t) return a;
+    }
+    return versCase(lx, ly);
+  }
   function hauteurPx(p, ile, st) {
     // (les petites herbes un peu agrandies, pour qu'on reconnaisse leur port et leur famille)
     const m = hauteurM(p), eff = m <= 2 ? 0.5 + m * 0.75 : 2 + (m - 2) * 0.35;
@@ -1920,6 +1966,7 @@
     // la place au-dessus de l'île pour les plus grandes plantes
     let haut = T * 1.5;
     for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) haut = Math.max(haut, hauteurPx(q, ile, 3) + 10); }
+    haut += niveauMax(ile) * HZ;
     vue.headroom = haut;
     vue.ox = MARGE + ile.lignes * HW;
     vue.oy = MARGE + haut;
@@ -1996,8 +2043,24 @@
     const cache = {};
     const c32 = (h) => cache[h] || (cache[h] = rgb(h));
     const hp = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    const mH = niveauMax(ile);
     for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
-      const [fx, fy] = versCase(x + 0.5, y + 0.5);
+      // (avec du relief, on suit le regard : le dessus d'une case haute, ou la face d'un talus ou
+      // d'un muret entre deux niveaux, à gauche au soleil, à droite à l'ombre)
+      let fx, fy, face = 0, prof = 0;
+      if (mH) {
+        let vu = false;
+        for (let tt = mH * HZ; tt >= 0; tt--) {
+          const a = versCase(x + 0.5, y + 0.5 + tt), ax = Math.floor(a[0]), ay = Math.floor(a[1]);
+          if (estVide(ile, ax, ay)) continue;
+          const hc = niveau(ile, ax, ay) * HZ;
+          if (hc < tt) continue;
+          fx = a[0]; fy = a[1]; vu = true;
+          if (hc - tt >= 1) { face = 1 - (fy - ay) < 1 - (fx - ax) ? 1 : 2; prof = hc - tt; }
+          break;
+        }
+        if (!vu) continue;
+      } else [fx, fy] = versCase(x + 0.5, y + 0.5);
       if (fx < 0 || fy < 0 || fx >= C || fy >= Lg) continue;
       const cx0 = Math.floor(fx), cy0 = Math.floor(fy), t2 = caseDe(ile, cx0, cy0).t, h = hp(x, y), n = hp(x >> 2, y >> 1), u = fx - cx0, v = fy - cy0;
       if (t2 === "vide") continue;
@@ -2029,6 +2092,17 @@
         col = PAL.herbe[k];
         if (h > 0.997) col = PAL.fleurs[Math.floor(hp(y, x) * PAL.fleurs.length)];
       }
+      if (face) {
+        const clair = face === 1;
+        if (muret(ile, cx0, cy0)) {
+          // les pierres sèches, en assises de trois pixels aux joints décalés
+          const assise = Math.floor(prof / 3), joint = prof % 3 === 0 || (x + assise * 3) % 6 === 0;
+          col = joint ? (clair ? "#8a98cc" : "#5b5fa8") : clair ? (h < 0.5 ? "#f3e6c8" : "#e9e3cd") : (h < 0.5 ? "#c2cdec" : "#a8b8e0");
+        } else {
+          // le talus : l'herbe qui retombe du haut, puis la terre
+          col = prof <= 2 ? PAL.herbe[clair ? 3 : 1] : clair ? (h < 0.15 ? "#7a4520" : "#9a6a3c") : (h < 0.15 ? "#4b3427" : "#7a4520");
+        }
+      }
       px[y * lw + x] = c32(col);
     }
     const plat = document.createElement("canvas");
@@ -2042,12 +2116,12 @@
     const bords = [];
     for (let y = 0; y < Lg; y++) for (let x = 0; x < C; x++) {
       if (estVide(ile, x, y)) continue;
-      if (estVide(ile, x, y + 1)) bords.push([[x, y + 1], [x + 1, y + 1]]);
-      if (estVide(ile, x + 1, y)) bords.push([[x + 1, y + 1], [x + 1, y]]);
+      if (estVide(ile, x, y + 1)) bords.push([[x, y + 1], [x + 1, y + 1], niveau(ile, x, y) * HZ]);
+      if (estVide(ile, x + 1, y)) bords.push([[x + 1, y + 1], [x + 1, y], niveau(ile, x, y) * HZ]);
     }
-    for (const [a, b] of bords) {
+    for (const [a, b, dh] of bords) {
       const [x0, y0] = proj(a[0], a[1]), [x1, y1] = proj(b[0], b[1]), n2 = Math.round(Math.abs(x1 - x0));
-      for (let q = 0; q <= n2; q++) { const xx = x0 + ((x1 - x0) * q) / n2, yy = y0 + ((y1 - y0) * q) / n2; ctx.fillStyle = PAL.herbe[4]; ctx.fillRect(Math.round(xx), Math.round(yy) - 1, 1, 1); if (H.hash(String(q)) % 3 === 0) { ctx.fillStyle = PAL.herbe[2]; ctx.fillRect(Math.round(xx), Math.round(yy) + 1, 1, 2); } }
+      for (let q = 0; q <= n2; q++) { const xx = x0 + ((x1 - x0) * q) / n2, yy = y0 + ((y1 - y0) * q) / n2; ctx.fillStyle = PAL.herbe[4]; ctx.fillRect(Math.round(xx), Math.round(yy) - 1 - dh, 1, 1); if (H.hash(String(q)) % 3 === 0) { ctx.fillStyle = PAL.herbe[2]; ctx.fillRect(Math.round(xx), Math.round(yy) + 1, 1, 2); } }
     }
   }
 
@@ -2082,6 +2156,7 @@
     // une nouvelle grande plante : on fait de la place au-dessus de l'île
     let besoin = T * 1.5;
     for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) besoin = Math.max(besoin, hauteurPx(q, ile, 3) + 10); }
+    besoin += niveauMax(ile) * HZ;
     if (!ctxDest && Math.abs(besoin - vue.headroom) > 2) { dimensionnerIso(); peindreFondIso(); }
     const z = vue.zoom * vue.dpr, t = performance.now();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2092,27 +2167,32 @@
     // ce qui est à plat sur le sol : cases conseillées, ombres des plantes, bassin, sélection
     ctx.save();
     aplat(ctx, z);
+    // (sur le plan couché, remonter de h pixels à l'écran, c'est reculer d'autant sur les deux axes)
+    const leve = (x, y) => (niveau(ile, x, y) * HZ * T) / (2 * QH);
     if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
       const p = H.d.plante(vue.plante);
       if (p) {
         if (!vue.casesBonnes || vue.casesBonnes.id !== p.id || vue.casesBonnes.le < t - 1500) vue.casesBonnes = { id: p.id, le: t, cases: new Set(casesQuiConviennent(ile, p)) };
         ctx.fillStyle = "rgba(157,255,0,0.3)";
-        for (const k2 of vue.casesBonnes.cases) { const [x, y] = k2.split(",").map(Number); ctx.fillRect(x * T + 1, y * T + 1, T - 2, T - 2); }
+        for (const k2 of vue.casesBonnes.cases) { const [x, y] = k2.split(",").map(Number), l = leve(x, y); ctx.fillRect(x * T + 1 - l, y * T + 1 - l, T - 2, T - 2); }
       }
     }
     for (const [k2, pl] of Object.entries(ile.plantes || {})) {
       const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
       if (!q) continue;
       const st = stade(ile, pl);
+      ctx.save();
+      ctx.translate(-leve(x, y), -leve(x, y));
       ctx.fillStyle = "rgba(35,33,74,0.18)";
       ctx.beginPath(); ctx.ellipse((x + 0.55) * T, (y + 0.55) * T, T * (st === 3 ? Math.min(1.4, rayonPlante(q, ile) * 0.7) : 0.25), T * (st === 3 ? Math.min(1.4, rayonPlante(q, ile) * 0.7) : 0.25), 0, 0, Math.PI * 2); ctx.fill();
       if (aRecolter(q, ile, pl)) {
         ctx.strokeStyle = "#ff2e9a"; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]);
         ctx.beginPath(); ctx.arc((x + 0.5) * T, (y + 0.5) * T, T * 0.46, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }
+      ctx.restore();
     }
     if (ile.secrete && ile.mare) dessinerMare(ctx, ile, t);
-    if (vue.choisie) { ctx.strokeStyle = "#ff7b00"; ctx.lineWidth = 2.5; ctx.strokeRect(vue.choisie.x * T + 1, vue.choisie.y * T + 1, T - 2, T - 2); }
+    if (vue.choisie) { const l = leve(vue.choisie.x, vue.choisie.y); ctx.strokeStyle = "#ff7b00"; ctx.lineWidth = 2.5; ctx.strokeRect(vue.choisie.x * T + 1 - l, vue.choisie.y * T + 1 - l, T - 2, T - 2); }
     dessinerCalqueEtTrace(ctx);
     ctx.restore();
 
@@ -2126,7 +2206,7 @@
       const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
       if (!q) continue;
       debout.push({ prof: x + y + 1, dessin: () => {
-        const st = stade(ile, pl), d = planteDebout(q, ile, st, fleurie(q, ile, pl), finPlantes), [sx, sy] = proj(x + 0.5, y + 0.5);
+        const st = stade(ile, pl), d = planteDebout(q, ile, st, fleurie(q, ile, pl), finPlantes), [sx, sy] = projH(x + 0.5, y + 0.5);
         const gx = Math.round(sx - d.l / 2), gy = Math.round(sy - d.h + 2);
         ctx.drawImage(d.pied, gx, gy, d.l, d.h);
         if (d.couronne) couronnes.push([d.couronne, gx, gy, d.l, d.h]);
@@ -2136,7 +2216,7 @@
       } });
     }
     const enCalin = vue.calin && vue.luigi && !vue.luigi.cible;
-    const perso = (nom, o, echelle, image, sauf) => { const [sx, sy] = proj(o.x + 0.5, o.y + 0.5); H.pixel.dessiner(ctx, nom, sx, sy - (sauf || 0), echelle, image); };
+    const perso = (nom, o, echelle, image, sauf) => { const [sx, sy] = projH(o.x + 0.5, o.y + 0.5); H.pixel.dessiner(ctx, nom, sx, sy - (sauf || 0), echelle, image); };
     if ((!ile.croquis || vue.ovo.cible) && !enCalin) {
       const o = vue.ovo, marche = o.cible ? Math.floor(t / 160) % 2 : 0;
       debout.push({ prof: o.x + o.y + 1.02, dessin: () => perso("ovo", o, 1.5, marche, marche ? 1 : 0) });
@@ -2153,7 +2233,7 @@
     if (enCalin) {
       const o = vue.ovo;
       debout.push({ prof: o.x + o.y + 1.02, dessin: () => {
-        const [sx, sy] = proj(o.x + 0.5, o.y + 0.5);
+        const [sx, sy] = projH(o.x + 0.5, o.y + 0.5);
         ctx.save(); ctx.translate(sx - (o.x + 0.5) * T, sy - (o.y + 0.9) * T); dessinerCalin(ctx, T); ctx.restore();
       } });
     }
@@ -2163,7 +2243,7 @@
       const place = ile.lolo || { x: ile.cols / 2, y: ile.lignes / 2 + 0.6 }, lx = pos ? pos.x : place.x;
       const image = galope ? Math.floor(t / 90) % 4 : Math.floor(t / 700) % 2;
       if (visible) debout.push({ prof: lx + place.y + 0.5, dessin: () => {
-        const [sx, sy] = proj(lx, place.y);
+        const [sx, sy] = projH(lx, place.y);
         H.pixel.dessiner(ctx, galope ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", sx, sy - (galope && image % 2 ? 2 : 0), 2, image);
         if (!galope && Math.floor(t / 1400) % 2) { ctx.font = "10px 'Suez One', serif"; ctx.fillStyle = "#ff2e9a"; ctx.fillText("rrr", sx + 12, sy - 60); }
       } });
@@ -2172,21 +2252,21 @@
       const l = vue.loloVisite, pos = H.sons.position(l.course, t);
       if (pos) {
         const image = pos.enCourse ? Math.floor(t / 90) % 4 : Math.floor(t / 700) % 2;
-        debout.push({ prof: pos.x + l.y + 1, dessin: () => { const [sx, sy] = proj(pos.x + 0.5, l.y + 0.5); H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", sx, sy - (pos.enCourse && image % 2 ? 2 : 0), 2, image); } });
+        debout.push({ prof: pos.x + l.y + 1, dessin: () => { const [sx, sy] = projH(pos.x + 0.5, l.y + 0.5); H.pixel.dessiner(ctx, pos.enCourse ? "loloGalop" : H.memeDehors && H.memeDehors() ? "loloSansMeme" : "lolo", sx, sy - (pos.enCourse && image % 2 ? 2 : 0), 2, image); } });
       }
     }
     if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
     // les paniers de la récolte du jour, sur le bord de devant
     paniersIle(ile).forEach((b, i) => {
       const q = H.d.plante(b.p), [bx, by] = placePanier(ile, i);
-      if (q) debout.push({ prof: bx + by, dessin: () => { const [sx, sy] = proj(bx, by); ctx.save(); ctx.translate(Math.round(sx), Math.round(sy)); ctx.scale(2, 2); panierRecolte(ctx, 0, 0, q, b.n); ctx.restore(); } });
+      if (q) debout.push({ prof: bx + by, dessin: () => { const [sx, sy] = projH(bx, by); ctx.save(); ctx.translate(Math.round(sx), Math.round(sy)); ctx.scale(2, 2); panierRecolte(ctx, 0, 0, q, b.n); ctx.restore(); } });
     });
     // les pots à repiquer, qui flottent devant l'angle de devant (par-dessus tout le reste)
     vue.potsFlottants = [];
     potsDeLaCaisse(ile).forEach((q, i) => {
       const pq = H.d.plante(q.id);
       if (!pq) return;
-      const [sx, sy] = proj(q.x, q.y), hy = sy - 12;
+      const [sx, sy] = projH(q.x, q.y), hy = sy - 12;
       vue.potsFlottants.push({ id: q.id, g: sx - 15, d: sx + 15, h: hy - 30, b: hy + 14 });
       debout.push({ prof: 100 + q.x + q.y, dessin: () => { ctx.save(); ctx.translate(Math.round(sx), Math.round(hy)); ctx.scale(1.7, 1.7); potFlottant(ctx, 0, 0, pq, vue.outil === "planter" && vue.depuisSerre && vue.plante === q.id, t, i); ctx.restore(); } });
     });
@@ -2194,7 +2274,7 @@
     // ce qui vole : un brin récolté vers son panier, en arc
     vue.envols = (vue.envols || []).filter((e) => t - e.t0 < 750);
     for (const e of vue.envols) {
-      const u = (t - e.t0) / 750, [ax, ay] = proj(e.de[0], e.de[1]), [bx, by] = proj(e.vers[0], e.vers[1]);
+      const u = (t - e.t0) / 750, [ax, ay] = projH(e.de[0], e.de[1]), [bx, by] = projH(e.vers[0], e.vers[1]);
       const x = ax + (bx - ax) * u, y = ay - 20 + (by - 10 - (ay - 20)) * u - Math.sin(Math.PI * u) * 26;
       ctx.fillStyle = FEUILLES_PIX[H.hash(e.p.id) % FEUILLES_PIX.length]; ctx.fillRect(Math.round(x), Math.round(y), 1, 4); ctx.fillRect(Math.round(x) - 1, Math.round(y) + 1, 3, 1);
       ctx.fillStyle = FLEURS_ISO[H.hash(e.p.id) % FLEURS_ISO.length]; ctx.fillRect(Math.round(x), Math.round(y) - 1, 2, 2);
@@ -2211,7 +2291,7 @@
 
     // petits cœurs pendant un câlin
     if (vue.coeurs && vue.coeurs > t && vue.luigi) {
-      const tc = (t % 1500) / 1500, [sx, sy] = proj(vue.ovo.x + 0.5, vue.ovo.y + 0.5);
+      const tc = (t % 1500) / 1500, [sx, sy] = projH(vue.ovo.x + 0.5, vue.ovo.y + 0.5);
       for (let i = 0; i < 3; i++) { const u = (tc + i / 3) % 1; dessinerCoeur(ctx, sx - 10 + Math.sin(u * 6 + i) * 8, sy - 38 - u * 28, 1 - u); }
     }
     // météo
@@ -2623,7 +2703,7 @@
       // d'abord les grandes plantes (on touche leur feuillage), de la plus proche à la plus lointaine
       const grande = (vue.boites || []).filter((b) => b.grande && lx >= b.g && lx <= b.d && ly >= b.h && ly <= b.b).sort((a, b) => b.prof - a.prof)[0];
       if (grande) return { x: grande.x, y: grande.y };
-      const [fx, fy] = versCase(lx, ly), x = Math.floor(fx), y = Math.floor(fy);
+      const [fx, fy] = caseSous(lx, ly), x = Math.floor(fx), y = Math.floor(fy);
       return dansOuAuBord(x, y);
     }
     const k = T * vue.zoom;
@@ -2903,9 +2983,21 @@
   // la position d'un point sous le doigt, en cases (avec la virgule)
   function caseFine(e) {
     const rect = vue.toile.getBoundingClientRect();
-    if (vue.iso) return versCase((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
+    if (vue.iso) return caseSous((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
     const k = T * vue.zoom;
     return [(e.clientX - rect.left) / k - vue.bx, (e.clientY - rect.top) / k - vue.by];
+  }
+  // un coup de relief : la case sous le doigt monte, descend ou s'aplanit (une fois par geste)
+  function coupDeRelief(fx, fy, vus) {
+    const ile = vue.ile, x = Math.floor(fx), y = Math.floor(fy), k = cle(x, y);
+    if (estVide(ile, x, y) || vus.has(k)) return false;
+    vus.add(k);
+    const mode = vue.reliefMode || "monter", r = Object.assign({}, (ile.relief || {})[k]);
+    r.n = mode === "aplanir" ? 0 : Math.max(0, Math.min(NIVEAU_MAX, (r.n || 0) + (mode === "monter" ? 1 : -1)));
+    r.mur = (vue.reliefStyle || "talus") === "muret";
+    ile.relief = Object.assign({}, ile.relief, { [k]: r });
+    if (!r.n) delete ile.relief[k];
+    return true;
   }
   // un coup de pinceau : un carré de cases sous le doigt, qu'on ajoute ou qu'on enlève
   function coupDePinceau(fx, fy) {
@@ -2959,6 +3051,14 @@
       dimensionner(); peindreFond(); dessiner();
     };
     toile.addEventListener("pointerdown", (e) => {
+      if (vue && vue.outil === "relief") {
+        e.preventDefault();
+        toile.setPointerCapture(e.pointerId);
+        const [fx, fy] = caseFine(e);
+        geste = { mode: "relief", dernier: [fx, fy], vus: new Set() };
+        if (coupDeRelief(fx, fy, geste.vus)) repeindreBientot(true);
+        return;
+      }
       if (!vue || vue.outil !== "forme") return;
       const mode = vue.formeMode || "ajouter";
       if (mode === "deplacer" && !vue.calque) return;
@@ -2976,6 +3076,14 @@
       geste.bouge = true;
       if (geste.mode === "contour") { vue.trace.push([fx, fy]); geste.dernier = [fx, fy]; dessiner(); return; }
       if (geste.mode === "deplacer") { vue.calque.x += fx - ax; vue.calque.y += fy - ay; geste.dernier = [fx, fy]; dessiner(); return; }
+      if (geste.mode === "relief") {
+        const n = Math.ceil(Math.hypot(fx - ax, fy - ay) / 0.5);
+        let change = false;
+        for (let i = 1; i <= n; i++) change = coupDeRelief(ax + ((fx - ax) * i) / n, ay + ((fy - ay) * i) / n, geste.vus) || change;
+        geste.dernier = [fx, fy];
+        if (change) repeindreBientot();
+        return;
+      }
       // (entre deux positions, on peint aussi les cases traversées)
       const n = Math.ceil(Math.hypot(fx - ax, fy - ay) / 0.5);
       let change = false;
@@ -2997,6 +3105,7 @@
         return;
       }
       if (g.mode === "deplacer") { garderCalque(); return; }
+      if (g.mode === "relief") { sauver(vue.ile); repeindreBientot(true); return; }
       rogner(vue.ile);
       sauver(vue.ile);
       if (vue.calqueBouge) garderCalque();
@@ -3100,6 +3209,8 @@
       case "regarder":
         if (pl) inspecter(x, y);
         else montrerCase(x, y);
+        break;
+      case "relief":
         break;
       case "forme": {
         if ((vue.formeMode || "ajouter") === "enlever") {
