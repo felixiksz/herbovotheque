@@ -3128,6 +3128,37 @@
     ctx.restore();
     return true;
   }
+  // La garrigue au bord du chemin, en dessin botanique comme sur les jardins : romarin, thym,
+  // lavande, lentisque, sarriette, myrte, genévrier ; « t » est le rayon de l'ancienne touffe
+  const BUISSONS_BALADE = [["Romarin", 4], ["Thym commun", 3], ["Lavande officinale", 3], ["Lentisque", 2], ["Sarriette", 2], ["Myrte", 1], ["Genevrier commun", 1]];
+  function buissonBalade(ctx, x, base, t, mo, k, graine) {
+    if (!H.terrain || !H.terrain.plantePetite) return false;
+    const total = BUISSONS_BALADE.reduce((a, e) => a + e[1], 0);
+    let n = Math.floor(hsh(graine, 29) * total), nom = BUISSONS_BALADE[0][0];
+    for (const [nm, poids] of BUISSONS_BALADE) { if (n < poids) { nom = nm; break; } n -= poids; }
+    const haut = Math.max(8, Math.round(t * 1.25 * k)), cle = "b|" + nom + "|" + haut + "|" + mo;
+    let d = dessinsArbres.get(cle);
+    if (d === undefined) {
+      const p = H.d.plantes().find((q) => q.nom === nom);
+      d = null;
+      if (p) {
+        const src = H.terrain.plantePetite(p, haut, 3, true);
+        d = document.createElement("canvas");
+        d.width = src.width; d.height = src.height;
+        const g = d.getContext("2d");
+        g.drawImage(src, 0, 0);
+        if (mo !== "jour") { g.globalCompositeOperation = "source-atop"; g.fillStyle = mo === "nuit" ? "rgba(16,20,66,0.72)" : "rgba(120,60,110,0.28)"; g.fillRect(0, 0, d.width, d.height); }
+      }
+      if (dessinsArbres.size > 160) dessinsArbres.clear();
+      dessinsArbres.set(cle, d);
+    }
+    if (!d) return false;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(d, Math.round(x - d.width / k / 2), Math.round(base - d.height / k + 1), d.width / k, d.height / k);
+    ctx.restore();
+    return true;
+  }
   function pinPlat(ctx, x, base, t, couleur, dessous, tronc) {
     // un pin sur trois environ pousse en Y : le tronc se sépare en deux, et la couronne aussi
     if (Math.round(t) % 3 === 0) return pinEnY(ctx, x, base, t, couleur, dessous, tronc);
@@ -3485,15 +3516,15 @@
       ctx.ellipse(x, sol(x) - h * (0.11 - (i % 5) * 0.022), 3 + (i % 3), 2, 0, 0, Math.PI * 2);
       ctx.fill();
     }
+    const moA = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
     // la garrigue au bord du chemin (des oyats dans les dunes), et les pins parasols de toutes tailles
     for (let i = 0; i < 14; i++) {
       const x = boucler(i * 95 - avance * 0.9, w, 50);
       if (dunes(X(x)) > 0.5 && !nuit) {
         ctx.strokeStyle = "#8a9a4a"; ctx.lineWidth = 1.6;
         for (let j = 0; j < 5; j++) { ctx.beginPath(); ctx.moveTo(x + j * 3, sol(x) - h * 0.15); ctx.lineTo(x + j * 3 + (j - 2) * 3, sol(x) - h * 0.15 - 14 - (j % 2) * 6); ctx.stroke(); }
-      } else buissonPlat(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, nuit ? "#163024" : i % 2 ? "#2f7a3e" : "#4f9a46");
+      } else if (!buissonBalade(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, moA, dpr, i * 7 + 3)) buissonPlat(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, nuit ? "#163024" : i % 2 ? "#2f7a3e" : "#4f9a46");
     }
-    const moA = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
     poses(S.arbres, b, 0.85, (x, taille) => {
       if (dunes(X(x)) > 0.6) return;
       if (arbreBalade(ctx, x, sol(x) - h * 0.14, taille, moA, dpr)) return;
@@ -3538,7 +3569,7 @@
     }
     if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
-    for (let i = 0; i < 12; i++) buissonPlat(ctx, boucler(i * 110 - avance * 1.25, w, 60), h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a");
+    for (let i = 0; i < 12; i++) { const bx = boucler(i * 110 - avance * 1.25, w, 60); if (!buissonBalade(ctx, bx, h + 4, 22 + (i % 3) * 8, moA, dpr, i * 11 + 5)) buissonPlat(ctx, bx, h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a"); }
     poses(S.devant, b, 1.3, (x, taille) => arbreBalade(ctx, x, h * 1.04, taille, moA, dpr) || pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
     // On peut aller se baigner quand le chemin longe la crique aux rochers rouges. En y arrivant,
     // on s'arrête (même si quelqu'un est en train de raconter une histoire) ; une fois la bulle
