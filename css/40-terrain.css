@@ -363,6 +363,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile { padding: 6px 10px; margin: 8px 0; }
 .titre-outils-ferme { font: 1.15rem/1.2 var(--menu-police); color: #a8d8ec; margin-right: 4px; }
 :root[data-ile] .options-outil:empty { display: none; }
+.pastilles-scene.icones-scene { gap: 12px; }
 /* les options de Planter : une ligne par façon d'avoir une plante, son titre à gauche */
 .ligne-option { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
 .titre-option { min-width: 11.5em; color: #a8d8ec; }

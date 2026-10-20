@@ -30,6 +30,8 @@
   }
   function ligne(c, x0, y0, x1, y1, col) {
     x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+    // (une coordonnée qui n'est pas un nombre ferait tourner le tracé sans fin)
+    if (!isFinite(x0 + y0 + x1 + y1)) { if (!ligne.prevenu) { ligne.prevenu = true; console.warn("ferme : ligne hors de la toile", new Error().stack); } return; }
     const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
     let e = dx + dy; c.fillStyle = col;
     for (;;) { c.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
@@ -2105,10 +2107,12 @@
       const toile = H.el("canvas.toile-village", { "aria-label": "La ferme" });
       const etiquette = H.el("div.etiquette-ferme", { hidden: true });
       const heureMeteo = H.el("div.heure-ferme", { "aria-live": "off" });
-      const boutons = H.el("div.pastilles-scene", null,
-        H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
-        H.el("a.pastille-scene", { href: "#terrain" }, "Terrain"),
-        H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
+      // en haut à droite, trois icônes comme sur les jardins : aménager la ferme, le terrain, les réglages
+      const I = H.icones;
+      const boutons = H.el("div.pastilles-scene.icones-scene", null,
+        I.bouton(I.image("truelle"), "Aménager la ferme", () => scene && basculerAmenager(!scene.amenager)),
+        I.bouton(I.image("pousse"), "Terrain", null, "#terrain"),
+        I.bouton(I.image("reglages"), "Réglages", null, "#reglages")
       );
       // dans le coin en bas à gauche : les post-it de la to-do liste, au-dessus de l'heure et de la météo
       boite.append(toile, etiquette, H.el("div.coin-ferme", null, H.taches && H.taches.postits ? H.taches.postits() : null, heureMeteo), boutons);

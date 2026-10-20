@@ -858,7 +858,7 @@
 
 
   // --- les icônes en pixels de l'écran des îles (12 × 12, dans le style du bureau) ---------------
-  const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", y: "#f6ee55", g: "#c6c8dc", G: "#8d90b0", n: "#b9834f", N: "#7a4520" };
+  const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", V: "#2f6b35", y: "#f6ee55", g: "#c6c8dc", G: "#8d90b0", n: "#b9834f", N: "#7a4520" };
   const ICONES_ILE = {
     oiseau: ["............", "............", ".......kkk..", "......kbbbk.", "......kbkbyy", "..kkkkkbbbk.", ".kbbbbbbbbk.", "kbbBBBbbbk..", ".kbbBBBbbk..", "..kkkbbbk...", "....k..k....", "...kk..kk..."],
     relief: [".....kk.....", "...kkvvkk...", ".kkvvvvvvkk.", "kvvvvvvvvvvk", "knkkvvvvkkNk", "knnnkkkkNNNk", "knnnnnNNNNNk", ".kknnnNNNkk.", "...kknNkk...", ".....kk.....", "............", "............"],
@@ -867,6 +867,9 @@
     cerveau: ["............", "...kkkkkk...", "..kmmMmmmk..", ".kmmmMmMmmk.", ".kmMmMmmMmk.", "kmmMmmMmmmmk", "kmmmMmmMmMmk", ".kmMmmMmmmk.", ".kmmMmmMmmk.", "..kkkkkkkk..", "....kmmk....", "....kkkk...."],
     exporter: ["..kkkkkk....", "..kwwwwkk...", "..kwwwwkwk..", "..kwwwwkkkk.", "..kwwwwwwwk.", "..kwwwvwwwk.", "..kwwwvvwwk.", "..kwvvvvvwk.", "..kwwwvvwwk.", "..kwwwvwwwk.", "..kwwwwwwwk.", "..kkkkkkkkk."],
     reglages: ["....kkkk....", ".kk.kggk.kk.", ".kgkkggkkgk.", "..kggggggk..", "kkggkkkkgGkk", "kgggk..kgGGk", "kgggk..kgGGk", "kkggkkkkGGkk", "..kgGGGGGk..", ".kGkkGGkkGk.", ".kk.kGGk.kk.", "....kkkk...."],
+    // la truelle (aménager) et la pousse (le terrain), comme sur le bureau
+    truelle: ["............", "........kk..", ".......kgGk.", "......kggk..", ".....kggk...", "....kgGk....", "...kkkk.....", "..knNk......", ".knNk.......", "knNk........", "kkk.........", "............"],
+    pousse: ["............", "...vv..vv...", "..vVVvvVVv..", "..vVVVVVVv..", "...vvVVvv...", ".....VV.....", ".....VV.....", "....nnnn....", "..nnnnnnnn..", ".nnnnnnnnnn.", "knnnnnnnnnnk", "kkkkkkkkkkkk"],
     patte: ["............", "..kk....kk..", ".knnk..knnk.", ".knnk..knnk.", "..kk.kk.kk..", "....knnk....", "...knnnnk...", "..knnnnnnk..", "..knnnnnnk..", "...knnnnk...", "....kkkk....", "............"],
   };
   const imagesIcones = {};
@@ -882,6 +885,8 @@
   }
   // un bouton-icône : l'image en pixels, le nom au survol (et pour les lecteurs d'écran)
   const boutonIcone = (src, nom, onclick, lien) => H.el(lien ? "a.bouton-icone" : "button.bouton-icone", Object.assign({ title: nom, "aria-label": nom }, lien ? { href: lien } : { type: "button", onclick }), H.el("img", { src, alt: "" }));
+  // (les mêmes icônes pour les autres scènes : la ferme)
+  H.icones = { image: imageIcone, bouton: boutonIcone };
 
   // --- vue : une île -----------------------------------------------------------------
   let vue = null; // état de l'île affichée
