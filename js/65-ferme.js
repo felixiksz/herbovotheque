@@ -167,7 +167,14 @@
     prairie: ["#6cbd5c", "#9cc77a", "#d07ab8", "#f6ee55"],
     bassin: ["#12aec4", "#0d8fae", "#a8d8ec", "#26406a"],
   };
-  const elementsIso = () => Object.values((H.jeu.ferme || {}).elements || {}).filter((e) => e && e.iso && !e.supprime);
+  // (côté Mesi, dans le monde d'ƟvƟ : aussi ce qu'ƟvƟ a posé sur sa vraie ferme, en lecture seule)
+  const fermeOvo = () => (H.monde !== "mesi" && H.local && H.local.role === "mesi" && H.local.fermeOvo) || null;
+  const elementsIso = () => {
+    const miens = Object.values((H.jeu.ferme || {}).elements || {}).filter((e) => e && e.iso && !e.supprime), autres = fermeOvo();
+    if (!autres) return miens;
+    const ids = new Set(miens.map((e) => e.id));
+    return miens.concat(Object.values(autres).filter((e) => e && e.iso && !e.supprime && !ids.has(e.id)).map((e) => Object.assign({}, e, { deOvo: true })));
+  };
   function enregistrer(e) {
     H.jeu.ferme = H.jeu.ferme || {};
     H.jeu.ferme.elements = H.jeu.ferme.elements || {};
@@ -1130,7 +1137,7 @@
     fondCle = null; sprites.clear(); miroirs.clear();
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && scene && solPerdu()) repeindreTout(); });
-  H.sur("donnees", () => { if (scene && !(scene.amenager && scene.amenager.priseBat) && appliquerPlan()) { peindreSol(); peindreSol2(); } });
+  H.sur("donnees", (quoi) => { if (scene && !(scene.amenager && scene.amenager.priseBat) && (appliquerPlan() || quoi === "fermeOvo")) { peindreSol(); peindreSol2(); } });
   for (const t of [sol0]) t.addEventListener("contextrestored", () => repeindreTout());
 
   // l'enveloppe convexe d'un nuage de points (pour l'ombre d'une maison)
@@ -2089,12 +2096,12 @@
     if (!debut) return;
     const proche = elementsIso().filter((x) => x.type).map((x) => [x, Math.hypot(x.i - i, x.j - j)]).sort((p, q) => p[1] - q[1])[0];
     if (a.outil === "gomme") {
-      if (proche && proche[1] < 0.8) { enregistrer(Object.assign({}, proche[0], { supprime: true })); return; }
+      if (proche && proche[1] < 0.8) { if (proche[0].deOvo) return H.toast("ƟvƟ l’a posé chez iel : seul·e ƟvƟ peut le retirer."); enregistrer(Object.assign({}, proche[0], { supprime: true })); return; }
       const s = ((H.jeu.ferme || {}).elements || {})["iso-sol-" + ci + "," + cj];
       if (s && !s.supprime) { enregistrer(Object.assign({}, s, { supprime: true })); peindreSol(); peindreSol2(); }
       return;
     }
-    if (a.outil === "deplacer") { if (proche && proche[1] < 0.8) a.prise = proche[0]; return; }
+    if (a.outil === "deplacer") { if (proche && proche[1] < 0.8) { if (proche[0].deOvo) return H.toast("ƟvƟ l’a posé chez iel : seul·e ƟvƟ peut le déplacer."); a.prise = proche[0]; } return; }
     if (a.outil === "bouger") { a.priseBat = priseSous(i, j, e); return; }
     if (a.outil === "tourner") {
       const q = priseSous(i, j, e);
@@ -2129,7 +2136,7 @@
     }
     return paysages.get(cle);
   }
-  H.ferme = { scene: () => scene, fond: () => fond, paysage, aUnBassin: () => casesBassin().length > 0,
+  H.ferme = { scene: () => scene, fond: () => fond, paysage, elements: () => elementsIso(), aUnBassin: () => casesBassin().length > 0,
     // les bêtes de la nuit, pour qu'on les voie aussi passer depuis la maison
     betes: { RENARD, RENARD_PAS, SANGLIER, SANGLIER_PAS, MARCASSIN, MARCASSIN_PAS, HERISSON, HERISSON_PAS, PAL_BETES, PAL_BASSIN } };
   H.vues.village = {

@@ -195,6 +195,11 @@
         // à son herbier ni à ses jardins
         if (role() === "mesi") {
           const chezOvo = await lireDistant(FICHIERS.jeu, parent);
+          // (dans le monde d'ƟvƟ, une copie de ce qu'ƟvƟ a posé sur sa ferme : on le voit, sans y toucher)
+          if (H.monde !== "mesi") {
+            const sienne = ((chezOvo && chezOvo.ferme) || {}).elements || {};
+            if (canon(sienne) !== canon(H.local.fermeOvo || {})) { await H.d.majLocal((l) => (l.fermeOvo = sienne)); H.emettre("donnees", "fermeOvo"); }
+          }
           const commun = { lettres: fusionnerCollection(H.jeu.lettres, chezOvo && chezOvo.lettres), textes: fusionnerCollection(H.jeu.textes, chezOvo && chezOvo.textes), matins: fusionnerCollection(H.jeu.matins, chezOvo && chezOvo.matins), cadeaux: fusionnerCollection(H.jeu.cadeaux, chezOvo && chezOvo.cadeaux), cris: fusionnerCollection(H.jeu.cris, chezOvo && chezOvo.cris) };
           // la disposition de la ferme : seulement quand Mesi aménage dans le monde d'ƟvƟ
           if (H.monde !== "mesi") commun.planFerme = fusionnerCollection(H.jeu.planFerme, chezOvo && chezOvo.planFerme);
