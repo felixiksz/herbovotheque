@@ -56,8 +56,8 @@
     ["devis", "Devis", [
       "..kkkkkkk...", "..kwwwwwkk..", "..kwkkkwkwk.", "..kwwwwwkkkk", "..kwkkkkkwwk", "..kwwwwwwwwk", "..kwkkkkwwwk", "..kwwwwwwwwk", "..kwwwkoookk", "..kwwwwoooko", "..kkkkkkkkk.", "............"]],
     ["terrain", "Terrain", [
-      ".....Vv.vV..", "....vvVvvvv.", "...vV.n..Vv.", "......n.....", "......n.....", ".....n......",
-      ".....n......", "...oooooo...", ".oooooooooo.", "bbbbbbbbbbbb", "bBbbbBbbbbBb", "bbbbbbbbbbbb"]],
+      "............", "...vv..vv...", "..vVVvvVVv..", "..vVVVVVVv..", "...vvVVvv...", ".....VV.....",
+      ".....VV.....", "....nnnn....", "..nnnnnnnn..", ".nnnnnnnnnn.", "knnnnnnnnnnk", "kkkkkkkkkkkk"]],
     ["reglages", "Réglages", [
       "....kkkk....", ".kk.kggk.kk.", ".kgkkggkkgk.", "..kggggggk..", "kkggkkkkgGkk", "kgggk..kgGGk",
       "kgggk..kgGGk", "kkggkkkkGGkk", "..kgGGGGGk..", ".kGkkGGkkGk.", ".kk.kGGk.kk.", "....kkkk...."]],

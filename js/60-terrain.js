@@ -1005,7 +1005,7 @@
       jardin: ile.croquis
         ? [["regarder", "Regarder"], ["planter", "Planter"], ["retirer", "Retirer"]]
         : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["retirer", "Retirer"]],
-      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"]].concat(ile.secrete ? [] : [["forme", "Forme du jardin"]]),
+      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"], ["forme", "Forme du jardin"]],
     };
     const mode = modes.chantier.some(([id]) => id === vue.outil) ? "chantier" : "jardin";
     const changerMode = (m) => { if (m !== mode) { vue.outil = modes[m][0][0]; dessinerOutils(); } };
@@ -2923,7 +2923,7 @@
       dimensionner(); peindreFond(); dessiner();
     };
     toile.addEventListener("pointerdown", (e) => {
-      if (!vue || vue.outil !== "forme" || vue.ile.secrete) return;
+      if (!vue || vue.outil !== "forme") return;
       const mode = vue.formeMode || "ajouter";
       if (mode === "deplacer" && !vue.calque) return;
       e.preventDefault();
@@ -3066,7 +3066,6 @@
         else montrerCase(x, y);
         break;
       case "forme": {
-        if (ile.secrete) return;
         if ((vue.formeMode || "ajouter") === "enlever") {
           if (estVide(ile, x, y)) return;
           if (pl) return libre("Il y a une plante ici : retire-la d’abord.");
