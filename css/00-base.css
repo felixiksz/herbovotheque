@@ -244,42 +244,52 @@ label { font-size: 0.95rem; }
   background: var(--papier); color: var(--encre); font-size: 1.25rem; line-height: 1; cursor: pointer; }
 .fermer-fenetre-pixel:hover, .fermer-fenetre-pixel:focus-visible { background: var(--fluo); outline: none; }
 .corps-fenetre { padding: 14px 18px 20px; }
-.fenetre-pixel :is(h1, h2, h3, h4, legend, summary, th, dt, b, strong, label) { font-weight: normal; text-shadow: 1px 0 0 currentColor; }
-.fenetre-pixel :is(h3, h4) { font-size: 1.35rem; line-height: 1.2; margin: 14px 0 6px; }
-.fenetre-pixel label :is(input, select, textarea, option, .discret, span:not(:first-child)) { text-shadow: none; }
-.fenetre-pixel p { margin: 0.35em 0 0.7em; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(h1, h2, h3, h4, legend, summary, th, dt, b, strong, label) { font-weight: normal; text-shadow: 1px 0 0 currentColor; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(h3, h4) { font-size: 1.35rem; line-height: 1.2; margin: 14px 0 6px; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) label :is(input, select, textarea, option, .discret, span:not(:first-child)) { text-shadow: none; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) p { margin: 0.35em 0 0.7em; }
 .panneau.fenetre-pixel label, .panneau.fenetre-pixel legend { font-size: 1.2rem; letter-spacing: 0.02em; text-transform: none; color: var(--encre); }
-.fenetre-pixel .discret { color: #4a4880; font-size: 1.15rem; line-height: 1.3; }
-.fenetre-pixel :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea) {
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .discret { color: #4a4880; font-size: 1.15rem; line-height: 1.3; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea) {
   font-size: 1.2rem; line-height: 1.2; border: 1.5px solid var(--encre); border-radius: 0; background: #fffdf3; color: var(--encre); padding: 4px 8px; }
-.fenetre-pixel .bouton { font-size: 1.25rem; line-height: 1; border: 2px solid var(--encre); border-radius: 0; background: var(--papier); color: var(--encre);
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton { font-size: 1.25rem; line-height: 1; border: 2px solid var(--encre); border-radius: 0; background: var(--papier); color: var(--encre);
   box-shadow: 3px 3px 0 var(--encre); padding: 4px 12px 5px; text-transform: none; letter-spacing: 0.02em; text-decoration: none; }
-.fenetre-pixel .bouton:hover { background: #fff7a0; }
-.fenetre-pixel .bouton:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--encre); }
-.fenetre-pixel :is(.bouton.actif, button[type="submit"].bouton) { background: #f3ee6a; }
-.fenetre-pixel .bouton.petit { font-size: 1.1rem; padding: 2px 8px 3px; box-shadow: 2px 2px 0 var(--encre); }
-.fenetre-pixel .bouton.discret-bouton { border-color: transparent; box-shadow: none; background: none; text-decoration: underline; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton:hover { background: #fff7a0; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--encre); }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(.bouton.actif, button[type="submit"].bouton) { background: #f3ee6a; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton.petit { font-size: 1.1rem; padding: 2px 8px 3px; box-shadow: 2px 2px 0 var(--encre); }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton.discret-bouton { border-color: transparent; box-shadow: none; background: none; text-decoration: underline; }
 .panneau.fenetre-pixel.large { width: min(900px, 100%); }
+/* Les pages du bureau prennent le même habit que les fenêtres : tout en police pixel (agrandie pour
+   que ses minuscules aient la hauteur de celles d'avant), les titres en gras pixel, les boutons et
+   les champs carrés. Seuls les objets écrits à la main le restent : les étiquettes des sachets et de
+   l'herbier, les lettres, les titres des livres, les noms des pots. */
+:root :is(.contenu-vue, .contenu-ordi), :root :is(.contenu-vue, .contenu-ordi) * { font-family: var(--menu-police); font-size-adjust: 0.5; letter-spacing: 0.02em; }
+:root :is(.contenu-vue, .contenu-ordi) :is(h1, h2, .titre-carnet) { font-weight: normal; text-shadow: 1px 0 0 currentColor; line-height: 1.25; }
+:root :is(.contenu-vue, .contenu-ordi) h1 { font-size: 1.9rem; } :root :is(.contenu-vue, .contenu-ordi) h2 { font-size: 1.6rem; }
+:root :is(.contenu-vue, .contenu-ordi) :is(.sachet-nom, .etiquette-herbier .titre-etiquette, .lettre-papier .lettre-texte, .lettre-papier .lettre-texte *, .lettre-date, .lettre-signature, .titre-livre, .livre .titre, .nom-pot) { font-family: var(--titre); font-size-adjust: none; letter-spacing: 0.01em; text-shadow: none; }
+:root :is(.contenu-vue, .contenu-ordi) .bouton-trait { font-size: 1.1rem; border: 2px solid var(--encre); border-radius: 0; background: var(--papier); box-shadow: 2px 2px 0 var(--encre); padding: 2px 8px 3px; }
+:root[data-theme="nuit"] :is(.contenu-vue, .contenu-ordi) .bouton-trait { box-shadow: 2px 2px 0 #0b0a24; }
 /* les petites questions (« Sûr·e ? ») : une fenêtre étroite, un peu plus bas */
 .panneau.fenetre-pixel.petite { width: min(440px, 100%); margin-top: 16vh; }
 .confirmer p { margin: 0 0 14px; }
 /* (les anciens menus de scène, comme « Nouveau jardin » : leurs champs et leurs choix passent à l'encre) */
 .panneau.fenetre-pixel :is(input, textarea)::placeholder { color: #8d8aa8; opacity: 1; }
-.fenetre-pixel :is(.champ-pixel, .champ-pixel > span:first-child, .puce-pixel, .ligne-pixel .fois) { color: var(--encre); }
-.fenetre-pixel .champ-pixel > span:first-child { text-shadow: 1px 0 0 currentColor; }
-.fenetre-pixel .puce-pixel:has(input:checked) { color: var(--encre); text-shadow: 1px 0 0 currentColor; }
-.fenetre-pixel .puce-pixel small { text-shadow: none; }
-.fenetre-pixel .formulaire-pixel :is(p, .discret) { color: #4a4880; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(.champ-pixel, .champ-pixel > span:first-child, .puce-pixel, .ligne-pixel .fois) { color: var(--encre); }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .champ-pixel > span:first-child { text-shadow: 1px 0 0 currentColor; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .puce-pixel:has(input:checked) { color: var(--encre); text-shadow: 1px 0 0 currentColor; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .puce-pixel small { text-shadow: none; }
+:is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .formulaire-pixel :is(p, .discret) { color: #4a4880; }
 /* la nuit (dès le coucher du soleil), les fenêtres passent en sombre : papier bleu nuit, encre crème */
 :root[data-theme="nuit"] .panneau.fenetre-pixel { box-shadow: 6px 6px 0 rgba(0, 0, 10, 0.6); }
 :root[data-theme="nuit"] .titre-fenetre-pixel { background: color-mix(in srgb, var(--papier) 86%, #f3ead8); }
-:root[data-theme="nuit"] .fenetre-pixel :is(.discret, .formulaire-pixel p) { color: #c9c4e6; }
-:root[data-theme="nuit"] .fenetre-pixel :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea) { background: var(--papier-fonce); }
-:root[data-theme="nuit"] .fenetre-pixel .bouton { box-shadow: 3px 3px 0 #0b0a24; }
-:root[data-theme="nuit"] .fenetre-pixel .bouton.petit { box-shadow: 2px 2px 0 #0b0a24; }
-:root[data-theme="nuit"] .fenetre-pixel .bouton:hover { background: #3a3870; }
-:root[data-theme="nuit"] .fenetre-pixel :is(.bouton.actif, button[type="submit"].bouton) { background: #f3ee6a; color: #23214a; border-color: #f3ee6a; }
-:root[data-theme="nuit"] .fenetre-pixel .bouton.discret-bouton { box-shadow: none; background: none; }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(.discret, .formulaire-pixel p) { color: #c9c4e6; }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea) { background: var(--papier-fonce); }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton { box-shadow: 3px 3px 0 #0b0a24; }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton.petit { box-shadow: 2px 2px 0 #0b0a24; }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton:hover { background: #3a3870; }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) :is(.bouton.actif, button[type="submit"].bouton) { background: #f3ee6a; color: #23214a; border-color: #f3ee6a; }
+:root[data-theme="nuit"] :is(.fenetre-pixel, .contenu-vue, .contenu-ordi) .bouton.discret-bouton { box-shadow: none; background: none; }
 :root[data-ile] .panneau:not(.menu-scene) .discret, :root[data-ile] .panneau:not(.menu-scene) legend { color: var(--encre-douce); }
 
 /* --- photo façon vieux téléphone avec flash --- */
