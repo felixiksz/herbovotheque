@@ -3824,7 +3824,7 @@
     afficher(c, params) {
       vue = null;
       // une île ouverte : la scène en plein écran, seules les ressources restent en haut
-      if (params[0]) document.documentElement.dataset.ile = "1";
+      if (params[0]) { document.documentElement.dataset.ile = "1"; if (H.bureau && H.bureau.heure) H.bureau.heure(); }
       else delete document.documentElement.dataset.ile;
       if (params[0]) ouvrirIle(c, params[0]);
       else archipel(c);

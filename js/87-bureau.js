@@ -153,13 +153,14 @@
     }
     h.textContent = new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
   }
-  setInterval(() => document.documentElement.dataset.bureau && heure(), 60e3);
+  setInterval(() => (document.documentElement.dataset.bureau || document.documentElement.dataset.ile) && heure(), 60e3);
 
   H.bureau = {
     mode,
     cadre,
     cadreOrdi,
     onglets,
+    heure,
     preparer(m) {
       if (m) document.documentElement.dataset.bureau = m;
       else delete document.documentElement.dataset.bureau;

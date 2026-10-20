@@ -329,12 +329,9 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root[data-vue="balade"] .actions-balade { position: absolute; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); justify-content: center; z-index: 2; }
 :root[data-vue="balade"] .actions-balade .bouton { background: rgba(35, 33, 74, 0.82); color: #f2f0e8; border-color: #f2f0e8; }
 
-/* une île ouverte : sur fond d'encre ; en haut, seulement les ressources (utiles pour jardiner) */
+/* un jardin ouvert : sur fond d'encre, sous la même barre jaune que les autres pages */
 :root[data-ile] body { background: #23214a; color: #f2f0e8; }
-:root[data-ile] #ciel, :root[data-ile] #entete .titre-jeu, :root[data-ile] #menu,
-:root[data-ile] .terrain-tete h1, :root[data-ile] .echelle-ile, :root[data-ile] .bandeau-ciel { display: none !important; }
-:root[data-ile] #entete { background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; padding-block: calc(6px + env(safe-area-inset-top)) 0; }
-:root[data-ile] #barre-ressources { flex-basis: auto; margin-left: auto; background: rgba(242, 240, 232, 0.92); color: #23214a; border-radius: 999px; padding: 2px 12px; }
+:root[data-ile] #ciel, :root[data-ile] .terrain-tete h1, :root[data-ile] .echelle-ile, :root[data-ile] .bandeau-ciel { display: none !important; }
 :root[data-ile] .terrain-tete a.bouton { background: rgba(242, 240, 232, 0.12); color: #f2f0e8; border-color: rgba(242, 240, 232, 0.5); }
 :root[data-ile] .zone-toile { border-color: transparent; }
 :root[data-ile] .outils-terrain .bouton, :root[data-ile] .options-outil .bouton, :root[data-ile] .pied-ile .bouton { background: rgba(242, 240, 232, 0.12); color: #f2f0e8; border-color: rgba(242, 240, 232, 0.5); }
