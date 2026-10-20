@@ -265,7 +265,7 @@
   function etapesVisite() {
     const mesi = H.monde === "mesi";
     return [
-      ["village", [
+      ["ferme", [
         "Hiii ! Suis-moi, je te montre tout. Ici, c’est la ferme. Clique sur une maison pour y entrer, ou n’importe où pour y marcher.",
         "En haut à droite : la truelle pour aménager la ferme, la pousse pour aller aux jardins, le rouage pour les réglages.",
         "Le petit carnet juste en dessous, c’est pour noter vite quelque chose, même les mains pleines de terre. En bas à gauche, les post-it de ta to-do liste : tu peux les cocher direct !",
@@ -281,7 +281,7 @@
       ["taches", ["La to-do liste, avec des rappels qui sonnent au bon moment."]],
       ["devis", ["Les devis et les factures, pour tes clients."]],
       ["maison", ["Et la maison ! Le canapé, le goûter, le dodo… et la porte, pour partir en balade."]],
-      ["village", ["Voilà, tu sais tout ! Hiii ! Tu peux me redemander la visite quand tu veux : clique sur moi à la ferme, ou va dans les réglages."]],
+      ["ferme", ["Voilà, tu sais tout ! Hiii ! Tu peux me redemander la visite quand tu veux : clique sur moi à la ferme, ou va dans les réglages."]],
     ];
   }
   let visiteEnCours = false;
@@ -293,7 +293,7 @@
       for (const [lieu, textes] of etapesVisite()) {
         if (!location.hash.startsWith("#" + lieu)) { H.aller(lieu); await new Promise((r) => setTimeout(r, 900)); }
         const r = await H.dialogue.dire(textes.map((texte, i) => i === textes.length - 1 ? { qui: "lolo", texte, choix: [{ valeur: "suite", libelle: "Suite" }, { valeur: null, libelle: "Arrêter la visite" }] } : { qui: "lolo", texte }));
-        if (lieu === "village" && textes.length === 1) break;
+        if (lieu === "ferme" && textes.length === 1) break;
         if (!r) { await H.dialogue.dire([{ qui: "lolo", texte: "D’accord ! Si tu veux la reprendre, clique sur moi à la ferme. Hiii !" }]); break; }
       }
     } finally { visiteEnCours = false; }
@@ -332,7 +332,7 @@
               H.router();
             },
           }, actif ? "Tout recacher sur cet appareil" : "Voir les surprises sur cet appareil"),
-          H.el("a.bouton.discret-bouton", { href: "#village" }, "Retour à la ferme"))
+          H.el("a.bouton.discret-bouton", { href: "#ferme" }, "Retour à la ferme"))
       ));
     },
   };

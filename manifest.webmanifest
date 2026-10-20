@@ -2,7 +2,7 @@
   "name": "L’herbothèque d’ƟvƟ",
   "short_name": "Herbothèque",
   "lang": "fr",
-  "start_url": "./#village",
+  "start_url": "./#ferme",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

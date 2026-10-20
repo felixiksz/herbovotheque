@@ -2927,7 +2927,7 @@
     afficher(c) {
       c.appendChild(H.el("div.page-maison", null,
         (toileMaison = H.el("canvas.scene-maison", { role: "img", "aria-label": "L’intérieur du mazet : le lit, le canapé sous la fenêtre, la table, Mesi, Lóló et Mémé" })),
-        H.el("a.sortie-maison", { href: "#village", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme")
+        H.el("a.sortie-maison", { href: "#ferme", "aria-label": "Retour à la ferme", title: "Retour à la ferme" }, "‹ Ferme")
       ));
       sceneMaison(toileMaison);
       // le jour de l'anniversaire d'ƟvƟ, une fois : une coupe de champagne

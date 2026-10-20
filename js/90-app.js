@@ -88,7 +88,11 @@
   }
 
   function router() {
-    const [nom, ...params] = (location.hash.replace(/^#/, "") || "village").split("/").map(decodeURIComponent);
+    // (la ferme s'appelle #ferme dans l'adresse ; l'ancienne adresse #village y mène aussi)
+    const brut = location.hash.replace(/^#/, "") || "ferme";
+    if (/^village(\/|$)/.test(brut)) history.replaceState(null, "", "#" + brut.replace(/^village/, "ferme"));
+    let [nom, ...params] = brut.split("/").map(decodeURIComponent);
+    if (nom === "ferme") nom = "village";
     let vue = H.vues[nom] ? nom : "village";
     // de 22 h à 6 h : seulement dormir et se balader (la ferme et la maison restent ouvertes pour ça)
     if (H.ciel.nuitCalme() && H.vues.dodo && !["village", "maison", "balade", "dodo", "reglages", "surprises"].includes(vue)) vue = "dodo";

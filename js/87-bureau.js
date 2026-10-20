@@ -88,7 +88,7 @@
 
   function icones(vue) {
     return H.el("nav.icones-bureau", { "aria-label": "Bureau" },
-      ICONES.map(([v, nom, motif]) => H.el("a.icone-bureau" + (v === vue ? ".ouverte" : ""), { href: "#" + v }, icone(motif), H.el("span", null, v === "tisanes" && H.monde === "mesi" ? "Formules" : nom)))
+      ICONES.map(([v, nom, motif]) => H.el("a.icone-bureau" + (v === vue ? ".ouverte" : ""), { href: "#" + (v === "village" ? "ferme" : v) }, icone(motif), H.el("span", null, v === "tisanes" && H.monde === "mesi" ? "Formules" : nom)))
     );
   }
 
@@ -99,7 +99,7 @@
       icones(vue),
       H.el("section.fenetre-vue", null,
         H.el("div.titre-fenetre", null,
-          H.el("a.fermer-fenetre", { href: "#village", "aria-label": "Fermer et revenir à la ferme", title: "Revenir à la ferme" }, "×"),
+          H.el("a.fermer-fenetre", { href: "#ferme", "aria-label": "Fermer et revenir à la ferme", title: "Revenir à la ferme" }, "×"),
           H.el("span", null, FENETRES[vue])
         ),
         contenu
