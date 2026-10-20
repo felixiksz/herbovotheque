@@ -145,6 +145,7 @@
     r.matins = fusionnerCollection(local.matins, distant.matins);
     r.cadeaux = fusionnerCollection(local.cadeaux, distant.cadeaux);
     r.cris = fusionnerCollection(local.cris, distant.cris);
+    r.planFerme = fusionnerCollection(local.planFerme, distant.planFerme);
     for (const cle of ["taches", "clients", "catalogue", "documents", "pages", "favoris"]) r[cle] = fusionnerCollection(local[cle], distant[cle]);
     const entr = plusRecent(local, distant, "entrepriseModifieLe");
     r.entreprise = entr.entreprise;
@@ -195,6 +196,8 @@
         if (role() === "mesi") {
           const chezOvo = await lireDistant(FICHIERS.jeu, parent);
           const commun = { lettres: fusionnerCollection(H.jeu.lettres, chezOvo && chezOvo.lettres), textes: fusionnerCollection(H.jeu.textes, chezOvo && chezOvo.textes), matins: fusionnerCollection(H.jeu.matins, chezOvo && chezOvo.matins), cadeaux: fusionnerCollection(H.jeu.cadeaux, chezOvo && chezOvo.cadeaux), cris: fusionnerCollection(H.jeu.cris, chezOvo && chezOvo.cris) };
+          // la disposition de la ferme : seulement quand Mesi aménage dans le monde d'ƟvƟ
+          if (H.monde !== "mesi") commun.planFerme = fusionnerCollection(H.jeu.planFerme, chezOvo && chezOvo.planFerme);
           const chezMoi = Object.assign({}, H.jeu, commun);
           if (canon(chezMoi) !== canon(H.jeu)) {
             H.jeu = chezMoi;

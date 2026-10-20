@@ -90,24 +90,30 @@
   function passage(a, b, profil) {
     const cle = (x, y) => y * G + x, versG = ([x, y]) => [Math.max(0, Math.min(G - 1, Math.floor(x * RG))), Math.max(0, Math.min(G - 1, Math.floor(y * RG)))];
     const [sx, sy] = versG(a), [tx, ty] = versG(b);
-    const cout = new Map([[cle(sx, sy), 0]]), venu = new Map(), ouverts = [[0, sx, sy]];
-    while (ouverts.length) {
-      ouverts.sort((p, q) => p[0] - q[0]);
-      const [, x, y] = ouverts.shift();
+    const cout = new Map([[cle(sx, sy), 0]]), venu = new Map(), ouverts = [[0, sx, sy]], fermes = new Set();
+    // (si l'arrivée est enfermée, on s'arrête au bout d'un moment : le chemin va alors tout droit)
+    // (un tas : on prend toujours le moins cher, sans tout retrier)
+    const pousser = (e) => { ouverts.push(e); let k = ouverts.length - 1; while (k > 0) { const pk = (k - 1) >> 1; if (ouverts[pk][0] <= ouverts[k][0]) break; [ouverts[pk], ouverts[k]] = [ouverts[k], ouverts[pk]]; k = pk; } };
+    const prendre = () => { const h = ouverts[0], f = ouverts.pop(); if (ouverts.length) { ouverts[0] = f; let k = 0; for (;;) { const a = 2 * k + 1, b = a + 1; let m = k; if (a < ouverts.length && ouverts[a][0] < ouverts[m][0]) m = a; if (b < ouverts.length && ouverts[b][0] < ouverts[m][0]) m = b; if (m === k) break; [ouverts[m], ouverts[k]] = [ouverts[k], ouverts[m]]; k = m; } } return h; };
+    let tours = 0;
+    while (ouverts.length && tours++ < 6000) {
+      const [, x, y] = prendre();
       if (x === tx && y === ty) break;
+      if (fermes.has(cle(x, y))) continue;
+      fermes.add(cle(x, y));
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
         const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= G || ny >= G) continue;
+        if (nx < 0 || ny < 0 || nx >= G || ny >= G || fermes.has(cle(nx, ny))) continue;
         const wx = (nx + 0.5) / RG, wy = (ny + 0.5) / RG;
         if (occupe(wx, wy, 0.45) && !(nx === tx && ny === ty)) continue;
         // un peu plus cher près des murs, et un léger hasard pour que le chemin serpente
         const c = cout.get(cle(x, y)) + Math.hypot(dx, dy) * (profil && dx === dy ? 2.2 : profil && dx !== -dy ? 1.25 : 1) + (occupe(wx, wy, 1.1) ? 0.8 : 0) + hash(nx * 3, ny * 5) * 0.35;
-        if (c < (cout.get(cle(nx, ny)) ?? Infinity)) { cout.set(cle(nx, ny), c); venu.set(cle(nx, ny), [x, y]); ouverts.push([c + Math.hypot(tx - nx, ty - ny), nx, ny]); }
+        if (c < (cout.get(cle(nx, ny)) ?? Infinity)) { cout.set(cle(nx, ny), c); venu.set(cle(nx, ny), [x, y]); pousser([c + Math.hypot(tx - nx, ty - ny), nx, ny]); }
       }
     }
     const pts = [b];
     let k = [tx, ty];
-    while (venu.has(cle(k[0], k[1]))) { k = venu.get(cle(k[0], k[1])); pts.push([(k[0] + 0.5) / RG, (k[1] + 0.5) / RG]); }
+    for (let n = 0; n < G * G && venu.has(cle(k[0], k[1])); n++) { k = venu.get(cle(k[0], k[1])); pts.push([(k[0] + 0.5) / RG, (k[1] + 0.5) / RG]); }
     pts.push(a);
     pts.reverse();
     // arrondir les angles (trois passes de Chaikin)
@@ -115,12 +121,14 @@
     for (let n = 0; n < 3; n++) { const r = [q[0]]; for (let i = 0; i < q.length - 1; i++) { const [x0, y0] = q[i], [x1, y1] = q[i + 1]; r.push([x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25], [x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75]); } r.push(q[q.length - 1]); q = r; }
     return q;
   }
-  const chemins = LIENS.map(([a, b], n) => {
+  // (recalculés quand on déplace un bâtiment)
+  const calculerChemins = () => LIENS.map(([a, b], n) => {
     const pts = passage(porte(parId[a]), porte(parId[b]));
     const cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     return { a, b, pts, cum, long: cum[cum.length - 1], n };
   });
+  let chemins = calculerChemins();
   // un point du chemin, de 0 (départ) à 1 (arrivée)
   // le sens où regarde une bête qui suit le chemin c, en q : d'après où elle sera un peu plus loin
   // (et pas au pas suivant, qui peut zigzaguer) ; quand elle descend ou monte presque tout droit à
@@ -141,7 +149,9 @@
   const surChemin = (x, y, marge) => chemins.some((c) => c.pts.some(([px, py]) => Math.hypot(px - x, py - y) < (marge || 1)));
   const dansMaison = (x, y) => MAISONS.some((m) => x > m.i - 1 && x < m.i + m.w + 1 && y > m.j - 1 && y < m.j + m.d + 1.8);
   // la cour des poules, devant le poulailler : de l'herbe rase, pas d'arbres
+  // (elle suit le poulailler quand on le déplace)
   const COUR = { x0: 14.8, x1: 20.2, y0: 7, y1: 12.4 };
+  const majCour = () => { const m = parId.poules; Object.assign(COUR, { x0: m.i - 1.2, x1: m.i + 4.2, y0: m.j - 1, y1: m.j + 4.4 }); };
   const dansJardin = (x, y) => x > COUR.x0 && x < COUR.x1 && y > COUR.y0 && y < COUR.y1;
 
 
@@ -228,6 +238,91 @@
     const a = plantes.find((q) => q.e === "araucaria");
     if (a) Object.assign(a, A); else plantes.push({ x: A.x, y: A.y, e: "araucaria", v: 0 });
   }
+  // --- la disposition de la ferme : chaque bâtiment et chaque arbre peut être déplacé, ou tourné
+  // d'un quart de tour (on le voit alors en miroir : sa largeur et sa profondeur s'échangent).
+  // Gardée dans la partie (H.jeu.planFerme : « b:maison », « p:12 »…) ; quand Mesi aménage dans le
+  // monde d'ƟvƟ, elle part chez ƟvƟ, comme les lettres. Sans disposition, la ferme d'origine.
+  const DEFAUT_MAISONS = MAISONS.map((m) => ({ i: m.i, j: m.j, w: m.w, d: m.d }));
+  const TOUTES_PLANTES = plantes.slice();
+  TOUTES_PLANTES.forEach((p, n) => Object.assign(p, { n, x0: p.x, y0: p.y }));
+  let planApplique = "";
+  const planFerme = () => (H.jeu && H.jeu.planFerme) || {};
+  const entreePlan = (cle) => { const e = planFerme()[cle]; return e && !e.origine ? e : null; };
+  function appliquerPlan(forcer) {
+    const cle = JSON.stringify(planFerme());
+    if (!forcer && cle === planApplique) return false;
+    planApplique = cle;
+    let bouge = false;
+    MAISONS.forEach((m, k) => {
+      const d = DEFAUT_MAISONS[k], e = entreePlan("b:" + m.id);
+      m.miroir = !!(e && e.miroir);
+      m.i = e && e.i != null ? e.i : d.i; m.j = e && e.j != null ? e.j : d.j;
+      m.w = m.miroir ? d.d : d.w; m.d = m.miroir ? d.w : d.d;
+      if (e) bouge = true;
+    });
+    chemins = calculerChemins();
+    majCour();
+    // les plantes : à leur place choisie, sinon à leur place d'origine (sauf si un bâtiment ou un
+    // chemin déplacé passe dessus)
+    plantes.length = 0;
+    for (const p of TOUTES_PLANTES) {
+      const e = entreePlan("p:" + p.n);
+      if (e && e.supprime) continue;
+      const place = !!(e && e.x != null);
+      p.x = place ? e.x : p.x0; p.y = place ? e.y : p.y0; p.miroir = !!(e && e.miroir);
+      if (!place && bouge && (dansMaison(p.x, p.y) || surChemin(p.x, p.y, 0.7))) continue;
+      plantes.push(p);
+    }
+    return true;
+  }
+  function enregistrerPlan(cle, val) {
+    H.jeu.planFerme = Object.assign({}, H.jeu.planFerme, { [cle]: Object.assign({ id: cle }, val, { modifieLe: H.maintenant() }) });
+    H.d.changer("jeu");
+  }
+  function revenirOrigine() {
+    const plan = {};
+    for (const cle of Object.keys(planFerme())) plan[cle] = { id: cle, origine: true, modifieLe: H.maintenant() };
+    H.jeu.planFerme = plan;
+    H.d.changer("jeu");
+    appliquerPlan(true); peindreSol(); peindreSol2();
+  }
+  // le dessin en miroir d'un bâtiment ou d'un arbre tourné (dessiné avec le soleil de l'autre côté,
+  // puis retourné : la lumière reste juste)
+  const miroirs = new Map();
+  function retourne(s) {
+    if (!miroirs.has(s)) { const [t, c] = toileDe(s.width, s.height); c.save(); c.scale(-1, 1); c.drawImage(s, -s.width, 0); c.restore(); miroirs.set(s, t); }
+    return miroirs.get(s);
+  }
+  function spriteMaison(m) {
+    if (!m.miroir) return dessinMaison(m);
+    const d = DEFAUT_MAISONS[MAISONS.indexOf(m)], w = m.w, dd = m.d, c0 = cote;
+    m.w = d.w; m.d = d.d; cote = -cote;
+    try { return retourne(dessinMaison(m)); } finally { m.w = w; m.d = dd; cote = c0; }
+  }
+  function spritePlante(p) {
+    if (!p.miroir) return dessinPlante(p);
+    const c0 = cote; cote = -cote;
+    try { return retourne(dessinPlante(p)); } finally { cote = c0; }
+  }
+  // un bâtiment posé là (i, j, w, d) passerait-il sur un autre bâtiment ?
+  const chevauche = (m, i, j, w, d) => MAISONS.some((q) => q !== m && i < q.i + q.w && i + w > q.i && j < q.j + q.d && j + d > q.j);
+  // ce qu'il y a sous le doigt pour déplacer ou tourner : un bâtiment, sinon l'arbre le plus proche
+  // (d'abord d'après le dessin à l'écran : on touche le toit d'une maison, le feuillage d'un arbre ;
+  // le plus en avant l'emporte)
+  function priseSous(i, j, pt) {
+    if (pt) {
+      const dans = (b) => b && pt.x >= b[0] && pt.x < b[0] + b[2] && pt.y >= b[1] && pt.y < b[1] + b[3];
+      const c = [].concat(MAISONS.filter((q) => q.genre !== "ponton" && dans(q.boite)).map((q) => ({ prof: q.i + q.w + q.j + q.d, m: q })),
+        plantes.filter((q) => dans(q.boite)).map((q) => ({ prof: q.x + q.y, p: q }))).sort((a, b) => b.prof - a.prof)[0];
+      if (c && c.m) return { m: c.m, di: i - c.m.i, dj: j - c.m.j };
+      if (c) return { p: c.p, di: i - c.p.x, dj: j - c.p.y };
+    }
+    const m = MAISONS.find((q) => i > q.i - 0.3 && i < q.i + q.w + 0.3 && j > q.j - 0.3 && j < q.j + q.d + 0.3);
+    if (m) return { m, di: i - m.i, dj: j - m.j };
+    const p = plantes.map((q) => [q, Math.hypot(q.x - i, q.y - j)]).sort((a, b) => a[1] - b[1])[0];
+    return p && p[1] < 0.9 ? { p: p[0], di: i - p[0].x, dj: j - p[0].y } : null;
+  }
+
   // trois agaves en fleur au plus, parmi les plus grandes mères (c'est rare : la plante fleurit une fois dans sa vie)
   plantes.filter((q) => q.e === "agave" && q.taille > 0.95).sort((a, b) => hash(a.x, a.y) - hash(b.x, b.y)).slice(0, 3)
     .forEach((q) => { q.fleur = true; q.penche = hash(q.y, q.x) < 0.5 ? -1 : 1; });
@@ -1026,9 +1121,10 @@
   function repeindreTout() {
     if (!scene) return;
     peindreSol(); peindreSol2();
-    fondCle = null; sprites.clear();
+    fondCle = null; sprites.clear(); miroirs.clear();
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && scene && solPerdu()) repeindreTout(); });
+  H.sur("donnees", () => { if (scene && !(scene.amenager && scene.amenager.priseBat) && appliquerPlan()) { peindreSol(); peindreSol2(); } });
   for (const t of [sol0]) t.addEventListener("contextrestored", () => repeindreTout());
 
   // l'enveloppe convexe d'un nuage de points (pour l'ombre d'une maison)
@@ -1773,12 +1869,14 @@
     }
     const pas = Math.floor(t / 150) % 2, temps = Math.floor(t / 110) % 4;
     for (const o of objets) {
-      if (o.p) { const s = dessinPlante(o.p), [x, y] = iso(o.p.x, o.p.y); ctx.drawImage(s, Math.round(x - s.width / 2) - cx, Math.round(y + 4 - s.height) - cy); }
+      if (o.p) { const s = spritePlante(o.p), [x, y] = iso(o.p.x, o.p.y), bx = Math.round(x - s.width / 2) - cx, by = Math.round(y + 4 - s.height) - cy; ctx.drawImage(s, bx, by); o.p.boite = [bx, by, s.width, s.height]; }
       else if (o.m) {
-        const m = o.m, s = dessinMaison(m), [x, y] = iso(m.i + m.w, m.j + m.d);
+        const m = o.m, s = spriteMaison(m), [x, y] = iso(m.i + m.w, m.j + m.d);
+        m.largSprite = s.width;
         const px = Math.round(x - m.w * 8 - 12) - cx, py = Math.round(y - s.height + 6) - cy;
         ctx.drawImage(s, px, py);
         m.posSprite = [px, py];
+        m.boite = [px + 8, py + 10, s.width - 16, s.height - 12];
       } else if (o.e) { const [x, y] = iso(o.e.i, o.e.j); dessinObjet(ctx, o.e, Math.round(x) - cx, Math.round(y) + 4 - cy); }
       else if (o.ovo) { const [x, y] = iso(perso.x, perso.y); dessinOvo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, perso.trajet ? temps : 0); }
       else if (o.lolo) { const [x, y] = iso(lo.x, lo.y); dessinLolo(ctx, Math.round(x) - cx, Math.round(y) + 4 - cy, lo.broute && !lo.marche ? "broute" : lo.marche ? Math.floor(t / (lo.course || lo.rejoindre ? 70 : 120)) % 4 : 0, lo.gauche, !!scene.rentree); lo.ecran = [Math.round(x) - cx, Math.round(y) + 4 - cy]; }
@@ -1812,13 +1910,13 @@
     // un filet de fumée sort du tuyau de poêle du labo, quand une préparation est en cours
     const labo = parId.labo;
     if (laboActif() && labo.posSprite && labo.cheminee) {
-      const lx = labo.posSprite[0] + labo.cheminee[0], ly = labo.posSprite[1] + labo.cheminee[1];
+      const lx = labo.posSprite[0] + (labo.miroir ? labo.largSprite - labo.cheminee[0] : labo.cheminee[0]), ly = labo.posSprite[1] + labo.cheminee[1];
       for (let k = 0; k < 5; k++) { const u = ((t / 2400) + k / 5) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 5), ly - Math.round(u * 24), 1 + Math.round(u * 3), 1 + Math.round(u * 2), u < 0.5 ? "#f3f0dc" : "#c2cdec"); }
     }
     // et de la cheminée de la maison quand le feu brûle dans le poêle
     const maison = parId.maison;
     if (H.cheminee && H.cheminee.feuActif() && maison.posSprite && maison.cheminee) {
-      const lx = maison.posSprite[0] + maison.cheminee[0], ly = maison.posSprite[1] + maison.cheminee[1];
+      const lx = maison.posSprite[0] + (maison.miroir ? maison.largSprite - maison.cheminee[0] : maison.cheminee[0]), ly = maison.posSprite[1] + maison.cheminee[1];
       for (let k = 0; k < 6; k++) { const u = ((t / 2600) + k / 6) % 1; ovale(ctx, lx + Math.round(Math.sin(u * 5 + k) * 2 + u * 6), ly - Math.round(u * 18), 1 + Math.round(u * 2), 1 + Math.round(u * 1.5), u < 0.5 ? "#e9e3cd" : "#c2cdec"); }
     }
     // la pluie, quand il pleut vraiment (ou la pluie de joie de Lóló)
@@ -1906,6 +2004,11 @@
         ...Object.entries(OBJETS).filter(([id]) => id !== "plante").map(([id, nom]) => outil(id, nom))),
       H.el("div.pastilles", null, ...Object.entries(PINCEAUX).map(([id, nom]) => outil(id, nom))),
       H.el("div.pastilles", null,
+        H.el("span.titre-outils-ferme", null, "Bâtiments et arbres :"),
+        outil("bouger", "Déplacer"),
+        outil("tourner", "Tourner"),
+        H.el("button.bouton.petit", { type: "button", onclick: () => { if (confirm("Remettre tous les bâtiments et les arbres à leur place d’origine ?")) revenirOrigine(); } }, "Ferme d’origine")),
+      H.el("div.pastilles", null,
         outil("deplacer", "Déplacer"),
         outil("gomme", "Gomme"),
         H.el("button.bouton.petit", { type: "button", onclick() {
@@ -1959,6 +2062,18 @@
       return;
     }
     if (a.outil === "deplacer") { if (proche && proche[1] < 0.8) a.prise = proche[0]; return; }
+    if (a.outil === "bouger") { a.priseBat = priseSous(i, j, e); return; }
+    if (a.outil === "tourner") {
+      const q = priseSous(i, j, e);
+      if (!q) return;
+      if (q.m) {
+        const m = q.m, w = m.d, d = m.w, ni = Math.max(0, Math.min(N - w, m.i)), nj = Math.max(0, Math.min(N - d, m.j));
+        if (chevauche(m, ni, nj, w, d)) return H.toast("Pas la place de le tourner ici : éloigne-le d’abord des autres bâtiments.");
+        enregistrerPlan("b:" + m.id, { i: ni, j: nj, miroir: !m.miroir });
+      } else enregistrerPlan("p:" + q.p.n, { x: q.p.x, y: q.p.y, miroir: !q.p.miroir });
+      appliquerPlan(true); peindreSol(); peindreSol2();
+      return;
+    }
     if (OBJETS[a.outil]) {
       if (a.outil === "plante" && !a.plante) return H.toast("Choisis d’abord une plante");
       const el = { id: H.uid("iso"), iso: true, type: a.outil, i, j };
@@ -1994,6 +2109,7 @@
       majHeureMeteo();
       scene.minuteur = setInterval(majHeureMeteo, 20e3);
       dimensionner();
+      appliquerPlan(true);
       peindreSol(); peindreSol2();
       const [sx, sy] = iso(px, py);
       scene.cam.x = largeCamera(sx - W / 2); scene.cam.y = hautCamera(sy - Ht / 2 - 10);
@@ -2016,11 +2132,28 @@
         if (scene.amenager && scene.peint) {
           const a = scene.amenager;
           if (a.prise) { const [i, j] = versMonde(p.x, p.y); Object.assign(a.prise, { i, j }); }
+          else if (a.priseBat) {
+            // un bâtiment se pose sur les cases entières ; un arbre où l'on veut
+            const [i, j] = versMonde(p.x, p.y), q = a.priseBat;
+            if (q.m) {
+              const ni = Math.max(0, Math.min(N - q.m.w, Math.round(i - q.di))), nj = Math.max(0, Math.min(N - q.m.d, Math.round(j - q.dj)));
+              if (!chevauche(q.m, ni, nj, q.m.w, q.m.d)) { q.m.i = ni; q.m.j = nj; }
+            }
+            else { q.p.x = Math.max(0.5, Math.min(N - 0.5, i - q.di)); q.p.y = Math.max(0.5, Math.min(N - 0.5, j - q.dj)); }
+          }
           else if (PINCEAUX[a.outil]) agirAmenager(p, false);
         }
       });
       const lacher = () => {
         if (scene && scene.amenager && scene.amenager.prise) { enregistrer(scene.amenager.prise); scene.amenager.prise = null; }
+        if (scene && scene.amenager && scene.amenager.priseBat) {
+          const q = scene.amenager.priseBat;
+          scene.amenager.priseBat = null;
+          if (q.m) enregistrerPlan("b:" + q.m.id, { i: q.m.i, j: q.m.j, miroir: !!q.m.miroir });
+          else enregistrerPlan("p:" + q.p.n, { x: q.p.x, y: q.p.y, miroir: !!q.p.miroir });
+          appliquerPlan(true); peindreSol(); peindreSol2();
+          scene.ovo.trajet = null;
+        }
         if (scene) scene.peint = false;
       };
       toile.addEventListener("pointerup", lacher);
