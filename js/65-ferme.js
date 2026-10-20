@@ -1983,7 +1983,8 @@
         H.el("a.pastille-scene", { href: "#terrain" }, "Les îles"),
         H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
       );
-      boite.append(toile, etiquette, heureMeteo, boutons);
+      // dans le coin en bas à gauche : les post-it de la to-do liste, au-dessus de l'heure et de la météo
+      boite.append(toile, etiquette, H.el("div.coin-ferme", null, H.taches && H.taches.postits ? H.taches.postits() : null, heureMeteo), boutons);
       c.appendChild(boite);
       const depart = H.ciel.nuitCalme() ? "maison" : H.local.dernierLieu && parId[H.local.dernierLieu] ? H.local.dernierLieu : "maison";
       const [px, py] = porte(parId[depart]);

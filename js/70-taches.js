@@ -217,7 +217,43 @@
   setTimeout(verifierRappels, 4000);
   setInterval(verifierRappels, 30e3);
 
-  H.taches = { aFaire: () => taches().filter((t) => !t.fait && t.echeance && t.echeance < debutJour(Date.now()) + JOUR).length };
+  // --- les post-it de la ferme, dans le coin en bas à gauche : les tâches les plus pressées, une par
+  // post-it, qu'on coche sur place ; on les replie en un seul petit post-it (sur cet appareil)
+  const COULEURS_POSTIT = ["jaune", "rose", "bleu", "vert"];
+  function postits() {
+    const boite = H.el("div.postits");
+    const remplir = () => {
+      if (!H.jeu) return;
+      const g = groupes(taches()), pressees = [].concat(g.retard, g.aujourdhui, g.semaine, g.sansDate, g.plusTard);
+      const ferme = !!(H.local && H.local.postitsFermes);
+      const basculer = () => { H.d.majLocal((l) => (l.postitsFermes = !ferme)); setTimeout(remplir, 0); };
+      if (ferme || !pressees.length) {
+        boite.replaceChildren(H.el("button.postit.postit-plie.postit-jaune", { type: "button", title: pressees.length ? "Déplier les post-it" : "La to-do liste", onclick: () => (pressees.length ? basculer() : (location.hash = "#taches")) },
+          "To-do" + (pressees.length ? " (" + pressees.length + ")" : "")));
+        return;
+      }
+      const montrees = pressees.slice(0, 4), reste = pressees.length - montrees.length;
+      boite.replaceChildren(
+        H.el("div.postits-tete", null,
+          H.el("a.postits-titre", { href: "#taches", title: "Ouvrir la to-do liste" }, "To-do"),
+          H.el("button.postits-replier", { type: "button", title: "Replier les post-it", "aria-label": "Replier les post-it", onclick: basculer }, "–")),
+        ...montrees.map((t, i) => {
+          const retard = t.echeance && t.echeance < debutJour(Date.now());
+          const quand = t.echeance ? (retard ? "en retard · " : "") + dateCourte(t.echeance) + (t.heure ? " à " + t.heure.replace(":", " h ") : "") : "";
+          return H.el("div.postit.postit-" + COULEURS_POSTIT[H.hash(t.id) % COULEURS_POSTIT.length] + (retard ? ".postit-retard" : ""), { style: "--penche:" + ((H.hash(t.id + "p") % 5) - 2) * 0.8 + "deg" },
+            H.el("label.postit-case", null,
+              H.el("input", { type: "checkbox", onchange: () => { cocher(t); setTimeout(remplir, 0); } }),
+              H.el("span", null, t.titre)),
+            quand ? H.el("span.postit-quand", null, quand) : null);
+        }),
+        reste > 0 ? H.el("a.postit-reste", { href: "#taches" }, "et " + reste + " autre" + (reste > 1 ? "s" : "") + "…") : null);
+    };
+    remplir();
+    H.sur("donnees", () => boite.isConnected && remplir());
+    return boite;
+  }
+
+  H.taches = { aFaire: () => taches().filter((t) => !t.fait && t.echeance && t.echeance < debutJour(Date.now()) + JOUR).length, postits };
   H.vues.taches = {
     afficher(c) {
       conteneur = c;

@@ -424,6 +424,30 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 .heure-ferme { position: absolute; left: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; pointer-events: none;
   font: 1.15rem/1.15 var(--menu-police); color: var(--menu-trait); background: rgba(27, 29, 74, 0.72); padding: 3px 8px 4px; max-width: calc(100% - 24px); }
 
+/* le coin en bas à gauche de la ferme : les post-it de la to-do liste, puis l'heure et la météo */
+.coin-ferme { position: absolute; left: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; pointer-events: none; max-width: calc(100% - 24px); }
+.coin-ferme .heure-ferme { position: static; max-width: none; }
+.postits { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: auto; width: 220px; max-width: 100%; }
+.postits-tete { display: flex; align-items: center; gap: 8px; }
+.postits-titre { font: 1.3rem/1 var(--menu-police); color: var(--menu-trait); background: rgba(27, 29, 74, 0.72); padding: 2px 8px 3px; text-decoration: none; }
+.postits-titre:hover { color: var(--menu-choix); }
+.postits-replier { font: 1.3rem/1 var(--menu-police); width: 26px; height: 24px; padding: 0; border: 0; cursor: pointer; color: var(--menu-trait); background: rgba(27, 29, 74, 0.72); }
+.postits-replier:hover { color: var(--menu-choix); }
+.postit { --fond: #fbf1a0; --ombre: #e2cf5c; display: block; width: 100%; padding: 8px 10px 9px; color: #23214a; background: var(--fond);
+  border: 0; border-bottom: 3px solid var(--ombre); box-shadow: 4px 4px 0 rgba(15, 16, 53, 0.45); transform: rotate(var(--penche, 0deg));
+  font: 1.15rem/1.15 var(--menu-police); text-align: left; }
+.postit-rose { --fond: #fbd3e2; --ombre: #eba3c0; }
+.postit-bleu { --fond: #d3e9f8; --ombre: #9cc8e8; }
+.postit-vert { --fond: #dcf1c8; --ombre: #a9d78a; }
+.postit-case { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.postit-case input { flex: none; width: 16px; height: 16px; margin: 1px 0 0; accent-color: #3d5ee8; cursor: pointer; }
+.postit-case span { overflow-wrap: anywhere; }
+.postit-quand { display: block; margin: 3px 0 0 24px; font-size: 0.95rem; color: #4a4880; }
+.postit-retard .postit-quand { color: #c93f6e; }
+.postit-plie { width: auto; cursor: pointer; padding: 6px 12px 7px; --penche: -2deg; }
+.postit-plie:hover { --fond: #fff6b8; }
+.postit-reste { font: 1.05rem/1 var(--menu-police); color: var(--menu-trait); background: rgba(27, 29, 74, 0.72); padding: 2px 8px 3px; }
+
 /* la boîte aux lettres comme une messagerie : la liste à gauche, la lettre à droite */
 .barre-mail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 14px; }
 .messagerie { display: grid; grid-template-columns: minmax(200px, 36%) minmax(0, 1fr); border: 1.5px solid var(--encre); min-height: 380px; background: var(--papier); }
