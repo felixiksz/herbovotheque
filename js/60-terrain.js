@@ -2059,26 +2059,34 @@
     const cache = {};
     const c32 = (h) => cache[h] || (cache[h] = rgb(h));
     const hp = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-    const mH = niveauMax(ile);
+    const mH = niveauMax(ile), tMax = mH * HZ;
+    // (les cases, lues une fois : leur sorte, et leur hauteur, -1 pour la mer ; la peinture ne
+    // cherche plus rien par nom, pixel après pixel)
+    const grilleH = new Int8Array(C * Lg), casesG = new Array(C * Lg);
+    for (let j = 0; j < Lg; j++) for (let i = 0; i < C; i++) { casesG[j * C + i] = caseDe(ile, i, j); grilleH[j * C + i] = estVide(ile, i, j) ? -1 : niveau(ile, i, j); }
     for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
       // (avec du relief, on suit le regard : le dessus d'une case haute, ou la face d'un talus ou
       // d'un muret entre deux niveaux, à gauche au soleil, à droite à l'ombre)
       let fx, fy, face = 0, prof = 0;
+      const uu = (x + 0.5 - vue.ox) / HW, w0 = (y + 0.5 - vue.oy) / QH;
       if (mH) {
+        // (le regard ne croise pas le jardin : ciel ou mer, on passe)
+        const w1 = w0 + tMax / QH;
+        if ((uu + w1) / 2 < 0 || (uu + w0) / 2 >= C || (w1 - uu) / 2 < 0 || (w0 - uu) / 2 >= Lg) continue;
         let vu = false;
-        for (let tt = mH * HZ; tt >= 0; tt--) {
-          const a = versCase(x + 0.5, y + 0.5 + tt), ax = Math.floor(a[0]), ay = Math.floor(a[1]);
-          if (estVide(ile, ax, ay)) continue;
-          const hc = niveau(ile, ax, ay) * HZ;
-          if (hc < tt) continue;
-          fx = a[0]; fy = a[1]; vu = true;
-          if (hc - tt >= 1) { face = 1 - (fy - ay) < 1 - (fx - ax) ? 1 : 2; prof = hc - tt; }
+        for (let tt = tMax; tt >= 0; tt--) {
+          const w = w0 + tt / QH, ax = (uu + w) / 2, ay = (w - uu) / 2, ix = Math.floor(ax), iy = Math.floor(ay);
+          if (ix < 0 || iy < 0 || ix >= C || iy >= Lg) continue;
+          const n = grilleH[iy * C + ix];
+          if (n < 0 || n * HZ < tt) continue;
+          fx = ax; fy = ay; vu = true;
+          if (n * HZ - tt >= 1) { face = 1 - (fy - iy) < 1 - (fx - ix) ? 1 : 2; prof = n * HZ - tt; }
           break;
         }
         if (!vu) continue;
-      } else [fx, fy] = versCase(x + 0.5, y + 0.5);
+      } else { fx = (uu + w0) / 2; fy = (w0 - uu) / 2; }
       if (fx < 0 || fy < 0 || fx >= C || fy >= Lg) continue;
-      const cx0 = Math.floor(fx), cy0 = Math.floor(fy), t2 = caseDe(ile, cx0, cy0).t, h = hp(x, y), n = hp(x >> 2, y >> 1), u = fx - cx0, v = fy - cy0;
+      const cx0 = Math.floor(fx), cy0 = Math.floor(fy), caseIci = casesG[cy0 * C + cx0], t2 = caseIci.t, h = hp(x, y), n = hp(x >> 2, y >> 1), u = fx - cx0, v = fy - cy0;
       if (t2 === "vide") continue;
       let col;
       if (t2 === "terre") {
@@ -2093,7 +2101,7 @@
       else if (t2 === "serre") col = (u < 0.05 || v < 0.05) ? PAL.serre[2] : PAL.serre[h < 0.3 ? 1 : 0];
       else if (t2 === "sol") {
         // la terre nue, selon le sol de la case : des mottes plus claires ou plus sombres, des cailloux
-        const ts = teintesSol(caseDe(ile, cx0, cy0).sol), nn = hp(x >> 2, y >> 1);
+        const ts = teintesSol(caseIci.sol), nn = hp(x >> 2, y >> 1);
         col = ts.base[h < 0.1 ? 2 : nn < 0.4 ? 0 : nn < 0.8 ? 1 : 3];
         if (hp(x >> 1, y) < ts.cailloux) col = ts.pierres[hp(y, x) < 0.5 ? 0 : 1];
       } else {
@@ -2110,7 +2118,7 @@
       }
       if (face) {
         const clair = face === 1;
-        if (muret(ile, cx0, cy0)) {
+        if (muret(ile, cx0, cy0)) { // (seulement pour les pixels des faces)
           // les pierres sèches, en assises de trois pixels aux joints décalés
           const assise = Math.floor(prof / 3), joint = prof % 3 === 0 || (x + assise * 3) % 6 === 0;
           col = joint ? (clair ? "#8a98cc" : "#5b5fa8") : clair ? (h < 0.5 ? "#f3e6c8" : "#e9e3cd") : (h < 0.5 ? "#c2cdec" : "#a8b8e0");
@@ -3076,7 +3084,8 @@
         toile.setPointerCapture(e.pointerId);
         const [fx, fy] = caseFine(e);
         geste = { mode: "relief", dernier: [fx, fy], vus: new Set() };
-        if (coupDeRelief(fx, fy, geste.vus)) repeindreBientot(true);
+        vue.reliefEnCours = geste.vus;
+        if (coupDeRelief(fx, fy, geste.vus)) dessiner();
         return;
       }
       if (!vue || vue.outil !== "forme") return;
@@ -3101,7 +3110,7 @@
         let change = false;
         for (let i = 1; i <= n; i++) change = coupDeRelief(ax + ((fx - ax) * i) / n, ay + ((fy - ay) * i) / n, geste.vus) || change;
         geste.dernier = [fx, fy];
-        if (change) repeindreBientot();
+        if (change) dessiner();
         return;
       }
       // (entre deux positions, on peint aussi les cases traversées)
@@ -3125,7 +3134,7 @@
         return;
       }
       if (g.mode === "deplacer") { garderCalque(); return; }
-      if (g.mode === "relief") { sauver(vue.ile); repeindreBientot(true); return; }
+      if (g.mode === "relief") { vue.reliefEnCours = null; sauver(vue.ile); repeindreBientot(true); return; }
       rogner(vue.ile);
       sauver(vue.ile);
       if (vue.calqueBouge) garderCalque();
@@ -3184,6 +3193,13 @@
   }
   // dessiné à plat, dans le repère des cases (une case = T), en relief comme en vue d'oiseau
   function dessinerCalqueEtTrace(ctx) {
+    // pendant un coup de relief : les cases touchées, en couleur (le jardin est repeint au lâcher)
+    if (vue.reliefEnCours && vue.reliefEnCours.size) {
+      ctx.save();
+      ctx.fillStyle = (vue.reliefMode || "monter") === "monter" ? "rgba(255,214,90,0.45)" : (vue.reliefMode === "descendre" ? "rgba(90,140,230,0.45)" : "rgba(240,240,220,0.4)");
+      for (const k of vue.reliefEnCours) { const [x, y] = k.split(",").map(Number); ctx.fillRect(x * T + 1, y * T + 1, T - 2, T - 2); }
+      ctx.restore();
+    }
     const c = vue.calque;
     if (c && c.img && vue.outil === "forme") {
       ctx.save();
