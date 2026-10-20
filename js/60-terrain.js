@@ -1012,29 +1012,28 @@
     const o = vue.options;
     o.innerHTML = "";
     if (vue.outil === "planter") {
+      // deux façons d'avoir une plante, chacune sur sa ligne : une plante neuve (choisie dans
+      // l'herbothèque, ou parmi les dernières plantées), ou un bébé de la serre à repiquer (moins
+      // cher, et il démarre déjà jeune) ; puis ce que ça coûte
       const p = vue.plante && H.d.plante(vue.plante);
-      o.appendChild(H.el("button.bouton.petit", { type: "button", onclick: () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; vue.depuisSerre = false; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true, detail: ile.croquis ? null : (q) => pastillesCout(coutPlantation(q)) }) }, p && !vue.depuisSerre ? "Plante : " + p.nom : "Choisir la plante"));
-      (H.local.plantesRecentes || []).slice(0, 6).forEach((id) => {
-        const q = H.d.plante(id);
-        if (q && (id !== vue.plante || vue.depuisSerre)) o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = false; retenirPlante(id); dessinerOutils(); } }, q.nom));
-      });
-      // les bébés plantes de la serre : repiquage moins cher, et elles démarrent déjà jeunes
+      const ligne = (titre, ...enfants) => H.el("div.ligne-option", null, H.el("span.titre-option", null, titre), ...enfants);
+      const choisir = () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; vue.depuisSerre = false; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true, detail: ile.croquis ? null : (q) => pastillesCout(coutPlantation(q)) });
+      const recentes = (H.local.plantesRecentes || []).slice(0, 6).map((id) => H.d.plante(id)).filter(Boolean);
+      if (p && !vue.depuisSerre && !recentes.some((q) => q.id === p.id)) recentes.unshift(p);
+      o.appendChild(ligne(ile.croquis ? "Planter :" : "Une plante neuve :",
+        ...recentes.map((q) => H.el("button.bouton.petit" + (!vue.depuisSerre && vue.plante === q.id ? ".actif" : ""), { type: "button", onclick: () => { vue.plante = q.id; vue.depuisSerre = false; retenirPlante(q.id); dessinerOutils(); } }, q.nom)),
+        H.el("button.bouton.petit", { type: "button", onclick: choisir }, recentes.length ? "Une autre…" : "Choisir dans l’herbothèque…")));
       if (!ile.croquis && H.serre) {
         const bebes = H.serre.bebes();
-        if (bebes.length) {
-          o.appendChild(H.el("span.cout", null, "De la serre :"));
-          o.appendChild(H.el("button.bouton.petit.discret-bouton", { type: "button", onclick: fenetreCaisse }, "Ta caisse et le sol"));
-          bebes.forEach(([id, n]) => {
-            const q = H.d.plante(id);
-            if (q) o.appendChild(H.el("button.bouton.petit" + (vue.depuisSerre && vue.plante === id ? ".actif" : ""), { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; dessinerOutils(); } }, q.nom + " × " + n));
-          });
-        }
+        if (bebes.length) o.appendChild(ligne("Un bébé de la serre :",
+          ...bebes.map(([id, n]) => { const q = H.d.plante(id); return q ? H.el("button.bouton.petit" + (vue.depuisSerre && vue.plante === id ? ".actif" : ""), { type: "button", onclick: () => { vue.plante = id; vue.depuisSerre = true; dessinerOutils(); } }, q.nom + (n > 1 ? " (" + n + ")" : "")) : null; }).filter(Boolean),
+          H.el("button.bouton.petit", { type: "button", title: "Le sol de l’île, et où chaque bébé se plairait", onclick: fenetreCaisse }, "Où les repiquer ?")));
       }
       if (!ile.croquis && p) {
-        o.appendChild(vue.depuisSerre
-          ? H.el("span.cout", null, "Repiquer un bébé " + H.nomPhrase(p) + " : ", pastillesCout(H.serre.coutRepiquage))
-          : H.el("span.cout", null, "Pour planter " + H.duNom(p) + " : ", pastillesCout(coutPlantation(p))));
-      }
+        o.appendChild(ligne("Coût :", vue.depuisSerre
+          ? H.el("span.cout", null, "repiquer un bébé " + H.nomPhrase(p) + " ", pastillesCout(H.serre.coutRepiquage))
+          : H.el("span.cout", null, "planter " + H.duNom(p) + " ", pastillesCout(coutPlantation(p)))));
+      } else if (!p) o.appendChild(H.el("div.ligne-option", null, H.el("span.cout", null, "Choisis une plante, puis clique sur une case de l’île.")));
     } else if (vue.outil === "amenager") {
       Object.entries(TUILES).forEach(([id, t]) =>
         o.appendChild(H.el("button.bouton.petit" + (vue.tuile === id ? ".actif" : ""), { type: "button", onclick: () => { vue.tuile = id; dessinerOutils(); } }, t.nom))
