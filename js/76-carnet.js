@@ -455,7 +455,7 @@
     if (v === "carnet" && a === "etiquette") return "Étiquette #" + b;
     if (v === "fiche") { const p = H.d.plante(a); return p ? "Fiche · " + p.nom : null; }
     if (v === "terrain" && a) { const i = H.ilesVisibles().find((x) => x.id === a); return i ? "Jardin · " + i.nom : null; }
-    return { carnet: "Carnet", taches: "To-do liste", devis: "Devis et factures", herbotheque: "Herbothèque", cartes: "Flashcartes", terrain: "Les îles", labo: "Labo", serre: "Serre", lettres: "Lettres", tisanes: "Tisanes" }[v] || null;
+    return { carnet: "Carnet", taches: "To-do liste", devis: "Devis et factures", herbotheque: "Herbothèque", cartes: "Flashcartes", terrain: "Terrain", labo: "Labo", serre: "Serre", lettres: "Lettres", tisanes: "Tisanes" }[v] || null;
   }
   let enregistrerRecents = null;
   window.addEventListener("hashchange", () => {

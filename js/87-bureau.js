@@ -14,7 +14,7 @@
     taches: "To-do liste",
     carnet: "Carnet",
     devis: "Devis et factures",
-    terrain: "Les îles",
+    terrain: "Terrain",
     reglages: "Réglages",
     textes: "Les textes du jeu",
     surprises: "Surprises",
@@ -25,7 +25,7 @@
   // les icônes du bureau, 12 × 12 pixels
   const PAL = {
     k: "#23214a", w: "#f3f0dc", y: "#f6ee55", c: "#ff5b4f", v: "#4aa63e", V: "#2f6b35", b: "#3d5ee8",
-    B: "#a8d8ec", m: "#c93f6e", o: "#e9b44c", n: "#9a6a3c", g: "#b8b6cc",
+    B: "#a8d8ec", m: "#c93f6e", o: "#e9b44c", n: "#9a6a3c", g: "#b8b6cc", G: "#8d90b0",
   };
   const ICONES = [
     ["village", "Ferme", [
@@ -55,12 +55,12 @@
       "............", ".kkkkkkkkkk.", ".kwwwwwwwwk.", ".kwvwkkkkwk.", ".kvvwwwwwwk.", ".kwwwwwwwwk.", ".kwvwkkkkwk.", ".kvvwwwwwwk.", ".kwwwwwwwwk.", ".kwcwkkkkwk.", ".kwwwwwwwwk.", ".kkkkkkkkkk."]],
     ["devis", "Devis", [
       "..kkkkkkk...", "..kwwwwwkk..", "..kwkkkwkwk.", "..kwwwwwkkkk", "..kwkkkkkwwk", "..kwwwwwwwwk", "..kwkkkkwwwk", "..kwwwwwwwwk", "..kwwwkoookk", "..kwwwwoooko", "..kkkkkkkkk.", "............"]],
-    ["terrain", "Îles", [
+    ["terrain", "Terrain", [
       ".....Vv.vV..", "....vvVvvvv.", "...vV.n..Vv.", "......n.....", "......n.....", ".....n......",
       ".....n......", "...oooooo...", ".oooooooooo.", "bbbbbbbbbbbb", "bBbbbBbbbbBb", "bbbbbbbbbbbb"]],
     ["reglages", "Réglages", [
-      "....kkkk....", ".kk.kyyk.kk.", ".kykkyykkyk.", "..kyyyyyyk..", "kkyykkkkyykk", "kyyykwwkyyyk",
-      "kyyykwwkyyyk", "kkyykkkkyykk", "..kyyyyyyk..", ".kykkyykkyk.", ".kk.kyyk.kk.", "....kkkk...."]],
+      "....kkkk....", ".kk.kggk.kk.", ".kgkkggkkgk.", "..kggggggk..", "kkggkkkkgGkk", "kgggk..kgGGk",
+      "kgggk..kgGGk", "kkggkkkkGGkk", "..kgGGGGGk..", ".kGkkGGkkGk.", ".kk.kGGk.kk.", "....kkkk...."]],
   ];
 
   const cacheIcones = {};
@@ -77,6 +77,10 @@
     }
     return H.el("img.icone-pixel", { src: cacheIcones[cle], alt: "", width: 36, height: 36 });
   }
+
+  // dans le menu du haut, les réglages en icône : le même rouage gris
+  const lienReglages = document.querySelector("#menu .menu-reglages");
+  if (lienReglages) { lienReglages.title = "Réglages"; lienReglages.replaceChildren(icone(ICONES.find((x) => x[0] === "reglages")[2])); }
 
   function icones(vue) {
     return H.el("nav.icones-bureau", { "aria-label": "Bureau" },

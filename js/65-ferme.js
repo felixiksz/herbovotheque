@@ -1980,7 +1980,7 @@
       const heureMeteo = H.el("div.heure-ferme", { "aria-live": "off" });
       const boutons = H.el("div.pastilles-scene", null,
         H.el("button.pastille-scene", { type: "button", onclick: () => scene && basculerAmenager(!scene.amenager) }, "Aménager"),
-        H.el("a.pastille-scene", { href: "#terrain" }, "Les îles"),
+        H.el("a.pastille-scene", { href: "#terrain" }, "Terrain"),
         H.el("a.pastille-scene", { href: "#reglages" }, "Réglages")
       );
       // dans le coin en bas à gauche : les post-it de la to-do liste, au-dessus de l'heure et de la météo
