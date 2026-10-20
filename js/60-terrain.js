@@ -692,8 +692,9 @@
 
   // L'île de Lóló et Mémé : un chemin en forme de cœur, au milieu un bassin (papyrus, nénuphars,
   // grenouilles, canards), et tout autour beaucoup de romarin et de thym.
-  // (version 4 : la forme redessinée par Mesi, voir 59-jardin-lolo-meme.js)
-  const VERSION_ILE_SECRETE = 4;
+  // (version 4 : la forme redessinée par Mesi, voir 59-jardin-lolo-meme.js ; version 5 : le
+  // terrain surélevé hors du cœur)
+  const VERSION_ILE_SECRETE = 5;
   const NOM_JARDIN_SECRET = "Le jardin de Lóló et Mémé";
   function renommerJardinSecret() {
     const s = (H.jeu && H.jeu.iles || {})[ILE_SECRETE];
@@ -712,6 +713,7 @@
       };
       for (const k of M.vides) ile.vides[k] = true;
       for (const [k, t] of Object.entries(M.cases)) ile.cases[k] = { t };
+      if (M.relief) ile.relief = JSON.parse(JSON.stringify(M.relief));
       for (const [k, id] of Object.entries(M.plantes)) if (H.d.plante(id)) ile.plantes[k] = { p: id, le: maintenant, c: 100, eau: 80, maj: maintenant };
       sauver(ile);
       return;
