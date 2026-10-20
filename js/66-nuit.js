@@ -3187,35 +3187,12 @@
   // Un nuage net pour la balade : peint une fois, en gros pixels pleins (sans bord adouci) et dans
   // des couleurs de la palette, le ventre plus sombre. Posé à des positions entières, il glisse sans
   // que ses pixels ne changent de teinte à chaque pas (c'est ce qui le faisait clignoter).
-  const nuagesNets = new Map();
-  function nuageNet(ctx, x, y, t, nuit, sombre, gp) {
-    const clair = nuit ? "#3a3aa8" : sombre ? "#8a98cc" : "#f3f0dc", ventre = nuit ? "#2a2c6a" : sombre ? "#5b5fa8" : "#c2cdec";
-    const cle = Math.round(t) + "|" + clair + "|" + gp.toFixed(2);
-    let c = nuagesNets.get(cle);
-    if (!c) {
-      const L = Math.ceil((t * 2.2) / gp), Hh = Math.ceil((t * 1.0) / gp);
-      const tmp = document.createElement("canvas");
-      tmp.width = L; tmp.height = Hh;
-      const g = tmp.getContext("2d"), k = 1 / gp, cx = L / 2, cy = Hh * 0.62;
-      g.fillStyle = "#000";
-      g.beginPath();
-      g.ellipse(cx, cy, t * k, t * 0.32 * k, 0, 0, Math.PI * 2);
-      g.ellipse(cx - t * 0.35 * k, cy - t * 0.12 * k, t * 0.4 * k, t * 0.3 * k, 0, 0, Math.PI * 2);
-      g.ellipse(cx + t * 0.25 * k, cy - t * 0.2 * k, t * 0.45 * k, t * 0.36 * k, 0, 0, Math.PI * 2);
-      g.fill();
-      const im = g.getImageData(0, 0, L, Hh), d = im.data, [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(clair.slice(i, i + 2), 16)), [vr, vg, vb] = [1, 3, 5].map((i) => parseInt(ventre.slice(i, i + 2), 16));
-      for (let j = 0; j < Hh; j++) for (let i = 0; i < L; i++) {
-        const q = (j * L + i) * 4, plein = d[q + 3] > 120, bas = j > cy + t * 0.12 * k;
-        d[q] = bas ? vr : cr; d[q + 1] = bas ? vg : cg; d[q + 2] = bas ? vb : cb; d[q + 3] = plein ? 255 : 0;
-      }
-      g.putImageData(im, 0, 0);
-      c = tmp;
-      if (nuagesNets.size > 40) nuagesNets.clear();
-      nuagesNets.set(cle, c);
-    }
+  // un nuage peint (touches et coups de pinceau, voir 27-nuages.js), aux couleurs du moment
+  function nuageNet(ctx, x, y, t, nuit, sombre, gp, alt) {
+    const c = H.nuages.sprite(t, gp, sombre ? "couvert" : H.nuages.moment(nuit ? -1 : alt == null ? 30 : alt), Math.round(t * 7));
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(c, Math.round((x - (c.width * gp) / 2) / gp) * gp, Math.round((y - c.height * gp * 0.62) / gp) * gp, c.width * gp, c.height * gp);
+    ctx.drawImage(c, Math.round((x - (c.width * gp) / 2) / gp) * gp, Math.round((y - c.height * gp * 0.82) / gp) * gp, c.width * gp, c.height * gp);
     ctx.restore();
   }
   function nuagePlat(ctx, x, y, t, couleur) {
@@ -3455,7 +3432,7 @@
       S.profils.nuages.forEach((v, i) => {
         if (i >= S.couvert.n * 2) return;
         const gp = 1 / dpr, nx = boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120);
-        nuageNet(ctx, nx, h * (0.08 + v * 0.22), 50 + v * 50, nuit, !!S.couvert.ventre && /^#[0-9a-f]{6}$/i.test(S.couvert.couleur) && parseInt(S.couvert.couleur.slice(1, 3), 16) < 200, gp);
+        nuageNet(ctx, nx, h * (0.08 + v * 0.22), 50 + v * 50, nuit, !!S.couvert.ventre && /^#[0-9a-f]{6}$/i.test(S.couvert.couleur) && parseInt(S.couvert.couleur.slice(1, 3), 16) < 200, gp, alt);
       });
     }
     // au loin : les falaises de calcaire (rouges en terre rouge), ou des collines la nuit ;

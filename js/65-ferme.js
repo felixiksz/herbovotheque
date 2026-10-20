@@ -1023,7 +1023,11 @@
     [fond, fc] = toileDe(W + 80, Math.max(Ht + 40, 220));
     cielTrame(CIELS[periode], 66, 92);
     if (nuit) for (let k = 0; k < 50; k++) pixel(fc, hash(k, 1) * (W + 80), hash(1, k) * hash(k, 2) * 60, "#f3f0dc");
-    else for (const [x, y] of [[40, 14], [180, 8], [270, 18]]) { ovale(fc, x, y, 14, 3, periode === "crepuscule" ? "#ffb3a8" : "#f3f0dc"); ovale(fc, x + 6, y - 3, 8, 3, periode === "crepuscule" ? "#ffd23a" : "#ffffff"); }
+    // des nuages peints (touches et coups de pinceau), aux couleurs du moment
+    else for (const [x, y, t] of [[40, 28, 16], [180, 22, 12], [272, 32, 18]]) {
+      const n = H.nuages.sprite(t, 1, periode === "aube" ? "aube" : periode === "crepuscule" ? "soir" : "jour", x);
+      fc.drawImage(n, Math.round(x - n.width / 2), Math.round(y - n.height * 0.82));
+    }
     // Les calanques, comme sur les affiches de Cassis : au loin, un cap bleui par l'air qui finit
     // en falaise dans la mer ; devant, des massifs de calcaire clair aux sommets arrondis, coiffés
     // de pins, qui tombent à pic dans l'eau. Face au soleil la roche prend la couleur de la lumière,
