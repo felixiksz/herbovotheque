@@ -991,14 +991,21 @@
     const ile = vue.ile;
     // (avec l'outil de la forme, le doigt peint sur l'île au lieu de faire défiler la page)
     if (vue.toile) vue.toile.style.touchAction = vue.outil === "forme" ? "none" : "";
-    const liste = (ile.croquis
-      ? [["regarder", "Regarder"], ["planter", "Planter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]]
-      : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["amenager", "Aménager"], ["zones", "Soleil et sol"], ["retirer", "Retirer"]])
-      .concat(ile.secrete ? [] : [["forme", "Forme de l’île"]]);
-    vue.outils.innerHTML = "";
-    liste.forEach(([id, nom]) =>
-      vue.outils.appendChild(H.el("button.bouton.petit.outil" + (vue.outil === id ? ".actif" : ""), { type: "button", "aria-pressed": String(vue.outil === id), onclick: () => { vue.outil = id; dessinerOutils(); } }, nom))
-    );
+    // deux modes, une seule rangée d'outils à la fois : le jardin (ce qu'on fait tous les jours) et
+    // le chantier (ce qui transforme l'île)
+    const modes = {
+      jardin: ile.croquis
+        ? [["regarder", "Regarder"], ["planter", "Planter"], ["retirer", "Retirer"]]
+        : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["retirer", "Retirer"]],
+      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"]].concat(ile.secrete ? [] : [["forme", "Forme de l’île"]]),
+    };
+    const mode = modes.chantier.some(([id]) => id === vue.outil) ? "chantier" : "jardin";
+    const changerMode = (m) => { if (m !== mode) { vue.outil = modes[m][0][0]; dessinerOutils(); } };
+    vue.outils.replaceChildren(
+      H.el("div.modes-ile", { role: "tablist" }, [["jardin", "Jardin"], ["chantier", "Chantier"]].map(([m, nom]) =>
+        H.el("button.mode-ile" + (m === mode ? ".actif" : ""), { type: "button", role: "tab", "aria-selected": String(m === mode), onclick: () => changerMode(m) }, nom))),
+      H.el("div.rangee-outils", null, modes[mode].map(([id, nom]) =>
+        H.el("button.bouton.petit.outil" + (vue.outil === id ? ".actif" : ""), { type: "button", "aria-pressed": String(vue.outil === id), onclick: () => { vue.outil = id; dessinerOutils(); } }, nom))));
 
     // options de l'outil
     const o = vue.options;

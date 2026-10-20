@@ -362,6 +362,14 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 }
 :root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile { padding: 6px 10px; margin: 8px 0; }
 :root[data-ile] .options-outil:empty { display: none; }
+/* les deux modes de l'île (Jardin, Chantier) au-dessus de la rangée de leurs outils */
+:root[data-ile] .outils-terrain { flex-direction: column; align-items: stretch; gap: 4px; }
+.modes-ile { display: flex; gap: 20px; padding: 0 4px 4px; border-bottom: 1px solid rgba(243, 240, 220, 0.25); }
+.mode-ile { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 0 2px 1px; margin-bottom: -5px; cursor: pointer;
+  font: 1.35rem/1.2 var(--menu-police); color: var(--menu-trait); letter-spacing: 0.02em; }
+.mode-ile.actif, .mode-ile:hover, .mode-ile:focus-visible { color: var(--menu-choix); outline: none; }
+.mode-ile.actif { border-bottom-color: var(--menu-choix); }
+.rangee-outils { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 :root[data-vue="village"] .outils-ferme p, :root[data-ile] .options-outil, :root[data-ile] .options-outil .cout { color: var(--menu-trait); opacity: 0.85; font-family: var(--menu-police); font-size: 1.15rem; }
 :root[data-vue="village"] .outils-ferme .bouton,
 :root[data-ile] .outils-terrain .bouton, :root[data-ile] .options-outil .bouton, :root[data-ile] .pied-ile .bouton, :root[data-ile] .terrain-tete a.bouton,
