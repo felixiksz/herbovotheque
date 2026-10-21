@@ -95,7 +95,7 @@
             H.el("button.bouton.petit", {
               type: "button",
               onclick() {
-                const intro = s.qui === "lolo" ? "Installe-toi bien. Ce soir : « " : "J’ai une petite histoire pour toi : « ";
+                const intro = s.qui === "lolo" ? "Installe-toi bien. " + (H.ciel.etat().soleil.alt < 0 ? "Ce soir" : "Aujourd’hui") + " : « " : "J’ai une petite histoire pour toi : « ";
                 H.dialogue.dire([{ qui: s.qui, texte: intro + titre.value + " »." }].concat(depuisTexte(zone.value, s.qui)));
               },
             }, "Écouter"),

@@ -41,7 +41,7 @@
       l.histoiresLues[qui] = deja.concat(histoire.titre).slice(-liste.length + 1);
     });
     const intro = qui === "lolo"
-      ? { qui: "lolo", texte: "Installe-toi bien. Ce soir : « " + histoire.titre + " »." }
+      ? { qui: "lolo", texte: "Installe-toi bien. " + (H.ciel.etat().soleil.alt < 0 ? "Ce soir" : "Aujourd’hui") + " : « " + histoire.titre + " »." }
       : { qui: "luigi", texte: "J’ai une petite histoire pour toi : « " + histoire.titre + " »." };
     await H.dialogue.dire([intro].concat(sansMeme ? histoire.lignes.filter((l) => l.qui !== "meme") : histoire.lignes));
   }
