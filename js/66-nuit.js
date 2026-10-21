@@ -2261,6 +2261,21 @@
     }
     ctx.restore();
   }
+  // les chaussures devant la porte : celles d'ƟvƟ (ses sandales bleues et jaunes l'été) et celles de Mesi
+  function chaussuresEntree(ctx) {
+    const sol = NIV.bas.sol, mois = new Date().getMonth(), ete = mois >= 4 && mois <= 8;
+    const paire = (x, dessus, semelle, penche) => {
+      for (const d of [0, 9]) {
+        ctx.save(); ctx.translate(x + d * 1.5, sol); ctx.scale(1.6, 1.6); ctx.rotate(penche * (d ? 1 : -1));
+        ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-1, -4); ctx.quadraticCurveTo(0, -6, 3, -6); ctx.lineTo(6, -4); ctx.quadraticCurveTo(8, -3, 8, 0); ctx.closePath();
+        ctx.fillStyle = dessus; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = ENCRE; ctx.stroke();
+        ctx.fillStyle = semelle; ctx.fillRect(-1, -1.6, 9, 1.6);
+        ctx.restore();
+      }
+    };
+    paire(6, ete ? "#1f6fe0" : "#7a4520", ete ? "#f6c400" : "#3e2210", 0.05);
+    paire(38, "#c96a3a", "#3e2210", -0.08);
+  }
   // le rabat de la chatière, qui pend de son gond du haut et se balance en s'amortissant
   function rabatChatiere(ctx, t) {
     const dt = t - chatiere.t;
@@ -2847,6 +2862,9 @@
         else if (ouv < 1 && trajet && trajet.balade) porteSonnee = true;
       }
       rabatChatiere(cc, t);
+      // les chaussures laissées devant l'entrée quand on est à la maison ; on les enfile pour partir
+      // en balade (elles disparaissent juste avant que la porte s'ouvre)
+      if (!(trajet && trajet.balade && t - trajet.t0 > trajet.fin - 1500)) chaussuresEntree(cc);
       // la musique finie, on redescend à la table ; devant la porte, si on n'est pas parti, on revient
       if (!trajet && place === "canape" && canapeJusqua < t) partir("table");
       if (!trajet && place === "porte" && t - placeDepuis > 2500 && !H.$(".fenetre, .voile, .dialogue")) partir("table");
