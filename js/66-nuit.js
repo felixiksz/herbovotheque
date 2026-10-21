@@ -2334,13 +2334,36 @@
   }
 
   // la nuit, depuis le lit, on regarde les étoiles par le velux
+  // Regarder le ciel : tout l'écran rien que pour le ciel, peint comme dans la balade (ses vraies
+  // couleurs du moment, les nuages qui passent, la nuit les étoiles et la lune). On touche pour revenir.
   function regarderLeCiel() {
-    const etat = H.ciel.etat(), jour = momentMaison() === "jour", m = H.ciel.meteo || {};
-    const couvert = m.nuages != null && m.nuages > 70;
-    const lignes = jour
-      ? (couvert ? ["Des nuages tout gris qui passent au-dessus du velux… On dirait un troupeau de moutons pressés.", "Le ciel est tout couvert. On verra les étoiles une autre nuit."] : ["Un grand carré de ciel bleu au-dessus du lit. Ce soir, on verra les étoiles d’ici.", "Un nuage en forme de crêpe passe lentement… J’ai faim, du coup."])
-      : (couvert ? ["Les nuages cachent les étoiles ce soir… Elles sont quand même là, derrière."] : ["Regarde ! Il y en a tellement… On dirait du sucre renversé sur un tissu bleu.", "Je reconnais la Grande Ourse, là, la casserole.", "Une étoile filante ! Vite, un vœu… (ƟvƟ ferme les yeux et sourit.)"].concat(etat.lune.alt > 0 ? ["La lune nous regarde dormir. Ce soir : " + H.ciel.nomPhase(etat.lune.phase) + "."] : []));
-    return H.dialogue.dire([{ qui: "ovo", texte: H.histoires.auHasard(lignes) }]);
+    const c = H.el("canvas", { style: "position:fixed;inset:0;width:100vw;height:100vh;z-index:300;cursor:pointer;image-rendering:pixelated" });
+    document.body.appendChild(c);
+    const g = c.getContext("2d"), r = H.alea("ciel-ecran"), etoiles = Array.from({ length: 160 }, () => [r(), r() * r(), r() * 0.6 + 0.35]);
+    let anim;
+    const fermer = () => { cancelAnimationFrame(anim); c.remove(); document.removeEventListener("keydown", echap); };
+    const echap = (e) => e.key === "Escape" && fermer();
+    c.addEventListener("click", fermer); document.addEventListener("keydown", echap);
+    const peindre = (t) => {
+      const w = (c.width = Math.round(innerWidth / 3)), h = (c.height = Math.round(innerHeight / 3)), etat = H.ciel.etat(), alt = etat.soleil.alt, nuit = alt < 0;
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      if (nuit) [["0", "#15124a"], ["0.55", "#3a3aa8"], ["0.85", "#8a58cc"], ["1", "#d07ab8"]].forEach(([u, col]) => gr.addColorStop(+u, col));
+      else if (alt > 8) { gr.addColorStop(0, "#2f8fe0"); gr.addColorStop(1, "#a9dcf7"); }
+      else { const te = H.ciel.teinteCiel(alt, H.ciel.estMatin ? H.ciel.estMatin() : undefined); gr.addColorStop(0, te.haut); gr.addColorStop(1, te.bas); }
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      if (nuit) {
+        for (const [x, y, a] of etoiles) { g.fillStyle = "rgba(255,240,250," + a + ")"; g.fillRect(Math.round(x * w), Math.round(y * h * 0.85), 1, 1); }
+        if (etat.lune.alt > -2) lunePlate(g, w * 0.75, h * 0.22, Math.max(6, w * 0.035), etat.lune.phase);
+      }
+      const moment = H.nuages.moment(alt, (H.ciel.meteo || {}).nuages > 70);
+      for (let i = 0; i < 7; i++) {
+        const taille = 12 + (i % 3) * 7, sp = H.nuages.sprite(taille, 1, moment, i * 7 + 3), v = 2 + (i % 4);
+        const x = ((i * 157 + (t / 1000) * v) % (w + sp.width + 40)) - sp.width - 20;
+        g.drawImage(sp, Math.round(x), Math.round(h * (0.06 + ((i * 3) % 7) * 0.12)));
+      }
+      anim = requestAnimationFrame(peindre);
+    };
+    anim = requestAnimationFrame(peindre);
   }
   function basculerMusique() {
     if (!H.musique) return;
@@ -2352,7 +2375,7 @@
   // ce qu'on peut faire en cliquant dans la pièce (rectangles dans le dessin ; la mezzanine au-dessus du zéro)
   function zonesMaison(nuit) {
     // on peut aller faire dodo à partir de 21 h
-    const heure = new Date().getHours(), dodo = heure >= 21 || heure < 6;
+    const dodo = true; // (on peut aller dormir quand on veut)
     const zones = [
       { id: "fenetre", x: BAIE.x, y: BAIE.y, w: BAIE.w, h: 110, get nom() { return fenetresOuvertes() ? "Fermer les fenêtres" : "Ouvrir grand les fenêtres"; }, agir: basculerFenetres },
       { id: "meme", x: 274, y: 188, w: 56, h: 26, get nom() { return H.memeDehors() ? "La place de Mémé" : "Caresser Mémé"; }, agir: () => {
