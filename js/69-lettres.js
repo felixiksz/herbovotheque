@@ -31,15 +31,36 @@
     ctx.scale(2, 2);
     ctx.fillStyle = "#fbf6ea";
     for (let x = 2; x < 60; x += 6) for (const y of [2, 68]) ctx.beginPath(), ctx.arc(x + 1, y, 2.2, 0, Math.PI * 2), ctx.fill();
-    H.aqua.lavis(ctx, r, [[4, 4], [56, 4], [56, 66], [4, 66]], de === "mesi" ? "#9cc77a" : "#f2c94c", { alpha: 0.3, couches: 8 });
+    H.aqua.lavis(ctx, r, [[4, 4], [56, 4], [56, 66], [4, 66]], de === "mesi" ? "#f3dcb4" : "#9fd2ec", { alpha: 0.3, couches: 8 });
+    const vert = "#4e8a2a", feuille = "#6aa84f";
     if (de === "mesi") {
-      for (let i = 0; i < 4; i++) H.aqua.trait(ctx, r, [[30, 60], [24 + i * 5, 14 + i * 4]], { couleur: "#4e8a2a", epaisseur: 1.6 });
-    } else {
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * Math.PI * 2;
-        H.aqua.tache(ctx, r, 30 + Math.cos(a) * 12, 32 + Math.sin(a) * 12, 6, 4, "#ffc21a", { alpha: 0.5, couches: 3 });
+      // le chiendent : une tige souple, trois longues feuilles étroites, et l'épi en haut, ses
+      // épillets serrés de part et d'autre
+      H.aqua.trait(ctx, r, [[28, 64], [29, 50], [31, 36], [32, 22]], { couleur: vert, epaisseur: 1.6 });
+      for (const [y0, sens, long] of [[56, -1, 16], [46, 1, 15], [38, -1, 12]]) {
+        const x0 = 29 + (64 - y0) * 0.06;
+        H.aqua.lavis(ctx, r, [[x0, y0], [x0 + sens * long * 0.45, y0 - long * 0.7], [x0 + sens * long, y0 - long * 1.05], [x0 + sens * long * 0.3, y0 - long * 0.35], [x0, y0 - 4]], feuille, { alpha: 0.42, couches: 7, bord: 0.05 });
       }
-      H.aqua.tache(ctx, r, 30, 32, 8, 8, "#6b3a12", { alpha: 0.6, couches: 5 });
+      for (let i = 0; i < 7; i++) {
+        const y = 22 - i * 2.4, sens = i % 2 ? 1 : -1;
+        H.aqua.tache(ctx, r, 32 + sens * 2.3, y, 2, 2.8, i % 3 ? "#5f8a2a" : "#a8963a", { alpha: 0.7, couches: 4 });
+      }
+      H.aqua.trait(ctx, r, [[32, 22], [32, 6]], { couleur: vert, epaisseur: 0.9 });
+    } else {
+      // le tournesol : la tige, deux grandes feuilles en cœur, la fleur en haut avec ses pétales
+      // pointus tout autour du cœur brun
+      H.aqua.trait(ctx, r, [[29, 66], [30, 54], [31, 42], [31, 30]], { couleur: vert, epaisseur: 2.2 });
+      H.aqua.lavis(ctx, r, [[30, 54], [24, 49], [16, 50], [14, 55], [20, 59], [27, 57]], feuille, { alpha: 0.35, couches: 7, bord: 0.06 });
+      H.aqua.lavis(ctx, r, [[31, 46], [37, 40], [45, 40], [47, 45], [41, 49], [34, 49]], feuille, { alpha: 0.35, couches: 7, bord: 0.06 });
+      H.aqua.trait(ctx, r, [[30, 54], [19, 54]], { couleur: vert, epaisseur: 0.8, alpha: 0.5 });
+      H.aqua.trait(ctx, r, [[31, 46], [43, 44]], { couleur: vert, epaisseur: 0.8, alpha: 0.5 });
+      const cx = 31, cy = 22;
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a), px = -dy, py = dx;
+        H.aqua.lavis(ctx, r, [[cx + dx * 6 + px * 2.4, cy + dy * 6 + py * 2.4], [cx + dx * 15, cy + dy * 15], [cx + dx * 6 - px * 2.4, cy + dy * 6 - py * 2.4]], "#ffb000", { alpha: 0.55, couches: 6, bord: 0.04 });
+      }
+      H.aqua.tache(ctx, r, cx, cy, 7, 7, "#6b3a12", { alpha: 0.6, couches: 5 });
+      for (let i = 0; i < 8; i++) H.aqua.tache(ctx, r, cx + (r() - 0.5) * 8, cy + (r() - 0.5) * 8, 1, 1, "#3b2416", { alpha: 0.5, couches: 2 });
     }
     H.aqua.trait(ctx, r, [[4, 4], [56, 4], [56, 66], [4, 66], [4, 4]], { epaisseur: 1, alpha: 0.6 });
     timbres[de] = c.toDataURL("image/png");
