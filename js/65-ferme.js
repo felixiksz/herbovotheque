@@ -1903,6 +1903,10 @@
           if (qui) { const [x, y] = iso(qui.x, qui.y); ligne(sh, x - cx, y - cy + 4, x - cx + dx * 8, y - cy + 4 + dy * 8, "#1b1d4a"); }
         }
       }
+      // (les ombres ne tombent que sur l'île : pas sur le ciel ni sur le paysage derrière)
+      sh.globalCompositeOperation = "destination-in";
+      sh.drawImage(sol0, -cx, -cy);
+      sh.globalCompositeOperation = "source-over";
       ctx.globalAlpha = nuit ? 0.14 : periode === "aube" || periode === "crepuscule" ? 0.2 : 0.26;
       ctx.drawImage(ombres, 0, 0);
       ctx.globalAlpha = 1;

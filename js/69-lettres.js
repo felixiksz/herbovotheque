@@ -34,18 +34,25 @@
     H.aqua.lavis(ctx, r, [[4, 4], [56, 4], [56, 66], [4, 66]], de === "mesi" ? "#f3dcb4" : "#9fd2ec", { alpha: 0.3, couches: 8 });
     const vert = "#4e8a2a", feuille = "#6aa84f";
     if (de === "mesi") {
-      // le chiendent : une tige souple, trois longues feuilles étroites, et l'épi en haut, ses
-      // épillets serrés de part et d'autre
-      H.aqua.trait(ctx, r, [[28, 64], [29, 50], [31, 36], [32, 22]], { couleur: vert, epaisseur: 1.6 });
-      for (const [y0, sens, long] of [[56, -1, 16], [46, 1, 15], [38, -1, 12]]) {
-        const x0 = 29 + (64 - y0) * 0.06;
-        H.aqua.lavis(ctx, r, [[x0, y0], [x0 + sens * long * 0.45, y0 - long * 0.7], [x0 + sens * long, y0 - long * 1.05], [x0 + sens * long * 0.3, y0 - long * 0.35], [x0, y0 - 4]], feuille, { alpha: 0.42, couches: 7, bord: 0.05 });
+      // une touffe de chiendent : de longues feuilles étroites qui partent toutes du même pied et
+      // retombent en arc, et trois épis sur leurs tiges, de hauteurs différentes
+      const pied = [30, 58], dans = (x) => Math.max(7, Math.min(53, x));
+      for (let i = 0; i < 14; i++) {
+        const a = -Math.PI / 2 + (i / 13 - 0.5) * 1.9 + (r() - 0.5) * 0.12, L = 24 + r() * 14, ax = Math.cos(a), ay = Math.sin(a);
+        // (elles montent, puis le bout s'incline et retombe un peu vers l'extérieur)
+        const sens = ax < 0 ? -1 : 1, pli = Math.abs(ax) + 0.25;
+        const pts = [[pied[0] + (r() - 0.5) * 3, pied[1]], [pied[0] + ax * L * 0.4, pied[1] + ay * L * 0.5], [dans(pied[0] + ax * L * 0.75 + sens * pli * 3), pied[1] + ay * L * 0.78], [dans(pied[0] + ax * L * 0.95 + sens * pli * 8), pied[1] + ay * L * 0.7 + pli * 6]];
+        H.aqua.trait(ctx, r, pts, { couleur: i % 3 ? feuille : vert, epaisseur: 1.4, tremble: 0.3 });
       }
-      for (let i = 0; i < 7; i++) {
-        const y = 22 - i * 2.4, sens = i % 2 ? 1 : -1;
-        H.aqua.tache(ctx, r, 32 + sens * 2.3, y, 2, 2.8, i % 3 ? "#5f8a2a" : "#a8963a", { alpha: 0.7, couches: 4 });
+      for (const [hx, hy] of [[20, 20], [31, 9], [41, 15]]) {
+        H.aqua.trait(ctx, r, [[pied[0], pied[1]], [(pied[0] + hx) / 2 + (hx - pied[0]) * 0.1, (pied[1] + hy) / 2], [hx, hy + 9]], { couleur: vert, epaisseur: 1, tremble: 0.2 });
+        for (let k = 0; k < 6; k++) {
+          const y = hy + 9 - k * 1.9, sens = k % 2 ? 1 : -1;
+          H.aqua.tache(ctx, r, hx + sens * 1.3, y, 1.2, 1.9, k % 3 ? "#5f8a2a" : "#a8963a", { alpha: 0.75, couches: 3 });
+        }
+        H.aqua.trait(ctx, r, [[hx, hy + 9], [hx, hy - 1]], { couleur: "#3f6a2e", epaisseur: 0.7, tremble: 0.1 });
       }
-      H.aqua.trait(ctx, r, [[32, 22], [32, 6]], { couleur: vert, epaisseur: 0.9 });
+      for (let k = 0; k < 4; k++) H.aqua.trait(ctx, r, [[pied[0] - 2 + k * 1.3, pied[1]], [pied[0] - 4 + k * 2.6, pied[1] + 3]], { couleur: "#7a5a3a", epaisseur: 0.6, alpha: 0.6 });
     } else {
       // le tournesol : la tige, deux grandes feuilles en cœur, la fleur en haut avec ses pétales
       // pointus tout autour du cœur brun
