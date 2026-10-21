@@ -574,7 +574,8 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 :root[data-vue="village"] .outils-ferme,
 :root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile,
 :root[data-vue="balade"] .actions-balade > *, :root[data-ile] .terrain-tete a.bouton,
-.veille[data-moment="nuit"] .veille-aide, .bouton-icone, .note-rapide-bouton {
+.veille[data-moment="nuit"] .veille-aide, .bouton-icone, .note-rapide-bouton,
+:root[data-vue="balade"] .actions-balade > .bouton, .verrou[data-moment="nuit"] form {
   --ep: 4px;
   border: var(--ep) solid transparent;
   background:

@@ -86,10 +86,16 @@
   const lienReglages = document.querySelector("#menu .menu-reglages");
   if (lienReglages) { lienReglages.title = "Réglages"; lienReglages.replaceChildren(icone(ICONES.find((x) => x[0] === "reglages")[2])); }
 
+  // (sur téléphone, la rangée d'icônes défile de côté : elle garde sa position d'une page à l'autre,
+  // au lieu de revenir au début à chaque clic)
+  let defileIcones = 0;
   function icones(vue) {
-    return H.el("nav.icones-bureau", { "aria-label": "Bureau" },
+    const nav = H.el("nav.icones-bureau", { "aria-label": "Bureau" },
       ICONES.map(([v, nom, motif]) => H.el("a.icone-bureau" + (v === vue ? ".ouverte" : ""), { href: "#" + (v === "village" ? "ferme" : v) }, icone(motif), H.el("span", null, v === "tisanes" && H.monde === "mesi" ? "Formules" : nom)))
     );
+    nav.addEventListener("scroll", () => { if (nav.isConnected) defileIcones = nav.scrollLeft; }, { passive: true });
+    requestAnimationFrame(() => { nav.scrollLeft = defileIcones; });
+    return nav;
   }
 
   // Prépare la fenêtre dans le conteneur de la page et renvoie l'endroit où la vue se dessine.

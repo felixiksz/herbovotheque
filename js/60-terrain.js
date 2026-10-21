@@ -944,7 +944,8 @@
     // la truelle (aménager) et la pousse (le terrain), comme sur le bureau
     truelle: ["............", "........kk..", ".......kgGk.", "......kggk..", ".....kggk...", "....kgGk....", "...kkkk.....", "..knNk......", ".knNk.......", "knNk........", "kkk.........", "............"],
     pousse: ["............", "...vv..vv...", "..vVVvvVVv..", "..vVVVVVVv..", "...vvVVvv...", ".....VV.....", ".....VV.....", "....nnnn....", "..nnnnnnnn..", ".nnnnnnnnnn.", "knnnnnnnnnnk", "kkkkkkkkkkkk"],
-    patte: ["............", "..kk....kk..", ".knnk..knnk.", ".knnk..knnk.", "..kk.kk.kk..", "....knnk....", "...knnnnk...", "..knnnnnnk..", "..knnnnnnk..", "...knnnnk...", "....kkkk....", "............"],
+    // un papillon rose et une abeille, pour les animaux à emmener
+    papillon: ["..N...N.....", "...N.N......", "mm..N..mm...", "mMm.N.mMm...", "mmMmNmMmm...", ".mmMNMmm....", "..mm.mm.....", ".......wwB..", "......yNyyNN", ".....yyNyyNN", "......yNyyN.", "............"],
   };
   const imagesIcones = {};
   function imageIcone(nom) {
@@ -1023,7 +1024,7 @@
     const barreAmis = H.el("div.barre-ile.barre-amis", null,
       !ile.croquis ? boutonIcone(H.pixel.portrait("luigi", 2), H.monde === "mesi" ? "Appeler ƟvƟ" : "Appeler Mesi", () => appelerMesi(true)) : null,
       H.lolo && H.lolo.disponible() ? boutonIcone(H.pixel.portrait("lolo", 2), "Appeler Lóló", appelerLolo) : null,
-      ile.secrete ? boutonIcone(imageIcone("patte"), "Emmener un animal dans un de mes jardins", () => emmenerAnimal(ile)) : null,
+      ile.secrete ? boutonIcone(imageIcone("papillon"), "Emmener un animal dans un de mes jardins", () => emmenerAnimal(ile)) : null,
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null);
     conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, H.el("div.cadre-toile-ile", null, zoneToile, barreVue, barreAmis), panneau);
     Object.assign(vue, { toile, ciel, infoCiel, outils, options, panneau, zoneToile });
