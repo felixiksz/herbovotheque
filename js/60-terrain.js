@@ -1052,14 +1052,14 @@
   function dessinerOutils() {
     const ile = vue.ile;
     // (avec l'outil de la forme, le doigt peint sur l'île au lieu de faire défiler la page)
-    if (vue.toile) vue.toile.style.touchAction = vue.outil === "forme" || vue.outil === "relief" ? "none" : "";
+    if (vue.toile) vue.toile.style.touchAction = vue.outil === "forme" || vue.outil === "relief" || vue.outil === "deplacer" ? "none" : "";
     // deux modes, une seule rangée d'outils à la fois : le jardin (ce qu'on fait tous les jours) et
     // le chantier (ce qui transforme l'île)
     const modes = {
       jardin: ile.croquis
         ? [["regarder", "Regarder"], ["planter", "Planter"], ["retirer", "Retirer"]]
         : [["regarder", "Regarder"], ["planter", "Planter"], ["arroser", "Arroser"], ["recolter", "Récolter"], ["retirer", "Retirer"]],
-      chantier: [["amenager", "Aménager"], ["zones", "Soleil et sol"], ["forme", "Forme du jardin"], ["relief", "Relief"]],
+      chantier: [["amenager", "Aménager"], ["deplacer", "Déplacer"], ["zones", "Soleil et sol"], ["forme", "Forme du jardin"], ["relief", "Relief"]],
     };
     const mode = modes.chantier.some(([id]) => id === vue.outil) ? "chantier" : "jardin";
     const changerMode = (m) => { if (m !== mode) { vue.outil = modes[m][0][0]; dessinerOutils(); } };
@@ -1113,6 +1113,8 @@
       o.appendChild(H.el("span.cout", null, "Les plantes prêtes à récolter sont entourées de fluo · " + cout({ energie: 2 })));
     } else if (vue.outil === "retirer") {
       o.appendChild(H.el("span.cout", null, "Retire la plante ou l’aménagement de la case"));
+    } else if (vue.outil === "deplacer") {
+      o.appendChild(H.el("span.cout", null, "Fais glisser une plante" + ((ile.pins || []).length ? " ou un pin parasol" : "") + " jusqu’à sa nouvelle place (elle garde son âge et son eau)"));
     } else if (vue.outil === "relief") {
       const mode = vue.reliefMode || "monter", style = vue.reliefStyle || "talus";
       for (const [id, nom] of [["monter", "Monter d’un cran"], ["descendre", "Descendre d’un cran"], ["aplanir", "Aplanir"]])
@@ -2316,17 +2318,19 @@
     }
     if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
     // les pins parasols (ceux du jardin de Lóló et Mémé), dessinés comme à la ferme
-    for (const pn of ile.pins || []) {
+    vue.boitesPins = [];
+    (ile.pins || []).forEach((pn, i) => {
       const img = H.ferme && H.ferme.pin && H.ferme.pin((pn.x * 7 + pn.y * 3) % 3, pn.x, pn.y);
-      if (!img) continue;
+      if (!img) return;
       debout.push({ prof: pn.x + pn.y + 1, dessin: () => {
         const [sx, sy] = projH(pn.x + 0.5, pn.y + 0.5), e = ECHELLE_PIN[pn.t], w = img.width * e, h = img.height * e;
+        vue.boitesPins[i] = { g: sx - w / 2, d: sx + w / 2, h: sy - h + 2, b: sy + 2 };
         ctx.save(); ctx.imageSmoothingEnabled = false;
         if ((pn.x + pn.y) % 2) { ctx.translate(Math.round(sx), 0); ctx.scale(-1, 1); ctx.drawImage(img, Math.round(-w / 2), Math.round(sy - h + 2), w, h); }
         else ctx.drawImage(img, Math.round(sx - w / 2), Math.round(sy - h + 2), w, h);
         ctx.restore();
       } });
-    }
+    });
     // les paniers de la récolte du jour, sur le bord de devant
     paniersIle(ile).forEach((b, i) => {
       const q = H.d.plante(b.p), [bx, by] = placePanier(ile, i);
@@ -3059,6 +3063,43 @@
     sauver(ile); dimensionner(); peindreFond(); dessinerOutils(); dessiner();
   }
   // la position d'un point sous le doigt, en cases (avec la virgule)
+  // la case sous le doigt sur le sol à plat, sans le relief : pour suivre un glissé sans à-coups
+  function planCase(e) {
+    if (!vue.iso) return caseFine(e);
+    const rect = vue.toile.getBoundingClientRect();
+    return versCase((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
+  }
+  // ce qu'on attrape pour le déplacer : un pin parasol (ils sont devant), ou la plante de la case
+  // touchée quand elle est plus en avant que le pin
+  function priseSous(e) {
+    const ile = vue.ile, rect = vue.toile.getBoundingClientRect(), lx = (e.clientX - rect.left) / vue.zoom, ly = (e.clientY - rect.top) / vue.zoom;
+    const [fx, fy] = caseFine(e), cx = Math.floor(fx), cy = Math.floor(fy);
+    let pin = null;
+    (ile.pins || []).forEach((pn, i) => {
+      const b = (vue.boitesPins || [])[i];
+      const dedans = vue.iso ? b && lx >= b.g && lx <= b.d && ly >= b.h && ly <= b.b : Math.hypot(fx - pn.x - 0.5, fy - pn.y - 0.5) <= RAYON_PIN[pn.t] * 0.7;
+      if (dedans && (!pin || pn.x + pn.y > pin.x + pin.y)) pin = { type: "pin", i, x: pn.x, y: pn.y };
+    });
+    const plante = (ile.plantes || {})[cle(cx, cy)] ? { type: "plante", x: cx, y: cy } : null;
+    if (plante && (!pin || (vue.iso && cx + cy > pin.x + pin.y))) return plante;
+    return pin;
+  }
+  // poser ce qu'on tient sur une autre case, si elle le permet
+  function deplacerVers(p, nx, ny) {
+    const ile = vue.ile;
+    if (nx < 0 || ny < 0 || nx >= ile.cols || ny >= ile.lignes || estVide(ile, nx, ny)) return false;
+    if (p.type === "pin") {
+      if ((ile.pins || []).some((q, j) => j !== p.i && q.x === nx && q.y === ny)) return false;
+      ile.pins = ile.pins.map((q, j) => (j === p.i ? Object.assign({}, q, { x: nx, y: ny }) : q));
+    } else {
+      const t = caseDe(ile, nx, ny).t, k = cle(nx, ny);
+      if (t === "eau" || t === "chemin" || (ile.plantes || {})[k]) return false;
+      ile.plantes = Object.assign({}, ile.plantes, { [k]: ile.plantes[cle(p.x, p.y)] });
+      delete ile.plantes[cle(p.x, p.y)];
+    }
+    p.x = nx; p.y = ny;
+    return true;
+  }
   function caseFine(e) {
     const rect = vue.toile.getBoundingClientRect();
     if (vue.iso) return caseSous((e.clientX - rect.left) / vue.zoom, (e.clientY - rect.top) / vue.zoom);
@@ -3129,6 +3170,16 @@
       dimensionner(); peindreFond(); dessiner();
     };
     toile.addEventListener("pointerdown", (e) => {
+      if (vue && vue.outil === "deplacer") {
+        const prise = priseSous(e);
+        if (!prise) return;
+        e.preventDefault();
+        toile.setPointerCapture(e.pointerId);
+        geste = { mode: "bouger", prise, depart: planCase(e), x0: prise.x, y0: prise.y, bouge: false };
+        vue.enMain = prise;
+        dessiner();
+        return;
+      }
       if (vue && vue.outil === "relief") {
         e.preventDefault();
         toile.setPointerCapture(e.pointerId);
@@ -3150,6 +3201,12 @@
     });
     toile.addEventListener("pointermove", (e) => {
       if (!geste) return;
+      if (geste.mode === "bouger") {
+        const [px, py] = planCase(e), [qx, qy] = geste.depart, p = geste.prise;
+        const nx = Math.round(geste.x0 + px - qx), ny = Math.round(geste.y0 + py - qy);
+        if ((nx !== p.x || ny !== p.y) && deplacerVers(p, nx, ny)) { geste.bouge = true; dessiner(); }
+        return;
+      }
       const [fx, fy] = caseFine(e), [ax, ay] = geste.dernier;
       if (Math.hypot(fx - ax, fy - ay) < 0.2) return;
       geste.bouge = true;
@@ -3184,6 +3241,7 @@
         return;
       }
       if (g.mode === "deplacer") { garderCalque(); return; }
+      if (g.mode === "bouger") { vue.enMain = null; if (g.bouge) { sauver(vue.ile); H.bruit("plante"); } dessiner(); return; }
       if (g.mode === "relief") { vue.reliefEnCours = null; sauver(vue.ile); repeindreBientot(true); return; }
       rogner(vue.ile);
       sauver(vue.ile);
@@ -3243,6 +3301,8 @@
   }
   // dessiné à plat, dans le repère des cases (une case = T), en relief comme en vue d'oiseau
   function dessinerCalqueEtTrace(ctx) {
+    // ce qu'on est en train de déplacer : sa case, en jaune
+    if (vue.enMain) { ctx.save(); ctx.strokeStyle = "#f6ee55"; ctx.lineWidth = 3; ctx.strokeRect(vue.enMain.x * T + 1.5, vue.enMain.y * T + 1.5, T - 3, T - 3); ctx.restore(); }
     // pendant un coup de relief : les cases touchées, en couleur (le jardin est repeint au lâcher)
     if (vue.reliefEnCours && vue.reliefEnCours.size) {
       ctx.save();

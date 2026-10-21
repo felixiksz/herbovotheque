@@ -561,3 +561,33 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 .panneau.menu-scene .formulaire-pixel label.case { font-size: 1.15rem; }
 .panneau.menu-scene .formulaire-pixel .pastilles { gap: 4px 14px; }
 .formulaire-pixel > .bouton { justify-self: start; font-size: 1.45rem; }
+
+/* Le cadre en ampoules, comme la marquise d'une borne d'arcade : des ampoules jaunes (le jaune de la
+   barre du haut) et vert pré, les coins en carrés vert pré, puis un filet d'encre et l'ombre décalée.
+   (le corail reste pour les erreurs) */
+:root {
+  --ampoule-j: #f6ee55; --ampoule-v: #9dff00;
+  --ampoules-h: repeating-linear-gradient(90deg, var(--ampoule-j) 0 6px, var(--ampoule-v) 6px 9px, var(--ampoule-j) 9px 15px, var(--menu-fond) 15px 18px);
+  --ampoules-v: repeating-linear-gradient(180deg, var(--ampoule-j) 0 6px, var(--ampoule-v) 6px 9px, var(--ampoule-j) 9px 15px, var(--menu-fond) 15px 18px);
+}
+.dialogue, .pastille-scene, .sortie-maison, .boite-nuit, .etiquette-ferme, .panneau.menu-scene,
+:root[data-vue="village"] .outils-ferme,
+:root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile,
+:root[data-vue="balade"] .actions-balade > *, :root[data-ile] .terrain-tete a.bouton,
+.veille[data-moment="nuit"] .veille-aide, .bouton-icone, .note-rapide-bouton {
+  --ep: 4px;
+  border: var(--ep) solid transparent;
+  background:
+    linear-gradient(var(--ampoule-v), var(--ampoule-v)) left top / calc(var(--ep) * 2) calc(var(--ep) * 2) no-repeat border-box,
+    linear-gradient(var(--ampoule-v), var(--ampoule-v)) right top / calc(var(--ep) * 2) calc(var(--ep) * 2) no-repeat border-box,
+    linear-gradient(var(--ampoule-v), var(--ampoule-v)) left bottom / calc(var(--ep) * 2) calc(var(--ep) * 2) no-repeat border-box,
+    linear-gradient(var(--ampoule-v), var(--ampoule-v)) right bottom / calc(var(--ep) * 2) calc(var(--ep) * 2) no-repeat border-box,
+    linear-gradient(var(--menu-fond), var(--menu-fond)) padding-box,
+    var(--ampoules-h) left top / 100% var(--ep) no-repeat border-box,
+    var(--ampoules-h) left bottom / 100% var(--ep) no-repeat border-box,
+    var(--ampoules-v) left top / var(--ep) 100% no-repeat border-box,
+    var(--ampoules-v) right top / var(--ep) 100% no-repeat border-box;
+  box-shadow: 0 0 0 2px var(--menu-fond), 6px 6px 0 2px rgba(15, 16, 53, 0.6);
+}
+.bouton-icone, .note-rapide-bouton, .etiquette-ferme { --ep: 3px; box-shadow: 0 0 0 2px var(--menu-fond), 4px 4px 0 2px rgba(15, 16, 53, 0.55); }
+.pastille-scene:hover, .pastille-scene:focus-visible, .sortie-maison:hover, .sortie-maison:focus-visible { outline: 2px solid var(--ampoule-v); }
