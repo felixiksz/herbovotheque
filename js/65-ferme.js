@@ -247,6 +247,26 @@
     const a = plantes.find((q) => q.e === "araucaria");
     if (a) Object.assign(a, A); else plantes.push({ x: A.x, y: A.y, e: "araucaria", v: 0 });
   }
+  // le rucher : trois ruches peintes alignées le long du bord gauche de la ferme, hors du passage
+  // (les abeilles butinent les fleurs) ; on peut en amener une dans un jardin. Posées après les arbres,
+  // à la fin de la liste : les arbres déjà déplacés gardent leur numéro dans la disposition de la ferme.
+  {
+    const grand = (q) => q.e === "pin" || q.e === "cedre" || q.e === "araucaria";
+    const libre = (x, y) => x > 0.9 && y > 1 && x < N - 1 && y < N - 1 && !dansMaison(x, y) && !dansJardin(x, y) && !surChemin(x, y, 1.1)
+      && !plantes.some((q) => Math.hypot(q.x - x, q.y - y) < (grand(q) ? 1.6 : 0.8));
+    const cache = (x, y) => plantes.some((q) => grand(q) && q.x + q.y > x + y && Math.hypot(q.x - x, q.y - y) < 4);
+    let mieux = null;
+    for (const exigeant of [true, false]) {
+      for (let j = 1.5; j < N - 3; j += 0.5) for (let i = 1; i <= 3.2; i += 0.3) {
+        const places = [0, 1, 2].map((k) => [i, j + k * 0.9]);
+        if (!places.every(([x, y]) => libre(x, y) && libre(x + 0.5, y)) || (exigeant && places.some(([x, y]) => cache(x, y)))) continue;
+        const d = Math.hypot((i - 1.2) * 3, j - 14);
+        if (!mieux || d < mieux.d) mieux = { i, j, d };
+      }
+      if (mieux) break;
+    }
+    if (mieux) for (let k = 0; k < 3; k++) plantes.push({ x: mieux.i, y: mieux.j + k * 0.9, e: "ruche", v: k });
+  }
   // --- la disposition de la ferme : chaque bâtiment et chaque arbre peut être déplacé, ou tourné
   // d'un quart de tour (on le voit alors en miroir : sa largeur et sa profondeur s'échangent).
   // Gardée dans la partie (H.jeu.planFerme : « b:maison », « p:12 »…) ; quand Mesi aménage dans le
@@ -446,8 +466,22 @@
     pixel(c, x + 1, y, cote < 0 ? "#c0703f" : "#6a3420");
   }
   const VERTS_PIN = ["#1e3d25", "#2f6b35", "#4aa63e", "#173a26"], VERTS_BLEUS = ["#1e3d25", "#26406a", "#3f8a42", "#173a26"];
+  // une ruche peinte : son pied en bois, deux hausses (jaune, bleue ou crème), l'entrée en bas, et
+  // le toit en tôle bleutée
+  function dessinRuche(v) {
+    return sprite("ruche" + v, 10, 14, (c) => {
+      const corps = ["#f2c94c", "#8ab4e0", "#efe6d0"][v % 3], ombre = ["#c99a2e", "#5f86b8", "#c9bc9c"][v % 3], clair = ["#f8e08a", "#b4d0ee", "#faf5e8"][v % 3];
+      for (const x of [2, 7]) for (let y = 11; y < 14; y++) pixel(c, x, y, "#4b3427");
+      for (let x = 1; x <= 8; x++) pixel(c, x, 11, "#7a4520");
+      for (let y = 4; y < 11; y++) for (let x = 1; x <= 8; x++) pixel(c, x, y, x >= 7 ? ombre : x <= 1 ? clair : corps);
+      for (let x = 1; x <= 8; x++) pixel(c, x, 7, ombre);
+      for (let x = 3; x <= 6; x++) pixel(c, x, 9, "#2a2246");
+      for (let y = 2; y < 4; y++) for (let x = 0; x <= 9; x++) pixel(c, x, y, y === 2 ? "#b4bce0" : x >= 8 ? "#5b5fa8" : "#8a98cc");
+    });
+  }
   function dessinPlante(p) {
     switch (p.e) {
+      case "ruche": return dessinRuche(p.v || 0);
       case "pin": {
         // un pin sur trois environ pousse en Y : deux branches maîtresses, deux couronnes
         const fourche = hash(Math.round(p.x * 10), Math.round(p.y * 10)) < 0.33;
@@ -1913,7 +1947,16 @@
     }
     const pas = Math.floor(t / 150) % 2, temps = Math.floor(t / 110) % 4;
     for (const o of objets) {
-      if (o.p) { const s = spritePlante(o.p), [x, y] = iso(o.p.x, o.p.y), bx = Math.round(x - s.width / 2) - cx, by = Math.round(y + 4 - s.height) - cy; ctx.drawImage(s, bx, by); o.p.boite = [bx, by, s.width, s.height]; }
+      if (o.p) {
+        const s = spritePlante(o.p), [x, y] = iso(o.p.x, o.p.y), bx = Math.round(x - s.width / 2) - cx, by = Math.round(y + 4 - s.height) - cy;
+        ctx.drawImage(s, bx, by); o.p.boite = [bx, by, s.width, s.height];
+        // les abeilles qui tournent autour de la ruche
+        if (o.p.e === "ruche" && !nuit) for (let k = 0; k < 3; k++) {
+          const u = t / 1000 + k * 2.1 + o.p.v * 1.3, ax = bx + 5 + Math.sin(u * 1.7) * 5 + Math.sin(u * 5.3) * 1.2, ay = by + 2 + Math.cos(u * 1.3) * 3;
+          pixel(ctx, ax, ay, "#ffd23a"); pixel(ctx, ax + 1, ay, "#2a2246");
+          if (Math.floor(t / 60 + k) % 2) pixel(ctx, ax, ay - 1, "#f3f0dc");
+        }
+      }
       else if (o.m) {
         const m = o.m, s = spriteMaison(m), [x, y] = iso(m.i + m.w, m.j + m.d);
         m.largSprite = s.width;
@@ -2140,8 +2183,25 @@
     }
     return paysages.get(cle);
   }
+  // la fenêtre du rucher : amener une ruche (de la couleur qu'on veut) dans un de ses jardins
+  function fenetreRucher() {
+    const jardins = Object.values(H.jeu.iles || {}).filter((i) => i && !i.supprime && !i.croquis && (!i.secrete || H.local.apercuIleSecrete || new Date() >= new Date(2027, 1, 24)));
+    let fermer;
+    if (!jardins.length) return H.toast("Crée d’abord un jardin pour y amener une ruche.");
+    const vers = H.el("select", null, jardins.map((i) => H.el("option", { value: i.id }, i.nom + ((i.ruches || []).length ? " (" + i.ruches.length + " ruche" + (i.ruches.length > 1 ? "s" : "") + ")" : ""))));
+    const couleur = H.el("select", null, [["0", "jaune"], ["1", "bleue"], ["2", "crème"]].map(([v, n]) => H.el("option", { value: v }, n)));
+    fermer = H.fenetre(H.el("div", null,
+      H.el("h2", null, "Le rucher"),
+      H.el("p", null, "Trois ruches au bord de la ferme. Les abeilles butinent les fleurs de la ferme, et celles de tes jardins si tu leur y amènes une ruche."),
+      H.el("p", null, H.el("label", null, "Une ruche ", couleur), " ", H.el("label", null, " dans ", vers)),
+      H.el("div.boutons-bas", null, H.el("button.bouton", { type: "button", onclick: () => {
+        if (H.terrain && H.terrain.amenerRuche && H.terrain.amenerRuche(vers.value, Number(couleur.value))) fermer();
+      } }, "Amener la ruche"))));
+  }
+
   H.ferme = { scene: () => scene, fond: () => fond, paysage, elements: () => elementsIso(), aUnBassin: () => casesBassin().length > 0,
     // un pin parasol de la ferme, en plein jour et éclairé de gauche, pour les jardins
+    ruche: (v) => { const n0 = nuit, c0 = cote; nuit = false; cote = 1; try { return dessinRuche(v); } finally { nuit = n0; cote = c0; } },
     pin: (v, x, y) => { const n0 = nuit, c0 = cote; nuit = false; cote = 1; try { return dessinPlante({ e: "pin", v, x, y }); } finally { nuit = n0; cote = c0; } },
     // les bêtes de la nuit, pour qu'on les voie aussi passer depuis la maison
     betes: { RENARD, RENARD_PAS, SANGLIER, SANGLIER_PAS, MARCASSIN, MARCASSIN_PAS, HERISSON, HERISSON_PAS, PAL_BETES, PAL_BASSIN } };
@@ -2234,6 +2294,9 @@
           if (!H.$(".dialogue")) H.lolo.parler(null);
           return;
         }
+        // toucher le rucher : on peut amener une ruche dans un jardin
+        const ruche = plantes.find((q) => q.e === "ruche" && q.boite && p.x >= q.boite[0] && p.x <= q.boite[0] + q.boite[2] && p.y >= q.boite[1] && p.y <= q.boite[1] + q.boite[3]);
+        if (ruche) { fenetreRucher(); return; }
         scene.pointeur = p;
         dessiner(performance.now());
         const m = scene.survol;

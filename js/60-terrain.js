@@ -838,6 +838,13 @@
         liste.push({ type: "papillon", x: ile.cols / 2 + Math.sin(u * 0.23 + i) * ile.cols * 0.38, y: ile.lignes / 2 + Math.sin(u * 0.31 + i * 2) * ile.lignes * 0.36 + Math.sin(u * 3) * 0.15, variante: i });
       }
     }
+    // les abeilles des ruches amenées : elles tournent autour de la ruche, et vont butiner un peu plus loin
+    (ile.ruches || []).forEach((r, n) => {
+      for (let k = 0; k < 5; k++) {
+        const u = t / 1000 + k * 1.9 + n * 3.7, loin = 1.2 + (k % 3) * 0.9;
+        liste.push({ type: "abeille", x: r.x + 0.5 + Math.sin(u * 0.9 + k) * loin + Math.sin(u * 6.1) * 0.12, y: r.y + 0.5 + Math.cos(u * 0.7 + k * 2) * loin * 0.8, variante: k });
+      }
+    });
     // les animaux emmenés sur cette île : chacun garde son coin
     for (const a of ile.animaux || []) {
       const u = t / 1000 + (a.graine || 0);
@@ -852,7 +859,14 @@
   }
   function dessinerAnimaux(ctx, ile, t, projection) {
     for (const a of animaux(ile, t)) {
+      // (en relief, les abeilles sont dessinées à part, par-dessus les plantes)
+      if (a.type === "abeille" && projection) continue;
       const [px, py] = projection ? projection(a.x, a.y) : [a.x * T, a.y * T];
+      dessinerUnAnimal(ctx, a, px, py, t);
+    }
+  }
+  function dessinerUnAnimal(ctx, a, px, py, t) {
+    {
       ctx.save();
       if (a.type === "canard") {
         const [corps, tete] = a.variante ? ["#8a6a4a", "#2f7a4a"] : ["#f2f0e8", "#ffd23a"];
@@ -882,6 +896,12 @@
         for (const [dx, dy] of [[-1, -1], [-1, 1], [2, -1], [2, 1]]) { ctx.beginPath(); ctx.ellipse(dx, dy * 4, 2, 5, dy * 0.4, 0, Math.PI * 2); ctx.fill(); }
         ctx.strokeStyle = a.variante ? "#3826f2" : "#1f8a6a"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(6, 0); ctx.stroke();
+      } else if (a.type === "abeille") {
+        // une abeille : le corps jaune rayé, les ailes qui battent
+        const bat = Math.floor(t / 50 + a.variante) % 2;
+        ctx.fillStyle = "rgba(243,240,220,0.85)"; ctx.fillRect(px - 2, py - 3 - bat, 2, 2); ctx.fillRect(px + 1, py - 3 - bat, 2, 2);
+        ctx.fillStyle = "#ffd23a"; ctx.fillRect(px - 2, py - 1, 5, 3);
+        ctx.fillStyle = "#2a2246"; ctx.fillRect(px, py - 1, 1, 3); ctx.fillRect(px + 2, py - 1, 1, 3);
       } else if (a.type === "papillon") {
         const bat = Math.abs(Math.sin((t / 1000 + a.variante * 7) * 9));
         ctx.fillStyle = ["#ff5b4f", "#ffd23a", "#7aa6e0", "#f3b4cf"][a.variante % 4];
@@ -2404,6 +2424,18 @@
       }
     }
     if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
+    // les ruches amenées de la ferme, et leurs abeilles par-dessus tout
+    vue.boitesRuches = [];
+    (ile.ruches || []).forEach((r, i) => {
+      const img = H.ferme && H.ferme.ruche && H.ferme.ruche(r.v || 0);
+      if (!img) return;
+      debout.push({ prof: r.x + r.y + 1, dessin: () => {
+        const [sx, sy] = projH(r.x + 0.5, r.y + 0.5), e = 1.6, w = img.width * e, h = img.height * e;
+        vue.boitesRuches[i] = { g: sx - w / 2, d: sx + w / 2, h: sy - h + 2, b: sy + 2 };
+        ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, Math.round(sx - w / 2), Math.round(sy - h + 2), w, h); ctx.restore();
+      } });
+    });
+    if ((ile.ruches || []).length) debout.push({ prof: 99, dessin: () => { for (const a of animaux(ile, t)) if (a.type === "abeille") { const [px, py] = projH(a.x, a.y); dessinerUnAnimal(ctx, a, px, py - 14, t); } } });
     // les pins parasols (ceux du jardin de Lóló et Mémé), dessinés comme à la ferme
     vue.boitesPins = [];
     (ile.pins || []).forEach((pn, i) => {
@@ -2650,6 +2682,13 @@
       ctx.save(); ctx.translate(Math.round(q.x * T), Math.round(q.y * T)); ctx.scale(1.7, 1.7); potFlottant(ctx, 0, 0, pq, vue.outil === "planter" && vue.depuisSerre && vue.plante === q.id, performance.now(), i); ctx.restore();
     });
 
+    for (const r of ile.ruches || []) {
+      const x = (r.x + 0.2) * T, y = (r.y + 0.15) * T, w = T * 0.6, h = T * 0.7;
+      ctx.fillStyle = "rgba(38,40,106,0.3)"; ctx.fillRect(x + 3, y + 3, w, h);
+      ctx.fillStyle = ["#f2c94c", "#8ab4e0", "#efe6d0"][(r.v || 0) % 3]; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#8a98cc"; ctx.fillRect(x - 1, y - 1, w + 2, h * 0.45);
+      ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1; ctx.strokeRect(x - 1, y - 1, w + 2, h + 1);
+    }
     for (const pn of ile.pins || []) ombrellePinDessus(ctx, (pn.x + 0.5) * T, (pn.y + 0.5) * T, RAYON_PIN[pn.t] * T, pn.x * 31 + pn.y * 7);
 
     // Lóló et Mémé sur leur île
@@ -3167,6 +3206,11 @@
       const dedans = vue.iso ? b && lx >= b.g && lx <= b.d && ly >= b.h && ly <= b.b : Math.hypot(fx - pn.x - 0.5, fy - pn.y - 0.5) <= RAYON_PIN[pn.t] * 0.7;
       if (dedans && (!pin || pn.x + pn.y > pin.x + pin.y)) pin = { type: "pin", i, x: pn.x, y: pn.y };
     });
+    (ile.ruches || []).forEach((r, i) => {
+      const b = (vue.boitesRuches || [])[i];
+      const dedans = vue.iso ? b && lx >= b.g && lx <= b.d && ly >= b.h && ly <= b.b : cx === r.x && cy === r.y;
+      if (dedans && (!pin || r.x + r.y > pin.x + pin.y)) pin = { type: "ruche", i, x: r.x, y: r.y };
+    });
     const plante = (ile.plantes || {})[cle(cx, cy)] ? { type: "plante", x: cx, y: cy } : null;
     if (plante && (!pin || (vue.iso && cx + cy > pin.x + pin.y))) return plante;
     return pin;
@@ -3175,7 +3219,11 @@
   function deplacerVers(p, nx, ny) {
     const ile = vue.ile;
     if (nx < 0 || ny < 0 || nx >= ile.cols || ny >= ile.lignes || estVide(ile, nx, ny)) return false;
-    if (p.type === "pin") {
+    if (p.type === "ruche") {
+      const t = caseDe(ile, nx, ny).t, k = cle(nx, ny);
+      if (t === "eau" || (ile.plantes || {})[k] || (ile.ruches || []).some((q, j) => j !== p.i && q.x === nx && q.y === ny)) return false;
+      ile.ruches = ile.ruches.map((q, j) => (j === p.i ? Object.assign({}, q, { x: nx, y: ny }) : q));
+    } else if (p.type === "pin") {
       if ((ile.pins || []).some((q, j) => j !== p.i && q.x === nx && q.y === ny)) return false;
       ile.pins = ile.pins.map((q, j) => (j === p.i ? Object.assign({}, q, { x: nx, y: ny }) : q));
     } else {
@@ -4177,6 +4225,27 @@
     ));
   }
 
+  // amener une ruche de la ferme dans un jardin : sur une case libre (ni plante, ni eau, ni chemin),
+  // de préférence près des fleurs ; ensuite on la déplace avec l'outil Déplacer
+  function amenerRuche(id, v) {
+    const ile = (H.jeu.iles || {})[id];
+    if (!ile) return false;
+    const libres = [];
+    for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
+      const t = caseDe(ile, x, y).t;
+      if (estVide(ile, x, y) || t === "eau" || t === "chemin" || (ile.plantes || {})[cle(x, y)] || (ile.ruches || []).some((q) => q.x === x && q.y === y) || (ile.pins || []).some((q) => q.x === x && q.y === y)) continue;
+      const fleurs = Object.keys(ile.plantes || {}).filter((k) => { const [px, py] = k.split(",").map(Number); return Math.abs(px - x) <= 2 && Math.abs(py - y) <= 2; }).length;
+      libres.push([x, y, fleurs]);
+    }
+    if (!libres.length) { H.toast("Pas une case libre pour la ruche dans « " + ile.nom + " »."); return false; }
+    libres.sort((a, b) => b[2] - a[2]);
+    const [x, y] = libres[Math.floor(Math.random() * Math.min(6, libres.length))];
+    ile.ruches = (ile.ruches || []).concat([{ x, y, v: v || 0 }]);
+    sauver(ile);
+    H.toast("La ruche part pour « " + ile.nom + " » ! (Déplace-la avec l’outil Déplacer.)");
+    return true;
+  }
+
   H.vues.terrain = {
     afficher(c, params) {
       vue = null;
@@ -4267,7 +4336,7 @@
     return c;
   }
 
-  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait, plantePetite };
+  H.terrain = { evaluer, iles, ileSecreteOuverte, dessinAuto, portrait, plantePetite, amenerRuche };
   // les îles qu'on peut montrer ailleurs dans le jeu (to-do, devis, carnet, recherche), tout ce qui
   // se partage : l'île de Lóló et Mémé y reste cachée jusqu'à son vrai jour, même en aperçu
   H.ilesVisibles = () => iles().filter((i) => i && (!i.secrete || new Date() >= OUVERTURE_SECRETE));
