@@ -86,16 +86,24 @@
     pc.drawImage(toile, 0, 0, W, Hh, 0, 0, sw, sh);
     const img = pc.getImageData(0, 0, sw, sh), d = img.data;
     const dx = defile ? Math.round(defile.x / taille) : 0, ligneDefile = defile ? Math.floor(defile.depuis * sh) : sh;
+    // (le résultat de chaque teinte, à chaque place de la trame, est retenu : une grande toile ne
+    // refait plus le calcul et la recherche dans la palette pour chacun de ses millions de points)
+    const pal = actuel.pal, memo = actuel.memo || (actuel.memo = new Map());
+    let deja = memo.get(forceTrame);
+    if (!deja) memo.set(forceTrame, (deja = new Int16Array(1 << 19).fill(-1)));
     for (let y = 0, i = 0; y < sh; y++) {
-      const decale = y >= ligneDefile ? dx : 0;
+      const decale = y >= ligneDefile ? dx : 0, ty = (y & 3) << 2;
       for (let x = 0; x < sw; x++, i += 4) {
         if (d[i + 3] < 10) continue;
-        // un peu plus saturé et contrasté, comme les pochettes, avant de choisir la couleur
-        const o = TRAME[((y & 3) << 2) | ((x + decale) & 3)] * forceTrame;
-        const m = (d[i] + d[i + 1] + d[i + 2]) / 3;
-        const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
-        const r = rs(d[i]), g = rs(d[i + 1]), b = rs(d[i + 2]);
-        const c = actuel.pal[proche(r, g, b)];
+        const ti = ty | ((x + decale) & 3), k = ((((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3)) << 4) | ti;
+        let p = deja[k];
+        if (p < 0) {
+          // un peu plus saturé et contrasté, comme les pochettes, avant de choisir la couleur
+          const o = TRAME[ti] * forceTrame, m = (d[i] + d[i + 1] + d[i + 2]) / 3;
+          const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
+          p = deja[k] = proche(rs(d[i]), rs(d[i + 1]), rs(d[i + 2]));
+        }
+        const c = pal[p];
         d[i] = c[0];
         d[i + 1] = c[1];
         d[i + 2] = c[2];

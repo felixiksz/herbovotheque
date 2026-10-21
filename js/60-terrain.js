@@ -1312,7 +1312,10 @@
     const casesX = Math.max(ile.cols + BORD * 2, Math.ceil(zw / (T * vue.zoom))), casesY = Math.max(ile.lignes + BORD * 2, Math.floor(zh / (T * vue.zoom)));
     vue.bx = (casesX - ile.cols) / 2; vue.by = (casesY - ile.lignes) / 2;
     const w = casesX * T * vue.zoom, h = Math.max(casesY * T * vue.zoom, zh);
-    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 3);
+    // (pas plus fin qu'une fois et demie l'écran : le filtre en gros pixels relit toute la toile à
+    // chaque image, et au-delà on ne voit pas la différence ; à pleine finesse d'un téléphone, le
+    // jardin de Lóló et Mémé ne tournait plus qu'à quelques images par seconde)
+    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 1.5);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
     vue.toile.height = Math.round(h * dpr);
@@ -2063,12 +2066,18 @@
     g.putImageData(im, 0, 0);
   }
 
-  function dimensionnerIso() {
-    const ile = vue.ile;
-    // la place au-dessus de l'île pour les plus grandes plantes
+  // la place au-dessus de l'île pour les plus grandes plantes, les pins parasols et le relief (la
+  // même mesure pour dimensionner et pour savoir s'il faut redimensionner : avant, les pins n'étaient
+  // comptés que d'un côté, et tout le sol se repeignait à chaque image)
+  function placeAuDessus(ile) {
     let haut = T * 1.5;
     for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) haut = Math.max(haut, hauteurPx(q, ile, 3) + 10); }
-    haut += niveauMax(ile) * HZ;
+    for (const pn of ile.pins || []) haut = Math.max(haut, 46 * ECHELLE_PIN[pn.t] + 10);
+    return haut + niveauMax(ile) * HZ;
+  }
+  function dimensionnerIso() {
+    const ile = vue.ile;
+    const haut = placeAuDessus(ile);
     vue.headroom = haut;
     vue.ox = MARGE + ile.lignes * HW;
     vue.oy = MARGE + haut;
@@ -2077,7 +2086,10 @@
     const [zw, zh] = placeZone(w);
     if (zw > w) { vue.ox += (zw - w) / 2 / vue.zoom; w = zw; }
     if (zh > h) { vue.oy += (zh - h) / 2 / vue.zoom; h = zh; }
-    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 3);
+    // (pas plus fin qu'une fois et demie l'écran : le filtre en gros pixels relit toute la toile à
+    // chaque image, et au-delà on ne voit pas la différence ; à pleine finesse d'un téléphone, le
+    // jardin de Lóló et Mémé ne tournait plus qu'à quelques images par seconde)
+    const dpr = Math.min(window.devicePixelRatio || 1, 4096 / w, 4096 / h, 1.5);
     vue.dpr = dpr;
     vue.toile.width = Math.round(w * dpr);
     vue.toile.height = Math.round(h * dpr);
@@ -2292,11 +2304,7 @@
   function dessinerIso(ctxDest, sansNuit) {
     const ile = vue.ile, toile = vue.toile, ctx = ctxDest || toile.getContext("2d");
     // une nouvelle grande plante : on fait de la place au-dessus de l'île
-    let besoin = T * 1.5;
-    for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) besoin = Math.max(besoin, hauteurPx(q, ile, 3) + 10); }
-    for (const pn of ile.pins || []) besoin = Math.max(besoin, 46 * ECHELLE_PIN[pn.t] + 10);
-    besoin += niveauMax(ile) * HZ;
-    if (!ctxDest && Math.abs(besoin - vue.headroom) > 2) { dimensionnerIso(); peindreFondIso(); }
+    if (!ctxDest && Math.abs(placeAuDessus(ile) - vue.headroom) > 2) { dimensionnerIso(); peindreFondIso(); }
     const z = vue.zoom * vue.dpr, t = performance.now();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(vue.fond, 0, 0);
