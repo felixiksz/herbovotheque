@@ -570,11 +570,8 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
   --ampoules-h: repeating-linear-gradient(90deg, var(--ampoule-j) 0 6px, var(--ampoule-v) 6px 9px, var(--ampoule-j) 9px 15px, var(--menu-fond) 15px 18px);
   --ampoules-v: repeating-linear-gradient(180deg, var(--ampoule-j) 0 6px, var(--ampoule-v) 6px 9px, var(--ampoule-j) 9px 15px, var(--menu-fond) 15px 18px);
 }
-.dialogue, .pastille-scene, .sortie-maison, .boite-nuit, .etiquette-ferme, .panneau.menu-scene,
-:root[data-vue="village"] .outils-ferme,
-:root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile,
-:root[data-vue="balade"] .actions-balade > *, :root[data-ile] .terrain-tete a.bouton,
-.veille[data-moment="nuit"] .veille-aide, .bouton-icone, .note-rapide-bouton,
+.dialogue, .boite-nuit, .panneau.menu-scene,
+.veille[data-moment="nuit"] .veille-aide,
 :root[data-vue="balade"] .actions-balade > .bouton, .verrou[data-moment="nuit"] form {
   --ep: 4px;
   border: var(--ep) solid transparent;
@@ -590,5 +587,19 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
     var(--ampoules-v) right top / var(--ep) 100% no-repeat border-box;
   box-shadow: 0 0 0 2px var(--menu-fond), 6px 6px 0 2px rgba(15, 16, 53, 0.6);
 }
-.bouton-icone, .note-rapide-bouton, .etiquette-ferme { --ep: 3px; box-shadow: 0 0 0 2px var(--menu-fond), 4px 4px 0 2px rgba(15, 16, 53, 0.55); }
-.pastille-scene:hover, .pastille-scene:focus-visible, .sortie-maison:hover, .sortie-maison:focus-visible { outline: 2px solid var(--ampoule-v); }
+/* Les boutons secondaires et ceux qui restent toujours là (icônes, barres d'outils, « Maison »…) :
+   plus discrets, sans couleur, juste un biseau — la lumière en haut à gauche, l'ombre bleue en bas
+   à droite ; au survol, la lumière devient jaune */
+.pastille-scene, .sortie-maison, .etiquette-ferme, .bouton-icone, .note-rapide-bouton,
+:root[data-vue="village"] .outils-ferme,
+:root[data-ile] .outils-terrain, :root[data-ile] .options-outil, :root[data-ile] .pied-ile,
+:root[data-ile] .terrain-tete a.bouton, :root[data-vue="balade"] .actions-balade > .fin-balade {
+  border: 0;
+  background: var(--menu-fond);
+  box-shadow: inset 2px 2px 0 #4f55a8, inset -2px -2px 0 #10102e, 4px 4px 0 rgba(15, 16, 53, 0.6);
+  outline: none;
+}
+:is(.pastille-scene, .sortie-maison, .bouton-icone, .note-rapide-bouton, :root[data-ile] .terrain-tete a.bouton):is(:hover, :focus-visible) {
+  box-shadow: inset 2px 2px 0 var(--ampoule-j), inset -2px -2px 0 #10102e, 4px 4px 0 rgba(15, 16, 53, 0.6);
+  outline: none;
+}

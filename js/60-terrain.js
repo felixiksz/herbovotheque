@@ -568,8 +568,7 @@
           H.el("span.nom-ile", null, "Un jardin dans la brume"),
           H.el("span.mesures-ile", null, "Reviens le 24 février…"))
       ));
-    } else if (!(H.jeu.iles || {})[ILE_SECRETE] || ((H.jeu.iles[ILE_SECRETE].version || 1) < VERSION_ILE_SECRETE && !H.jeu.iles[ILE_SECRETE].supprime)) {
-      creerIleSecrete();
+    } else if (mettreAJourIleSecrete()) {
       return H.router();
     }
     conteneur.appendChild(grille);
@@ -730,6 +729,21 @@
     if (s && s.nom === "L’île de Lóló et Mémé") s.nom = NOM_JARDIN_SECRET;
   }
   H.sur("donnees", renommerJardinSecret);
+  // Le jardin de Lóló et Mémé n'est créé d'après le modèle qu'une fois : ensuite, ce qu'on y change
+  // dans le jeu reste (et passe d'un jeu à l'autre, voir 15-synchro.js). Une nouvelle version du
+  // modèle ajoute seulement ce qui manque, sans rien effacer (seules les toutes premières versions,
+  // d'avant le jardin redessiné par Mesi, sont refaites). Renvoie vrai si le jardin a changé.
+  function mettreAJourIleSecrete() {
+    const sec = (H.jeu.iles || {})[ILE_SECRETE];
+    if (!sec) { creerIleSecrete(); return true; }
+    if (sec.supprime || (sec.version || 1) >= VERSION_ILE_SECRETE) return false;
+    if ((sec.version || 1) < 5) { creerIleSecrete(); return true; }
+    const M = H.JARDIN_LOLO_MEME;
+    if (M && M.pins && !sec.pins) sec.pins = M.pins.map((p) => Object.assign({}, p));
+    sec.version = VERSION_ILE_SECRETE;
+    sauver(sec);
+    return true;
+  }
   function creerIleSecrete() {
     // d'après le modèle redessiné par Mesi, s'il est là : sa forme, ses chemins, son bassin, ses plantes
     const M = H.JARDIN_LOLO_MEME;
@@ -945,7 +959,7 @@
     truelle: ["............", "........kk..", ".......kgGk.", "......kggk..", ".....kggk...", "....kgGk....", "...kkkk.....", "..knNk......", ".knNk.......", "knNk........", "kkk.........", "............"],
     pousse: ["............", "...vv..vv...", "..vVVvvVVv..", "..vVVVVVVv..", "...vvVVvv...", ".....VV.....", ".....VV.....", "....nnnn....", "..nnnnnnnn..", ".nnnnnnnnnn.", "knnnnnnnnnnk", "kkkkkkkkkkkk"],
     // un papillon rose et une abeille, pour les animaux à emmener
-    papillon: ["..N...N.....", "...N.N......", "mm..N..mm...", "mMm.N.mMm...", "mmMmNmMmm...", ".mmMNMmm....", "..mm.mm.....", ".......wwB..", "......yNyyNN", ".....yyNyyNN", "......yNyyN.", "............"],
+    papillon: ["..N...N.....", "...N.N......", "mmm.N.mmm...", "mMmmNmmMm...", "mmmmNmmmm...", ".mm.N.mm....", ".MMMNMMM....", "..MM.MM.....", ".......wwB..", "......yNyyNN", ".....yyNyyNN", "......yNyyN."],
   };
   const imagesIcones = {};
   function imageIcone(nom) {
@@ -969,8 +983,7 @@
   function ouvrirIle(conteneur, id) {
     // (le jardin de Lóló et Mémé se met à jour aussi quand on l'ouvre directement, sans passer par
     // la liste des jardins)
-    const sec = (H.jeu.iles || {})[ILE_SECRETE];
-    if (id === ILE_SECRETE && sec && !sec.supprime && (sec.version || 1) < VERSION_ILE_SECRETE && ileSecreteOuverte()) creerIleSecrete();
+    if (id === ILE_SECRETE && ileSecreteOuverte()) mettreAJourIleSecrete();
     const ile = (H.jeu.iles || {})[id];
     if (!ile || ile.supprime || (ile.secrete && !ileSecreteOuverte())) {
       conteneur.appendChild(H.el("p", null, "Ce jardin n’existe pas (ou pas encore). ", H.el("a", { href: "#terrain" }, "Retour aux jardins")));

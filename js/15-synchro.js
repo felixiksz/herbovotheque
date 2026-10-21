@@ -204,12 +204,21 @@
           // la disposition de la ferme : seulement quand Mesi aménage dans le monde d'ƟvƟ
           if (H.monde !== "mesi") commun.planFerme = fusionnerCollection(H.jeu.planFerme, chezOvo && chezOvo.planFerme);
           const chezMoi = Object.assign({}, H.jeu, commun);
+          // le jardin de Lóló et Mémé : le même pour les deux (le plus récent l'emporte), pour que ce
+          // que Mesi y change arrive dans le jeu d'ƟvƟ ; les autres jardins de chacun·e n'y passent pas
+          let jardinCommun = null;
+          if (H.monde !== "mesi") {
+            const SECRET = "lolo-meme", a = (H.jeu.iles || {})[SECRET], b = ((chezOvo && chezOvo.iles) || {})[SECRET];
+            jardinCommun = fusionnerCollection(a ? { [SECRET]: a } : {}, b ? { [SECRET]: b } : {})[SECRET] || null;
+            if (jardinCommun) chezMoi.iles = Object.assign({}, H.jeu.iles, { [SECRET]: jardinCommun });
+          }
           if (canon(chezMoi) !== canon(H.jeu)) {
             H.jeu = chezMoi;
             await H.kv.ecrire(H.d.cleKv("jeu"), chezMoi);
             H.emettre("donnees", "jeu");
           }
           const versOvo = Object.assign({}, chezOvo || { modifieLe: 0 }, commun);
+          if (jardinCommun) versOvo.iles = Object.assign({}, (chezOvo && chezOvo.iles) || {}, { "lolo-meme": jardinCommun });
           if (!chezOvo || canon(versOvo) !== canon(chezOvo)) aEcrire[FICHIERS.jeu] = versOvo;
         }
         // ma partie à moi, partagée entre mes appareils : celle d'ƟvƟ, celle de Mesi, ou une partie d'essai
