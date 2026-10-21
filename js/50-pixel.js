@@ -547,8 +547,8 @@
     memePas: [MEME_DEBOUT, MEME_PAS],
     // Lóló de dos, qui regarde le paysage : les oreilles et la crinière, la croupe, la queue, les quatre pattes
     loloDos: [[".......kk..kk.....", "......knk..knk....", "......knnkknnk....", ".......kMMMMk.....", "........kMMk......", "....kkkkkMMkkkk...", "...knnnnnMMnnnnk..", "..knnnnnnnnnnnnnk.", "..knnnnnnnnnnnnnk.", ".knnnnnnMMnnnnnnk.", ".knnnnnnMMnnnnnnk.", ".knnnnnMMMMnnnnnk.", ".knnnnnMMMMnnnnnk.", "..knnnnMMMMnnnnk..", "..knnnkMMMMknnnk..", "..knnk.MMMM.knnk..", "..knnk.kMMk.knnk..", "..knnk..kk..knnk..", "..knnk......knnk..", "..kNNk......kNNk..", "...kk........kk..."]],
-    // (avec Mémé assise sur son dos, de dos elle aussi : les oreilles, le dos rayé, la queue qui pend)
-    get loloDosMeme() { const g = this.loloDos[0].map((l) => l.split("")); ["..kEkEk", ".ktTtTk", ".kTtTtk", "kttTttk", "kTttTtk", "kT.....", "kT.....", ".k....."].forEach((l, y) => l.split("").forEach((c, x) => { if (c !== ".") g[y + 2][x + 1] = c; })); const v = [g.map((l) => l.join(""))]; Object.defineProperty(this, "loloDosMeme", { value: v }); return v; },
+    // (avec Mémé assise au milieu de son dos, de dos elle aussi : les oreilles, le dos rayé, la queue qui pend)
+    get loloDosMeme() { const g = this.loloDos[0].map((l) => l.split("")); ["..kEkEk", ".ktTtTk", ".kTtTtk", "kttTttk", "kTttTtk", "kT.....", "kT.....", ".k....."].forEach((l, y) => l.split("").forEach((c, x) => { if (c !== ".") g[y + 3][x + 6] = c; })); const v = [g.map((l) => l.join(""))]; Object.defineProperty(this, "loloDosMeme", { value: v }); return v; },
   };
   const cache = new Map();
   // Lóló est une peluche : robe caramel, crinière, queue et sabots chocolat
