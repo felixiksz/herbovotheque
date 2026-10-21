@@ -275,6 +275,13 @@
   // la grande baie vitrée du salon, du plafond jusqu'au sol, derrière le canapé ; la fenêtre du
   // rez-de-chaussée, au-dessus de la plante
   const BAIE = { x: 240, y: 28, w: 264, h: 214 };
+  // les fenêtres des murs coupés (on les voit par la tranche, dans l'épaisseur du mur) : à droite
+  // une par étage, à gauche au salon et au grenier (en bas, c'est la porte). Le jour la lumière du
+  // ciel entre par elles, la nuit celle de la lune.
+  const FENETRES_COUPE = [
+    { cote: "g", y: 70, h: 96, etage: "salon" }, { cote: "g", y: -68, h: 38, etage: "grenier" },
+    { cote: "d", y: 318, h: 92, etage: "bas" }, { cote: "d", y: 70, h: 96, etage: "salon" }, { cote: "d", y: -68, h: 38, etage: "grenier" },
+  ];
   const FENETRE_BAS = { x: 486, y: 298, w: 62, h: 112 };
   function cheminFenetre(ctx, R) {
     R = R || BAIE;
@@ -1003,6 +1010,8 @@
       { x: BAIE.x + BAIE.w / 2, y: 200, rx: 300, ry: 150, col: ciel, rim, poids: lampes ? 0.3 : 1, etage: "salon" },
       { x: FENETRE_BAS.x + FENETRE_BAS.w / 2 - 20, y: 420, rx: 230, ry: 130, col: ciel.map((v) => v * 0.7), rim, poids: lampes ? 0.3 : 0.8, etage: "bas" },
       { x: 346, y: -90, rx: 250, ry: 120, col: ciel, rim, poids: lampes ? 0.3 : 1, etage: "grenier" },
+      // et par les fenêtres des murs coupés, de chaque côté
+      ...FENETRES_COUPE.map((f) => ({ x: f.cote === "g" ? 26 : LARGE - 26, y: f.y + f.h / 2 + 24, rx: f.h > 60 ? 210 : 150, ry: f.h > 60 ? 120 : 80, col: ciel.map((v) => v * 0.65), rim, poids: lampes ? 0.35 : 0.75, etage: f.etage })),
     ];
     if (lampes) {
       // la petite lampe posée sur l'enceinte, à côté du canapé ; la lampe de chevet ; la boule
@@ -1248,6 +1257,36 @@
     ctx.restore();
   }
 
+  // La lumière qui passe par les fenêtres des murs coupés : le jour (et au soleil couchant), un rai
+  // qui entre en biais et descend jusqu'au sol de la pièce ; la nuit, la lumière chaude des lampes
+  // traverse la vitre et déborde dehors, et un peu de clair de lune bleuté entre.
+  function raisFenetresCoupe(ctx, moment, t) {
+    const sol = { bas: NIV.bas.sol, salon: NIV.salon.sol, grenier: NIV.grenier.sol };
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const f of FENETRES_COUPE) {
+      const dir = f.cote === "g" ? 1 : -1, xin = f.cote === "g" ? 0 : LARGE, xout = f.cote === "g" ? -EP_MUR : LARGE + EP_MUR, bas = sol[f.etage];
+      const rai = (col, a, loin) => {
+        const g = ctx.createLinearGradient(xin, f.y, xin + dir * loin, bas);
+        g.addColorStop(0, rgba(col, a)); g.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.moveTo(xin, f.y + 4); ctx.lineTo(xin, f.y + f.h - 4); ctx.lineTo(xin + dir * loin * 0.55, bas); ctx.lineTo(xin + dir * loin, bas); ctx.closePath(); ctx.fill();
+      };
+      if (moment === "jour") rai([255, 244, 214], 0.2, f.h > 60 ? 170 : 110);
+      else if (moment === "soir") rai([255, 170, 110], 0.22, f.h > 60 ? 190 : 120);
+      else {
+        rai([150, 170, 255], 0.07, f.h > 60 ? 150 : 100);
+        // la lueur des lampes qui sort par la vitre, et se pose dehors
+        const cy = f.y + f.h / 2, vac = 0.92 + Math.sin(t / 900 + f.y) * 0.05;
+        const g = ctx.createRadialGradient(xout, cy, 2, xout, cy, f.h * 0.9);
+        g.addColorStop(0, rgba([255, 196, 110], 0.3 * vac)); g.addColorStop(1, rgba([255, 196, 110], 0));
+        ctx.fillStyle = g; ctx.fillRect(xout - (dir > 0 ? f.h : 0), cy - f.h, f.h, f.h * 2);
+        ctx.fillStyle = rgba([255, 226, 150], 0.55 * vac); ctx.fillRect(Math.min(xin, xout) + EP_MUR / 2 - 1, f.y + 4, 2, f.h - 8);
+      }
+    }
+    ctx.restore();
+  }
+
   // Les flammes derrière la vitre de la cheminée, qui dansent, et leur lueur qui se pose sur le sol et
   // le mur autour (sans halo dans l'air), plus forte le soir.
   // la lumière du feu en chaque point (elle vacille)
@@ -1442,6 +1481,20 @@
     for (const [x0, x1] of [[-EP_MUR, 0], [LARGE, LARGE + EP_MUR]]) {
       ctx.beginPath(); ctx.moveTo(x0, toitY(x0) + EP_TOIT); ctx.lineTo(x1, toitY(x1) + EP_TOIT); ctx.lineTo(x1, SOL_DEHORS); ctx.lineTo(x0, SOL_DEHORS); ctx.closePath();
       ctx.fill(); ctx.stroke();
+    }
+    // les fenêtres des murs coupés
+    for (const f of FENETRES_COUPE) {
+      const x0 = f.cote === "g" ? -EP_MUR : LARGE, { y, h } = f;
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "#000"; ctx.fillRect(x0, y, EP_MUR, h);
+      ctx.restore();
+      ctx.strokeRect(x0, y, EP_MUR, h);
+      // la vitre, vue par la tranche, au milieu du mur, dans son cadre en pin
+      bloc(ctx, x0 + EP_MUR / 2 - 3, y, 6, h, 1, PIN.b);
+      ctx.fillStyle = "#a8d8ec"; ctx.fillRect(x0 + EP_MUR / 2 - 1, y + 4, 2, h - 8);
+      blocBois(ctx, x0 - 3, y - 7, EP_MUR + 6, 7, 1, false, y + x0);
+      blocBois(ctx, x0 - 5, y + h, EP_MUR + 10, 5, 1, false, y + x0 + 1);
     }
     // la porte d'entrée, dans le mur de gauche : on la voit coupée, dans l'épaisseur du mur (le
     // linteau au-dessus, la vitre par la tranche, la poignée dehors). C'est par là qu'on sort sur
@@ -2532,6 +2585,7 @@
         m.drawImage(decor.chaises, BOITE.x, BOITE.y, BOITE.w, BOITE.h);
         raiDuVelux(m, ciel);
       }
+      raisFenetresCoupe(m, moment, t);
       const feu = cheminee.feuActif();
       if (feu) feuDuPoele(m, t, moment, decor);
       // Lóló et Mémé sur le canapé ; ƟvƟ et Mesi à la table du goûter (ou sur le canapé). Tout ça
