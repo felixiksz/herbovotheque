@@ -2127,10 +2127,8 @@
       ctx.translate(genou - 4, siege - 5);
       ctx.rotate(angle);
       bloc(ctx, -5, -2, 10, 19, 5, pantalon);
-      if (ete) {
-        bloc(ctx, -5, 14, 15, 4, 2, "#1f6fe0");
-        bloc(ctx, -6, 17, 17, 4, 2, "#f6c400");
-      } else bloc(ctx, -6, 14, 16, 7, 3.5, "#7a4520");
+      // (pieds nus, à la maison)
+      bloc(ctx, -5, 14, 13, 6, 3, "#f2c29b");
       ctx.restore();
     };
     ctx.save();
@@ -2183,8 +2181,9 @@
   };
   // les dessins de chacun·e quand il ou elle marche (Mémé sur le dos de Lóló s'ils viennent tous les deux)
   const ALLURE = {
-    ovo: () => ({ nom: "ovoProfil", e: 4.4, images: 4, arret: 4 }),
-    luigi: () => ({ nom: "luigiProfil", e: 4.4, images: 4, arret: 4 }),
+    // (pieds nus dans la maison ; les bottes attendent devant l'entrée)
+    ovo: () => ({ nom: "ovoPieds", e: 4.4, images: 4, arret: 4 }),
+    luigi: () => ({ nom: "luigiPieds", e: 4.4, images: 4, arret: 4 }),
     lolo: (avecMeme) => ({ nom: avecMeme ? "loloBalade" : "loloSeule", e: 3.5, images: 4, arret: 0 }),
     // (Mémé fait la moitié de la taille de Lóló)
     meme: () => ({ nom: "memePas", e: 4.5, images: 2, arret: 0 }),
@@ -2267,14 +2266,15 @@
     const paire = (x, dessus, semelle, penche) => {
       for (const d of [0, 9]) {
         ctx.save(); ctx.translate(x + d * 1.5, sol); ctx.scale(1.6, 1.6); ctx.rotate(penche * (d ? 1 : -1));
-        ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-1, -4); ctx.quadraticCurveTo(0, -6, 3, -6); ctx.lineTo(6, -4); ctx.quadraticCurveTo(8, -3, 8, 0); ctx.closePath();
-        ctx.fillStyle = dessus; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = ENCRE; ctx.stroke();
-        ctx.fillStyle = semelle; ctx.fillRect(-1, -1.6, 9, 1.6);
+        // une botte : la tige haute, le pied, la semelle
+        ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-1, -12); ctx.lineTo(4, -12); ctx.lineTo(4, -5); ctx.quadraticCurveTo(8, -4.5, 8.5, -1); ctx.lineTo(8.5, 0); ctx.closePath();
+        ctx.fillStyle = dessus; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = ENCRE; ctx.stroke();
+        ctx.fillStyle = semelle; ctx.fillRect(-1, -1.6, 9.5, 1.6); ctx.fillRect(-1, -12, 5, 1.4);
         ctx.restore();
       }
     };
-    paire(6, ete ? "#1f6fe0" : "#7a4520", ete ? "#f6c400" : "#3e2210", 0.05);
-    paire(38, "#c96a3a", "#3e2210", -0.08);
+    paire(6, "#e0b030", "#7a4520", 0.04);
+    paire(38, "#4f8a46", "#2f4a2a", -0.06);
   }
   // le rabat de la chatière, qui pend de son gond du haut et se balance en s'amortissant
   function rabatChatiere(ctx, t) {
@@ -2870,7 +2870,8 @@
       if (!trajet && place === "porte" && t - placeDepuis > 2500 && !H.$(".fenetre, .voile, .dialogue")) partir("table");
       if (!enRoute && (place === "porte" || place === "lit")) {
         const pl = PLACES[place];
-        for (const qui of ["ovo", "luigi"]) H.pixel.dessiner(cc, qui + "Profil", pl[qui], NIV[pl.niv].sol, 4.4, 4, place === "porte");
+        // (devant la porte, bottes aux pieds ; au lit, pieds nus)
+        for (const qui of ["ovo", "luigi"]) H.pixel.dessiner(cc, qui + (place === "porte" ? "Profil" : "Pieds"), pl[qui], NIV[pl.niv].sol, 4.4, 4, place === "porte");
       }
       const surCanape = !enRoute && place === "canape", ici = (qui) => !partis.has(qui);
       cc.save();

@@ -308,6 +308,9 @@
     const g = Array.from({ length: 24 }, () => Array(16).fill("."));
     const b = image % 2 || image === 4 ? 0 : 1; // le corps descend d'un pixel quand les jambes s'écartent
     const serviette = tenue && tenue.startsWith("serviette") ? tenue.split(":")[1] : null;
+    // (« pieds » : à la maison, pieds nus, le reste habillé)
+    const pieds = tenue === "pieds";
+    if (pieds) { sandales = false; tenue = null; }
     if (tenue) { haut = enMaillot(haut, tenue === "nage"); manche = "s"; sandales = false; }
     haut.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x, y + b, c)));
     const jambe = (dx, leve, pantalon, chaussure) => {
@@ -325,8 +328,8 @@
       } else for (let i = 0; i < 3; i++) poser(g, 7 + dx + i, bas, chaussure);
     };
     const [dxD, leveD, dxA, leveA] = PAS[image];
-    jambe(dxA, leveA, tenue ? "S" : "B", tenue ? "S" : "N"); // la jambe de derrière, plus sombre
-    jambe(dxD, leveD, tenue ? "s" : "b", tenue ? "s" : "n");
+    jambe(dxA, leveA, tenue ? "S" : "B", tenue || pieds ? "S" : "N"); // la jambe de derrière, plus sombre
+    jambe(dxD, leveD, tenue ? "s" : "b", tenue || pieds ? "s" : "n");
     if (serviette) {
       // la serviette enroulée, avec deux rayures claires
       for (let y = 13 + b; y <= 19; y++) for (let x = 3; x <= 13; x++) {
@@ -527,6 +530,9 @@
     ovoEte: [OVO_ETE, OVO_MARCHE_ETE],
     ovoProfilEte: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, true)),
     luigiProfil: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i)),
+    // pieds nus, à la maison
+    ovoPieds: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, false, "pieds")),
+    luigiPieds: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i, false, "pieds")),
     // pour se baigner, puis se sécher sur la plage
     ovoNage: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, false, "nage")),
     luigiNage: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i, false, "nage")),
