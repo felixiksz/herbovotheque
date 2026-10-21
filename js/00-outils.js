@@ -291,6 +291,10 @@ window.H = window.H || {};
     };
   };
 
+  // un raccourci clavier tel qu'il s'écrit sur cet appareil : ⌘K sur Mac, iPhone et iPad, Ctrl K ailleurs
+  const SUR_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || "");
+  H.touche = (lettre) => (SUR_MAC ? "⌘" + lettre : "Ctrl " + lettre);
+
   H.telecharger = function (nom, contenu, type) {
     const url = URL.createObjectURL(new Blob([contenu], { type: type || "text/plain;charset=utf-8" }));
     const a = H.el("a", { href: url, download: nom });

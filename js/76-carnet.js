@@ -738,10 +738,11 @@
   function colonne() {
     const etiq = Object.entries(indexEtiquettes()).sort((a, b) => b[1].length - a[1].length).slice(0, 24);
     return H.el("aside.colonne-carnet", null,
-      H.el("button.bouton-trait.chercher-carnet", { type: "button", onclick: chercherPartout }, H.el("span.icone-trait", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>' }), H.el("span", null, "Chercher partout"), H.el("kbd", null, "Ctrl K")),
+      H.el("button.bouton-trait.chercher-carnet", { type: "button", onclick: chercherPartout }, H.el("span.icone-trait", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>' }), H.el("span", null, "Chercher partout"), H.el("kbd", null, H.touche("K"))),
       H.el("div.pastilles", null,
         H.el("button.bouton.petit", { type: "button", onclick: () => { const p = nouvellePage(""); H.aller("carnet/" + p.id); } }, "+ Nouvelle page"),
-        H.el("button.bouton.petit", { type: "button", onclick: choisirModele }, "Depuis un modèle")),
+        H.el("button.bouton.petit", { type: "button", onclick: choisirModele }, "Depuis un modèle"),
+        H.el("button.bouton.petit.discret-bouton", { type: "button", title: "Lóló explique tout le carnet, sur une page d’exemple", onclick: () => H.lolo && H.lolo.visiteCarnet && H.lolo.visiteCarnet() }, "Lóló m’explique le carnet")),
       favoris().length ? H.el("section", null, H.el("h4", null, "Favoris"), H.el("ul.liste-carnet", null, favoris().map((f) => H.el("li", null, H.el("a", { href: "#" + f.id }, f.titre))))) : null,
       (H.local.recents || []).length ? H.el("section", null, H.el("h4", null, "Récents"), H.el("ul.liste-carnet", null, (H.local.recents || []).slice(0, 6).map((r) => H.el("li", null, H.el("a", { href: "#" + r.hash }, r.nom))))) : null,
       H.el("section", null, H.el("h4", null, "Pages"), toutes().length ? H.el("ul.arbre-carnet", null, arbre(null, 0)) : H.el("p.discret", null, "Pas encore de page.")),
@@ -775,7 +776,7 @@
   function accueil() {
     const recents = toutes().sort((a, b) => b.modifieLe - a.modifieLe).slice(0, 8);
     return H.el("article.page-carnet", null, H.el("h1.titre-carnet", null, "Carnet"),
-      H.el("p.discret", null, "Des pages libres pour tes notes de chantier, tes visites, tes idées. Tape « / » pour choisir un bloc, « [[ » pour relier une page, une plante, un jardin ou un client, et #étiquette pour classer. Ctrl K (ou ⌘K) cherche dans tout le jeu."),
+      H.el("p.discret", null, "Des pages libres pour tes notes de chantier, tes visites, tes idées. Tape « / » pour choisir un bloc, « [[ » pour relier une page, une plante, un jardin ou un client, et #étiquette pour classer. " + H.touche("K") + " cherche dans tout le jeu."),
       recents.length ? H.el("section", null, H.el("h3", null, "Modifiées dernièrement"), H.el("ul.liste-sources", null, recents.map((p) => H.el("li", null, H.el("a", { href: "#carnet/" + p.id }, p.titre || "Sans titre"), H.el("span.discret", null, " · " + new Date(p.modifieLe).toLocaleDateString("fr-FR")))))) : null);
   }
 
@@ -825,7 +826,45 @@
   }
   document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "j" && H.jeu) { e.preventDefault(); noteRapide(); } });
 
-  H.carnet = { citations, sectionCitees, chercherPartout, estFavori, basculerFavori, indexEtiquettes, rendre, noteRapide };
+  // La page d'exemple de la visite de Lóló : un bloc de chaque sorte (listes, encadré, partie
+  // dépliable, liens, étiquettes, tableau, feuille de calcul, vue des sous-pages en tableau), et trois
+  // sous-pages avec une date et un statut. Créée une fois ; si elle a été jetée, elle revient.
+  const ID_EXEMPLE = "page-mode-emploi";
+  function pageExemple() {
+    const deja = page(ID_EXEMPLE);
+    if (deja && !deja.supprime) return deja;
+    const t = H.maintenant(), jour = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+    const thym = (H.d.plantes().find((q) => /^thym/i.test(q.nom)) || {}).nom || "Thym";
+    const p = { id: ID_EXEMPLE, titre: "Le carnet, mode d’emploi", parent: null, etiquettes: ["exemple"], creeLe: t, modifieLe: t, blocs: [
+      bloc("p", "Une page d’exemple préparée par Lóló : tu peux tout essayer ici, puis la garder ou la mettre à la corbeille."),
+      bloc("h2", "Écrire"),
+      bloc("p", "Tape « / » au début d’une ligne pour choisir un bloc. Le texte peut être en **gras**, en *italique* ou ~~barré~~."),
+      bloc("puce", "Une liste à puces (raccourci : « - » puis espace)"),
+      bloc("todo", "Une case à cocher (raccourci : « [] »)"),
+      bloc("encadre", "Un encadré, pour ce qui est important (clique sur la pastille pour changer sa couleur)", { couleur: COULEURS_ENCADRE[1] || COULEURS_ENCADRE[0] }),
+      bloc("toggle", "Une partie dépliable : clique sur la flèche", { contenu: "Ce qui était replié. Pratique pour ranger les longues notes." }),
+      bloc("citation", "Une citation (raccourci : « > »)"),
+      bloc("h2", "Relier et classer"),
+      bloc("p", "Tape deux crochets ouvrants à la suite pour relier une page, une plante, un jardin ou un client : [[" + thym + "]]. Et une étiquette pour classer : #exemple."),
+      bloc("h2", "Tableaux"),
+      bloc("p", "Un tableau simple, pour une liste :"),
+      bloc("tableau", "", { lignes: [["Fourniture", "Quantité", "Prix"], ["Terreau", "2 sacs", "12 €"], ["Paillage", "1 balle", "18 €"]] }),
+      bloc("p", "Une feuille de calcul, qui compte toute seule (clique sur une case pour voir sa formule) :"),
+      bloc("feuille", "", { entete: true, cellules: [["Plante", "Pots", "Prix du pot", "Total"], ["Lavande", "6", "4,5", "=B2*C2"], ["Romarin", "4", "5", "=B3*C3"], ["Thym", "10", "3", "=B4*C4"], ["Ensemble", "=SOMME(B2:B4)", "=MOYENNE(C2:C4)", "=SOMME(D2:D4)"]] }),
+      bloc("h2", "Les sous-pages"),
+      bloc("p", "Les pages rangées dans celle-ci, vues en tableau avec leur date et leur statut :"),
+      bloc("vue", "", { source: "sous-pages", disposition: "tableau" }),
+    ] };
+    garder(p, true);
+    [["Visite du jardin de Mme Martin", 3, "À faire"], ["Plantation de la haie", -2, "Fait"], ["Devis du jardin sec", 1, "En cours"]].forEach(([titre, n, statut], i) => {
+      const q = nouvellePage(titre, p.id, [bloc("p", "Une sous-page d’exemple, rangée dans « Le carnet, mode d’emploi ».")]);
+      Object.assign(q, { date: jour(n), statut, ordre: t + i });
+      garder(q, true);
+    });
+    return p;
+  }
+
+  H.carnet = { citations, sectionCitees, chercherPartout, estFavori, basculerFavori, indexEtiquettes, rendre, noteRapide, pageExemple };
   H.vues.carnet = {
     afficher(c, params) { conteneur = c; dessiner(params); },
     mettreAJour(params) { if (aEnregistrer) { garder(aEnregistrer); aEnregistrer = null; } dessiner(params); },

@@ -603,3 +603,7 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
   box-shadow: inset 2px 2px 0 var(--ampoule-j), inset -2px -2px 0 #10102e, 4px 4px 0 rgba(15, 16, 53, 0.6);
   outline: none;
 }
+
+/* ce que Lóló montre pendant la visite : un cadre qui clignote autour, vert pré et jaune */
+.lolo-montre { outline: 3px dashed var(--ampoule-v) !important; outline-offset: 3px; animation: lolo-montre 0.9s steps(2) infinite; }
+@keyframes lolo-montre { 50% { outline-color: var(--ampoule-j); } }

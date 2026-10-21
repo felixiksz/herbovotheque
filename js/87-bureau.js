@@ -79,7 +79,7 @@
   }
 
   // la note rapide, toujours dans un coin de l'écran (un geste, et on écrit)
-  document.body.appendChild(H.el("button.note-rapide-bouton", { type: "button", title: "Note rapide (Ctrl J)", "aria-label": "Note rapide", onclick: () => H.carnet && H.carnet.noteRapide() },
+  document.body.appendChild(H.el("button.note-rapide-bouton", { type: "button", title: "Note rapide (" + H.touche("J") + ")", "aria-label": "Note rapide", onclick: () => H.carnet && H.carnet.noteRapide() },
     icone(ICONES.find((x) => x[0] === "carnet")[2])));
 
   // dans le menu du haut, les réglages en icône : le même rouage gris
@@ -164,7 +164,7 @@
       } }, icone(ICONES.find((x) => x[0] === "carnet")[2]), H.el("span", null, "Carnet"));
       H.$("#entete").append(carnet);
       // la loupe : chercher dans tout le jeu (aussi Ctrl K ou ⌘K)
-      H.$("#entete").append(H.el("button.chercher-entete", { type: "button", title: "Chercher partout (Ctrl K)", "aria-label": "Chercher partout", onclick: () => H.carnet && H.carnet.chercherPartout(),
+      H.$("#entete").append(H.el("button.chercher-entete", { type: "button", title: "Chercher partout (" + H.touche("K") + ")", "aria-label": "Chercher partout", onclick: () => H.carnet && H.carnet.chercherPartout(),
         html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>' }), h);
     }
     h.textContent = new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
