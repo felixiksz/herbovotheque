@@ -694,7 +694,7 @@
   // grenouilles, canards), et tout autour beaucoup de romarin et de thym.
   // (version 4 : la forme redessinée par Mesi, voir 59-jardin-lolo-meme.js ; version 5 : le
   // terrain surélevé hors du cœur)
-  const VERSION_ILE_SECRETE = 5;
+  const VERSION_ILE_SECRETE = 6;
   const NOM_JARDIN_SECRET = "Le jardin de Lóló et Mémé";
   function renommerJardinSecret() {
     const s = (H.jeu && H.jeu.iles || {})[ILE_SECRETE];
@@ -714,6 +714,7 @@
       for (const k of M.vides) ile.vides[k] = true;
       for (const [k, t] of Object.entries(M.cases)) ile.cases[k] = { t };
       if (M.relief) ile.relief = JSON.parse(JSON.stringify(M.relief));
+      if (M.pins) ile.pins = M.pins.map((p) => Object.assign({}, p));
       for (const [k, id] of Object.entries(M.plantes)) if (H.d.plante(id)) ile.plantes[k] = { p: id, le: maintenant, c: 100, eau: 80, maj: maintenant };
       sauver(ile);
       return;
@@ -849,6 +850,25 @@
   }
 
   // le bassin et ses habitants, dessinés par-dessus l'île (en cases ; T pixels par case)
+  // les pins parasols : leur taille en relief (le dessin de la ferme, agrandi) et vus d'en haut
+  const ECHELLE_PIN = { 1: 2.2, 2: 3, 3: 3.8 }, RAYON_PIN = { 1: 1.4, 2: 1.9, 3: 2.4 };
+  // l'ombrelle vue du ciel : son ombre bleue portée en bas à droite, puis des touffes d'aiguilles,
+  // sombres dessous, claires côté soleil (en haut à gauche)
+  function ombrellePinDessus(ctx, cx, cy, r, graine) {
+    const rnd = H.alea("pin" + graine), px = 2;
+    const touffe = (x, y, rr, couleur) => {
+      ctx.fillStyle = couleur;
+      for (let dy = -rr; dy <= rr; dy += px) for (let dx = -rr; dx <= rr; dx += px)
+        if (dx * dx + dy * dy <= rr * rr * (0.75 + 0.25 * ((H.hash(Math.round(x + dx) + "," + Math.round(y + dy)) % 100) / 100))) ctx.fillRect(Math.round((x + dx) / px) * px, Math.round((y + dy) / px) * px, px, px);
+    };
+    touffe(cx + r * 0.35, cy + r * 0.3, r, "rgba(38,40,106,0.32)");
+    const n = Math.round(6 + r / 6), touffes = [];
+    for (let i = 0; i < n; i++) { const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * r * 0.62; touffes.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.3 + rnd() * 0.16)]); }
+    touffe(cx, cy, r * 0.86, "#173a2c");
+    for (const [x, y, rr] of touffes) touffe(x, y, rr, "#2c6a3c");
+    for (const [x, y, rr] of touffes) touffe(x - rr * 0.25, y - rr * 0.3, rr * 0.7, "#4a9a46");
+    for (const [x, y, rr] of touffes) touffe(x - rr * 0.4, y - rr * 0.45, rr * 0.35, "#8cc46a");
+  }
   function dessinerMare(ctx, ile, t) {
     const m = ile.mare;
     const X = (x) => x * T, Y = (y) => y * T;
@@ -2194,6 +2214,7 @@
     // une nouvelle grande plante : on fait de la place au-dessus de l'île
     let besoin = T * 1.5;
     for (const pl of Object.values(ile.plantes || {})) { const q = H.d.plante(pl.p); if (q) besoin = Math.max(besoin, hauteurPx(q, ile, 3) + 10); }
+    for (const pn of ile.pins || []) besoin = Math.max(besoin, 46 * ECHELLE_PIN[pn.t] + 10);
     besoin += niveauMax(ile) * HZ;
     if (!ctxDest && Math.abs(besoin - vue.headroom) > 2) { dimensionnerIso(); peindreFondIso(); }
     const z = vue.zoom * vue.dpr, t = performance.now();
@@ -2294,6 +2315,18 @@
       }
     }
     if (ile.mare || (ile.animaux && ile.animaux.length)) debout.push({ prof: 0, dessin: () => dessinerAnimaux(ctx, ile, t, proj) });
+    // les pins parasols (ceux du jardin de Lóló et Mémé), dessinés comme à la ferme
+    for (const pn of ile.pins || []) {
+      const img = H.ferme && H.ferme.pin && H.ferme.pin((pn.x * 7 + pn.y * 3) % 3, pn.x, pn.y);
+      if (!img) continue;
+      debout.push({ prof: pn.x + pn.y + 1, dessin: () => {
+        const [sx, sy] = projH(pn.x + 0.5, pn.y + 0.5), e = ECHELLE_PIN[pn.t], w = img.width * e, h = img.height * e;
+        ctx.save(); ctx.imageSmoothingEnabled = false;
+        if ((pn.x + pn.y) % 2) { ctx.translate(Math.round(sx), 0); ctx.scale(-1, 1); ctx.drawImage(img, Math.round(-w / 2), Math.round(sy - h + 2), w, h); }
+        else ctx.drawImage(img, Math.round(sx - w / 2), Math.round(sy - h + 2), w, h);
+        ctx.restore();
+      } });
+    }
     // les paniers de la récolte du jour, sur le bord de devant
     paniersIle(ile).forEach((b, i) => {
       const q = H.d.plante(b.p), [bx, by] = placePanier(ile, i);
@@ -2525,6 +2558,8 @@
       vue.potsOiseau.push(q);
       ctx.save(); ctx.translate(Math.round(q.x * T), Math.round(q.y * T)); ctx.scale(1.7, 1.7); potFlottant(ctx, 0, 0, pq, vue.outil === "planter" && vue.depuisSerre && vue.plante === q.id, performance.now(), i); ctx.restore();
     });
+
+    for (const pn of ile.pins || []) ombrellePinDessus(ctx, (pn.x + 0.5) * T, (pn.y + 0.5) * T, RAYON_PIN[pn.t] * T, pn.x * 31 + pn.y * 7);
 
     // Lóló et Mémé sur leur île
     if (ile.secrete) {
@@ -2988,6 +3023,7 @@
     // (le bassin et la place de Lóló suivent aussi)
     if (ile.mare) ile.mare = Object.assign({}, ile.mare, { cx: ile.mare.cx + dx, cy: ile.mare.cy + dy });
     if (ile.lolo) ile.lolo = Object.assign({}, ile.lolo, { x: ile.lolo.x + dx, y: ile.lolo.y + dy });
+    if (ile.pins) ile.pins = ile.pins.map((p) => Object.assign({}, p, { x: p.x + dx, y: p.y + dy }));
     ile.cols = Math.max(1, ile.cols + dx); ile.lignes = Math.max(1, ile.lignes + dy);
     if (vue && vue.ile === ile) {
       vue.ovo.x += dx; vue.ovo.y += dy; if (vue.ovo.cible) { vue.ovo.cible.x += dx; vue.ovo.cible.y += dy; }

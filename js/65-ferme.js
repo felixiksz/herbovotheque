@@ -2137,6 +2137,8 @@
     return paysages.get(cle);
   }
   H.ferme = { scene: () => scene, fond: () => fond, paysage, elements: () => elementsIso(), aUnBassin: () => casesBassin().length > 0,
+    // un pin parasol de la ferme, en plein jour et éclairé de gauche, pour les jardins
+    pin: (v, x, y) => { const n0 = nuit, c0 = cote; nuit = false; cote = 1; try { return dessinPlante({ e: "pin", v, x, y }); } finally { nuit = n0; cote = c0; } },
     // les bêtes de la nuit, pour qu'on les voie aussi passer depuis la maison
     betes: { RENARD, RENARD_PAS, SANGLIER, SANGLIER_PAS, MARCASSIN, MARCASSIN_PAS, HERISSON, HERISSON_PAS, PAL_BETES, PAL_BASSIN } };
   H.vues.village = {

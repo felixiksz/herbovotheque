@@ -150,40 +150,6 @@
 
   H.lettres = { aLire: () => aLire().length };
 
-  // --- le message du matin ------------------------------------------------------------------
-  // Le premier matin de la journée, Mesi écrit : « Jó reggelt! », puis « JQTBD? ». ƟvƟ répond
-  // « JR BB! », puis O ou N, et lui demande à son tour « JQTBD? ». Mesi répond O!!:) ou N :(
-  // (sa vraie réponse, si elle l'a donnée ce matin sur son appareil ; sinon, la plus probable).
-  // Sur l'appareil de Mesi, c'est elle qui écrit, et qui choisit sa réponse.
-  const jour = () => { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
-  function noterMatin(qui, reponse) {
-    const id = jour() + "|" + qui;
-    H.jeu.matins = Object.assign({}, H.jeu.matins, { [id]: { id, qui, reponse, modifieLe: H.maintenant() } });
-    H.d.changer("jeu");
-  }
-  const reponseDe = (qui) => ((H.jeu.matins || {})[jour() + "|" + qui] || {}).reponse;
-  async function messageDuMatin() {
-    const h = new Date().getHours();
-    if (h < 5 || h >= 12 || H.local.messageMatin === jour() || H.$(".dialogue") || !H.jeu) return;
-    H.d.majLocal((l) => (l.messageMatin = jour()));
-    if (moi() === "mesi") {
-      await H.dialogue.dire([{ brut: true, qui: "luigi", texte: "Jó reggelt!" }, { brut: true, qui: "luigi", texte: "JQTBD?" }]);
-      const r = reponseDe("ovo");
-      if (r) await H.dialogue.dire([{ brut: true, qui: "ovo", texte: "JR BB!" }, { brut: true, qui: "ovo", texte: r }, { brut: true, qui: "ovo", texte: "JQTBD?" }]);
-      const m = await H.dialogue.dire([{ brut: true, qui: "luigi", texte: r ? "…" : "(Quand ƟvƟ te demandera « JQTBD? »…)", choix: [{ valeur: "O!!:)", libelle: "O!!:)" }, { valeur: "N :(", libelle: "N :(" }] }]);
-      if (m) noterMatin("mesi", m);
-      return;
-    }
-    const a = await H.dialogue.dire([{ brut: true, qui: "luigi", texte: "Jó reggelt!" }, { brut: true, qui: "luigi", texte: "JQTBD?", choix: [{ valeur: "jr", libelle: "JR BB!" }] }]);
-    if (!a) return;
-    const r = await H.dialogue.dire([{ brut: true, qui: "ovo", texte: "JR BB!", choix: [{ valeur: "O", libelle: "O" }, { valeur: "N", libelle: "N" }] }]);
-    if (!r) return;
-    noterMatin("ovo", r);
-    const m = reponseDe("mesi") || (Math.random() < 0.8 ? "O!!:)" : "N :(");
-    await H.dialogue.dire([{ brut: true, qui: "ovo", texte: r }, { brut: true, qui: "ovo", texte: "JQTBD?" }, { brut: true, qui: "luigi", texte: m }]);
-  }
-  H.sur("vue", (v) => { if (v === "village" || v === "maison") setTimeout(messageDuMatin, 1500); });
-
   H.vues.lettres = {
     afficher(c) {
       conteneur = c;
