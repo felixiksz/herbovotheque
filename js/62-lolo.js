@@ -288,7 +288,7 @@
       ["terrain", [
         "Tes jardins ! « Nouveau jardin » pour en commencer un : un jardin de jeu qui pousse pour de vrai, un croquis de projet à l’échelle, ou un jardin surprise à offrir.",
         "En mode Jardin, on plante, on arrose, on récolte. En mode Chantier : « Aménager » pour les chemins, l’eau, les murets en pierres sèches ; « Soleil et sol » pour peindre l’ombre et la terre.",
-        "« Déplacer » pour bouger une plante sans la replanter, « Forme du jardin » pour dessiner ses contours, et « Relief » pour monter des buttes et des terrasses, avec un talus ou un muret.",
+        "« Déplacer » pour bouger une plante sans la replanter, « Forme du jardin » pour dessiner ses contours, et « Relief » pour des buttes en pente douce, des talus ou des terrasses à muret.",
         "La touche V passe en vue d’oiseau. On zoome avec la molette, le pavé tactile ou deux doigts. Et tu peux importer un dessin à décalquer.",
         "Le bouton exporter sort la liste des plantes ou le croquis en PDF. Et dans les réglages du jardin (le rouage), tu peux le renommer ou l’offrir en surprise.",
       ]],

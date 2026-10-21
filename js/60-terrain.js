@@ -45,6 +45,35 @@
   const niveau = (ile, x, y) => { const r = ile.relief && ile.relief[cle(x, y)]; return r && !estVide(ile, x, y) ? r.n || 0 : 0; };
   const muret = (ile, x, y) => !!(ile.relief && (ile.relief[cle(x, y)] || {}).mur);
   const niveauMax = (ile) => Object.values(ile.relief || {}).reduce((m, r) => Math.max(m, (r && r.n) || 0), 0);
+  // Les pentes douces : une case « en pente » n'est pas un plateau mais un plan incliné, tendu entre
+  // les hauteurs de ses quatre coins. Un coin prend la hauteur des cases à plat qui le touchent (la
+  // plus haute, s'il y en a plusieurs), pour que la pente les rejoigne sans marche ; entre cases en
+  // pente seulement, la moyenne de leurs niveaux : les crans se fondent en une pente lisse.
+  const enPente = (ile, x, y) => !!(ile.relief && (ile.relief[cle(x, y)] || {}).pente) && !estVide(ile, x, y);
+  let coinsMemo = null;
+  function coinsRelief(ile) {
+    const m = coinsMemo;
+    if (m && m.r === ile.relief && m.v === ile.vides && m.C === ile.cols && m.L === ile.lignes) return m.h;
+    const C = ile.cols, L = ile.lignes, h = new Float32Array((C + 1) * (L + 1));
+    for (let j = 0; j <= L; j++) for (let i = 0; i <= C; i++) {
+      let plat = -1, somme = 0, nb = 0;
+      for (const [x, y] of [[i - 1, j - 1], [i, j - 1], [i - 1, j], [i, j]]) {
+        if (estVide(ile, x, y)) continue;
+        const n = niveau(ile, x, y);
+        if (enPente(ile, x, y)) { somme += n; nb++; } else plat = Math.max(plat, n);
+      }
+      h[j * (C + 1) + i] = plat >= 0 ? plat : nb ? somme / nb : 0;
+    }
+    coinsMemo = { r: ile.relief, v: ile.vides, C, L, h };
+    return h;
+  }
+  // la hauteur du sol (en crans) en un point du jardin, pente comprise
+  function hauteurIci(ile, fx, fy) {
+    const x = Math.floor(fx), y = Math.floor(fy);
+    if (!enPente(ile, x, y)) return niveau(ile, x, y);
+    const h = coinsRelief(ile), C1 = ile.cols + 1, u = fx - x, v = fy - y;
+    return h[y * C1 + x] * (1 - u) * (1 - v) + h[y * C1 + x + 1] * u * (1 - v) + h[(y + 1) * C1 + x] * (1 - u) * v + h[(y + 1) * C1 + x + 1] * u * v;
+  }
   function texteEchelle(ile) {
     return ile.largeur + " × " + ile.longueur + " m · une case = " + (ile.caseM < 1 ? ile.caseM * 100 + " cm" : ile.caseM + " m") + (ile.croquis ? " · croquis" : "");
   }
@@ -1120,9 +1149,9 @@
       for (const [id, nom] of [["monter", "Monter d’un cran"], ["descendre", "Descendre d’un cran"], ["aplanir", "Aplanir"]])
         o.appendChild(H.el("button.bouton.petit" + (mode === id ? ".actif" : ""), { type: "button", onclick: () => { vue.reliefMode = id; dessinerOutils(); } }, nom));
       o.appendChild(H.el("span.cout", null, " Bord :"));
-      for (const [id, nom] of [["talus", "Talus"], ["muret", "Muret en pierres sèches"]])
+      for (const [id, nom] of [["pente", "Pente douce"], ["talus", "Talus"], ["muret", "Muret en pierres sèches"]])
         o.appendChild(H.el("button.bouton.petit" + (style === id ? ".actif" : ""), { type: "button", onclick: () => { vue.reliefStyle = id; dessinerOutils(); } }, nom));
-      o.appendChild(H.el("span.cout", null, "Glisse le doigt sur les cases à monter ou à descendre (un cran ≈ 30 cm, six au plus). Des crans réguliers font une pente ; un muret fait une terrasse."));
+      o.appendChild(H.el("span.cout", null, "Glisse le doigt sur les cases à monter ou à descendre (un cran ≈ 30 cm, six au plus). En pente douce, les crans se fondent en une pente lisse ; un talus fait une marche, un muret une terrasse."));
     } else if (vue.outil === "forme") {
       const mode = vue.formeMode || "ajouter";
       const modes = [["ajouter", "Pinceau : terre"], ["enlever", "Gomme : mer"], ["contour", "Tracer le contour"]].concat(vue.calque ? [["deplacer", "Déplacer le dessin"]] : []);
@@ -1358,9 +1387,16 @@
       for (let y = 0; y < ile.lignes; y++) for (let x = 0; x < ile.cols; x++) {
         const n = niveau(ile, x, y);
         if (n) { ctx.fillStyle = "rgba(255,236,190," + Math.min(0.32, 0.06 * n) + ")"; ctx.fillRect((x + BX) * k, (y + BY) * k, k, k); }
+        // une pente : plus claire tournée vers le soleil (en haut à gauche), bleutée à l'opposé
+        if (enPente(ile, x, y)) {
+          const h = coinsRelief(ile), C1 = ile.cols + 1, i0 = y * C1 + x, e = ((h[i0 + 1] + h[i0 + C1 + 1]) - (h[i0] + h[i0 + C1])) / 2 + ((h[i0 + C1] + h[i0 + C1 + 1]) - (h[i0] + h[i0 + 1])) / 2;
+          if (Math.abs(e) > 0.05) { ctx.fillStyle = e > 0 ? "rgba(255,240,192," + Math.min(0.45, e * 0.32) + ")" : "rgba(38,40,106," + Math.min(0.35, -e * 0.22) + ")"; ctx.fillRect((x + BX) * k, (y + BY) * k, k, k); }
+        }
         for (const [dx, dy] of [[1, 0], [0, 1]]) {
           const nx = x + dx, ny = y + dy;
           if (estVide(ile, nx, ny) || niveau(ile, nx, ny) === n) continue;
+          // (là où une pente rejoint sa voisine, pas de marche : pas de trait)
+          if ((enPente(ile, x, y) || enPente(ile, nx, ny)) && Math.abs(hauteurIci(ile, x + 0.5 + dx * 0.499, y + 0.5 + dy * 0.499) - hauteurIci(ile, nx + 0.5 - dx * 0.499, ny + 0.5 - dy * 0.499)) < 0.2) continue;
           const haut = n > niveau(ile, nx, ny) ? [x, y] : [nx, ny], mur = muret(ile, haut[0], haut[1]);
           // l'ombre portée au pied du muret ou du talus, quand le bas est à droite ou en dessous
           // (le soleil vient d'en haut à gauche), plus longue si la marche est haute
@@ -1388,7 +1424,7 @@
   const proj = (x, y) => [vue.ox + (x - y) * HW, vue.oy + (x + y) * QH];
   const versCase = (lx, ly) => { const u = (lx - vue.ox) / HW, w = (ly - vue.oy) / QH; return [(u + w) / 2, (w - u) / 2]; };
   // (ce qui se tient sur une case se tient à sa hauteur)
-  const projH = (x, y) => { const q = proj(x, y); return [q[0], q[1] - niveau(vue.ile, Math.floor(x), Math.floor(y)) * HZ]; };
+  const projH = (x, y) => { const q = proj(x, y); return [q[0], q[1] - hauteurIci(vue.ile, x, y) * HZ]; };
   // la case qu'on voit sous un point de l'écran, relief compris : on suit le regard depuis le haut,
   // la première case dont la hauteur atteint le regard est celle qu'on touche
   function caseSous(lx, ly) {
@@ -1397,7 +1433,7 @@
     for (let t = m * HZ; t >= 0; t--) {
       const a = versCase(lx, ly + t), cx = Math.floor(a[0]), cy = Math.floor(a[1]);
       if (estVide(ile, cx, cy)) continue;
-      if (niveau(ile, cx, cy) * HZ >= t) return a;
+      if (hauteurIci(ile, a[0], a[1]) * HZ >= t) return a;
     }
     return versCase(lx, ly);
   }
@@ -2098,8 +2134,21 @@
     const mH = niveauMax(ile), tMax = mH * HZ;
     // (les cases, lues une fois : leur sorte, et leur hauteur, -1 pour la mer ; la peinture ne
     // cherche plus rien par nom, pixel après pixel)
-    const grilleH = new Int8Array(C * Lg), casesG = new Array(C * Lg);
-    for (let j = 0; j < Lg; j++) for (let i = 0; i < C; i++) { casesG[j * C + i] = caseDe(ile, i, j); grilleH[j * C + i] = estVide(ile, i, j) ? -1 : niveau(ile, i, j); }
+    const grilleH = new Int8Array(C * Lg), casesG = new Array(C * Lg), penteG = new Uint8Array(C * Lg), coins = coinsRelief(ile), C1 = C + 1;
+    for (let j = 0; j < Lg; j++) for (let i = 0; i < C; i++) { casesG[j * C + i] = caseDe(ile, i, j); grilleH[j * C + i] = estVide(ile, i, j) ? -1 : niveau(ile, i, j); penteG[j * C + i] = enPente(ile, i, j) ? 1 : 0; }
+    // (la hauteur en un point d'une case en pente : entre ses quatre coins)
+    const surPente = (ix, iy, u, v) => coins[iy * C1 + ix] * (1 - u) * (1 - v) + coins[iy * C1 + ix + 1] * u * (1 - v) + coins[(iy + 1) * C1 + ix] * (1 - u) * v + coins[(iy + 1) * C1 + ix + 1] * u * v;
+    // la lumière sur une pente (comme sur les talus : tournée vers le devant à gauche, au soleil ;
+    // vers le devant à droite, à l'ombre bleue)
+    const melange = (c, vers, a) => { const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255; return 0xff000000 | (Math.round(r + (vers[2] - r) * a) << 16) | (Math.round(g + (vers[1] - g) * a) << 8) | Math.round(b + (vers[0] - b) * a); };
+    const CHAUD = [255, 240, 192], OMBRE = [38, 40, 106];
+    // la hauteur en un point quelconque (hors du jardin : celle d'à côté)
+    const hauteurEn = (ax, ay, defaut) => {
+      const ix = Math.floor(ax), iy = Math.floor(ay);
+      if (ix < 0 || iy < 0 || ix >= C || iy >= Lg) return defaut;
+      const n = grilleH[iy * C + ix];
+      return n < 0 ? defaut : penteG[iy * C + ix] ? surPente(ix, iy, ax - ix, ay - iy) : n;
+    };
     for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
       // (avec du relief, on suit le regard : le dessus d'une case haute, ou la face d'un talus ou
       // d'un muret entre deux niveaux, à gauche au soleil, à droite à l'ombre)
@@ -2114,9 +2163,13 @@
           const w = w0 + tt / QH, ax = (uu + w) / 2, ay = (w - uu) / 2, ix = Math.floor(ax), iy = Math.floor(ay);
           if (ix < 0 || iy < 0 || ix >= C || iy >= Lg) continue;
           const n = grilleH[iy * C + ix];
-          if (n < 0 || n * HZ < tt) continue;
+          if (n < 0) continue;
+          const hh = penteG[iy * C + ix] ? surPente(ix, iy, ax - ix, ay - iy) : n;
+          if (hh * HZ < tt) continue;
           fx = ax; fy = ay; vu = true;
-          if (n * HZ - tt >= 1) { face = 1 - (fy - iy) < 1 - (fx - ix) ? 1 : 2; prof = n * HZ - tt; }
+          // (sur une pente, le regard dépasse un peu le sol d'un pas à l'autre : ce n'est une face
+          // que s'il s'enfonce nettement)
+          if (hh * HZ - tt >= (penteG[iy * C + ix] ? 2 : 1)) { face = 1 - (fy - iy) < 1 - (fx - ix) ? 1 : 2; prof = hh * HZ - tt; }
           break;
         }
         if (!vu) continue;
@@ -2163,7 +2216,18 @@
           col = prof <= 2 ? PAL.herbe[clair ? 3 : 1] : clair ? (h < 0.15 ? "#7a4520" : "#9a6a3c") : (h < 0.15 ? "#4b3427" : "#7a4520");
         }
       }
-      px[y * lw + x] = c32(col);
+      let c = c32(col);
+      if (!face && penteG[cy0 * C + cx0]) {
+        // (la pente mesurée sur une demi-case autour du point : la lumière passe en douceur d'une
+        // case à l'autre ; le soleil vient du devant, un peu sur la gauche ; et plus haut, plus chaud)
+        const hc = surPente(cx0, cy0, u, v), dd = 0.35;
+        const gx = (hauteurEn(fx + dd, fy, hc) - hauteurEn(fx - dd, fy, hc)) / (2 * dd), gy = (hauteurEn(fx, fy + dd, hc) - hauteurEn(fx, fy - dd, hc)) / (2 * dd);
+        const e = 0.6 * gx - gy;
+        if (e > 0.04) c = melange(c, CHAUD, Math.min(0.34, e * 0.26));
+        else if (e < -0.04) c = melange(c, OMBRE, Math.min(0.45, -e * 0.34));
+        if (hc > 0.3) c = melange(c, CHAUD, Math.min(0.12, hc * 0.022));
+      }
+      px[y * lw + x] = c;
     }
     const plat = document.createElement("canvas");
     plat.width = lw; plat.height = lh;
@@ -2176,8 +2240,8 @@
     const bords = [];
     for (let y = 0; y < Lg; y++) for (let x = 0; x < C; x++) {
       if (estVide(ile, x, y)) continue;
-      if (estVide(ile, x, y + 1)) bords.push([[x, y + 1], [x + 1, y + 1], niveau(ile, x, y) * HZ]);
-      if (estVide(ile, x + 1, y)) bords.push([[x + 1, y + 1], [x + 1, y], niveau(ile, x, y) * HZ]);
+      if (estVide(ile, x, y + 1)) bords.push([[x, y + 1], [x + 1, y + 1], hauteurIci(ile, x + 0.5, y + 0.999) * HZ]);
+      if (estVide(ile, x + 1, y)) bords.push([[x + 1, y + 1], [x + 1, y], hauteurIci(ile, x + 0.999, y + 0.5) * HZ]);
     }
     for (const [a, b, dh] of bords) {
       const [x0, y0] = proj(a[0], a[1]), [x1, y1] = proj(b[0], b[1]), n2 = Math.round(Math.abs(x1 - x0));
@@ -2229,7 +2293,7 @@
     ctx.save();
     aplat(ctx, z);
     // (sur le plan couché, remonter de h pixels à l'écran, c'est reculer d'autant sur les deux axes)
-    const leve = (x, y) => (niveau(ile, x, y) * HZ * T) / (2 * QH);
+    const leve = (x, y) => (hauteurIci(ile, x + 0.5, y + 0.5) * HZ * T) / (2 * QH);
     if (vue.outil === "planter" && vue.depuisSerre && vue.plante && !ile.croquis) {
       const p = H.d.plante(vue.plante);
       if (p) {
@@ -3114,6 +3178,7 @@
     const mode = vue.reliefMode || "monter", r = Object.assign({}, (ile.relief || {})[k]);
     r.n = mode === "aplanir" ? 0 : Math.max(0, Math.min(NIVEAU_MAX, (r.n || 0) + (mode === "monter" ? 1 : -1)));
     r.mur = (vue.reliefStyle || "talus") === "muret";
+    if ((vue.reliefStyle || "talus") === "pente") r.pente = true; else delete r.pente;
     ile.relief = Object.assign({}, ile.relief, { [k]: r });
     if (!r.n) delete ile.relief[k];
     return true;
