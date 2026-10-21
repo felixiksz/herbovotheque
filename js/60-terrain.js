@@ -1104,7 +1104,7 @@
     if (vue.outil === "planter") {
       // deux façons d'avoir une plante, chacune sur sa ligne : une plante neuve (choisie dans
       // l'herbothèque, ou parmi les dernières plantées), ou un bébé de la serre à repiquer (moins
-      // cher, et il démarre déjà jeune) ; puis ce que ça coûte
+      // cher, et il a déjà poussé un peu) ; puis ce que ça coûte
       const p = vue.plante && H.d.plante(vue.plante);
       const ligne = (titre, ...enfants) => H.el("div.ligne-option", null, H.el("span.titre-option", null, titre), ...enfants);
       const choisir = () => H.choisirPlantes(vue.plante ? [vue.plante] : [], (ids) => { vue.plante = ids[0] || null; vue.depuisSerre = false; retenirPlante(vue.plante); dessinerOutils(); }, "Quelle plante ?", { un: true, detail: ile.croquis ? null : (q) => pastillesCout(coutPlantation(q)) });

@@ -2962,8 +2962,9 @@
     // sur un écran en hauteur (téléphone), le paysage garde ses proportions : on ajoute du ciel
     // au-dessus et de la garrigue au premier plan, au lieu de laisser du vide
     const portrait = window.innerHeight > window.innerWidth * 1.15;
-    const Htot = portrait ? Math.max(h, Math.min(window.innerHeight - 30, Math.round(w * 2))) : h;
-    const haut = Math.round((Htot - h) * 0.55), bas = Htot - h - haut;
+    // (jusqu'en bas de l'écran ; un peu de ciel en plus en haut, surtout du premier plan en bas)
+    const Htot = portrait ? Math.max(h, Math.round(window.innerHeight - Math.max(0, toile.getBoundingClientRect().top))) : h;
+    const haut = Math.round((Htot - h) * 0.3), bas = Htot - h - haut;
     toile.style.height = Htot + "px";
     ecran.width = Math.ceil(w * dpr); ecran.height = Math.ceil(Htot * dpr);
     const nuit = H.ciel.etat().soleil.alt < 0;
@@ -2977,6 +2978,10 @@
     const arbres = [], devant = [];
     for (let D = 0; D < CYCLE; D += 160 + ra() * 230) arbres.push([D, 90 + ra() * 90 + (ra() < 0.18 ? 120 : 0)]);
     for (let D = 300; D < CYCLE; D += 1000 + ra() * 900) devant.push([D, h * (1.05 + ra() * 0.3)]);
+    // de temps en temps, un grand arbre au bord du chemin, la couronne haut dans le ciel (plus haut
+    // encore sur téléphone, où le ciel est plus grand)
+    const rg2 = H.alea("grands-arbres-balade"), grands = [];
+    for (let D = 650; D < CYCLE; D += 700 + rg2() * 800) grands.push([D, (h * 0.72 + haut * 0.85) * (0.9 + rg2() * 0.3), rg2()]);
     // le grain de risographie, une fois pour toutes
     const grain = H.aqua.toile(256, 256);
     {
@@ -2987,7 +2992,7 @@
       }
     }
     return {
-      ctx, ecran, visible, dpr, w, h, haut, bas, Htot, nuit, etoiles, arbres, devant, grain,
+      ctx, ecran, visible, dpr, w, h, haut, bas, Htot, nuit, etoiles, arbres, devant, grands, grain,
       couvert: H.ciel.couvert(nuit),
       profils: { falaises: tirage("falaises", 24), rochers: tirage("rochers", 24), collines: tirage("collines", 24), collines2: tirage("collines2", 24), nuages: tirage("nuages", 12) },
       decalage: 0, compagnons, derniere: performance.now(),
@@ -3155,6 +3160,7 @@
     if (!d) return false;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
+    auVent(ctx, x, base, graine);
     ctx.drawImage(d, Math.round(x - d.width / k / 2), Math.round(base - d.height / k + 1), d.width / k, d.height / k);
     ctx.restore();
     return true;
@@ -3204,8 +3210,16 @@
       ctx.fill();
     }
   }
+  // le vent dans la garrigue : le haut des touffes se balance doucement, chacune à son rythme (le
+  // pied ne bouge pas)
+  function auVent(ctx, x, base, graine) {
+    const s = performance.now() / 1000, a = Math.sin(s * 1.3 + graine * 1.7) * 0.06 + Math.sin(s * 3.1 + graine) * 0.02;
+    ctx.translate(x, base); ctx.transform(1, 0, a, 1, 0, 0); ctx.translate(-x, -base);
+  }
   // un buisson de garrigue, en aplat
   function buissonPlat(ctx, x, base, t, couleur) {
+    ctx.save();
+    auVent(ctx, x, base, t * 0.37 + Math.round(x / 50));
     ctx.fillStyle = couleur;
     ctx.beginPath();
     ctx.moveTo(x - t, base);
@@ -3213,6 +3227,7 @@
     ctx.ellipse(x + t * 0.35, base, t * 0.65, t * 0.62, 0, Math.PI, 0);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
   }
   // un nuage plat, bien arrondi
   // Un nuage net pour la balade : peint une fois, en gros pixels pleins (sans bord adouci) et dans
@@ -3400,6 +3415,75 @@
   }
 
   const TELEPHONE = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+  // le premier plan sous le chemin, en rangées de plus en plus proches : la terre du bord (du sable
+  // dans les dunes, de la terre rouge dans la terre rouge), des touffes de garrigue en dessin
+  // botanique qui bougent dans le vent, des rochers de calcaire (ombre bleue), des bosses de sable
+  // avec leurs oyats
+  // un rocher irrégulier : un contour bosselé et anguleux (le bas plat, posé au sol), puis la face au
+  // soleil (en haut à gauche), une facette plus claire et une fissure
+  function rocherIrregulier(ctx, x, y, L, Hr, roche, graine, e) {
+    const n = 9, pts = [];
+    for (let k = 0; k <= n; k++) {
+      const a = Math.PI + (Math.PI * k) / n, r = 0.72 + hsh(graine, k) * 0.4;
+      pts.push([x + Math.cos(a) * L * r, y + Math.min(0, Math.sin(a) * Hr * r)]);
+    }
+    const forme = (dx, dy, f) => { ctx.beginPath(); pts.forEach(([px, py], k) => ctx[k ? "lineTo" : "moveTo"](x + (px - x) * f + dx, y + (py - y) * f + dy)); ctx.closePath(); ctx.fill(); };
+    ctx.fillStyle = roche[2]; forme(0, 0, 1);
+    ctx.fillStyle = roche[1]; forme(-L * 0.08, -Hr * 0.04, 0.84);
+    ctx.fillStyle = roche[0];
+    ctx.beginPath(); ctx.moveTo(pts[1][0] - L * 0.05, pts[1][1]); ctx.lineTo(pts[3][0], pts[3][1] + Hr * 0.06); ctx.lineTo(pts[4][0], pts[4][1] + Hr * 0.3); ctx.lineTo(pts[1][0] + L * 0.15, pts[1][1] + Hr * 0.15); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = roche[2]; ctx.lineWidth = Math.max(1, e * 0.7);
+    const fx = pts[5][0], fy = pts[5][1];
+    ctx.beginPath(); ctx.moveTo(fx, fy + Hr * 0.12); ctx.lineTo(fx + L * 0.08, fy + Hr * 0.45); ctx.lineTo(fx + L * 0.02, y - Hr * 0.08); ctx.stroke();
+  }
+  function premierPlanBalade(ctx, w, h, bas, avance, nuit, moA, dpr, t) {
+    const du = dunes(avance), rg = rouge(avance);
+    const terre = nuit ? "#122a20" : du > 0.5 ? "#e8cf98" : melange("#b9a06a", "#b8603a", rg), terreOmbre = nuit ? "#0b1a14" : du > 0.5 ? "#d9b878" : melange("#8f8a5a", "#93452a", rg);
+    const g = ctx.createLinearGradient(0, h, 0, h + bas);
+    g.addColorStop(0, terre); g.addColorStop(1, terreOmbre);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, h - 2, w, bas + 4);
+    const roche = nuit ? ["#4a4f7a", "#3a3f6a", "#262a55"] : rg > 0.5 ? ["#e8875a", "#c9643f", "#8a3f2a"] : ["#f3e9cf", "#d9cba6", "#8f99c4"];
+    const sable = nuit ? ["#4a4a6a", "#34345a"] : ["#f0dcaa", "#d9b878"];
+    const herbes = nuit ? ["#10241a", "#0b1a12"] : du > 0.5 ? ["#9aa85a", "#7a8a3a"] : ["#5a8a3a", "#3f6a2e"];
+    // le sol : des petites touffes et des cailloux semés partout, qui défilent avec leur rangée
+    for (let i = 0; i < 70; i++) {
+      const fy = hsh(i, 3), y = h + 6 + fy * (bas - 6), vite = 1.3 + fy * 1.4, x = boucler(i * 61 + hsh(i, 5) * 300 - avance * vite, w, 20), e = 1 + fy * 1.6;
+      if (i % 3) { ctx.fillStyle = herbes[i % 2]; ctx.fillRect(Math.round(x), Math.round(y - 3 * e), Math.ceil(e), Math.ceil(3 * e)); ctx.fillRect(Math.round(x + 2 * e), Math.round(y - 4 * e), Math.ceil(e), Math.ceil(4 * e)); ctx.fillRect(Math.round(x - 2 * e), Math.round(y - 2 * e), Math.ceil(e), Math.ceil(2 * e)); }
+      else { ctx.fillStyle = roche[i % 2 ? 1 : 2]; ctx.fillRect(Math.round(x), Math.round(y - e), Math.ceil(2 * e), Math.ceil(e)); }
+    }
+    for (let rang = 0; rang < 5; rang++) {
+      const y = h + (bas * (rang + 0.75)) / 5.1, vite = 1.3 + rang * 0.3, e = 1 + rang * 0.5;
+      for (let i = 0; i < 9; i++) {
+        const x = boucler(i * (110 + rang * 30) + rang * 53 + hsh(i, rang) * 40 - avance * vite, w, 90 * e), quoi = hsh(i * 7 + rang, 41);
+        if (du > 0.35 && quoi < 0.4) {
+          // une bosse de sable, éclairée à gauche, et ses oyats
+          const L = 46 * e, Hb = 14 * e;
+          ctx.fillStyle = sable[1]; ctx.beginPath(); ctx.ellipse(x + 3, y, L, Hb, 0, Math.PI, 0); ctx.fill();
+          ctx.fillStyle = sable[0]; ctx.beginPath(); ctx.ellipse(x - 2, y, L * 0.86, Hb * 0.92, 0, Math.PI, 0); ctx.fill();
+          if (!nuit) {
+            ctx.strokeStyle = "#8a9a4a"; ctx.lineWidth = 1.2 + rang * 0.4;
+            for (let j = 0; j < 6; j++) { const bx = x - L * 0.3 + j * 4 * e, vent = Math.sin(t / 650 + i + j * 0.7) * 3 * e; ctx.beginPath(); ctx.moveTo(bx, y - Hb * 0.7); ctx.lineTo(bx + (j - 2.5) * 2 * e + vent, y - Hb * 0.7 - (14 + (j % 2) * 7) * e); ctx.stroke(); }
+          }
+        } else if (quoi < 0.6 && hsh(i, rang * 3 + 1) < 0.55) {
+          // un amas de rochers de calcaire, d'un seul tenant : des blocs irréguliers serrés les uns
+          // contre les autres (ils avancent ensemble), le dessus au soleil, les flancs dans l'ombre
+          // bleue, des fissures ; une touffe pousse souvent dans un creux
+          const nb = 2 + Math.floor(hsh(i + 3, rang) * 3), L0 = (13 + hsh(i, rang) * 12) * e;
+          let cx = x - (nb - 1) * L0 * 0.45;
+          for (let q = 0; q < nb; q++) {
+            const L = L0 * (0.75 + hsh(q + i, rang + 7) * 0.6), Hr = L * (0.9 + hsh(rang + q, i) * 0.5), gr = i * 31 + rang * 7 + q * 3;
+            rocherIrregulier(ctx, cx, y + (q % 2) * 2 * e, L, Hr, roche, gr, e);
+            cx += L * (0.75 + hsh(gr, 2) * 0.25);
+          }
+          if (hsh(i, rang + 11) < 0.6) buissonBalade(ctx, cx - L0 * 0.2, y + 1, (7 + (i % 3) * 3) * e, moA, dpr, i * 5 + rang);
+        } else {
+          const taille = (12 + (i % 3) * 6) * e;
+          if (!buissonBalade(ctx, x, y, taille, moA, dpr, i * 13 + rang * 5 + 2)) buissonPlat(ctx, x, y, taille * 1.6, nuit ? ["#10241a", "#0f2218", "#0b1a12", "#081410", "#06100c"][rang] : ["#3fa04a", "#2f8a3e", "#2a7a36", "#1f6b34", "#1a5a2c"][rang]);
+        }
+      }
+    }
+  }
   function dessinerBalade() {
     const b = balade;
     if (!b) return;
@@ -3412,7 +3496,16 @@
     }
     const dt = Math.min(Math.max(0.1, H.ips() ? 1.5 / H.ips() : 0.1), (t - S.derniere) / 1000);
     S.derniere = t;
-    if (!b.pause) S.decalage += dt * 40;
+    // on ralentit avant de s'arrêter, et on repart en douceur ; une fois arrêté·es un instant, on se
+    // tourne de dos pour regarder le paysage
+    const cible = b.pause ? 0 : 1;
+    b.vitesse = b.vitesse == null ? cible : b.vitesse + (cible - b.vitesse) * Math.min(1, dt * (cible ? 1.1 : 0.7));
+    if (Math.abs(b.vitesse - cible) < 0.02) b.vitesse = cible;
+    S.decalage += dt * 40 * b.vitesse;
+    b.foulee = (b.foulee || 0) + dt * 1000 * Math.max(b.vitesse, 0);
+    const arret = b.vitesse < 0.08;
+    if (!arret) b.arretDepuis = 0; else if (!b.arretDepuis) b.arretDepuis = t;
+    const deDos = arret && !b.baignade && t - b.arretDepuis > 700;
     const avance = S.decalage;
     const etat = H.ciel.etat();
     const alt = etat.soleil.alt;
@@ -3522,7 +3615,7 @@
       const x = boucler(i * 95 - avance * 0.9, w, 50);
       if (dunes(X(x)) > 0.5 && !nuit) {
         ctx.strokeStyle = "#8a9a4a"; ctx.lineWidth = 1.6;
-        for (let j = 0; j < 5; j++) { ctx.beginPath(); ctx.moveTo(x + j * 3, sol(x) - h * 0.15); ctx.lineTo(x + j * 3 + (j - 2) * 3, sol(x) - h * 0.15 - 14 - (j % 2) * 6); ctx.stroke(); }
+        for (let j = 0; j < 5; j++) { const vent = Math.sin(t / 650 + i * 1.3 + j * 0.7) * 2.5; ctx.beginPath(); ctx.moveTo(x + j * 3, sol(x) - h * 0.15); ctx.lineTo(x + j * 3 + (j - 2) * 3 + vent, sol(x) - h * 0.15 - 14 - (j % 2) * 6); ctx.stroke(); }
       } else if (!buissonBalade(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, moA, dpr, i * 7 + 3)) buissonPlat(ctx, x, sol(x) - h * 0.15, 12 + (i % 3) * 5, nuit ? "#163024" : i % 2 ? "#2f7a3e" : "#4f9a46");
     }
     poses(S.arbres, b, 0.85, (x, taille) => {
@@ -3531,12 +3624,17 @@
       if (nuit) pinPlat(ctx, x, sol(x) - h * 0.14, taille, "#132a1e", "#0f2218", "#132a1e");
       else pinPlat(ctx, x, sol(x) - h * 0.14, taille, taille > 160 ? "#1f7a3a" : "#2d8f45", "#155a2a", "#5a3a2a");
     });
+    poses(S.grands || [], b, 0.9, (x, taille, sorte) => {
+      if (dunes(X(x)) > 0.6) return;
+      const base = sol(x) - h * 0.13;
+      if (sorte < 0.55 || !arbreBalade(ctx, x, base, taille, moA, dpr)) pinPlat(ctx, x, base, taille, nuit ? "#132a1e" : "#2a7f3e", nuit ? "#0f2218" : "#155a2a", nuit ? "#132a1e" : "#5a3a2a");
+    });
     // les promeneurs, de profil : de vrais pas alternés
-    const pas = (decale) => (b.pause ? 4 : (Math.floor(t / 170) + decale) % 4);
+    const pas = (decale) => (arret ? 4 : (Math.floor(b.foulee / 170) + decale) % 4);
     const avec = (q) => S.compagnons.includes(q);
-    if (avec("lolo")) persoBalade(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, b.pause ? 0 : Math.floor(t / 230) % 4);
+    if (avec("lolo")) persoBalade(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, arret ? 0 : Math.floor(b.foulee / 230) % 4);
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
-    if (avec("meme") && !avec("lolo") && !b.baignade) persoBalade(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, b.pause ? 0 : Math.floor(t / 200) % 2);
+    if (avec("meme") && !avec("lolo") && !b.baignade) persoBalade(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, arret ? 0 : Math.floor(b.foulee / 200) % 2);
     // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
     // sortis de l'eau : sur la plage, enroulé·es dans une serviette, on se frotte les cheveux
     if (b.baignade && b.sortieEau && t - b.sortieEau >= SORTIE_EAU) {
@@ -3551,20 +3649,17 @@
       ctx.restore();
     }
     if (!b.baignade) {
-      if (avec("luigi")) persoBalade(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
-      if (b.assis) {
-        // une pierre plate au bord du chemin, et ƟvƟ assis·e dessus, de dos
-        const px = w * 0.42, py = sol(px) - h * 0.06;
-        ctx.fillStyle = nuit ? "#3a3f6a" : "#e3d6b8";
-        ctx.beginPath(); ctx.ellipse(px, py - 6, 26, 9, 0, Math.PI, 0); ctx.lineTo(px + 26, py); ctx.lineTo(px - 26, py); ctx.fill();
-        ctx.fillStyle = nuit ? "#2a2c55" : "#b8a07e";
-        ctx.fillRect(px - 26, py - 4, 52, 4);
-        persoBalade(ctx, "ovoDosAssis", px, py - 12, 3, 0);
-      } else persoBalade(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, pas(0));
+      // (arrêté·es : de dos, face au paysage)
+      // (à deux : enlacé·es, le bras de l'une sur les épaules de l'autre)
+      if (deDos && avec("luigi")) persoBalade(ctx, "dosEnlaces", w * 0.39, sol(w * 0.39) - h * 0.058, 3, 0);
+      else {
+        if (avec("luigi")) persoBalade(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
+        persoBalade(ctx, deDos ? "ovoDos" : "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, deDos ? 0 : pas(0));
+      }
       // la nuit, les humain·es ont une lampe frontale ; allumée, elle éclaire le chemin devant
-      if (nuit) {
+      if (nuit && !deDos) {
         if (avec("luigi")) lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t, pas(2));
-        if (!b.assis) lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
+        lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
       }
     }
     if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
@@ -3605,21 +3700,15 @@
     }
     // les pas sur le chemin, tant qu'on marche : ƟvƟ, plus Mesi (deux pieds de plus), plus les
     // quatre sabots de Lóló ; Mémé, elle, ne fait aucun bruit
-    const marche = !b.pause && !b.baignade, pistes = ["pas"].concat(avec("luigi") ? ["pas2"] : [], avec("lolo") ? ["pas3", "pas4"] : []);
+    const marche = !arret && !b.baignade, pistes = ["pas"].concat(avec("luigi") ? ["pas2"] : [], avec("lolo") ? ["pas3", "pas4"] : []);
     const etatPas = marche ? pistes.join("+") : "";
     if (b.sonPas !== etatPas) {
       b.sonPas = etatPas;
       for (const nom of ["pas", "pas2", "pas3", "pas4"]) H.sons.boucle(nom, marche && pistes.includes(nom), nom === "pas" ? 0.5 : 0.42);
     }
-    // sur téléphone, le premier plan continue sous le chemin : la garrigue, de plus en plus près
-    if (bas > 0) {
-      ctx.fillStyle = nuit ? "#0d1d15" : "#2a7a36";
-      ctx.fillRect(0, h - 2, w, bas + 4);
-      for (let rang = 0; rang < 4; rang++) {
-        const y = h + (bas * (rang + 0.6)) / 4, vite = 1.3 + rang * 0.25;
-        for (let i = 0; i < 9; i++) buissonPlat(ctx, boucler(i * (120 + rang * 30) + rang * 47 - avance * vite, w, 80), y, 26 + rang * 10 + (i % 3) * 8, nuit ? ["#10241a", "#0f2218", "#0b1a12", "#081410"][rang] : ["#3fa04a", "#2f8a3e", "#2a7a36", "#1f6b34"][rang]);
-      }
-    }
+    // sur téléphone, le premier plan continue sous le chemin jusqu'en bas de l'écran : la garrigue,
+    // des rochers, des dunes dans les dunes, de plus en plus près (et de plus en plus vite)
+    if (bas > 0) premierPlanBalade(ctx, w, h, bas, avance, nuit, moA, dpr, t);
     // le grain de risographie (celui du sol avance avec le chemin), puis la lumière de l'aube ou du couchant
     const grain = ctx.createPattern(S.grain, "repeat");
     ctx.fillStyle = grain;
@@ -3761,6 +3850,13 @@
       persoBalade(ctx, "flamant", f.x, y, 3, 0, true);
       ctx.restore();
       ronds(ctx, f.x, eau, t, 3);
+      // (la seule conversation de la balade : on se salue en langue de flamant)
+      if (!f.parle && f.x < w * 0.7 && !H.$(".dialogue")) {
+        f.parle = true;
+        const repliques = [{ qui: "flamant", texte: "Flma-mala-lamama !" }, { qui: "ovo", texte: "Fala-la-lamala !" }];
+        if (b.s.compagnons.includes("luigi")) repliques.push({ qui: "luigi", texte: "Fla-fla-mala !" });
+        H.dialogue.dire(repliques);
+      }
       if (f.x < -60) {
         f.x = null;
         f.prochain = t + 20000 + Math.random() * 25000;
@@ -3795,25 +3891,25 @@
     if (b.continuer) b.continuer.hidden = false;
   }
 
-  // La balade est un moment calme, avec qui que ce soit : pas une bulle, seulement les bruits (les
-  // pas, la mer, les grillons). En solo, une fois, au bout d'un moment, ƟvƟ s'assoit sur une
-  // pierre, de dos, face au paysage, puis repart.
-  async function deroulerBalade(compagnons) {
+  // La balade est un moment calme, avec qui que ce soit : pas une bulle (sauf pour saluer le flamant
+  // rose), seulement les bruits (les pas, la mer, les grillons). Une fois, au bout d'un moment, on
+  // ralentit, on s'arrête et on se tourne de dos pour regarder le paysage (les nuages passent, la
+  // garrigue bouge dans le vent), puis on repart.
+  async function deroulerBalade() {
     const b0 = balade;
     if (!b0) return;
     if (b0.fin) b0.fin.hidden = false;
-    if (compagnons.length) return;
     await new Promise((r) => setTimeout(r, 45000));
     if (balade !== b0 || b0.baignade || b0.attenteCrique) return;
-    b0.assis = true; b0.pause = true;
-    await new Promise((r) => setTimeout(r, 12000));
-    if (balade === b0) { b0.assis = false; b0.pause = false; }
+    b0.contemple = true; b0.pause = true;
+    await new Promise((r) => setTimeout(r, 16000));
+    if (balade === b0 && b0.contemple) { b0.contemple = false; if (!b0.attenteCrique && !b0.baignade) b0.pause = false; }
   }
   // reprendre le chemin, après la baignade
   function continuerBalade() {
     const b = balade;
     if (!b) return;
-    Object.assign(b, { baignade: null, sortieEau: null, pause: false, attenteCrique: false, assis: false, flamant: null });
+    Object.assign(b, { baignade: null, sortieEau: null, pause: false, attenteCrique: false, contemple: false, flamant: null });
     b.sortir.hidden = true;
     if (b.continuer) b.continuer.hidden = true;
   }

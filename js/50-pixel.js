@@ -216,6 +216,40 @@
     "..kBbbbbbbbbBk..",
     "...kkkkkkkkkk...",
   ];
+  // ƟvƟ debout de dos, qui regarde le paysage : le haut comme assis·e, puis le fond de la salopette
+  // et les deux jambes côte à côte (même hauteur que de profil : les pieds au même endroit)
+  const OVO_DOS = OVO_DOS_ASSIS.slice(0, 15).concat([
+    "..kbbbbbbbbbbk..",
+    "..kBbbbbbbbbBk..",
+    "...kbbbBBbbbk...",
+    "...kbbk..kbbk...",
+    "...kbbk..kbbk...",
+    "...kBbk..kbBk...",
+    "...knnk..knnk...",
+    "...kkkk..kkkk...",
+  ]);
+  // Mesi de dos : le mulet châtain qui couvre la nuque, la chemise verte
+  const LUIGI_DOS = OVO_DOS.map((l, y) => (y === 8 ? "..kcCcCcCcCcCk.." : l.replace(/h/g, "c").replace(/H/g, "C").replace(/r/g, "g").replace(/R/g, "G")));
+  // Mesi et ƟvƟ de dos, serré·es l'une contre l'autre devant le paysage : Mesi, un peu plus grande,
+  // passe le bras sur les épaules d'ƟvƟ (la main posée sur l'autre épaule) ; ƟvƟ passe le sien
+  // autour de la taille de Mesi (la main sur sa hanche)
+  function dosEnlaces() {
+    const W = 30, g = Array.from({ length: 25 }, () => Array(W).fill("."));
+    const poserGrille = (grille, ox, oy) => grille.forEach((l, y) => l.split("").forEach((c, x) => { if (c !== "." && g[y + oy]) g[y + oy][x + ox] = c; }));
+    // (Mesi : deux pixels de jambes en plus)
+    const mesi = LUIGI_DOS.slice(0, 19).concat(["...kbbk..kbbk...", "...kbbk..kbbk..."], LUIGI_DOS.slice(19));
+    poserGrille(mesi, 0, 0);
+    poserGrille(OVO_DOS, 11, 2);
+    // le bras d'ƟvƟ autour de la taille de Mesi (manche rouge)
+    for (let x = 3; x <= 13; x++) { const y = Math.round(15 + (13 - x) / 10); g[y][x] = "r"; g[y + 1][x] = "R"; }
+    [[2, 16], [2, 17], [1, 16], [1, 17]].forEach(([x, y]) => (g[y][x] = "s"));
+    [[0, 16], [0, 17], [1, 18], [2, 18], [1, 15], [2, 15]].forEach(([x, y]) => (g[y][x] = "k"));
+    // le bras de Mesi sur les épaules d'ƟvƟ (manche verte), qui descend de son épaule à celle d'ƟvƟ
+    for (let x = 12; x <= 24; x++) { const y = Math.round(11 + ((x - 12) * 2) / 12); g[y][x] = "g"; g[y + 1][x] = "G"; }
+    [[25, 13], [25, 14], [26, 13], [26, 14]].forEach(([x, y]) => (g[y][x] = "s"));
+    [[27, 13], [27, 14], [25, 15], [26, 15], [25, 12], [26, 12]].forEach(([x, y]) => (g[y][x] = "k"));
+    return g.map((l) => l.join(""));
+  }
   // Mesi : mulet châtain, lunettes, chemise verte, chiendent sur la salopette
   const LUIGI_PROFIL = [
     "....kkkkkkk.....",
@@ -461,6 +495,9 @@
     calinEte: [0, 1, 2, 3].map((i) => calin(i, true)),
     flamant: [FLAMANT],
     ovoDosAssis: [OVO_DOS_ASSIS],
+    ovoDos: [OVO_DOS],
+    luigiDos: [LUIGI_DOS],
+    dosEnlaces: [dosEnlaces()],
     ovo: [OVO, OVO_MARCHE],
     luigi: [LUIGI, LUIGI_MARCHE],
     lolo: [LOLO, LOLO_2],

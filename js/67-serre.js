@@ -152,7 +152,7 @@
       conteneur.innerHTML = "";
       conteneur.appendChild(H.el("div.herbo-tete", null,
         H.el("h1", null, "Serre"),
-        H.el("p.aide-pixel.intro-serre", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite dans tes jardins, moins cher et déjà jeunes.")
+        H.el("p.aide-pixel.intro-serre", null, "Sème dans un pot : à l’abri, ça lève en quelques heures, et deux fois plus vite au bon mois de semis. Les bébés plantes se repiquent ensuite dans tes jardins : ça coûte moins cher qu’une plante neuve, et elles ont déjà poussé un peu.")
       ));
       zone = H.el("div");
       conteneur.appendChild(zone);
