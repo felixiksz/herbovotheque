@@ -2188,7 +2188,7 @@
     // (Mémé fait la moitié de la taille de Lóló)
     meme: () => ({ nom: "memePas", e: 4.5, images: 2, arret: 0 }),
   };
-  const ETAGES = ["bas", "salon", "grenier"], VITESSE = 0.11, DUREE_ETAGE = 2600;
+  const ETAGES = ["bas", "salon", "grenier"], VITESSE = 0.11, DUREE_ETAGE = 2600, POSE_PIEDS = 6;
   let place = "table", trajet = null, placeDepuis = 0;
   function segments(qui, de, vers) {
     const a = PLACES[de], b = PLACES[vers], pied = ESCALIER.x + ESCALIER.r + 18, segs = [];
@@ -2871,7 +2871,7 @@
       if (!enRoute && (place === "porte" || place === "lit")) {
         const pl = PLACES[place];
         // (devant la porte, bottes aux pieds ; au lit, pieds nus)
-        for (const qui of ["ovo", "luigi"]) H.pixel.dessiner(cc, qui + (place === "porte" ? "Profil" : "Pieds"), pl[qui], NIV[pl.niv].sol, 4.4, 4, place === "porte");
+        for (const qui of ["ovo", "luigi"]) H.pixel.dessiner(cc, qui + (place === "porte" ? "Profil" : "Pieds"), pl[qui], NIV[pl.niv].sol + POSE_PIEDS, 4.4, 4, place === "porte");
       }
       const surCanape = !enRoute && place === "canape", ici = (qui) => !partis.has(qui);
       cc.save();
@@ -2901,7 +2901,8 @@
       cc.restore();
       for (const [g, ps] of marcheurs) {
         const a = g.allure || ALLURE[g.qui]();
-        H.pixel.dessiner(cc, a.nom, ps.x, ps.y, a.e, ps.marche ? Math.floor(t / (a.images === 2 ? 180 : 140)) % a.images : a.arret, ps.gauche);
+        // (ƟvƟ et Mesi posé·es bien sur le parquet, sans flotter au-dessus)
+        H.pixel.dessiner(cc, a.nom, ps.x, ps.y + (g.qui === "ovo" || g.qui === "luigi" ? POSE_PIEDS : 0), a.e, ps.marche ? Math.floor(t / (a.images === 2 ? 180 : 140)) % a.images : a.arret, ps.gauche);
       }
       // la fausse plante, au rez-de-chaussée, entre le poêle et la table (là où il y avait la porte)
       if (farce && farce.id === "plante") { cc.save(); cc.translate(226 - 338, NIV.bas.sol - 332); dessinerFarce(cc, t); cc.restore(); }
