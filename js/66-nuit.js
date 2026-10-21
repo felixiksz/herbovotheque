@@ -3850,6 +3850,39 @@
     const fx = pts[5][0], fy = pts[5][1];
     ctx.beginPath(); ctx.moveTo(fx, fy + Hr * 0.12); ctx.lineTo(fx + L * 0.08, fy + Hr * 0.45); ctx.lineTo(fx + L * 0.02, y - Hr * 0.08); ctx.stroke();
   }
+  // un coussin de garrigue : un dôme bas et serré, plus clair en haut à gauche (le soleil), plus
+  // sombre en bas, piqueté de petites feuilles ; parfois couvert des fleurs jaunes de l'euphorbe
+  const TONS_GARRIGUE = [
+    ["#6f7f3a", "#8f9e4a", "#b4bf6a"], ["#3f6a3a", "#55804a", "#7c9e62"], ["#7f93a8", "#a2b4c6", "#c8d4e0"],
+    ["#6f8a5a", "#8fa878", "#b2c498"], ["#5a7a3a", "#7a9a48", "#a4ba5e"], ["#7a8a4a", "#9aa85a", "#c4c87a"],
+  ];
+  function coussinGarrigue(ctx, x, y, r, g, nuit, t) {
+    const tons = TONS_GARRIGUE[Math.floor(hsh(g, 4) * TONS_GARRIGUE.length)], fleurs = hsh(g, 5) < 0.22;
+    ctx.save();
+    auVent(ctx, x, y, g * 0.3);
+    const rx = r, ry = r * (0.72 + hsh(g, 6) * 0.22);
+    // (deux ou trois lobes de tailles différentes : jamais un dôme parfait)
+    const lobes = [[0, 1, 1]].concat(Array.from({ length: 1 + Math.floor(hsh(g, 8) * 2) }, (_, k) => [(hsh(g, 20 + k) - 0.5) * 1.1, 0.5 + hsh(g, 24 + k) * 0.4, 0.6 + hsh(g, 28 + k) * 0.5]));
+    const dome = (dec, f) => { for (const [dx, fx, fy] of lobes) { ctx.beginPath(); ctx.ellipse(x + dx * rx - rx * dec, y, rx * fx * f, ry * fy * f, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); } };
+    ctx.fillStyle = nuit ? "#16302a" : tons[0];
+    dome(0, 1);
+    if (!nuit) {
+      ctx.fillStyle = tons[1];
+      dome(0.08, 0.84);
+      // les petites feuilles : des touches claires en haut, sombres en bas
+      for (let k = 0; k < 18; k++) {
+        const a = Math.PI + hsh(g, k + 10) * Math.PI, d = Math.sqrt(hsh(g, k + 40)), px = x + Math.cos(a) * rx * 0.9 * d, py = y + Math.sin(a) * ry * 0.9 * d;
+        ctx.fillStyle = py < y - ry * 0.45 ? tons[2] : tons[0];
+        ctx.fillRect(Math.round(px), Math.round(py), Math.max(1.5, r * 0.12), Math.max(1.5, r * 0.1));
+      }
+      if (fleurs) for (let k = 0; k < 14; k++) {
+        const a = Math.PI * 1.08 + hsh(g, k + 70) * Math.PI * 0.84, d = 0.55 + hsh(g, k + 90) * 0.45;
+        ctx.fillStyle = k % 3 ? "#e8d43a" : "#f6e86a";
+        ctx.fillRect(Math.round(x + Math.cos(a) * rx * d), Math.round(y + Math.sin(a) * ry * d), Math.max(2, r * 0.16), Math.max(2, r * 0.14));
+      }
+    }
+    ctx.restore();
+  }
   function premierPlanBalade(ctx, w, h, bas, avance, nuit, moA, dpr, t) {
     const du = dunes(avance), rg = rouge(avance);
     const terre = nuit ? "#122a20" : du > 0.5 ? "#e8cf98" : melange("#b9a06a", "#b8603a", rg), terreOmbre = nuit ? "#0b1a14" : du > 0.5 ? "#d9b878" : melange("#8f8a5a", "#93452a", rg);
@@ -3866,9 +3899,22 @@
       if (i % 3) { ctx.fillStyle = herbes[i % 2]; ctx.fillRect(Math.round(x), Math.round(y - 3 * e), Math.ceil(e), Math.ceil(3 * e)); ctx.fillRect(Math.round(x + 2 * e), Math.round(y - 4 * e), Math.ceil(e), Math.ceil(4 * e)); ctx.fillRect(Math.round(x - 2 * e), Math.round(y - 2 * e), Math.ceil(e), Math.ceil(2 * e)); }
       else { ctx.fillStyle = roche[i % 2 ? 1 : 2]; ctx.fillRect(Math.round(x), Math.round(y - e), Math.ceil(2 * e), Math.ceil(e)); }
     }
+    // la garrigue comme en vrai : un tapis serré de coussins arrondis qui se touchent (vert olive,
+    // vert sombre du lentisque et du genévrier, argent bleuté, vert sauge), et les fleurs jaune vif
+    // des euphorbes ; presque pas de terre nue entre eux
+    if (du < 0.35) for (let rang = 0; rang < 9; rang++) {
+      const y = h + 6 + (bas * (rang + 0.3)) / 8.4, vite = 1.25 + rang * 0.2, e = 1 + rang * 0.34, pas = 24 * e;
+      for (let i = 0, n = Math.ceil((w + 120 * e) / pas) + 1; i < n; i++) {
+        const g = i * 13 + rang * 71;
+        if (hsh(g, 7) < 0.12) continue;
+        const x = boucler(i * pas + (hsh(g, 1) - 0.5) * pas * 1.3 - avance * vite, w, 50 * e), taille = (8 + Math.pow(hsh(g, 3), 1.6) * 30) * e;
+        coussinGarrigue(ctx, x, y + (hsh(g, 2) - 0.5) * (bas / 8.4) * 1.1, taille, g, nuit, t);
+      }
+    }
     for (let rang = 0; rang < 5; rang++) {
       const y = h + (bas * (rang + 0.75)) / 5.1, vite = 1.3 + rang * 0.3, e = 1 + rang * 0.5;
       for (let i = 0; i < 9; i++) {
+        if (du < 0.35 && (hsh(i * 7 + rang, 41) >= 0.4 || hsh(i, rang + 77) < 0.75)) continue;
         const x = boucler(i * (110 + rang * 30) + rang * 53 + hsh(i, rang) * 40 - avance * vite, w, 90 * e), quoi = hsh(i * 7 + rang, 41);
         if (du > 0.35 && quoi < 0.4) {
           // une bosse de sable, éclairée à gauche, et ses oyats
