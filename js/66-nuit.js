@@ -3902,19 +3902,22 @@
     // la garrigue comme en vrai : un tapis serré de coussins arrondis qui se touchent (vert olive,
     // vert sombre du lentisque et du genévrier, argent bleuté, vert sauge), et les fleurs jaune vif
     // des euphorbes ; presque pas de terre nue entre eux
+    // (tout ce qui pousse au premier plan est dessiné ensemble, du fond vers l'avant)
+    const aDessiner = [];
     if (du < 0.35) for (let rang = 0; rang < 9; rang++) {
       const y = h + 6 + (bas * (rang + 0.3)) / 8.4, vite = 1.25 + rang * 0.2, e = 1 + rang * 0.34, pas = 24 * e;
       for (let i = 0, n = Math.ceil((w + 120 * e) / pas) + 1; i < n; i++) {
         const g = i * 13 + rang * 71;
         if (hsh(g, 7) < 0.12) continue;
         const x = boucler(i * pas + (hsh(g, 1) - 0.5) * pas * 1.3 - avance * vite, w, 50 * e), taille = (8 + Math.pow(hsh(g, 3), 1.6) * 30) * e;
-        coussinGarrigue(ctx, x, y + (hsh(g, 2) - 0.5) * (bas / 8.4) * 1.1, taille, g, nuit, t);
+        const yc = y + (hsh(g, 2) - 0.5) * (bas / 8.4) * 1.1;
+        aDessiner.push({ y: yc, f: () => coussinGarrigue(ctx, x, yc, taille, g, nuit, t) });
       }
     }
     for (let rang = 0; rang < 5; rang++) {
       const y = h + (bas * (rang + 0.75)) / 5.1, vite = 1.3 + rang * 0.3, e = 1 + rang * 0.5;
-      for (let i = 0; i < 9; i++) {
-        if (du < 0.35 && (hsh(i * 7 + rang, 41) >= 0.4 || hsh(i, rang + 77) < 0.75)) continue;
+      for (let i = 0; i < 9; i++) aDessiner.push({ y: y + 0.5, f: () => {
+        if (du < 0.35 && (hsh(i * 7 + rang, 41) >= 0.4 || hsh(i, rang + 77) < 0.75)) return;
         const x = boucler(i * (110 + rang * 30) + rang * 53 + hsh(i, rang) * 40 - avance * vite, w, 90 * e), quoi = hsh(i * 7 + rang, 41);
         if (du > 0.35 && quoi < 0.4) {
           // une bosse de sable, éclairée à gauche, et ses oyats
@@ -3941,8 +3944,9 @@
           const taille = (12 + (i % 3) * 6) * e;
           if (!buissonBalade(ctx, x, y, taille, moA, dpr, i * 13 + rang * 5 + 2)) buissonPlat(ctx, x, y, taille * 1.6, nuit ? ["#10241a", "#0f2218", "#0b1a12", "#081410", "#06100c"][rang] : ["#3fa04a", "#2f8a3e", "#2a7a36", "#1f6b34", "#1a5a2c"][rang]);
         }
-      }
+      } });
     }
+    aDessiner.sort((p, q) => p.y - q.y).forEach((d) => d.f());
   }
   function dessinerBalade() {
     const b = balade;
