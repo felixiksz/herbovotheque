@@ -1584,8 +1584,10 @@
     }
     ctx.beginPath(); ctx.moveTo(-EP_MUR, NIV.bas.plafond); ctx.lineTo(LARGE + EP_MUR, NIV.bas.plafond); ctx.stroke();
     // les poutres apparentes, au plafond du salon et du rez-de-chaussée
-    poutres(ctx, NIV.salon.plafond, [112, 174, 300, 420, 530], 10);
-    poutres(ctx, NIV.bas.plafond, [130, 230, 455, 530], 14);
+    // (régulièrement espacées, tous les 110 points, aux deux plafonds)
+    const PAS_POUTRES = [100, 210, 320, 430, 540];
+    poutres(ctx, NIV.salon.plafond, PAS_POUTRES, 10);
+    poutres(ctx, NIV.bas.plafond, PAS_POUTRES, 14);
     // le tapis du salon, devant le canapé
     tapisMotifs(ctx, 372, NIV.salon.sol + 1, 118);
     tapisMotifs(ctx, 372, NIV.bas.sol + 1, 150);
@@ -1659,8 +1661,8 @@
     ctx.fillStyle = "#8a98cc"; ctx.fillRect(-EP_MUR - 4, SOL_DEHORS, LARGE + 2 * EP_MUR + 8, 14); ctx.strokeRect(-EP_MUR - 4, SOL_DEHORS, LARGE + 2 * EP_MUR + 8, 14);
     // les trémies de l'escalier, dans les planchers
     const { x: ex, r: er } = ESCALIER, tx = ex - er - 6, tw = er * 2 + 12;
-    ctx.fillStyle = "#1b1d4a";
-    for (const [y0, hh] of [[NIV.grenier.plancher, 28], [NIV.salon.plancher, NIV.bas.plafond - NIV.salon.plancher]]) { ctx.fillRect(tx, y0, tw, hh); ctx.strokeRect(tx, y0, tw, hh); }
+    // (garnies de bois, comme les murs)
+    for (const [y0, hh] of [[NIV.grenier.plancher, 28], [NIV.salon.plancher, NIV.bas.plafond - NIV.salon.plancher]]) { contreplaque(ctx, tx, y0, tw, hh, y0 + 5); ctx.strokeRect(tx, y0, tw, hh); }
   }
 
   // Le grenier, sous le toit à deux pentes (vu en coupe) : le mur du fond bleu, l'ombre sous les
