@@ -160,7 +160,10 @@
   function vueMaison(toile) {
     const cw = toile.clientWidth || 400, ch = toile.clientHeight || 700;
     const dpr = Math.min(3, window.devicePixelRatio || 1, Math.sqrt(2.6e6 / (cw * ch)));
-    const echelle = Math.min(cw / BOITE.w, ch / (BOITE.h + 30)), K = echelle * dpr;
+    // (sur un écran étroit, comme un téléphone, on recule un peu : on voit aussi le dehors de chaque
+    // côté de la maison, le jardin, les arbres, le tas de bois)
+    const recul = cw < 640 ? 1.3 : 1;
+    const echelle = Math.min(cw / (BOITE.w * recul), ch / (BOITE.h + 30)), K = echelle * dpr;
     const taille = Math.max(1, Math.round(2.3 * K * H.finesse())), W = Math.round(cw * dpr), Hc = Math.round(ch * dpr);
     // (la maison tombe pile sur la grille des gros pixels)
     const px = Math.round(((W - BOITE.w * K) / 2) / taille) * taille, py = Math.round(((Hc - BOITE.h * K) * 0.6) / taille) * taille;
@@ -348,7 +351,7 @@
   // Les repères du paysage (dans le dessin) : l'horizon, la surface de la mer, le fond de l'île,
   // ses bords ; et les arbres tout autour de la maison (les grands pins des guirlandes, les cyprès,
   // les pins plus loin).
-  const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 400, fond: SOL_DEHORS + 300, ile: { g: -870, d: 1650 } };
+  const PAYS = { horizon: SOL_DEHORS - 46, mer: SOL_DEHORS + 900, fond: SOL_DEHORS + 800, ile: { g: -870, d: 1650 } };
   const ARBRES = [
     ...[[-300, 300], [LARGE + 104, 320]].map(([x, h]) => ({ x, h, cypres: true, pres: true })),
     ...[-216, -380, -480, -620, -760, LARGE + 46, LARGE + 170, LARGE + 290, LARGE + 760, LARGE + 900].map((x) => {
