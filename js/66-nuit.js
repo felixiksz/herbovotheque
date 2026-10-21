@@ -1959,7 +1959,7 @@
   // les deux chaises bleues de la table
   // les deux chaises en pin, le dossier à barreaux
   // (un peu plus petites qu'avant, comme la table : réduites autour de leur pied, sur le sol)
-  const MEUBLE_BAS = 0.85, SOL_TABLE = 294;
+  const MEUBLE_BAS = 0.85, SOL_TABLE = 294, BAISSE_TABLE = 16;
   const reduire = (ctx, cx) => { ctx.translate(cx, SOL_TABLE); ctx.scale(MEUBLE_BAS, MEUBLE_BAS); ctx.translate(-cx, -SOL_TABLE); };
   function chaises(ctx) {
     for (const [dos, assise, p1, p2, cx] of [[438, 436, 438, 466, 455], [626, 596, 598, 626, 615]]) {
@@ -2089,9 +2089,12 @@
 
   // la table du goûter : deux tasses de tilleul et deux assiettes de crêpes au chocolat fondu
   function tableGouter(ctx) {
+    // (le plateau arrive au plexus d'ƟvƟ et de Mesi assis : les pieds sont plus courts, le plateau et
+    // ce qui est posé dessus descendent d'autant)
     ctx.save(); reduire(ctx, 535);
-    blocBois(ctx, 478, 223, 9, 70, 3, true, 21);
-    blocBois(ctx, 584, 223, 9, 70, 3, true, 22);
+    blocBois(ctx, 478, 223 + BAISSE_TABLE, 9, 70 - BAISSE_TABLE, 3, true, 21);
+    blocBois(ctx, 584, 223 + BAISSE_TABLE, 9, 70 - BAISSE_TABLE, 3, true, 22);
+    ctx.translate(0, BAISSE_TABLE);
     blocBois(ctx, 468, 212, 134, 11, 4, false, 23);
     for (const [x, sens] of [[503, -1], [558, 1]]) {
       bloc(ctx, x, 201, 11, 12, 3, "#ffffff");
