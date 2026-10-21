@@ -273,9 +273,9 @@
     if (c) return c;
     c = document.createElement("canvas"); c.width = W; c.height = Hh;
     const gc = c.getContext("2d"), img = gc.createImageData(W, Hh), d = img.data;
-    // (à l'échelle de la maison, environ 75 points pour un mètre : une figure du bois fait 15 à
-    // 25 cm, comme sur un vrai panneau)
-    const ox = hsh(g, 1) * 200, oy = hsh(g, 2) * 200, serre = 6 + hsh(g, 4) * 3, E = 2.6;
+    // (à l'échelle de la maison, environ 75 points pour un mètre : une figure du bois fait 25 à
+    // 40 cm, comme sur un vrai panneau)
+    const ox = hsh(g, 1) * 200, oy = hsh(g, 2) * 200, serre = 7 + hsh(g, 4) * 4, E = 1.6;
     for (let y = 0, i = 0; y < Hh; y++) for (let x = 0; x < W; x++, i += 4) {
       const u = (x + ox) * E, w = (y + oy) * E;
       const torsion = fbm(u * 0.03, w * 0.012) * 4;
