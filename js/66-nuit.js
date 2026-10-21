@@ -242,6 +242,137 @@
     }
     ctx.restore();
   }
+  // le lambris de pin, à lames horizontales, sur tous les murs (comme une cabane en bois)
+  function lambris(ctx, x0, y0, w, h, graine) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+    for (let y = y0, i = 0; y < y0 + h; y += 11, i++) {
+      const r = hsh(graine, i);
+      ctx.fillStyle = r < 0.33 ? "#e2bd84" : r < 0.7 ? "#d8b076" : "#cda46a";
+      ctx.fillRect(x0, y, w, 11);
+      fil(ctx, x0, y + 1, w, 9, false, graine * 3 + i);
+      ctx.fillStyle = PIN.f; ctx.fillRect(x0, y + 10, w, 1);
+      for (let x = x0 + hsh(i, graine) * 120; x < x0 + w; x += 150 + hsh(i, Math.round(x)) * 60) ctx.fillRect(x, y, 1, 10);
+    }
+    ctx.restore();
+  }
+  // De grands panneaux de contreplaqué de pin sur les murs, comme en vrai : le fond de pin clair et
+  // de larges veines plus foncées qui ondulent en flammes, en ovales et en vagues (les courbes de
+  // niveau d'un bruit doux, étiré en hauteur et un peu tordu), un joint fin entre deux panneaux.
+  // Chaque panneau est calculé une fois, point par point, puis gardé.
+  const bruitV = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = hsh(xi, yi), b = hsh(xi + 1, yi), c = hsh(xi, yi + 1), d = hsh(xi + 1, yi + 1);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  };
+  const fbm = (x, y) => bruitV(x, y) * 0.6 + bruitV(x * 2.1 + 5.3, y * 2.1 + 3.1) * 0.28 + bruitV(x * 4.3 + 9.7, y * 4.3 + 7.9) * 0.12;
+  const texturesBois = new Map();
+  function textureContreplaque(tw, th, g) {
+    const W = Math.ceil(tw), Hh = Math.ceil(th), cle = W + "x" + Hh + ":" + g;
+    let c = texturesBois.get(cle);
+    if (c) return c;
+    c = document.createElement("canvas"); c.width = W; c.height = Hh;
+    const gc = c.getContext("2d"), img = gc.createImageData(W, Hh), d = img.data;
+    // (à l'échelle de la maison, environ 75 points pour un mètre : une figure du bois fait 15 à
+    // 25 cm, comme sur un vrai panneau)
+    const ox = hsh(g, 1) * 200, oy = hsh(g, 2) * 200, serre = 6 + hsh(g, 4) * 3, E = 2.6;
+    for (let y = 0, i = 0; y < Hh; y++) for (let x = 0; x < W; x++, i += 4) {
+      const u = (x + ox) * E, w = (y + oy) * E;
+      const torsion = fbm(u * 0.03, w * 0.012) * 4;
+      const v = fbm(u * 0.02 + torsion * 0.1, w * 0.007) * serre + torsion * 0.6;
+      const b = v - Math.floor(v);
+      // (chaque veine : un bord net et foncé, puis la couleur qui s'éclaircit peu à peu)
+      const veine = Math.exp(-b * 6) * 0.9 + Math.exp(-(1 - b) * 22) * 0.6;
+      const t = Math.min(1, veine * 0.95 + fbm(u * 0.11, w * 0.05) * 0.12);
+      d[i] = 240 + (194 - 240) * t; d[i + 1] = 218 + (132 - 218) * t; d[i + 2] = 176 + (72 - 176) * t; d[i + 3] = 255;
+    }
+    gc.putImageData(img, 0, 0);
+    texturesBois.set(cle, c);
+    return c;
+  }
+  function contreplaque(ctx, x0, y0, w, h, graine) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+    const PW = 112, PH = 240;
+    for (let px = x0, i = 0; px < x0 + w; px += PW, i++) for (let py = y0, j = 0; py < y0 + h; py += PH, j++) {
+      const g = graine * 7 + i * 13 + j * 31, tw = Math.min(PW, x0 + w - px), th = Math.min(PH, y0 + h - py);
+      ctx.drawImage(textureContreplaque(tw, th, g), px, py, tw, th);
+      // un petit nœud, de temps en temps
+      if (hsh(g, 9) < 0.5) {
+        const nx = px + 10 + hsh(g, 10) * (tw - 20), ny = py + 10 + hsh(g, 11) * (th - 20);
+        ctx.fillStyle = "rgba(150,96,44,0.55)"; ctx.beginPath(); ctx.ellipse(nx, ny, 2.2, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(90,52,24,0.7)"; ctx.beginPath(); ctx.arc(nx, ny, 1, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "rgba(120,78,38,0.45)"; ctx.fillRect(px, py, 1.2, th); ctx.fillRect(px, py, tw, 1.2);
+    }
+    ctx.restore();
+  }
+  // une plante qui retombe (un pothos) : des tiges souples, les feuilles en cœur de chaque côté
+  function retombante(ctx, x, y, long, graine) {
+    const tons = ["#2f7a3e", "#4f9a46", "#7fbf5a"];
+    for (let b = 0; b < 3; b++) {
+      const dx = (b - 1) * 5, L = long * (0.6 + hsh(graine, b) * 0.4);
+      ctx.strokeStyle = "#3f6a2e"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(x + dx, y);
+      for (let s = 0; s <= L; s += 6) ctx.lineTo(x + dx + Math.sin(s / 14 + graine + b) * 4, y + s);
+      ctx.stroke();
+      for (let s = 3, k = 0; s <= L; s += 6, k++) {
+        const px = x + dx + Math.sin(s / 14 + graine + b) * 4 + (k % 2 ? 3 : -3);
+        ctx.fillStyle = tons[(k + b) % 3];
+        ctx.beginPath(); ctx.ellipse(px, y + s, 3.4, 2.6, k % 2 ? 0.5 : -0.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
+  }
+  // une suspension au plafond : la corde, le pot en macramé, et la plante qui retombe
+  function suspension(ctx, x, plafond, corde, long, graine) {
+    ctx.strokeStyle = "#c9b08a"; ctx.lineWidth = 1.4;
+    for (const d of [-6, 0, 6]) { ctx.beginPath(); ctx.moveTo(x, plafond); ctx.lineTo(x + d, plafond + corde); ctx.stroke(); }
+    ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(x - 9, plafond + corde); ctx.lineTo(x + 9, plafond + corde); ctx.quadraticCurveTo(x + 8, plafond + corde + 12, x, plafond + corde + 12); ctx.quadraticCurveTo(x - 8, plafond + corde + 12, x - 9, plafond + corde); ctx.closePath();
+    ctx.fillStyle = "#e9dcc0"; ctx.fill(); ctx.stroke();
+    for (const d of [-5, 5]) { ctx.fillStyle = "#4f9a46"; ctx.beginPath(); ctx.ellipse(x + d, plafond + corde - 2, 5, 3, d > 0 ? 0.4 : -0.4, 0, Math.PI * 2); ctx.fill(); }
+    retombante(ctx, x, plafond + corde + 6, long, graine);
+  }
+  // les étagères murales en pin : des livres, des pots, et une plante qui retombe par-dessus le bord
+  // (au-dessus du poêle, pas de plantes : elles s'y dessécheraient ; des livres et des bocaux)
+  const ETAGERES_MUR = [{ x: 96, y: 76, w: 72 }, { x: 96, y: 122, w: 72 }, { x: 166, y: 336, w: 90, plantes: false }, { x: 166, y: 382, w: 90, plantes: false }];
+  function etageresMurales(ctx, r) {
+    const LIVRES = ["#c96a3a", "#7a8a4a", "#e0b45a", "#8a5a3a", "#d9c2a0", "#5a6a8a", "#b8643f"];
+    ETAGERES_MUR.forEach((e, n) => {
+      let x = e.x + 4;
+      while (x < e.x + e.w - 10) {
+        if (e.plantes === false && r() < 0.45) {
+          // un bocal de plantes sèches, ou de tisane
+          bloc(ctx, x, e.y - 12, 9, 12, 2, "#d6eef5");
+          bloc(ctx, x + 1, e.y - 8, 7, 7, 1, ["#c9a24a", "#8a6a3a", "#9a7aa8"][Math.floor(r() * 3)], true);
+          bloc(ctx, x - 0.5, e.y - 14, 10, 3, 1, "#b8643f");
+          x += 13;
+        } else if (e.plantes === false || r() < 0.5) {
+          for (let i = 0, k = 2 + Math.floor(r() * 3); i < k && x < e.x + e.w - 6; i++) { const hh = 13 + r() * 8, l = 4 + Math.floor(r() * 2); bloc(ctx, x, e.y - hh, l, hh, 1, LIVRES[Math.floor(r() * LIVRES.length)]); x += l; }
+          x += 4;
+        } else {
+          bloc(ctx, x, e.y - 10, 11, 10, 2, r() < 0.5 ? "#c96a3a" : "#e9dcc0");
+          for (let i = 0; i < 4; i++) { ctx.fillStyle = ["#2f7a3e", "#4f9a46", "#7fbf5a"][i % 3]; ctx.beginPath(); ctx.ellipse(x + 2 + i * 2.4, e.y - 13 - (i % 2) * 3, 3.2, 2.4, i % 2 ? 0.6 : -0.6, 0, Math.PI * 2); ctx.fill(); }
+          if (r() < 0.6) retombante(ctx, x + 5, e.y - 4, 26 + r() * 22, n * 7 + x);
+          x += 16;
+        }
+      }
+      blocBois(ctx, e.x, e.y, e.w, 5, 1, false, e.x + e.y);
+    });
+  }
+  // un tapis à motifs (vu par la tranche, posé sur le sol) : crème, frise terracotta, losanges bleus
+  function tapisMotifs(ctx, cx, y, rx) {
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, y, rx, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#efe3c8"; ctx.fill(); ctx.stroke();
+    ctx.clip();
+    for (let x = cx - rx; x < cx + rx; x += 8) {
+      ctx.fillStyle = "#b8643f"; ctx.fillRect(x, y - 5, 4, 2); ctx.fillRect(x + 4, y + 3, 4, 2);
+      ctx.fillStyle = "#5a6a8a"; ctx.beginPath(); ctx.moveTo(x + 4, y - 2); ctx.lineTo(x + 6.5, y); ctx.lineTo(x + 4, y + 2); ctx.lineTo(x + 1.5, y); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
   // les poutres apparentes : vues par le bout, sous le plafond, avec les cernes du bois
   function poutres(ctx, y, xs, hh) {
     for (const x of xs) {
@@ -1257,6 +1388,21 @@
     ctx.restore();
   }
 
+  // Les rubans de lumière chaude cachés sous le bord du plafond, sous les étagères et sous le lit :
+  // une ligne qui brille et une lueur qui descend sur le bois. Discrets le jour, dorés le soir.
+  function rubansLumineux(ctx, moment, t) {
+    const a = moment === "jour" ? 0.22 : moment === "soir" ? 0.7 : 0.9;
+    const rubans = [[90, LARGE, NIV.salon.plafond + 12, 46], [90, LARGE, NIV.bas.plafond + 16, 40], [130, 380, NIV.grenier.sol + 1, 14]].concat(ETAGERES_MUR.map((e) => [e.x, e.x + e.w, e.y + 5, 30]));
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const [x0, x1, y, lueur] of rubans) {
+      const g = ctx.createLinearGradient(0, y, 0, y + lueur);
+      g.addColorStop(0, rgba([255, 178, 96], 0.42 * a)); g.addColorStop(1, rgba([255, 178, 96], 0));
+      ctx.fillStyle = g; ctx.fillRect(x0, y, x1 - x0, lueur);
+      ctx.fillStyle = rgba([255, 196, 110], 0.5 * a); ctx.fillRect(x0 + 2, y, x1 - x0 - 4, 1.2);
+    }
+    ctx.restore();
+  }
   // La lumière qui passe par les fenêtres des murs coupés : le jour (et au soleil couchant), un rai
   // qui entre en biais et descend jusqu'au sol de la pièce ; la nuit, la lumière chaude des lampes
   // traverse la vitre et déborde dehors, et un peu de clair de lune bleuté entre.
@@ -1356,6 +1502,12 @@
     // au grenier : le lit, et l'étagère de livres sous la pente
     litGrenier(cm);
     etagere(cm, r);
+    // les étagères murales en pin (au salon, et en bas au-dessus du poêle), et les plantes
+    // suspendues au plafond, qui retombent
+    etageresMurales(cm, r);
+    suspension(cm, 468, NIV.bas.plafond + 14, 16, 50, 2);
+    suspension(cm, 200, toitY(200) + 30, 18, 44, 4);
+    retombante(cm, 448, -60, 40, 5);
     // en bas : la plante, sous la petite fenêtre, et les chaises de la table du goûter
     cm.save();
     cm.translate(PLANTE_T.x, PLANTE_T.y);
@@ -1408,7 +1560,7 @@
     const eclats = ["#e04bb0", "#a8325b", "#ff5b4f", "#e04bb0", "#a8325b", "#ffd23a", "#3d5ee8"];
     for (const n of [NIV.salon, NIV.bas]) {
       const hh = n.plancher - n.plafond;
-      ctx.fillStyle = M.murG; ctx.fillRect(0, n.plafond, CAGE, hh);
+      contreplaque(ctx, 0, n.plafond, LARGE, hh, n.plafond);
       // plus sombre vers le plafond et dans le coin de la cage
       const pl = ctx.createLinearGradient(0, n.plafond, 0, n.plafond + 60);
       pl.addColorStop(0, M.ombreMur); pl.addColorStop(1, "rgba(0,0,0,0)");
@@ -1417,11 +1569,7 @@
       co.addColorStop(0, M.ombreMur); co.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = co; ctx.fillRect(CAGE, n.plafond, 40, hh);
       ctx.beginPath(); ctx.moveTo(CAGE, n.plafond); ctx.lineTo(CAGE, n.plancher); ctx.stroke();
-      // le mur chaulé : de petites taches plus claires et plus sombres, comme la chaux
-      for (let i = 0; i < 260; i++) {
-        ctx.fillStyle = r() < 0.5 ? "rgba(255,252,240,0.7)" : "rgba(200,184,150,0.22)";
-        ctx.fillRect(r() * LARGE, n.plafond + r() * hh, 1.5 + r() * 2.5, 1.2 + r() * 1.5);
-      }
+      // le lambris de pin, à lames horizontales
       // le parquet en point de Hongrie
       parquet(ctx, 0, n.plancher, LARGE, 16);
       ctx.fillStyle = M.plinthe; ctx.fillRect(0, n.plancher - 4, LARGE, 4);
@@ -1439,8 +1587,8 @@
     poutres(ctx, NIV.salon.plafond, [112, 174, 300, 420, 530], 10);
     poutres(ctx, NIV.bas.plafond, [130, 230, 455, 530], 14);
     // le tapis du salon, devant le canapé
-    ctx.beginPath(); ctx.ellipse(372, NIV.salon.sol + 1, 118, 5, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
+    tapisMotifs(ctx, 372, NIV.salon.sol + 1, 118);
+    tapisMotifs(ctx, 372, NIV.bas.sol + 1, 150);
     ombresAuSol(ctx);
 
     // les vitres : on les découpe (le dehors se peint derrière), puis les cadres en bois naturel
@@ -1527,7 +1675,7 @@
     // le mur du fond
     ctx.save();
     ctx.beginPath(); ctx.moveTo(0, NIV.grenier.plancher); ctx.lineTo(0, toitY(0)); ctx.lineTo(FAITE.x, FAITE.y); ctx.lineTo(LARGE, toitY(LARGE)); ctx.lineTo(LARGE, NIV.grenier.plancher); ctx.closePath(); ctx.clip();
-    ctx.fillStyle = MOMENTS.jour.murG; ctx.fillRect(0, BOITE.y, LARGE, NIV.grenier.plancher - BOITE.y);
+    contreplaque(ctx, 0, BOITE.y, LARGE, NIV.grenier.plancher - BOITE.y, 3);
     // le dessous du toit (le rampant), vu en fuite au-dessus du lit : un lambris, des chevrons
     // parallèles aux côtés du velux et une panne en bas qui suit la pente. C'est lui qui explique
     // qu'on voie le velux de biais : il est posé entre deux chevrons, dans ce plafond penché.
@@ -1604,6 +1752,7 @@
       const x = xp + i * l, y = mi - (i + 1) * h1;
       blocBois(ctx, x, y, l + 1, mi - y, 1, true, i * 3 + bas, PIN.d);
       bloc(ctx, x, y, l + 1, 4, 1, PIN.l);
+      tiroir(ctx, x, y, l, h1);
     }
     // son garde-corps : une planche pleine à hauteur de main, qui suit la volée, sur deux poteaux
     ctx.beginPath(); ctx.moveTo(xp, mi - 22); ctx.lineTo(xd, haut - 22); ctx.lineTo(xd, haut - 34); ctx.lineTo(xp, mi - 34); ctx.closePath();
@@ -1618,13 +1767,21 @@
       const x = xd - (i + 1) * l, y = bas - (i + 1) * h1;
       blocBois(ctx, x, y, l + 1, bas - y, 1, true, i * 5 + bas + 1);
       bloc(ctx, x - 1, y, l + 2, 4, 1, PIN.l);
+      tiroir(ctx, x, y, l, h1);
     }
-    // la rampe de la volée du bas, sur deux poteaux
-    ctx.strokeStyle = PIN.k; ctx.lineWidth = 3.4;
-    ctx.beginPath(); ctx.moveTo(xd + 2, bas - 34); ctx.lineTo(xp, mi - 30); ctx.stroke();
-    ctx.lineWidth = 2.4;
-    ctx.beginPath(); ctx.moveTo(xd + 2, bas - 2); ctx.lineTo(xd + 2, bas - 34); ctx.stroke();
-    ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE;
+    // la rampe de la volée du bas : une planche pleine à hauteur de main, sur son poteau
+    ctx.beginPath(); ctx.moveTo(xd + 2, bas - 22); ctx.lineTo(xp, mi - 22); ctx.lineTo(xp, mi - 34); ctx.lineTo(xd + 2, bas - 34); ctx.closePath();
+    ctx.fillStyle = PIN.b; ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.clip(); fil(ctx, xp, mi - 34, xd - xp + 2, bas - mi, false, bas * 0.7); ctx.restore();
+    blocBois(ctx, xd, bas - 34, 5, 34, 1, true, bas * 0.4);
+  }
+  // le tiroir caché dans une marche, avec son petit bouton
+  function tiroir(ctx, x, y, l, h1) {
+    ctx.save();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = PIN.f;
+    ctx.strokeRect(x + 1.6, y + 5, l - 2.2, h1 - 7);
+    ctx.fillStyle = PIN.k; ctx.beginPath(); ctx.arc(x + l / 2 + 0.5, y + 5 + (h1 - 7) / 2, 1.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
   // Les enceintes, en noyer, de chaque côté de la baie : un tweeter et deux haut-parleurs. Quand
   // la musique joue, les membranes battent (voir membranes).
@@ -1664,20 +1821,21 @@
   // droite, et à gauche la méridienne qui avance vers nous, où Lóló et Mémé dorment (un plaid bleu
   // plié sur l'accoudoir). ƟvƟ et Mesi s'y affalent pour écouter de la musique.
   function canapeL(ctx) {
-    bloc(ctx, 200, 150, 268, 58, 18, "#ff5b4f");
-    bloc(ctx, 334, 160, 40, 34, 12, "#ffd23a");
-    bloc(ctx, 412, 162, 38, 32, 12, "#f2f0e8");
-    bloc(ctx, 300, 196, 168, 38, 13, "#ff7a6b");
-    bloc(ctx, 454, 176, 26, 64, 11, "#ff5b4f");
+    bloc(ctx, 200, 150, 268, 58, 18, "#c9ae84");
+    bloc(ctx, 334, 160, 40, 34, 12, "#e0b45a");
+    bloc(ctx, 412, 162, 38, 32, 12, "#c96a4a");
+    bloc(ctx, 376, 166, 32, 28, 11, "#eadcc0");
+    bloc(ctx, 300, 196, 168, 38, 13, "#d8c19a");
+    bloc(ctx, 454, 176, 26, 64, 11, "#c9ae84");
     bloc(ctx, 462, 238, 8, 9, 3, ENCRE);
     // la méridienne
-    bloc(ctx, 188, 172, 24, 82, 11, "#ff5b4f");
-    bloc(ctx, 196, 200, 130, 30, 13, "#ff7a6b");
-    bloc(ctx, 196, 224, 130, 30, 11, "#ff5b4f");
-    // le plaid plié, posé sur l'accoudoir, qui retombe un peu
-    bloc(ctx, 186, 168, 30, 14, 6, "#3d5ee8");
-    bloc(ctx, 204, 176, 12, 40, 5, "#3d5ee8");
-    ctx.strokeStyle = "#7f97f2"; ctx.lineWidth = 2;
+    bloc(ctx, 188, 172, 24, 82, 11, "#c9ae84");
+    bloc(ctx, 196, 200, 130, 30, 13, "#d8c19a");
+    bloc(ctx, 196, 224, 130, 30, 11, "#c9ae84");
+    // le plaid rouille plié, posé sur l'accoudoir, qui retombe un peu
+    bloc(ctx, 186, 168, 30, 14, 6, "#b8643f");
+    bloc(ctx, 204, 176, 12, 40, 5, "#b8643f");
+    ctx.strokeStyle = "#d9824f"; ctx.lineWidth = 2;
     for (const y of [190, 202]) { ctx.beginPath(); ctx.moveTo(206, y); ctx.lineTo(214, y); ctx.stroke(); }
     ctx.strokeStyle = ENCRE; ctx.lineWidth = 2.2;
     bloc(ctx, 200, 252, 8, 8, 3, ENCRE);
@@ -1695,10 +1853,16 @@
     versLeLit(cm);
     blocBois(cm, 22, 150, 16, 94, 7, true, 3);
     bloc(cm, 34, 202, 198, 32, 11, "#f2f0e8");
-    bloc(cm, 74, 196, 160, 40, 13, "#3d5ee8");
-    bloc(cm, 74, 196, 30, 40, 12, "#7f97f2");
-    bloc(cm, 40, 182, 42, 23, 11, "#ffffff");
-    bloc(cm, 64, 187, 40, 21, 10, "#ffb3a8");
+    bloc(cm, 74, 196, 160, 40, 13, "#f6f1e6");
+    bloc(cm, 74, 196, 30, 40, 12, "#ece4d4");
+    bloc(cm, 40, 182, 42, 23, 11, "#efe6d4");
+    bloc(cm, 64, 187, 40, 21, 10, "#d9c2a0");
+    // le plaid beige, jeté au pied du lit, avec ses franges
+    bloc(cm, 150, 192, 56, 46, 8, "#d6c09a");
+    cm.strokeStyle = "#b8a07a"; cm.lineWidth = 1.2;
+    for (let x = 156; x < 204; x += 8) { cm.beginPath(); cm.moveTo(x, 196); cm.lineTo(x, 236); cm.stroke(); }
+    for (let x = 152; x < 206; x += 3) { cm.beginPath(); cm.moveTo(x, 238); cm.lineTo(x, 243); cm.stroke(); }
+    cm.strokeStyle = ENCRE; cm.lineWidth = 2.2;
     blocBois(cm, 34, 230, 198, 8, 3, false, 4);
     blocBois(cm, 42, 234, 8, 12, 3, true, 5);
     blocBois(cm, 218, 234, 8, 12, 3, true, 6);
@@ -1794,21 +1958,29 @@
   }
   // les deux chaises bleues de la table
   // les deux chaises en pin, le dossier à barreaux
+  // (un peu plus petites qu'avant, comme la table : réduites autour de leur pied, sur le sol)
+  const MEUBLE_BAS = 0.85, SOL_TABLE = 294;
+  const reduire = (ctx, cx) => { ctx.translate(cx, SOL_TABLE); ctx.scale(MEUBLE_BAS, MEUBLE_BAS); ctx.translate(-cx, -SOL_TABLE); };
   function chaises(ctx) {
-    for (const [dos, assise, p1, p2] of [[438, 436, 438, 466], [626, 596, 598, 626]]) {
+    for (const [dos, assise, p1, p2, cx] of [[438, 436, 438, 466, 455], [626, 596, 598, 626, 615]]) {
+      ctx.save(); reduire(ctx, cx);
       blocBois(ctx, dos, 196, 7, 54, 3, true, dos);
       blocBois(ctx, assise, 246, 38, 8, 3, false, assise);
       blocBois(ctx, p1, 254, 6, 40, 2, true, p1 + 1);
       blocBois(ctx, p2, 254, 6, 40, 2, true, p2 + 1);
+      ctx.restore();
     }
   }
+  // la hauteur de l'assise et la place du dossier, une fois les chaises réduites
+  const SIEGE = Math.round(SOL_TABLE - (SOL_TABLE - 246) * MEUBLE_BAS), DOS = (x, cx) => Math.round(cx + (x - cx) * MEUBLE_BAS);
 
   // Le poêle à bois, tout à gauche, posé sur le sol : un corps de fonte noire sur quatre pieds, une
   // grande vitre (le feu derrière, voir feuDuPoele) et une poignée. Son conduit monte tout droit
   // jusqu'au plafond : de l'inox argenté, poli comme un miroir, qui reflète la pièce en bandes
   // étirées (le plafond sombre en haut, le mur bleu, le sol magenta en bas, la fenêtre en un
   // trait clair). À côté, les bûches qu'on a rapportées de dehors.
-  const POELE = { x: 90, y: 420, w: 66, h: 80, vitre: { x: 104, y: 440, w: 34, h: 34 } };
+  // (au milieu, entre le pied de l'escalier et la table)
+  const POELE = { x: 152, y: 432, w: 56, h: 68, vitre: { x: 164, y: 449, w: 29, h: 29 } };
   function poeleABois(ctx, moment, eteint) {
     const M = MOMENTS[moment], { x, y, w, h, vitre } = POELE, cx = x + w / 2;
     // (on ne voit pas le conduit traverser la maison : seulement une petite cheminée sur le toit)
@@ -1917,6 +2089,7 @@
 
   // la table du goûter : deux tasses de tilleul et deux assiettes de crêpes au chocolat fondu
   function tableGouter(ctx) {
+    ctx.save(); reduire(ctx, 535);
     blocBois(ctx, 478, 223, 9, 70, 3, true, 21);
     blocBois(ctx, 584, 223, 9, 70, 3, true, 22);
     blocBois(ctx, 468, 212, 134, 11, 4, false, 23);
@@ -1932,6 +2105,7 @@
       ctx.beginPath(); ctx.moveTo(x - 3, 205); ctx.quadraticCurveTo(x, 203, x + 3, 205); ctx.lineTo(x + 3, 208); ctx.quadraticCurveTo(x + 1.5, 209.5, x, 208);
       ctx.fillStyle = "#5a3020"; ctx.fill();
     }
+    ctx.restore();
   }
 
   // Mesi et ƟvƟ assis·es de profil, le dos contre le dossier. Avec leurs proportions d'enfant
@@ -2586,6 +2760,7 @@
         raiDuVelux(m, ciel);
       }
       raisFenetresCoupe(m, moment, t);
+      rubansLumineux(m, moment, t);
       const feu = cheminee.feuActif();
       if (feu) feuDuPoele(m, t, moment, decor);
       // Lóló et Mémé sur le canapé ; ƟvƟ et Mesi à la table du goûter (ou sur le canapé). Tout ça
@@ -2660,8 +2835,8 @@
       cc.save();
       cc.translate(TABLE_T.x, TABLE_T.y);
       if (place === "table") {
-        if (ici("ovo")) assis(cc, "ovo", 445, 1, t, 2, loloRaconte);
-        if (ici("luigi")) assis(cc, "luigi", 626, -1, t, 4);
+        if (ici("ovo")) assis(cc, "ovo", DOS(445, 455), 1, t, 2, loloRaconte, SIEGE);
+        if (ici("luigi")) assis(cc, "luigi", DOS(626, 615), -1, t, 4, false, SIEGE);
       }
       cc.strokeStyle = ENCRE;
       cc.lineWidth = 1.6;

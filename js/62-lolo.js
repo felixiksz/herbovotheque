@@ -62,6 +62,54 @@
   // les textes corrigés dans « Les textes du jeu » remplacent ceux d'origine
   const T = (cle, defaut) => (H.textes ? H.textes.valeur(cle, defaut) : defaut);
   const astuces = () => T("astucesLolo", ASTUCES);
+  // les compliments qu'on peut faire à Lóló : trois dans la journée, et il fait pleuvoir de joie
+  const COMPLIMENTS = [
+    "Tu as la plus jolie étoile du monde !",
+    "Ta crinière brille comme du miel au soleil.",
+    "Tu galopes plus vite que le mistral !",
+    "Mémé a bien de la chance de dormir sur toi.",
+    "Tu sens bon le foin et la lavande.",
+    "Tes sabots font la plus jolie musique.",
+    "Tu es le plus doux des chevaux.",
+    "Tes yeux pétillent comme la mer aux calanques.",
+  ];
+  const compliments = () => T("complimentsLolo", COMPLIMENTS);
+  const DUREE_PLUIE = 10 * 60e3;
+  // La pluie de joie : après trois compliments, Lóló fait pleuvoir sur tous les jardins (elle
+  // arrose toutes les plantes, pendant dix minutes).
+  function faireTomberLaPluie() {
+    const t = H.maintenant();
+    H.jeu.pluieMagique = t + DUREE_PLUIE;
+    for (const ile of Object.values(H.jeu.iles || {})) {
+      if (!ile || ile.supprime || ile.croquis) continue;
+      for (const pl of Object.values(ile.plantes || {})) pl.eau = 100;
+      ile.modifieLe = t;
+    }
+    H.d.changer("jeu");
+    H.emettre("meteo", H.ciel.meteo);
+  }
+  async function complimenter() {
+    const melange = compliments().slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    const choix = await H.dialogue.dire([{ qui: "ovo", texte: "Hmm… qu’est-ce que je pourrais lui dire de gentil ?", choix: melange.map((c) => ({ valeur: c, libelle: c })) }]);
+    if (!choix) return;
+    const c = H.jeu.complimentsLolo || { n: 0, le: 0 };
+    if (H.maintenant() - c.le > 24 * 3600e3) c.n = 0;
+    c.n++;
+    c.le = H.maintenant();
+    H.jeu.complimentsLolo = c;
+    H.d.changer("jeu");
+    if (c.n === 1) await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Hiii… merci ! Tu me fais rougir jusqu’aux oreilles." }]);
+    else if (c.n === 2) await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Oh là là, encore ? Mon cœur fait des galops !" }]);
+    else {
+      c.n = 0;
+      await H.dialogue.dire([{ qui: "ovo", texte: choix }, { qui: "lolo", texte: "Hiii ! Tu me rends tellement heureux que… regarde le ciel !" }]);
+      faireTomberLaPluie();
+      await H.dialogue.dire([
+        { qui: "meme", texte: "Rrrrrrrr… (Mémé sent les premières gouttes, ouvre un œil, et se rendort.)" },
+        { qui: "lolo", texte: "Voilà : une pluie de joie pour tous tes jardins ! Ça arrose tout, pendant dix minutes." },
+      ]);
+    }
+  }
   const repliquesMeme = () => T("memeLolo", MEME);
   // Et quelques vraies blagues, ses préférées
   const BLAGUES = [
@@ -233,11 +281,13 @@
         { valeur: "fleurs", libelle: "Qu’est-ce qui fleurit ?" },
         { valeur: "recolte", libelle: "Qu’est-ce qu’on récolte ou cueille ?" },
         { valeur: "semis", libelle: "Qu’est-ce qu’on sème ?" },
+        { valeur: "compliment", libelle: "Lui faire un compliment" },
         { valeur: "visite", libelle: "Une visite guidée du jeu" },
         { valeur: "carnet", libelle: "Explique-moi le carnet" },
         { valeur: null, libelle: "Merci Lóló !" },
       ]);
       if (!q) break;
+      if (q === "compliment") { await complimenter(); intro = "Autre chose ?"; continue; }
       if (q === "visite") return visite();
       if (q === "carnet") return visiteCarnet();
       let repliques = [];
@@ -423,7 +473,7 @@
       .then((r) => (r ? visite() : H.dialogue.dire([{ qui: "lolo", texte: "D’accord ! Quand tu veux, clique sur moi à la ferme, ou va dans les réglages." }])));
   }
 
-  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, visite: () => visite(), visiteCarnet, proposerVisite, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME } };
+  H.lolo = { parler, blague, bienDormi, leMatin, cacherLaLumiere, disponible, visite: () => visite(), visiteCarnet, proposerVisite, DEFAUTS: { astucesLolo: ASTUCES, memeLolo: MEME, complimentsLolo: COMPLIMENTS } };
 })();
 
 // Une adresse que seul·e Mesi connaît (#surprises) : voir dès maintenant, sur cet appareil,
