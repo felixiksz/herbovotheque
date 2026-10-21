@@ -545,6 +545,8 @@
     // Lóló sans Mémé sur l'encolure (quand Mémé est sortie par la chatière)
     loloSansMeme: [LOLO, LOLO_2].map((G) => contour(sansMeme(G.map((l) => l.split("")), false))),
     memePas: [MEME_DEBOUT, MEME_PAS],
+    // Lóló de dos, qui regarde le paysage : les oreilles et la crinière, la croupe, la queue, les quatre pattes
+    loloDos: [[".......kk..kk.....", "......knk..knk....", "......knnkknnk....", ".......kMMMMk.....", "........kMMk......", "....kkkkkMMkkkk...", "...knnnnnMMnnnnk..", "..knnnnnnnnnnnnnk.", "..knnnnnnnnnnnnnk.", ".knnnnnnMMnnnnnnk.", ".knnnnnnMMnnnnnnk.", ".knnnnnMMMMnnnnnk.", ".knnnnnMMMMnnnnnk.", "..knnnnMMMMnnnnk..", "..knnnkMMMMknnnk..", "..knnk.MMMM.knnk..", "..knnk.kMMk.knnk..", "..knnk..kk..knnk..", "..knnk......knnk..", "..kNNk......kNNk..", "...kk........kk..."]],
   };
   const cache = new Map();
   // Lóló est une peluche : robe caramel, crinière, queue et sabots chocolat

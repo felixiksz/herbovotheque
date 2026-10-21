@@ -4046,7 +4046,8 @@
     // les promeneurs, de profil : de vrais pas alternés
     const pas = (decale) => (arret ? 4 : (Math.floor(b.foulee / 170) + decale) % 4);
     const avec = (q) => S.compagnons.includes(q);
-    if (avec("lolo")) persoBalade(ctx, avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, 2.4, arret ? 0 : Math.floor(b.foulee / 230) % 4);
+    // (à l'arrêt, Lóló aussi se tourne vers le paysage)
+    if (avec("lolo")) persoBalade(ctx, deDos ? "loloDos" : avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, deDos ? 3.2 : 2.4, arret ? 0 : Math.floor(b.foulee / 230) % 4);
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
     if (avec("meme") && !avec("lolo") && !b.baignade) persoBalade(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, arret ? 0 : Math.floor(b.foulee / 200) % 2);
     // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
