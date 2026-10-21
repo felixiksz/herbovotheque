@@ -12,6 +12,10 @@
     soir: { haut: ["#ffdca0", "#ffd2a8", "#ffd8b4", "#ffe0a8"], milieu: ["#f6b4c4", "#f2b0c8", "#f8bab4", "#f4b8cc"], ombre: ["#c4a4dc", "#bca8dc", "#c8a8d8", "#b8acdc"] },
     nuit: { haut: ["#a8b2dc", "#aeb6e0", "#a4aed8", "#b0b8e0"], milieu: ["#8a92c8", "#868ec6", "#8e94ca", "#848cc4"], ombre: ["#6c72b0", "#6a70ae", "#7076b2", "#686eac"] },
     couvert: { haut: ["#9aa2d2", "#a0a6d4", "#9ca0ce", "#a2a8d6"], milieu: ["#7e84bc", "#8288be", "#7c80b8", "#8086bc"], ombre: ["#62689e", "#666aa0", "#60669c", "#6a6ea4"] },
+    // (sous la pluie : plus lourds, bleu ardoise ; sous l'orage : indigo et violet ; jamais de gris)
+    pluie: { haut: ["#8a94c4", "#8e96c6", "#8690c0", "#9098c8"], milieu: ["#6a72aa", "#6e74ac", "#6870a6", "#7076ae"], ombre: ["#4c5288", "#50568a", "#4a5084", "#52588c"] },
+    orage: { haut: ["#7a72b0", "#7e76b4", "#7670ac", "#8078b6"], milieu: ["#56508e", "#5a5492", "#544e8a", "#5c5694"], ombre: ["#38326a", "#3c366e", "#363066", "#3e3870"] },
+    nuitCouvert: { haut: ["#5a5e96", "#5e6298", "#585c92", "#60649a"], milieu: ["#444880", "#484c84", "#42467e", "#4a4e86"], ombre: ["#2e3266", "#32366a", "#2c3064", "#34386c"] },
   };
   const hasard = (s) => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
   const sprites = new Map();
@@ -69,8 +73,12 @@
     return c;
   }
   // le moment qui colore les nuages, d'après la hauteur du soleil (et la couverture du ciel)
-  function moment(alt, couvert) {
-    if (couvert) return "couvert";
+  // (la météo d'abord : orage, pluie, couvert — de nuit, couvert plus sombre ; sinon selon l'heure)
+  function moment(alt, couvert, type) {
+    type = type || (H.ciel && H.ciel.meteo || {}).type;
+    if (type === "orage") return "orage";
+    if (type === "pluie") return "pluie";
+    if (couvert) return alt < 0 ? "nuitCouvert" : "couvert";
     if (alt < 0) return "nuit";
     if (alt < 8) return new Date().getHours() < 12 ? "aube" : "soir";
     return "jour";

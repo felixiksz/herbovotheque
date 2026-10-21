@@ -2355,11 +2355,18 @@
         for (const [x, y, a] of etoiles) { g.fillStyle = "rgba(255,240,250," + a + ")"; g.fillRect(Math.round(x * w), Math.round(y * h * 0.85), 1, 1); }
         if (etat.lune.alt > -2) lunePlate(g, w * 0.75, h * 0.22, Math.max(6, w * 0.035), etat.lune.phase);
       }
-      const moment = H.nuages.moment(alt, (H.ciel.meteo || {}).nuages > 70);
-      for (let i = 0; i < 7; i++) {
+      const met = H.ciel.meteo || {}, moment = H.nuages.moment(alt, met.nuages > 70, met.type);
+      // (autant de nuages que dans le vrai ciel : quelques-uns par beau temps, beaucoup s'il est couvert)
+      const n = met.type === "pluie" || met.type === "orage" ? 14 : met.nuages != null ? Math.round(2 + (met.nuages / 100) * 12) : 7;
+      for (let i = 0; i < n; i++) {
         const taille = 12 + (i % 3) * 7, sp = H.nuages.sprite(taille, 1, moment, i * 7 + 3), v = 2 + (i % 4);
         const x = ((i * 157 + (t / 1000) * v) % (w + sp.width + 40)) - sp.width - 20;
-        g.drawImage(sp, Math.round(x), Math.round(h * (0.06 + ((i * 3) % 7) * 0.12)));
+        g.drawImage(sp, Math.round(x), Math.round(h * (0.04 + ((i * 3) % 9) * 0.09)));
+      }
+      // la pluie, quand il pleut
+      if (met.type === "pluie" || met.type === "orage") {
+        g.fillStyle = "rgba(170,190,240,0.5)";
+        for (let k = 0; k < 120; k++) { const x = (k * 37 + t * 0.05) % (w + 20) - 10, y = (k * 53 + t * 0.25) % (h + 20) - 10; g.fillRect(Math.round(x), Math.round(y), 1, 4); }
       }
       anim = requestAnimationFrame(peindre);
     };
