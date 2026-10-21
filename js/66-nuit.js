@@ -4025,7 +4025,8 @@
     const moA = nuit ? "nuit" : alt < 8 ? "soir" : "jour";
     // la garrigue au bord du chemin (des oyats dans les dunes), et les pins parasols de toutes tailles
     for (let i = 0; i < 14; i++) {
-      const x = boucler(i * 95 - avance * 0.9, w, 50);
+      if (hsh(i, 63) < 0.18) continue;
+      const x = boucler(i * 95 + (hsh(i, 64) - 0.5) * 80 - avance * 0.9, w, 50);
       if (dunes(X(x)) > 0.5 && !nuit) {
         ctx.strokeStyle = "#8a9a4a"; ctx.lineWidth = 1.6;
         for (let j = 0; j < 5; j++) { const vent = Math.sin(t / 650 + i * 1.3 + j * 0.7) * 2.5; ctx.beginPath(); ctx.moveTo(x + j * 3, sol(x) - h * 0.15); ctx.lineTo(x + j * 3 + (j - 2) * 3 + vent, sol(x) - h * 0.15 - 14 - (j % 2) * 6); ctx.stroke(); }
@@ -4077,7 +4078,8 @@
     }
     if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
-    for (let i = 0; i < 12; i++) { const bx = boucler(i * 110 - avance * 1.25, w, 60); if (!buissonBalade(ctx, bx, h + 4, 22 + (i % 3) * 8, moA, dpr, i * 11 + 5)) buissonPlat(ctx, bx, h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a"); }
+    // (espacés irrégulièrement, et parfois un trou)
+    for (let i = 0; i < 12; i++) { if (hsh(i, 61) < 0.22) continue; const bx = boucler(i * 110 + (hsh(i, 62) - 0.5) * 90 - avance * 1.25, w, 60); if (!buissonBalade(ctx, bx, h + 4, 22 + (i % 3) * 8, moA, dpr, i * 11 + 5)) buissonPlat(ctx, bx, h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a"); }
     poses(S.devant, b, 1.3, (x, taille) => arbreBalade(ctx, x, h * 1.04, taille, moA, dpr) || pinPlat(ctx, x, h * 1.04, taille, nuit ? "#0f2218" : "#1f6b34", nuit ? "#0b1a12" : "#134a24", nuit ? "#0f2218" : "#4a2e20"));
     // On peut aller se baigner quand le chemin longe la crique aux rochers rouges. En y arrivant,
     // on s'arrête (même si quelqu'un est en train de raconter une histoire) ; une fois la bulle
