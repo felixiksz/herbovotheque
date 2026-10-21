@@ -917,6 +917,10 @@
   let vue = null; // état de l'île affichée
 
   function ouvrirIle(conteneur, id) {
+    // (le jardin de Lóló et Mémé se met à jour aussi quand on l'ouvre directement, sans passer par
+    // la liste des jardins)
+    const sec = (H.jeu.iles || {})[ILE_SECRETE];
+    if (id === ILE_SECRETE && sec && !sec.supprime && (sec.version || 1) < VERSION_ILE_SECRETE && ileSecreteOuverte()) creerIleSecrete();
     const ile = (H.jeu.iles || {})[id];
     if (!ile || ile.supprime || (ile.secrete && !ileSecreteOuverte())) {
       conteneur.appendChild(H.el("p", null, "Ce jardin n’existe pas (ou pas encore). ", H.el("a", { href: "#terrain" }, "Retour aux jardins")));
@@ -1336,6 +1340,14 @@
           const nx = x + dx, ny = y + dy;
           if (estVide(ile, nx, ny) || niveau(ile, nx, ny) === n) continue;
           const haut = n > niveau(ile, nx, ny) ? [x, y] : [nx, ny], mur = muret(ile, haut[0], haut[1]);
+          // l'ombre portée au pied du muret ou du talus, quand le bas est à droite ou en dessous
+          // (le soleil vient d'en haut à gauche), plus longue si la marche est haute
+          if (haut[0] === x && haut[1] === y) {
+            const marche = n - niveau(ile, nx, ny), lg = Math.min(0.6, 0.18 * marche) * k;
+            ctx.fillStyle = "rgba(38,40,106," + Math.min(0.42, 0.16 + 0.08 * marche) + ")";
+            if (dx) ctx.fillRect((nx + BX) * k, (y + BY) * k, lg, k);
+            else ctx.fillRect((x + BX) * k, (ny + BY) * k, k, lg);
+          }
           ctx.fillStyle = mur ? "#5b5fa8" : "#7a4520";
           const ep = mur ? Math.max(2, k * 0.12) : Math.max(1, k * 0.06);
           if (dx) ctx.fillRect((nx + BX) * k - ep / 2, (y + BY) * k, ep, k);
