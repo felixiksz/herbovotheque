@@ -948,9 +948,8 @@
   // --- les icônes en pixels de l'écran des îles (12 × 12, dans le style du bureau) ---------------
   const PAL_ICONE = { k: "#23214a", w: "#f3f0dc", b: "#3d5ee8", B: "#a8d8ec", m: "#f4a3b8", M: "#c93f6e", v: "#4aa63e", V: "#2f6b35", y: "#f6ee55", g: "#c6c8dc", G: "#8d90b0", n: "#b9834f", N: "#7a4520" };
   const ICONES_ILE = {
-    // un flamant rose en vol, vu d'en haut : le long cou tendu devant, les ailes grandes ouvertes
-    // (la tache rouge, le bout des plumes sombre), les pattes qui traînent derrière
-    oiseau: [".....MM.....", ".....mm.....", ".....mm.....", "G....mm....G", "GGm..mm..mGG", ".GmMMmmMMmG.", "..mMmmmmMm..", "....mmmm....", ".....ww.....", ".....MM.....", ".....MM.....", ".....M.M...."],
+    // un petit oiseau bleu en vol, de profil : l'aile levée, l'œil, le bec jaune, la queue
+    oiseau: ["............", "............", "..bb........", "..bBb.......", "...bBb......", "...bBBb..bb.", "....bBBbbwby", "BBbbbbbbbbb.", ".BbbbbbbbB..", "...BBBBBB...", "............", "............"],
     relief: [".....kk.....", "...kkvvkk...", ".kkvvvvvvkk.", "kvvvvvvvvvvk", "knkkvvvvkkNk", "knnnkkkkNNNk", "knnnnnNNNNNk", ".kknnnNNNkk.", "...kknNkk...", ".....kk.....", "............", "............"],
     plus: ["............", "............", "....kkkk....", "....kwwk....", "..kkkwwkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkwwkkk..", "....kwwk....", "....kkkk....", "............", "............"],
     moins: ["............", "............", "............", "............", "..kkkkkkkk..", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkkkkkk..", "............", "............", "............", "............"],
