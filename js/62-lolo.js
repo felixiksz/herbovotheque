@@ -263,24 +263,68 @@
   // --- la visite guidée : Lóló fait le tour de tout le jeu, lieu après lieu (proposée au tout
   // début ; on la retrouve dans le menu de Lóló, et dans les réglages)
   function etapesVisite() {
-    const mesi = H.monde === "mesi";
+    const mesi = H.monde === "mesi", deMesi = H.local && H.local.role === "mesi";
     return [
       ["ferme", [
         "Hiii ! Suis-moi, je te montre tout. Ici, c’est la ferme. Clique sur une maison pour y entrer, ou n’importe où pour y marcher.",
         "En haut à droite : la truelle pour aménager la ferme, la pousse pour aller aux jardins, le rouage pour les réglages.",
-        "Le petit carnet juste en dessous, c’est pour noter vite quelque chose, même les mains pleines de terre. En bas à gauche, les post-it de ta to-do liste : tu peux les cocher direct !",
+        "Avec la truelle, tu poses des chemins, du gravier, une prairie fleurie, des plantes… « Déplacer » et « Tourner » bougent les maisons et les arbres. « Ferme d’origine » remet tout comme au début.",
+        "Le petit carnet juste en dessous (ou Ctrl J), c’est pour noter vite, même les mains pleines de terre : la note file dans le carnet, page « Notes rapides ».",
+        "En bas à gauche, les post-it de ta to-do liste : tu peux les cocher direct, ou les replier.",
       ]],
-      ["herbotheque", ["L’herbothèque : toutes les fiches des plantes, rangées sur les étagères. Clique sur un bocal pour ouvrir sa fiche."]],
-      ["cartes", ["Les flashcartes ! Chaque bonne réponse rapporte des ressources pour les jardins. Et toutes les quinze cartes… une crêpe au chocolat fondu !"]],
-      ["terrain", ["Tes jardins. En mode Jardin, on plante, on arrose, on récolte. En mode Chantier, on aménage, on change la forme du jardin ou son relief."]],
-      ["serre", ["La serre : on sème dans les pots, et les bébés plantes vont dans la caisse, prêts à repiquer dans les jardins."]],
-      ["labo", ["Le labo : les récoltes deviennent des préparations, et on remplit les bocaux de l’herbothèque."]],
-      ["tisanes", [mesi ? "Tes formules, avec le rôle de chaque substance." : "Le placard à tisanes : tes mélanges, avec ce que fait chaque plante."]],
-      ["lettres", ["La boîte aux lettres, pour écrire des lettres, même des lettres qui arrivent plus tard."]],
-      ["carnet", ["Le carnet : des pages pour tes chantiers et tes idées, avec des vues, des commentaires, des pièces jointes. Ctrl K pour chercher partout dans le jeu !"]],
-      ["taches", ["La to-do liste, avec des rappels qui sonnent au bon moment."]],
-      ["devis", ["Les devis et les factures, pour tes clients."]],
+      ["herbotheque", [
+        "L’herbothèque : toutes les fiches, rangées sur les étagères. Clique sur un bocal pour ouvrir sa fiche, ou « Nouvelle plante » pour en créer une à toi.",
+        "« Organiser », c’est ton atelier de rangement : tu crées tes étagères, tu choisis les plantes qui y vont, tu les montes ou les descends.",
+        "Toujours dans « Organiser » : les rubriques des fiches. Texte court, texte long, choix dans une liste, mois de l’année… Chaque rubrique que tu ajoutes apparaît sur toutes les fiches.",
+        "Et les préparations : sirop, baume, macérat… Tu inventes les tiennes, avec la forme du contenant : bocal, flacon ambré, compte-gouttes, petit tube.",
+        "Dans une fiche : « Modifier » pour remplir ou corriger, « Renommer », « Changer la photo » (une photo à toi, ou une photo libre), et l’étoile pour la mettre en favori.",
+        "Et « Dessiner son modèle » : tu dessines la plante toi-même, pixel par pixel, de face, de côté et de dessus. Coche « Montrer mon dessin dans les jardins », et c’est ton dessin qui pousse !",
+      ]],
+      ["cartes", [
+        "Les flashcartes ! Chaque bonne réponse rapporte des ressources pour les jardins. Et toutes les quinze cartes… une crêpe au chocolat fondu !",
+        "« Choisir quoi réviser » : des plantes une à une, une étagère entière, et les rubriques des fiches que tu veux apprendre.",
+        "« Mes cartes » : tes propres cartes, question et réponse, liées à une plante si tu veux. Et dans « Paramètres avancés », tu règles le rythme : quand revoir une carte ratée, difficile ou facile.",
+      ]],
+      ["terrain", [
+        "Tes jardins ! « Nouveau jardin » pour en commencer un : un jardin de jeu qui pousse pour de vrai, un croquis de projet à l’échelle, ou un jardin surprise à offrir.",
+        "En mode Jardin, on plante, on arrose, on récolte. En mode Chantier : « Aménager » pour les chemins, l’eau, les murets en pierres sèches ; « Soleil et sol » pour peindre l’ombre et la terre.",
+        "« Forme du jardin » pour dessiner ses contours, et « Relief » pour monter des buttes et des terrasses, avec un talus ou un muret.",
+        "La touche V passe en vue d’oiseau. On zoome avec la molette, le pavé tactile ou deux doigts. Et tu peux importer un dessin à décalquer.",
+        "Le bouton exporter sort la liste des plantes ou le croquis en PDF. Et dans les réglages du jardin (le rouage), tu peux le renommer ou l’offrir en surprise.",
+      ]],
+      ["serre", ["La serre : on sème dans les pots, et les bébés plantes vont dans la caisse, prêts à repiquer dans les jardins. Tu peux chercher quoi semer par indication : digestion, sommeil, toux…"]],
+      ["labo", ["Le labo : les récoltes deviennent des préparations (les tiennes aussi, celles d’« Organiser »), et on remplit les bocaux de l’herbothèque."]],
+      ["tisanes", mesi ? [
+        "Tes formules : clique sur les bocaux pour composer, puis la dose et le rang de chaque substance (empereur, ministre, assistant, messager), son action, la préparation.",
+        "« Exporter les formules » pour tout garder sur papier.",
+      ] : [
+        "Le placard à tisanes : « Nouveau mélange », clique sur les bocaux pour composer, puis les proportions, l’effet de chaque plante, la préparation.",
+        "« Exporter les recettes » pour tout garder sur papier.",
+      ]],
+      ["lettres", ["La boîte aux lettres, pour écrire des lettres, même des lettres qui arrivent plus tard : tu choisis la date d’arrivée."]],
+      ["carnet", [
+        "Le carnet : des pages libres pour tes chantiers, tes visites, tes idées. « + Sous-page » range des pages dans une page.",
+        "Tape « / » pour choisir un bloc : titres, listes, cases à cocher, encadré, partie dépliable, image, tableau, deux colonnes… Ou les raccourcis : # pour un titre, - pour une puce, [] pour une case.",
+        "Tape « [[ » pour relier une page, une plante, un jardin ou un client. Et #étiquette pour classer : un clic sur l’étiquette montre toutes les pages qui l’ont.",
+        "En haut de chaque page, les propriétés : une date, un statut, et « Liée à » pour la relier à d’autres pages.",
+        "Le bloc « Vue des pages » montre des pages en liste, en tableau, en galerie ou en calendrier, d’après une étiquette ou les sous-pages.",
+        "Les modèles : « Depuis un modèle » pour commencer une page toute prête, « En faire un modèle » pour garder la tienne. Mets {date}, {client} ou {jardin}, ils se remplissent tout seuls.",
+        "Sous chaque page : les commentaires, les pièces jointes, l’historique pour revenir en arrière, « Déplacer », « Exporter », les favoris… et la corbeille, pour se rattraper.",
+        "Ctrl K cherche partout dans le jeu, et Ctrl J ouvre une note rapide.",
+      ]],
+      ["taches", ["La to-do liste : une date, un rappel qui sonne, une tâche qui revient chaque semaine, chaque mois ou chaque année, liée à une plante ou à un jardin. Et des idées du mois, d’après tes jardins."]],
+      ["devis", [
+        "Les devis et les factures. « Mon entreprise » pour tes coordonnées et ton logo, « Mes clients », et « Mes prix » pour ne pas tout retaper.",
+        "Dans un devis : des lignes, des titres de partie, des sous-totaux, du texte libre, des sauts de page, et même les plantes d’un jardin d’un coup. Et tu ajoutes tes colonnes, de texte ou de nombres.",
+        "« Modèles de PDF » : le style (Classique, Moderne, Herbier, Fenêtre…), la police, la couleur, la place du logo, les parties à montrer, et « + Un champ » pour tes champs en plus.",
+        "Quand c’est accepté : « En faire une facture ». Hiii !",
+      ]],
       ["maison", ["Et la maison ! Le canapé, le goûter, le dodo… et la porte, pour partir en balade."]],
+      ["reglages", [
+        "Les réglages : le lieu pour la météo, le jour, la nuit et les sons, le jeu léger si l’appareil rame, la sauvegarde.",
+        "Et partout où tu vois « Exporter » : en PDF, en tableau ou en texte, avec un style au choix (Classique, Moderne, Herbier, Carnet de terrain…).",
+      ]],
+      ...(deMesi ? [["textes", ["Rien que pour toi, Mesi : les textes du jeu. Mes astuces, mes drames, ce que fait Mémé, les histoires du soir… tu changes tout ce que tu veux."]]] : []),
       ["ferme", ["Voilà, tu sais tout ! Hiii ! Tu peux me redemander la visite quand tu veux : clique sur moi à la ferme, ou va dans les réglages."]],
     ];
   }
@@ -290,10 +334,13 @@
     visiteEnCours = true;
     H.d.majLocal((l) => (l.visiteProposee = true));
     try {
-      for (const [lieu, textes] of etapesVisite()) {
+      const etapes = etapesVisite();
+      for (let n = 0; n < etapes.length; n++) {
+        const [lieu, textes] = etapes[n], derniere = n === etapes.length - 1;
         if (!location.hash.startsWith("#" + lieu)) { H.aller(lieu); await new Promise((r) => setTimeout(r, 900)); }
-        const r = await H.dialogue.dire(textes.map((texte, i) => i === textes.length - 1 ? { qui: "lolo", texte, choix: [{ valeur: "suite", libelle: "Suite" }, { valeur: null, libelle: "Arrêter la visite" }] } : { qui: "lolo", texte }));
-        if (lieu === "ferme" && textes.length === 1) break;
+        // (à la fin de chaque lieu : passer au suivant, ou arrêter ; rien à choisir à la dernière)
+        const r = await H.dialogue.dire(textes.map((texte, i) => i === textes.length - 1 && !derniere ? { qui: "lolo", texte, choix: [{ valeur: "suite", libelle: "Lieu suivant" }, { valeur: null, libelle: "Arrêter la visite" }] } : { qui: "lolo", texte }));
+        if (derniere) break;
         if (!r) { await H.dialogue.dire([{ qui: "lolo", texte: "D’accord ! Si tu veux la reprendre, clique sur moi à la ferme. Hiii !" }]); break; }
       }
     } finally { visiteEnCours = false; }
