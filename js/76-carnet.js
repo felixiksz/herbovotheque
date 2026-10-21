@@ -38,7 +38,7 @@
   }
   const enfants = (id) => toutes().filter((p) => (p.parent || null) === (id || null)).sort((a, b) => (a.ordre || a.creeLe) - (b.ordre || b.creeLe));
   const chemin = (p) => { const c = []; let q = p; while (q && q.parent && c.length < 20) { q = page(q.parent); if (q && !q.supprime) c.unshift(q); else break; } return c; };
-  const texteDe = (p) => [p.titre].concat((p.blocs || []).flatMap((b) => [b.texte, b.contenu, b.gauche, b.droite, b.legende].concat((b.lignes || []).flat())),
+  const texteDe = (p) => [p.titre].concat((p.blocs || []).flatMap((b) => [b.texte, b.contenu, b.gauche, b.droite, b.legende].concat((b.lignes || []).flat(), (b.cellules || []).flat())),
     (p.relations || []).map((r) => "[[" + r + "]]"), (p.commentaires || []).filter((c) => !c.supprime).map((c) => c.texte)).filter(Boolean).join("\n");
 
   // --- les noms reliés : [[un nom]] ----------------------------------------------------------
@@ -111,7 +111,7 @@
     ["p", "Texte", ""], ["h1", "Grand titre", "# "], ["h2", "Titre", "## "], ["h3", "Petit titre", "### "],
     ["puce", "Liste à puces", "- "], ["num", "Liste numérotée", "1. "], ["todo", "Case à cocher", "[] "],
     ["citation", "Citation", "> "], ["encadre", "Encadré", "!> "], ["toggle", "Partie dépliable", ">> "],
-    ["separateur", "Séparateur", "---"], ["image", "Image", ""], ["tableau", "Tableau", ""], ["colonnes", "Deux colonnes", ""],
+    ["separateur", "Séparateur", "---"], ["image", "Image", ""], ["tableau", "Tableau", ""], ["feuille", "Feuille de calcul", ""], ["colonnes", "Deux colonnes", ""],
     ["vue", "Vue des pages", ""],
   ];
   // les propriétés d'une page : une date, un statut, et des relations (« Liée à »)
@@ -230,6 +230,117 @@
     };
   }
 
+  // --- la feuille de calcul : des cases comme dans Excel, avec des formules (=SOMME(B2:B5)…), le
+  // tri et le filtre par colonne, et l'import ou l'export d'un vrai fichier Excel ----------------
+  function feuilleDeCalcul(b, changer, p) {
+    const T = H.tableur;
+    b.cellules = b.cellules || [["", "", ""], ["", "", ""], ["", "", ""]];
+    let colChoisie = 0, enEdition = null;
+    const table = H.el("table.feuille-carnet"), infos = H.el("div.infos-feuille");
+    const larg = () => Math.max(1, ...b.cellules.map((r) => r.length));
+    const egaliser = () => { const n = larg(); b.cellules.forEach((r) => { while (r.length < n) r.push(""); }); };
+    function dessiner() {
+      egaliser();
+      const valeurs = T.calculer(b.cellules), n = larg(), f = b.filtre;
+      const garde = (l) => !f || l === 0 && b.entete || String(T.afficher(valeurs[l][f.c])).toLowerCase().includes(f.texte.toLowerCase());
+      table.replaceChildren(
+        H.el("tr.lettres-feuille", null, H.el("th.coin-feuille"), Array.from({ length: n }, (_, c) => H.el("th" + (c === colChoisie ? ".choisie" : ""), { title: "Choisir la colonne " + T.lettres(c) + " (pour trier ou filtrer)", onclick: () => { colChoisie = c; dessiner(); } }, T.lettres(c)))),
+        ...b.cellules.map((rang, l) => garde(l) ? H.el("tr" + (l === 0 && b.entete ? ".entete-feuille" : ""), null, H.el("th.numero-feuille", null, String(l + 1)),
+          rang.map((brut, c) => {
+            const v = valeurs[l][c], estNombre = typeof v === "number", erreur = typeof v === "string" && /^#/.test(v);
+            const inp = H.el("input.case-feuille" + (estNombre ? ".nombre" : "") + (erreur ? ".erreur" : "") + (String(brut).startsWith("=") ? ".formule" : ""), {
+              value: enEdition === l + "," + c ? brut : T.afficher(v), "aria-label": T.nomCase(c, l), title: String(brut).startsWith("=") ? T.nomCase(c, l) + " : " + brut : T.nomCase(c, l),
+              onfocus: (e) => { enEdition = l + "," + c; colChoisie = c; e.target.value = b.cellules[l][c]; table.querySelectorAll(".lettres-feuille th").forEach((th, k) => th.classList.toggle("choisie", k === c + 1)); infos.textContent = T.nomCase(c, l) + (String(b.cellules[l][c]).startsWith("=") ? " : " + b.cellules[l][c] : ""); },
+              oninput: (e) => { b.cellules[l][c] = e.target.value; changer(); },
+              onblur: () => { enEdition = null; setTimeout(() => { if (!table.contains(document.activeElement)) dessiner(); else rafraichir(); }, 0); },
+              onkeydown: (e) => {
+                const aller = (dl, dc) => { const cible = table.querySelector('[aria-label="' + T.nomCase(c + dc, l + dl) + '"]'); if (cible) { e.preventDefault(); cible.focus(); cible.select(); } };
+                if (e.key === "Enter" || e.key === "ArrowDown") aller(1, 0);
+                else if (e.key === "ArrowUp") aller(-1, 0);
+                else if (e.key === "Escape") e.target.blur();
+              },
+            });
+            return H.el("td", null, inp);
+          })) : null).filter(Boolean));
+    }
+    // (pendant qu'on tape, les autres cases se recalculent sans perdre la case en cours)
+    function rafraichir() {
+      const valeurs = T.calculer(b.cellules);
+      table.querySelectorAll("input.case-feuille").forEach((inp) => {
+        const m = /^([A-Z]+)(\d+)$/.exec(inp.getAttribute("aria-label")), c = T.colonne(m[1]), l = parseInt(m[2], 10) - 1;
+        if (enEdition === l + "," + c) return;
+        const v = valeurs[l][c];
+        inp.value = T.afficher(v);
+        inp.classList.toggle("nombre", typeof v === "number");
+        inp.classList.toggle("erreur", typeof v === "string" && /^#/.test(v));
+      });
+    }
+    table.addEventListener("input", () => setTimeout(rafraichir, 0));
+    const bouton = (texte, titre, faire) => H.el("button.bouton-crayon", { type: "button", title: titre, onclick: () => { faire(); changer(); dessiner(); outils(); } }, texte);
+    const trier = (sens) => {
+      const tete = b.entete ? b.cellules.slice(0, 1) : [], corps = b.entete ? b.cellules.slice(1) : b.cellules.slice();
+      const valeurs = T.calculer(b.cellules), dec = b.entete ? 1 : 0, cle = new Map(corps.map((r, i) => [r, valeurs[i + dec][colChoisie]]));
+      corps.sort((x, y) => { const a = cle.get(x), c = cle.get(y); if (a === "" && c !== "") return 1; if (c === "" && a !== "") return -1; return (typeof a === "number" && typeof c === "number" ? a - c : String(a).localeCompare(String(c), "fr", { numeric: true })) * sens; });
+      b.cellules = tete.concat(corps);
+    };
+    const filtrer = async () => {
+      if (b.filtre) { b.filtre = null; changer(); dessiner(); outils(); return; }
+      const champ = H.el("input", { type: "text", placeholder: "ce que la case doit contenir" });
+      const corps = H.el("form.formulaire", { onsubmit: (e) => { e.preventDefault(); if (champ.value.trim()) { b.filtre = { c: colChoisie, texte: champ.value.trim() }; changer(); dessiner(); outils(); } fermer(); } },
+        H.el("h2", null, "Filtrer la colonne " + T.lettres(colChoisie)),
+        H.el("label", null, "Ne garder que les lignes dont la case contient ", champ),
+        H.el("div.boutons-bas", null, H.el("button.bouton", { type: "submit" }, "Filtrer")));
+      const fermer = H.fenetre(corps, { classe: "petite" });
+      setTimeout(() => champ.focus(), 0);
+    };
+    const importer = () => {
+      const inp = H.el("input", { type: "file", accept: ".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      inp.onchange = async () => {
+        const f = inp.files[0];
+        if (!f) return;
+        try {
+          const lignes = /\.csv$/i.test(f.name) ? T.lireCsv(await f.text()) : ((await T.lireXlsx(await f.arrayBuffer()))[0] || {}).lignes;
+          if (!lignes || !lignes.length) return H.toast("Ce fichier est vide");
+          if (b.cellules.some((r) => r.some((x) => x !== "")) && !(await H.confirmer("Remplacer le contenu de cette feuille par « " + f.name + " » ?"))) return;
+          b.cellules = lignes.map((r) => r.map((x) => String(x == null ? "" : x)));
+          b.filtre = null;
+          changer(); dessiner(); outils();
+          H.toast("« " + f.name + " » importé");
+        } catch (e) { console.warn(e); H.toast("Ce fichier ne s’ouvre pas"); }
+      };
+      inp.click();
+    };
+    const exporter = () => H.telecharger(H.slug((p && p.titre) || "feuille") + ".xlsx", T.ecrireXlsx([{ nom: (p && p.titre) || "Feuille", lignes: b.cellules, titres: !!b.entete }]), T.TYPE_XLSX);
+    const aide = () => H.fenetre(H.el("div.aide-feuille", null, H.el("h2", null, "Les formules"),
+      H.el("p", null, "Une formule commence par « = ». Elle peut utiliser les autres cases par leur nom (la lettre de la colonne, puis le numéro de la ligne : B2), et une plage de cases avec deux points (B2:B10)."),
+      H.el("ul", null,
+        H.el("li", null, "=B2+B3, =B2*C2, =B2/4, =B2^2 : les opérations"),
+        H.el("li", null, "=SOMME(B2:B10) : le total ; =MOYENNE(B2:B10), =MIN(…), =MAX(…)"),
+        H.el("li", null, "=NB(B2:B10) : combien de nombres ; =NBVAL(…) : combien de cases remplies"),
+        H.el("li", null, "=ARRONDI(B2/3;2) : arrondi à 2 chiffres après la virgule"),
+        H.el("li", null, "=SI(B2>10;\"beaucoup\";\"peu\") : selon une condition"),
+        H.el("li", null, "=A2&\" \"&B2 : coller deux textes")),
+      H.el("p.discret", null, "Les arguments se séparent par un point-virgule, comme dans Excel en français. Dans un fichier Excel exporté, les formules sont gardées.")), { classe: "petite" });
+    const barre = H.el("div.pastilles.outils-feuille");
+    function outils() {
+      barre.replaceChildren(
+        bouton("+ ligne", "Ajouter une ligne", () => b.cellules.push(Array.from({ length: larg() }, () => ""))),
+        bouton("+ colonne", "Ajouter une colonne", () => b.cellules.forEach((r) => r.push(""))),
+        b.cellules.length > 1 ? bouton("− ligne", "Retirer la dernière ligne", () => b.cellules.pop()) : null,
+        larg() > 1 ? bouton("− colonne", "Retirer la dernière colonne", () => b.cellules.forEach((r) => r.pop())) : null,
+        bouton("Trier ↑", "Trier selon la colonne choisie, du plus petit au plus grand", () => trier(1)),
+        bouton("Trier ↓", "Trier selon la colonne choisie, du plus grand au plus petit", () => trier(-1)),
+        H.el("button.bouton-crayon" + (b.filtre ? ".actif" : ""), { type: "button", title: "Ne garder que certaines lignes", onclick: filtrer }, b.filtre ? "Filtre : " + T.lettres(b.filtre.c) + " contient « " + b.filtre.texte + " » ×" : "Filtrer"),
+        H.el("label.option.petite-option", null, H.el("input", { type: "checkbox", checked: !!b.entete, onchange: (e) => { b.entete = e.target.checked; changer(); dessiner(); } }), " 1ʳᵉ ligne = titres"),
+        H.el("button.bouton-crayon", { type: "button", title: "Remplir depuis un fichier Excel (.xlsx) ou un tableau (.csv)", onclick: importer }, "Importer"),
+        H.el("button.bouton-crayon", { type: "button", title: "Enregistrer en fichier Excel (.xlsx), formules comprises", onclick: exporter }, "Exporter .xlsx"),
+        H.el("button.bouton-crayon", { type: "button", title: "Comment écrire une formule", onclick: aide }, "Formules ?"));
+    }
+    outils();
+    dessiner();
+    return H.el("div.zone-feuille", null, H.el("div.defile-feuille", null, table), infos, barre);
+  }
+
   // --- la page ----------------------------------------------------------------------------------
   function dessinerPage(p) {
     actuelle = p;
@@ -241,7 +352,8 @@
     function transformer(b, type) {
       b.type = type;
       if (type === "separateur") { b.texte = ""; }
-      if (type === "tableau" && !b.lignes) b.lignes = [["", ""], ["", ""]];
+      if (type === "tableau" && !b.lignes) b.lignes = b.cellules ? b.cellules.map((r) => r.slice()) : [["", ""], ["", ""]];
+      if (type === "feuille" && !b.cellules) { b.cellules = b.lignes ? b.lignes.map((r) => r.slice()) : [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]; b.entete = true; }
       if (type === "colonnes") { b.gauche = b.gauche || b.texte || ""; b.droite = b.droite || ""; }
       if (type === "encadre" && !b.couleur) b.couleur = COULEURS_ENCADRE[0];
       if (type === "image") { choisirImage(b); }
@@ -373,6 +485,7 @@
             b.lignes[0].length > 1 ? H.el("button.bouton-crayon", { type: "button", title: "Retirer la dernière colonne", onclick: () => { b.lignes.forEach((r) => r.pop()); changer(); dessinerT(); } }, "− colonne") : null)));
           break;
         }
+        case "feuille": ligne.appendChild(feuilleDeCalcul(b, changer, p)); break;
         case "vue": ligne.appendChild(vuePages(b, p, changer)); break;
         case "colonnes":
           ligne.append(H.el("div.colonnes-carnet", null,
@@ -531,6 +644,7 @@
       if (/^h[123]$/.test(b.type)) { sections.push({ titre: b.texte, paragraphes: [] }); continue; }
       const s = sections[sections.length - 1], t = (b.texte || "").replace(/\[\[([^\]]+)\]\]/g, "$1");
       if (b.type === "tableau") { s.colonnes = b.lignes[0]; s.lignes = b.lignes.slice(1); continue; }
+      if (b.type === "feuille") { const v = H.tableur.calculer(b.cellules || []).map((r) => r.map(H.tableur.afficher)); s.colonnes = b.entete ? v[0] : v[0].map((x, c) => H.tableur.lettres(c)); s.lignes = b.entete ? v.slice(1) : v; s.feuille = b.cellules; continue; }
       const prefixe = { puce: "• ", num: "– ", todo: b.coche ? "☑ " : "☐ ", citation: "« ", encadre: "▌ " }[b.type] || "";
       if (b.type === "colonnes") s.paragraphes.push(b.gauche || "", b.droite || "");
       else if (b.type === "toggle") s.paragraphes.push(t, b.contenu || "");

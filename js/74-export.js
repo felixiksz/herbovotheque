@@ -53,6 +53,18 @@
     return "﻿" + out.join("\n");
   }
 
+  // --- en Excel : un vrai fichier .xlsx, une feuille par partie qui a un tableau (les titres de
+  // colonnes en gras sur fond jaune) ; les feuilles de calcul du carnet gardent leurs formules ------
+  function xlsx(doc) {
+    const feuilles = (doc.sections || []).filter((s) => s.lignes && s.lignes.length).map((s, i) => ({
+      nom: s.titre || (i ? doc.titre + " " + (i + 1) : doc.titre),
+      lignes: s.feuille ? s.feuille : [(s.colonnes || []).map(propre)].concat(s.lignes.map((l) => l.map(propre))),
+      titres: true,
+    }));
+    if (!feuilles.length) feuilles.push({ nom: doc.titre, lignes: [[doc.titre]].concat((doc.sections || []).flatMap((s) => (s.titre ? [[s.titre]] : []).concat((s.paragraphes || []).map((p) => [propre(p)])))), titres: true });
+    return H.tableur.ecrireXlsx(feuilles);
+  }
+
   // --- en PDF : une page HTML dans le style choisi, imprimée (« Enregistrer en PDF ») ------------
   function pagePdf(doc, style, opts) {
     opts = opts || {};
@@ -173,6 +185,7 @@
       H.el("div.pastilles", null,
         H.el("button.bouton", { type: "button", onclick: () => { H.telecharger(nom + ".txt", texte(doc), "text/plain;charset=utf-8"); fermer(); } }, "En texte (.txt)"),
         H.el("button.bouton", { type: "button", onclick: () => { H.telecharger(nom + ".csv", csv(doc), "text/csv;charset=utf-8"); fermer(); } }, "En tableau (.csv)"),
+        H.tableur ? H.el("button.bouton", { type: "button", onclick: () => { H.telecharger(nom + ".xlsx", xlsx(doc), H.tableur.TYPE_XLSX); fermer(); } }, "En Excel (.xlsx)") : null,
         opts.pdf ? H.el("button.bouton", { type: "button", onclick: () => { fermer(); opts.pdf(); } }, "En PDF") : null),
       opts.pdf ? null : H.el("div", null,
         H.el("h3", null, "En PDF"),
@@ -184,6 +197,6 @@
     return fermer;
   }
 
-  H.export = { STYLES, texte, csv, pagePdf, imprimerHtml, CSS_FEUILLE, ajusterApercu };
+  H.export = { STYLES, texte, csv, xlsx, pagePdf, imprimerHtml, CSS_FEUILLE, ajusterApercu };
   H.exporter = exporter;
 })();
