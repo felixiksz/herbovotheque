@@ -966,9 +966,9 @@
     });
   }
   // Mémé, la chatte tigrée, qui trottine (les yeux toujours fermés)
-  const MEME = ["t.t......", "tkt....T.", "ttTtTtTT.", ".tTtTtTt.", ".t.t..t.t"];
-  const MEME2 = MEME.slice(0, 4).concat(["..t.t.t.."]);
-  const PAL_MEME = { t: "#c9ad8a", T: "#6b5442", k: "#4b3427" };
+  const MEME = ["E.E......", "tkt....u.", "utTtTtTT.", ".uTtTtTt.", ".u.u..u.u"];
+  const MEME2 = MEME.slice(0, 4).concat(["..u.u.u.."]);
+  const PAL_MEME = { t: "#c9a57a", T: "#8a6c52", k: "#4b3427", u: "#f6efe2", E: "#8f5236" };
   function dessinMeme(c, x, y, image, gauche) {
     const g = image && image % 2 ? MEME2 : MEME;
     if (image && image % 2) y -= 1;

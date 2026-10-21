@@ -2066,7 +2066,7 @@
   // fermés, la queue ramenée devant ; de temps en temps, son dos se soulève en respirant.
   const MEME_DORT = [
     ".k..k.......",
-    "kTkkTkkkkk..",
+    "kEkkEkkkkk..",
     "kttttktTtTk.",
     "ktkktTttTttk",
     "kupuuttTttTk",
@@ -2077,7 +2077,7 @@
   // les oreilles dressées, le museau crème et le nez rose, le dos tigré, la queue enroulée devant
   const MEME_DORT_GRAND = [
     "..k...k...........",
-    ".kTk.kTk...kkkkk..",
+    ".kEk.kEk...kkkkk..",
     ".kttkttk.kkTttTtk.",
     "kttttttkkttTttTttk",
     "ktkttktttTttTttTtk",
@@ -2122,7 +2122,7 @@
   // maison) : la moitié de sa taille, une chatte tigrée beige, le museau crème, le nez rose, les
   // yeux toujours fermés, la queue enroulée devant ; son dos se soulève quand elle respire.
   function memeCouchee(ctx, x, y, t) {
-    const souffle = 1 + Math.sin(t / 900) * 0.04, robe = "#c9ad8a", raie = "#6b5442", creme = "#f0e4d4";
+    const souffle = 1 + Math.sin(t / 900) * 0.04, robe = "#c9a57a", raie = "#8a6c52", creme = "#f6efe2";
     ctx.save();
     ctx.translate(x, y);
     ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = ENCRE; ctx.lineWidth = 1.6;

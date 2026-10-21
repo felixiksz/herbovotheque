@@ -13,7 +13,7 @@
     o: "#ffc21a", O: "#6b3a12",              // tournesol
     v: "#8fd14f", V: "#4e8a2a",              // chiendent
     n: "#7a4520", N: "#3e2210",              // chaussures, cheval
-    t: "#c9ad8a", T: "#6b5442", u: "#f0e4d4", // chatte tigrée
+    t: "#c9a57a", T: "#8a6c52", u: "#f6efe2", E: "#8f5236", // Mémé, comme sa peluche : beige caramel, rayures gris-brun, ventre et pattes blancs, oreilles brunes
     p: "#f4a3b8", l: "#d6eef5",
     a: "#a3acb7", q: "#ee9a7e",
     M: "#3e2210",                              // crinière (sans contour)
@@ -343,20 +343,41 @@
   }
   // Mémé réveillée, debout sur ses quatre pattes (les yeux toujours fermés) :
   // corps allongé à l'horizontale, pattes droites, tête en avant, queue dressée
+  // (comme sa peluche : les oreilles rondes bordées de brun, le front rayé, les yeux fermés, le
+  // museau blanc et le nez rose, le poitrail et les pattes blancs, la queue rayée au bout clair)
   const MEME_DEBOUT = [
-    "...........k.k..",
-    ".k........kTkTk.",
-    "kTk.......kttttk",
-    ".kTk.....kttTTtk", // (les yeux fermés, toujours)
-    "..kTk...kttttupk",
-    "...kTkkkkttttuk.",
-    "...kttTttTttuuk.",
-    "...ktTttTttttuk.",
-    "...kTtkkkkkTtk..",
-    "...kTtk...kTtk..",
+    "..........kEkkEk",
+    ".ku......ktTtTtk",
+    "kuTk.....ktkkttk",
+    ".kTk....ktuuuupk",
+    "..kTk....kuuuuk.",
+    "...kTkkkkTtTuuk.",
+    "...ktTtTtTttuuk.",
+    "...kTtTtTtTtuuk.",
+    "...kTukkkkkTuk..",
+    "...ktuk...ktuk..",
     "...kuuk...kuuk..",
     "....kk.....kk...",
   ];
+  // Mémé allongée sur l'encolure de Lóló, de face : les oreilles rondes, les yeux fermés, le museau
+  // blanc et le nez rose, le dos rayé, le poitrail blanc, les pattes blanches posées sur l'encolure,
+  // la queue rayée qui pend (posée sur Lóló dessiné sans elle, à la colonne 13, ligne 3)
+  const MEME_COUCHEE = [
+    "........kEk.kEk...",
+    ".......kEuEkEuEk..",
+    ".......ktTtTtTtk..",
+    ".......ktkktkktk..",
+    ".......kuuuuuuuk..",
+    "...kkkkkuuupuuuk..",
+    "..ktTttTtkuuukk...",
+    ".kTttTttTtuuuuuuk.",
+    "kTttTttTttuukkuuuk",
+    "kttTuuuuuuuk.kkkk.",
+    "kTkkkkkkkkk.......",
+    "ktk...............",
+    "kuk...............",
+  ];
+  const avecMemeCouchee = (g) => { MEME_COUCHEE.forEach((l, y) => l.split("").forEach((c, x) => { if (c !== "." && g[y + 3]) g[y + 3][x + 13] = c; })); return g; };
   // Lóló sans Mémé couchée sur l'encolure : l'encolure et la crinière redessinées
   const ENCOLURE = [
     [0, 28, "knk"],
@@ -387,8 +408,8 @@
   }
   // Mémé qui marche toute seule : pattes droites, puis écartées
   const MEME_PAS = MEME_DEBOUT.slice(0, 8).concat([
-    "...kTtkkkkkTtk..",
-    "..kTtk.....kTtk.",
+    "...kTukkkkkTuk..",
+    "..kTuk.....kTuk.",
     "..kuuk.....kuuk.",
     "...kk.......kk..",
   ]);
@@ -500,7 +521,8 @@
     dosEnlaces: [dosEnlaces()],
     ovo: [OVO, OVO_MARCHE],
     luigi: [LUIGI, LUIGI_MARCHE],
-    lolo: [LOLO, LOLO_2],
+    // (Lóló dessiné sans Mémé, puis Mémé couchée posée par-dessus)
+    lolo: [LOLO, LOLO_2].map((G) => contour(avecMemeCouchee(sansMeme(G.map((l) => l.split("")), false)))),
     ovoProfil: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i)),
     ovoEte: [OVO_ETE, OVO_MARCHE_ETE],
     ovoProfilEte: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, true)),

@@ -264,7 +264,9 @@ label { font-size: 0.95rem; }
    que ses minuscules aient la hauteur de celles d'avant), les boutons et les champs carrés. Seuls les
    grands titres des pages et les lettres restent écrits à la main. */
 :root :is(.contenu-vue, .contenu-ordi), :root :is(.contenu-vue, .contenu-ordi) * { font-family: var(--menu-police); font-size-adjust: 0.5; letter-spacing: 0.02em; }
-:root :is(.contenu-vue, .contenu-ordi) :is(h1, h2, .titre-carnet, .lettre-papier .lettre-texte, .lettre-papier .lettre-texte *, .lettre-date, .lettre-signature) { font-family: var(--titre); font-size-adjust: none; letter-spacing: 0.01em; font-weight: normal; text-shadow: none; }
+/* (le manuscrit seulement pour le grand titre de la page, le titre d'une page du carnet et les
+   lettres ; les titres de sections, dans les fenêtres, restent en pixels) */
+:root :is(.contenu-vue, .contenu-ordi) :is(h1, .titre-carnet, .lettre-papier .lettre-texte, .lettre-papier .lettre-texte *, .lettre-date, .lettre-signature) { font-family: var(--titre); font-size-adjust: none; letter-spacing: 0.01em; font-weight: normal; text-shadow: none; }
 :root :is(.contenu-vue, .contenu-ordi) .bouton-trait { font-size: 1.1rem; border: 2px solid var(--encre); border-radius: 0; background: var(--papier); box-shadow: 2px 2px 0 var(--encre); padding: 2px 8px 3px; }
 :root[data-theme="nuit"] :is(.contenu-vue, .contenu-ordi) .bouton-trait { box-shadow: 2px 2px 0 #0b0a24; }
 /* les petites questions (« Sûr·e ? ») : une fenêtre étroite, un peu plus bas */
