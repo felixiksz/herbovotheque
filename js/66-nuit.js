@@ -4487,11 +4487,12 @@
       requestAnimationFrame(image);
       if (t - derniere < H.cadence(66)) return;
       derniere = t;
-      const v = vueMaison(toile), cleD = [v.W, v.Hc, v.K, v.taille, fenetresOuvertes()].join("|");
+      // (une sieste en plein jour reste en plein jour : lampes éteintes, mais la lumière du moment)
+      const mo = momentMaison(), v = vueMaison(toile), cleD = [v.W, v.Hc, v.K, v.taille, fenetresOuvertes(), mo].join("|");
       if (cle !== cleD) {
         cle = cleD;
         toile.width = v.W; toile.height = v.Hc;
-        decor = decorMaison(v.K, "nuit", true);
+        decor = decorMaison(v.K, mo, true);
         M = toileVide(decor); calque = toileVide(decor);
       }
       pixK = v.K;
@@ -4499,7 +4500,7 @@
       m.setTransform(1, 0, 0, 1, 0, 0); m.clearRect(0, 0, M.width, M.height);
       repere(m, v.K);
       // la nuit derrière les vitres ; par le velux, le vrai ciel (peint avec le dehors)
-      fenetresDehors(m, t, "nuit", etat);
+      fenetresDehors(m, t, mo, etat);
       m.drawImage(decor, BOITE.x, BOITE.y, BOITE.w, BOITE.h);
       m.drawImage(rideauxEclaires(decor, t), BOITE.x, BOITE.y, BOITE.w, BOITE.h);
       m.drawImage(decor.meubles, BOITE.x, BOITE.y, BOITE.w, BOITE.h);
