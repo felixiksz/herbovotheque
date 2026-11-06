@@ -146,7 +146,7 @@
     r.cadeaux = fusionnerCollection(local.cadeaux, distant.cadeaux);
     r.cris = fusionnerCollection(local.cris, distant.cris);
     r.planFerme = fusionnerCollection(local.planFerme, distant.planFerme);
-    for (const cle of ["taches", "clients", "catalogue", "documents", "pages", "favoris"]) r[cle] = fusionnerCollection(local[cle], distant[cle]);
+    for (const cle of ["taches", "clients", "catalogue", "documents", "pages", "favoris", "anniversaires"]) r[cle] = fusionnerCollection(local[cle], distant[cle]);
     const entr = plusRecent(local, distant, "entrepriseModifieLe");
     r.entreprise = entr.entreprise;
     r.entrepriseModifieLe = entr.entrepriseModifieLe;

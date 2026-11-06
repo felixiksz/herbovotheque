@@ -1685,7 +1685,7 @@
     // (la phase de la lune seulement la nuit)
     const lune = (jour ? "" : H.ciel.nomPhase(e.lune.phase) + " · ") + (jour ? "Soleil" : "Lune") + " en " + z.signe + " " + z.degre + "°";
     scene.heureMeteo.textContent = [m && m.temperature != null ? m.temperature + " °C" : null, m && m.humidite != null ? m.humidite + " % d’humidité" : null,
-      m && m.libelle ? m.libelle.toLowerCase() : null, lune, lieu].filter(Boolean).join(" · ");
+      m && m.libelle ? m.libelle.toLowerCase() : null, lune, lieu].concat(H.anniversaires ? H.anniversaires.rappel() : []).filter(Boolean).join(" · ");
   }
   H.sur("meteo", majHeureMeteo);
 

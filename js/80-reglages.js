@@ -66,6 +66,56 @@
     );
   }
 
+  // Les anniversaires des ami·es : un prénom, un jour et un mois ; le jeu les rappelle au bout de la
+  // ligne du temps qu'il fait, sur la ferme, la semaine qui précède
+  const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  function blocAnniversaires() {
+    const liste = H.el("ul.liste-anniversaires");
+    const remplir = () => {
+      const tous = Object.values(H.jeu.anniversaires || {}).filter((a) => !a.supprime).sort((a, b) => a.mois - b.mois || a.jour - b.jour || a.prenom.localeCompare(b.prenom));
+      liste.replaceChildren(...(tous.length ? tous.map((a) => H.el("li", null,
+        H.el("span", null, a.prenom + " — " + (a.jour === 1 ? "1er" : a.jour) + " " + MOIS[a.mois - 1]),
+        H.el("button.bouton.petit", { type: "button", onclick: () => { a.supprime = true; a.modifieLe = H.maintenant(); H.d.changer("jeu"); remplir(); } }, "Retirer")))
+        : [H.el("li.discret", null, "Aucun anniversaire pour l’instant.")]));
+    };
+    const prenom = H.el("input", { type: "text", placeholder: "Prénom", required: true, maxlength: 40, "aria-label": "Prénom" });
+    const jour = H.el("select", { "aria-label": "Jour" }, Array.from({ length: 31 }, (_, i) => H.el("option", { value: i + 1 }, String(i + 1))));
+    const mois = H.el("select", { "aria-label": "Mois" }, MOIS.map((m, i) => H.el("option", { value: i + 1 }, m)));
+    const ajouter = (e) => {
+      e.preventDefault();
+      const nom = prenom.value.trim();
+      if (!nom) return;
+      const id = H.slug(nom) + "-" + Date.now().toString(36);
+      H.jeu.anniversaires = Object.assign({}, H.jeu.anniversaires, { [id]: { id, prenom: nom, jour: Number(jour.value), mois: Number(mois.value), modifieLe: H.maintenant() } });
+      H.d.changer("jeu");
+      prenom.value = "";
+      remplir();
+    };
+    remplir();
+    return H.el("section.reglage", null,
+      H.el("h2", null, "Anniversaires"),
+      H.el("p.discret", null, "Le jeu te les rappelle sur la ferme, au bout de la ligne du temps qu’il fait, la semaine qui précède."),
+      liste,
+      H.el("form.ligne-anniversaire", { onsubmit: ajouter }, prenom, jour, mois, H.el("button.bouton.petit", { type: "submit" }, "Ajouter")));
+  }
+  // le rappel : « Anniversaire de Léa aujourd'hui », « … demain », « … dans 3 jours »
+  H.anniversaires = {
+    rappel() {
+      const auj = new Date(); auj.setHours(0, 0, 0, 0);
+      const proches = [];
+      for (const a of Object.values((H.jeu && H.jeu.anniversaires) || {})) {
+        if (!a || a.supprime) continue;
+        let d = new Date(auj.getFullYear(), a.mois - 1, a.jour);
+        // (le 29 février, les années qui n'en ont pas : le 28)
+        if (d.getMonth() !== a.mois - 1) d = new Date(auj.getFullYear(), a.mois - 1, 28);
+        if (d < auj) { d = new Date(auj.getFullYear() + 1, a.mois - 1, a.jour); if (d.getMonth() !== a.mois - 1) d = new Date(auj.getFullYear() + 1, a.mois - 1, 28); }
+        const n = Math.round((d - auj) / 864e5);
+        if (n <= 7) proches.push([n, a.prenom]);
+      }
+      return proches.sort((x, y) => x[0] - y[0]).map(([n, p]) => "Anniversaire de " + p + " " + (n === 0 ? "aujourd’hui" : n === 1 ? "demain" : "dans " + n + " jours"));
+    },
+  };
+
   function blocTheme() {
     const choix = [["auto", "Selon le soleil"], ["jour", "Toujours le jour"], ["nuit", "Toujours la nuit"]];
     return H.el("section.reglage", null,
@@ -507,7 +557,7 @@
       const visite = H.el("section.reglage", null, H.el("h2", null, "Visite guidée"),
         H.el("p.discret", null, "Lóló refait le tour de tout le jeu, lieu après lieu."),
         H.el("button.bouton", { type: "button", onclick: () => H.lolo && H.lolo.visite() }, "Revoir la visite avec Lóló"));
-      const blocs = [blocLieu(), blocTheme(), blocLeger(), blocMiaou(), visite, blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
+      const blocs = [blocLieu(), blocAnniversaires(), blocTheme(), blocLeger(), blocMiaou(), visite, blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
       c.appendChild(H.bureau.onglets(blocs.map((b) => ({ nom: b.querySelector("h2").textContent, el: b })), { cle: "reglages", lateral: true }));
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },

@@ -572,3 +572,8 @@ html.chargement #ciel { display: none; }
 .note-rapide textarea { width: 100%; }
 :root:is([data-bureau], [data-ile]) .chercher-entete { display: inline-flex; flex: 0 0 auto; background: none; border: 0; padding: 2px; cursor: pointer; color: #23214a; }
 .chercher-entete svg { width: 20px; height: 20px; }
+/* les anniversaires, dans les réglages : la liste, puis prénom, jour, mois */
+.liste-anniversaires { list-style: none; padding: 0; margin: 0 0 12px; }
+.liste-anniversaires li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--filet); }
+.ligne-anniversaire { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ligne-anniversaire input { flex: 1 1 140px; min-width: 0; }

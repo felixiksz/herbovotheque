@@ -163,6 +163,18 @@
         if (!ids.has(x.id) && !s.retires.includes(x.id)) s[cle].push(copie(x));
       }
     }
+    // chez Mesi, seulement la pharmacopée chinoise, puis la botanique et le jardin à la fin ; les
+    // autres sections d'ƟvƟ (phytothérapie, autres approches, MTC, précautions, notes) sont retirées
+    // (une seule fois : si elle range ou ajoute ses sections ensuite, on n'y touche plus)
+    if (H.monde === "mesi" && !s.sectionsMesi) {
+      const RETIRER = ["phyto", "approches", "mtc", "precautions", "notes"], FIN = ["botanique", "jardin"];
+      for (const id of RETIRER) if (!s.retires.includes(id)) s.retires.push(id);
+      const gardees = s.sections.filter((x) => !RETIRER.includes(x.id));
+      s.sections = gardees.filter((x) => !FIN.includes(x.id)).concat(FIN.map((id) => gardees.find((x) => x.id === id)).filter(Boolean));
+      s.sectionsMesi = 1;
+      s.modifieLe = H.maintenant();
+      setTimeout(() => H.d.changer("herbier"), 0);
+    }
     const idsChamps = new Set(s.champs.map((x) => x.id));
     for (const x of CHAMPS_JEU) if (!idsChamps.has(x.id) && !s.retires.includes(x.id)) s.champs.push(copie(x));
     // les rubriques de la base marquées d'un numéro de mise à jour reprennent leur nom et leurs cartes
