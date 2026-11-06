@@ -4160,15 +4160,7 @@
         if (avec("luigi")) persoBalade(ctx, "luigi" + tete("luigi"), w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
         persoBalade(ctx, deDos ? "ovoDos" : "ovo" + tete("ovo"), w * 0.42, sol(w * 0.42) - h * 0.06, 3, deDos ? 0 : pas(0));
       }
-      // la nuit, les humain·es ont une lampe frontale ; allumée, elle éclaire le chemin devant
-      // (tête tournée vers le paysage, la lampe éclaire au loin, de l'autre côté : on ne la voit plus)
-      // (la tête tournée ailleurs, le faisceau part de l'autre côté : on ne le voit pas)
-      if (nuit && !deDos && !regard) {
-        if (avec("luigi") && tete("luigi") === "Profil") lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t, pas(2));
-        if (tete("ovo") === "Profil") lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
-      }
     }
-    if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
     // devant : l'autre bord du chemin, et parfois un grand pin qui passe tout près
     // (espacés irrégulièrement, et parfois un trou)
     for (let i = 0; i < 12; i++) { if (hsh(i, 61) < 0.22) continue; const bx = boucler(i * 110 + (hsh(i, 62) - 0.5) * 90 - avance * 1.25, w, 60); if (!buissonBalade(ctx, bx, h + 4, 22 + (i % 3) * 8, moA, dpr, i * 11 + 5)) buissonPlat(ctx, bx, h + 4, 22 + (i % 3) * 8, nuit ? "#10241a" : i % 2 ? "#2f8a3e" : "#3fa04a"); }
@@ -4257,56 +4249,6 @@
   // tout le dehors), au lieu de rester éclairés comme en plein jour
   let nuitBalade = false;
   const persosNuit = new Map();
-  // La lampe frontale : un petit boîtier sur le front, et, allumée, un faisceau qui part vers
-  // l'avant et descend sur le chemin, chaud au centre (le filtre en gros pixels le trame en jolies
-  // couleurs) ; il tremble à peine au rythme des pas
-  // (le front, image par image : on cherche le haut de la tête dans le dessin, qui monte et descend
-  // avec les pas ; la lampe et son faisceau suivent)
-  const fronts = new Map();
-  function hautTete(nom, image) {
-    const cle = nom + "|" + image;
-    if (!fronts.has(cle)) {
-      const s0 = H.pixel.sprite(nom, image), d = s0.getContext("2d").getImageData(0, 0, s0.width, s0.height).data;
-      let haut = 0;
-      search: for (let j = 0; j < s0.height; j++) for (let i = 0; i < s0.width; i++) if (d[(j * s0.width + i) * 4 + 3] > 0) { haut = j; break search; }
-      fronts.set(cle, { haut, h: s0.height, w: s0.width });
-    }
-    return fronts.get(cle);
-  }
-  function lampeFrontale(ctx, nom, x, y, allumee, sol, h, t, image) {
-    const f = hautTete(nom, image || 0), ech = 3, front = y - (f.h - f.haut) * ech + 2.5 * ech, lx = x + f.w * ech * 0.32;
-    ctx.save();
-    ctx.fillStyle = "#23214a";
-    ctx.fillRect(Math.round(lx - 3), Math.round(front - 2), 5, 4);
-    ctx.fillStyle = allumee ? "#fff6d8" : "#6b6aa0";
-    ctx.fillRect(Math.round(lx), Math.round(front - 1), 2, 2);
-    if (allumee) {
-      // le faisceau plonge vers le chemin, quelques pas devant, et finit sur sa tache de lumière :
-      // la tache bouge avec la tête (elle avance et recule au rythme des pas). Plusieurs couches très
-      // légères, de la plus large à la plus étroite, pour des bords tout doux
-      const tremble = (front - (y - (f.h - hautTete(nom, 0).haut) * ech + 2.5 * ech)) * 2.5;
-      // (la tache loin devant, au niveau du sol où l'on marche, celui des pieds)
-      const tx = x + h * 0.32 + tremble * 3, ty = y + sol(tx) - sol(x) - 1, rx = h * 0.11, ry = h * 0.022;
-      ctx.globalCompositeOperation = "lighter";
-      for (const [k, a] of [[1, 0.035], [0.82, 0.04], [0.64, 0.045], [0.47, 0.05], [0.3, 0.055]]) {
-        const g = ctx.createLinearGradient(lx, front, tx, ty);
-        g.addColorStop(0, "rgba(255,236,200," + a * 1.6 + ")"); g.addColorStop(0.6, "rgba(255,214,170," + a + ")"); g.addColorStop(1, "rgba(255,196,170," + a * 0.7 + ")");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(lx + 1, front - 0.5 * k);
-        ctx.lineTo(tx + rx * k, ty - ry * 0.3 * k);
-        ctx.lineTo(tx - rx * 0.55 * k, ty + ry * k);
-        ctx.closePath();
-        ctx.fill();
-      }
-      // la tache de lumière sur le chemin, là où le faisceau touche le sol (elle aussi en couches)
-      for (const [k, a] of [[1, 0.07], [0.75, 0.08], [0.5, 0.09], [0.28, 0.1]]) {
-        ctx.fillStyle = "rgba(255,222,180," + a + ")";
-        ctx.beginPath(); ctx.ellipse(tx + rx * 0.15 * (1 - k), ty, rx * k, ry * k, 0, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-    ctx.restore();
-  }
   function persoBalade(ctx, nom, x, y, ech, image, miroir) {
     if (!nuitBalade) return H.pixel.dessiner(ctx, nom, x, y, ech, image, miroir);
     const cle = nom + "|" + image + "|" + (miroir ? 1 : 0) + "|" + ech;
@@ -4440,21 +4382,15 @@
       const toile = H.el("canvas.toile-balade", { "aria-label": "Balade le long des calanques" });
       const bain = H.el("button.bouton", { type: "button", hidden: true, onclick: () => baignade() }, "Aller se baigner");
       const sortir = H.el("button.bouton", { type: "button", hidden: true, onclick: () => sortirDeLeau() }, "Sortir de l’eau");
-      const lampe = H.el("button.bouton", { type: "button", hidden: true, onclick: () => {
-        if (!balade) return;
-        balade.lampe = !balade.lampe;
-        lampe.textContent = balade.lampe ? "Éteindre la lampe frontale" : "Allumer la lampe frontale";
-        H.bruit && H.bruit("clic");
-      } }, "Allumer la lampe frontale");
       const continuer = bouton("Continuer la balade", () => continuerBalade());
       continuer.hidden = true;
       const fin = H.el("div.pastilles.fin-balade", { hidden: true }, continuer, bouton("Rentrer à la maison", () => H.aller("maison")));
       c.append(H.el("div.cadre-balade", { "aria-label": titre },
         toile,
         H.el("a.sortie-maison", { href: "#maison", title: "Rentrer à la maison" }, "‹ Maison"),
-        H.el("div.pastilles.actions-balade", null, lampe, bain, sortir, fin)
+        H.el("div.pastilles.actions-balade", null, bain, sortir, fin)
       ));
-      balade = { toile, fin, bain, sortir, continuer, boutonLampe: lampe, s: scene(toile, compagnons) };
+      balade = { toile, fin, bain, sortir, continuer, s: scene(toile, compagnons) };
       if (H.ciel.etat().soleil.alt < 0) H.sons.criquets(true);
       dessinerBalade();
       setTimeout(() => balade && deroulerBalade(compagnons), 700);
