@@ -4478,7 +4478,7 @@
         ctx.fillStyle = ENCRE; ctx.fillRect(x + 4 * k, y + 7.5 * k, 8 * k, 0.3 * k);
       } else {
         ctx.fillStyle = ENCRE;
-        for (const ex of [6, 9]) ctx.fillRect(x + (ex - 0.3) * k, y + 6.6 * k, k * 1.6, k * 0.45);
+        for (const ex of [5.5, 9]) ctx.fillRect(x + ex * k, y + 6.4 * k, k * 2, k);
       }
       ctx.restore();
     };
