@@ -232,7 +232,7 @@
   const LUIGI_DOS = OVO_DOS.map((l, y) => (y === 8 ? "..kcCcCcCcCcCk.." : l.replace(/h/g, "c").replace(/H/g, "C").replace(/r/g, "g").replace(/R/g, "G")));
   // Mesi et ƟvƟ de dos, serré·es l'une contre l'autre devant le paysage : Mesi, un peu plus grande,
   // passe le bras sur les épaules d'ƟvƟ (la main posée sur l'autre épaule) ; ƟvƟ passe le sien
-  // autour de la taille de Mesi (la main sur sa hanche)
+  // dans son dos (la main posée sur ses lombes)
   function dosEnlaces() {
     const W = 30, g = Array.from({ length: 25 }, () => Array(W).fill("."));
     const poserGrille = (grille, ox, oy) => grille.forEach((l, y) => l.split("").forEach((c, x) => { if (c !== "." && g[y + oy]) g[y + oy][x + ox] = c; }));
@@ -240,10 +240,11 @@
     const mesi = LUIGI_DOS.slice(0, 19).concat(["...kbbk..kbbk...", "...kbbk..kbbk..."], LUIGI_DOS.slice(19));
     poserGrille(mesi, 0, 0);
     poserGrille(OVO_DOS, 11, 2);
-    // le bras d'ƟvƟ autour de la taille de Mesi (manche rouge)
-    for (let x = 3; x <= 13; x++) { const y = Math.round(15 + (13 - x) / 10); g[y][x] = "r"; g[y + 1][x] = "R"; }
-    [[2, 16], [2, 17], [1, 16], [1, 17]].forEach(([x, y]) => (g[y][x] = "s"));
-    [[0, 16], [0, 17], [1, 18], [2, 18], [1, 15], [2, 15]].forEach(([x, y]) => (g[y][x] = "k"));
+    // le bras d'ƟvƟ dans le dos de Mesi (manche rouge) : un avant-bras court, la main posée au
+    // creux de ses lombes, au milieu du dos
+    for (let x = 9; x <= 13; x++) { g[15][x] = "r"; g[16][x] = "R"; }
+    [[7, 15], [8, 15], [7, 16], [8, 16]].forEach(([x, y]) => (g[y][x] = "s"));
+    [[6, 15], [6, 16], [7, 17], [8, 17], [7, 14], [8, 14]].forEach(([x, y]) => (g[y][x] = "k"));
     // le bras de Mesi sur les épaules d'ƟvƟ (manche verte), qui descend de son épaule à celle d'ƟvƟ
     for (let x = 12; x <= 24; x++) { const y = Math.round(11 + ((x - 12) * 2) / 12); g[y][x] = "g"; g[y + 1][x] = "G"; }
     [[25, 13], [25, 14], [26, 13], [26, 14]].forEach(([x, y]) => (g[y][x] = "s"));
