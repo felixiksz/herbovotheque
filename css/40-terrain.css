@@ -389,9 +389,15 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 .postits-titre:hover { color: var(--menu-choix); }
 .postits-replier { font: 1.3rem/1 var(--menu-police); width: 26px; height: 24px; padding: 0; border: 0; cursor: pointer; color: var(--menu-trait); background: rgba(27, 29, 74, 0.72); }
 .postits-replier:hover { color: var(--menu-choix); }
-.postit { --fond: #fbf1a0; --ombre: #e2cf5c; display: block; width: 100%; padding: 8px 10px 9px; color: #23214a; background: var(--fond);
-  border: 0; border-bottom: 3px solid var(--ombre); box-shadow: 4px 4px 0 rgba(15, 16, 53, 0.45); transform: rotate(var(--penche, 0deg));
+.postit { --fond: #fbf1a0; --ombre: #e2cf5c; --coin: 13px; position: relative; isolation: isolate; display: block; width: 100%; padding: 8px 10px 9px; color: #23214a; background: none;
+  border: 0; filter: drop-shadow(4px 4px 0 rgba(15, 16, 53, 0.45)); transform: rotate(var(--penche, 0deg));
   font: 1.15rem/1.15 var(--menu-police); text-align: left; }
+/* le papier, le coin en bas à droite qui gondole : il se soulève et se replie un peu vers l'avant,
+   l'ombre suit la forme (et passe sous le rabat) */
+.postit::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--fond); border-bottom: 3px solid var(--ombre);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--coin)), calc(100% - var(--coin)) 100%, 0 100%); }
+.postit::after { content: ""; position: absolute; right: 0; bottom: 0; width: var(--coin); height: var(--coin); z-index: -1;
+  background: linear-gradient(135deg, var(--ombre) 0 45%, var(--fond) 100%); clip-path: polygon(0 0, 100% 0, 0 100%); }
 .postit-rose { --fond: #fbd3e2; --ombre: #eba3c0; }
 .postit-bleu { --fond: #d3e9f8; --ombre: #9cc8e8; }
 .postit-vert { --fond: #dcf1c8; --ombre: #a9d78a; }
