@@ -4236,26 +4236,28 @@
     ctx.fillStyle = allumee ? "#fff6d8" : "#6b6aa0";
     ctx.fillRect(Math.round(lx), Math.round(front - 1), 2, 2);
     if (allumee) {
-      // le faisceau plonge vers le chemin, quelques pas devant : trois couches, la plus étroite la
-      // plus vive, pour des bords doux
-      const tremble = (front - (y - (f.h - hautTete(nom, 0).haut) * ech + 2.5 * ech)) * 2.5, loin = lx + h * 0.62, bas = sol(loin) - 1;
+      // le faisceau plonge vers le chemin, quelques pas devant, et finit sur sa tache de lumière :
+      // la tache bouge avec la tête (elle avance et recule au rythme des pas). Plusieurs couches très
+      // légères, de la plus large à la plus étroite, pour des bords tout doux
+      const tremble = (front - (y - (f.h - hautTete(nom, 0).haut) * ech + 2.5 * ech)) * 2.5;
+      const tx = lx + h * 0.5 + tremble * 4, ty = sol(tx) - 1, rx = h * 0.15, ry = h * 0.034;
       ctx.globalCompositeOperation = "lighter";
-      for (const [ouvre, a] of [[0.2, 0.16], [0.12, 0.2], [0.05, 0.28]]) {
-        const g = ctx.createLinearGradient(lx, front, loin, bas);
-        g.addColorStop(0, "rgba(255,246,216," + a * 2 + ")"); g.addColorStop(0.5, "rgba(255,214,160," + a + ")"); g.addColorStop(1, "rgba(255,170,190,0)");
+      for (const [k, a] of [[1, 0.035], [0.82, 0.04], [0.64, 0.045], [0.47, 0.05], [0.3, 0.055]]) {
+        const g = ctx.createLinearGradient(lx, front, tx, ty);
+        g.addColorStop(0, "rgba(255,236,200," + a * 1.6 + ")"); g.addColorStop(0.6, "rgba(255,214,170," + a + ")"); g.addColorStop(1, "rgba(255,196,170," + a * 0.7 + ")");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.moveTo(lx + 1, front);
-        ctx.lineTo(loin, bas - h * ouvre + tremble);
-        ctx.lineTo(loin, bas + h * ouvre * 0.25 + tremble);
+        ctx.moveTo(lx + 1, front - 0.5 * k);
+        ctx.lineTo(tx + rx * k, ty - ry * 0.3 * k);
+        ctx.lineTo(tx - rx * 0.55 * k, ty + ry * k);
         ctx.closePath();
         ctx.fill();
       }
-      // la tache de lumière sur le chemin, là où le faisceau touche le sol
-      const tx = lx + h * 0.5, ty = sol(tx) - 1, r = ctx.createRadialGradient(tx, ty, 1, tx, ty, h * 0.15);
-      r.addColorStop(0, "rgba(255,236,190,0.5)"); r.addColorStop(1, "rgba(255,180,160,0)");
-      ctx.fillStyle = r;
-      ctx.beginPath(); ctx.ellipse(tx, ty, h * 0.15, h * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+      // la tache de lumière sur le chemin, là où le faisceau touche le sol (elle aussi en couches)
+      for (const [k, a] of [[1, 0.07], [0.75, 0.08], [0.5, 0.09], [0.28, 0.1]]) {
+        ctx.fillStyle = "rgba(255,222,180," + a + ")";
+        ctx.beginPath(); ctx.ellipse(tx + rx * 0.15 * (1 - k), ty, rx * k, ry * k, 0, 0, Math.PI * 2); ctx.fill();
+      }
     }
     ctx.restore();
   }
