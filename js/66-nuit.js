@@ -3960,7 +3960,10 @@
     S.derniere = t;
     // on ralentit avant de s'arrêter, et on repart en douceur ; une fois arrêté·es un instant, on se
     // tourne de dos pour regarder le paysage
-    const cible = b.pause ? 0 : 1;
+    // (pour contempler : on tourne d'abord la tête vers le paysage en marchant encore, on trouve
+    // ça beau, alors on ralentit, on s'arrête, et on se tourne tout entier·es)
+    if (!b.pause) b.pauseDepuis = 0; else if (!b.pauseDepuis) b.pauseDepuis = t;
+    const cible = b.pause && t - b.pauseDepuis >= (b.contemple ? 1600 : 0) ? 0 : 1;
     b.vitesse = b.vitesse == null ? cible : b.vitesse + (cible - b.vitesse) * Math.min(1, dt * (cible ? 1.1 : 0.7));
     if (Math.abs(b.vitesse - cible) < 0.02) b.vitesse = cible;
     S.decalage += dt * 40 * b.vitesse;
@@ -3968,6 +3971,7 @@
     const arret = b.vitesse < 0.08;
     if (!arret) b.arretDepuis = 0; else if (!b.arretDepuis) b.arretDepuis = t;
     const deDos = arret && !b.baignade && t - b.arretDepuis > 700;
+    const regard = b.pause && !b.baignade && !deDos;
     const avance = S.decalage;
     const etat = H.ciel.etat();
     const alt = etat.soleil.alt;
@@ -4117,11 +4121,12 @@
       // (à deux : enlacé·es, le bras de l'une sur les épaules de l'autre)
       if (deDos && avec("luigi")) persoBalade(ctx, "dosEnlaces", w * 0.39, sol(w * 0.39) - h * 0.058, 3, 0);
       else {
-        if (avec("luigi")) persoBalade(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
-        persoBalade(ctx, deDos ? "ovoDos" : "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, deDos ? 0 : pas(0));
+        if (avec("luigi")) persoBalade(ctx, regard ? "luigiRegard" : "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
+        persoBalade(ctx, deDos ? "ovoDos" : regard ? "ovoRegard" : "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, deDos ? 0 : pas(0));
       }
       // la nuit, les humain·es ont une lampe frontale ; allumée, elle éclaire le chemin devant
-      if (nuit && !deDos) {
+      // (tête tournée vers le paysage, la lampe éclaire au loin, de l'autre côté : on ne la voit plus)
+      if (nuit && !deDos && !regard) {
         if (avec("luigi")) lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t, pas(2));
         lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
       }
@@ -4240,7 +4245,8 @@
       // la tache bouge avec la tête (elle avance et recule au rythme des pas). Plusieurs couches très
       // légères, de la plus large à la plus étroite, pour des bords tout doux
       const tremble = (front - (y - (f.h - hautTete(nom, 0).haut) * ech + 2.5 * ech)) * 2.5;
-      const tx = lx + h * 0.5 + tremble * 4, ty = sol(tx) - 1, rx = h * 0.15, ry = h * 0.034;
+      // (la tache loin devant, au niveau du sol où l'on marche, celui des pieds)
+      const tx = x + h * 0.32 + tremble * 3, ty = y + sol(tx) - sol(x) - 1, rx = h * 0.11, ry = h * 0.022;
       ctx.globalCompositeOperation = "lighter";
       for (const [k, a] of [[1, 0.035], [0.82, 0.04], [0.64, 0.045], [0.47, 0.05], [0.3, 0.055]]) {
         const g = ctx.createLinearGradient(lx, front, tx, ty);

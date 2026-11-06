@@ -230,6 +230,12 @@
   ]);
   // Mesi de dos : le mulet châtain qui couvre la nuque, la chemise verte
   const LUIGI_DOS = OVO_DOS.map((l, y) => (y === 8 ? "..kcCcCcCcCcCk.." : l.replace(/h/g, "c").replace(/H/g, "C").replace(/r/g, "g").replace(/R/g, "G")));
+  // la tête de dos posée sur le corps de profil (la même hauteur que la tête de profil), avec un
+  // bout de joue qui dépasse à droite : on devine qu'on se retourne
+  function teteVersPaysage(dos, prof) {
+    const t = dos.slice(0, 8).concat([dos[6], dos[7], dos[8]]).map((l, y) => (y >= 6 && y <= 9 ? l.slice(0, 12) + "s" + l.slice(13) : l));
+    return t.concat([prof[11]], prof.slice(12));
+  }
   // Mesi et ƟvƟ de dos, serré·es l'une contre l'autre devant le paysage : Mesi, un peu plus grande,
   // passe le bras sur les épaules d'ƟvƟ (la main posée sur l'autre épaule) ; ƟvƟ passe le sien
   // dans son dos (la main posée sur ses lombes)
@@ -531,6 +537,9 @@
     ovoEte: [OVO_ETE, OVO_MARCHE_ETE],
     ovoProfilEte: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, true)),
     luigiProfil: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i)),
+    // en marchant, la tête tournée vers le paysage : le corps de profil, l'arrière de la tête
+    ovoRegard: [0, 1, 2, 3, 4].map((i) => profil(teteVersPaysage(OVO_DOS, OVO_PROFIL), "r", i)),
+    luigiRegard: [0, 1, 2, 3, 4].map((i) => profil(teteVersPaysage(LUIGI_DOS, LUIGI_PROFIL), "g", i)),
     // pieds nus, à la maison
     ovoPieds: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, false, "pieds")),
     luigiPieds: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i, false, "pieds")),
