@@ -1151,10 +1151,10 @@
       sources.push({ x: BOULE.x, y: BOULE.y + 80, rx: 430, ry: 310, douce: true, col: [222, 128, 52], rim: [255, 190, 110], poids: 1, eclat: [160, 82, 24], re: 75, ey: BOULE.y + 92, table: true, etage: "bas" });
     }
     return {
-      ambiant: eteint ? [38, 42, 94] : { jour: [250, 246, 240], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
+      ambiant: eteint && moment !== "jour" ? [38, 42, 94] : { jour: [250, 246, 240], soir: [118, 96, 146], nuit: [50, 54, 110] }[moment],
       // le jour, la lumière du dehors remplit toute la maison : les couleurs s'éclaircissent un peu
       // partout, et davantage près des fenêtres
-      jour: !eteint && moment === "jour",
+      jour: moment === "jour",
       ombre: { jour: "50,46,120", soir: "70,26,96", nuit: "16,16,64" }[moment],
       sources,
     };
@@ -4591,7 +4591,7 @@
       }
       m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.drawImage(calque, 0, 0); m.restore();
       // le dehors tout autour, la maison par-dessus
-      poserMaison(ctx, v, t, "nuit", etat, M);
+      poserMaison(ctx, v, t, mo, etat, M);
 
       // de temps en temps, Mémé ronfle : un petit « rrr » s'envole
       if (t > prochainRonflement) {
@@ -4608,7 +4608,7 @@
         ctx.globalAlpha = 1;
       }
       // tout passe en gros pixels, aux couleurs des pochettes
-      H.retro.appliquer(toile, grosPixel(), 0.6, null, paletteMaison("nuit", true));
+      H.retro.appliquer(toile, grosPixel(), 0.6, null, paletteMaison(mo, true));
     }
     requestAnimationFrame(image);
   }
