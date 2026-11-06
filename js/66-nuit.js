@@ -97,16 +97,14 @@
       const n = Math.min(3, BOIS_MAX - cheminee.bois());
       cheminee.majJeu((c) => (c.bois += n));
       if (H.journal) H.journal.noter("bois", "je suis allé·e chercher du bois sec");
-      return H.dialogue.dire([{ qui: "ovo", texte: "Une brassée de bois sec, " + n + " bûches : on aura bien chaud." }]);
     },
-    // dans la maison, en touchant le poêle
+    // dans la maison, en touchant le poêle : on l'allume, ou on l'éteint s'il brûle
     async allumer() {
-      if (cheminee.feuActif()) return H.dialogue.dire([{ qui: "luigi", texte: H.histoires.auHasard(["Écoute le bois qui crépite… on est bien.", "Rien de mieux qu’un feu quand il fait froid dehors."]) }]);
+      if (cheminee.feuActif()) return cheminee.majJeu((c) => { c.feu = 0; });
       if (!cheminee.froid()) return H.dialogue.dire([{ qui: "luigi", texte: "Il fait " + (cheminee.temperature() != null ? cheminee.temperature() + " °C" : "doux") + " : pas besoin de faire du feu." }]);
       if (!cheminee.bois()) return H.dialogue.dire([{ qui: "luigi", texte: "Il n’y a plus de bois sec. Va en chercher dehors : il est rangé contre la maison." }]);
       cheminee.majJeu((c) => { c.bois -= 1; c.feu = H.maintenant(); });
       if (H.journal) H.journal.noter("feu", "j’ai allumé un feu dans la cheminée");
-      return H.dialogue.dire([{ qui: "ovo", texte: "Une bûche dans le poêle, une allumette… le feu prend." }]);
     },
   };
   H.cheminee = cheminee;
@@ -2439,7 +2437,7 @@
       { id: "table", x: 500 + TABLE_T.x, y: 196 + TABLE_T.y, w: 72, h: 34, nom: "Le goûter", agir: () => (H.ressources.quantite("crepe") > 0
         ? crepeMesi(() => H.aller("maison"))
         : H.dialogue.dire([{ qui: "luigi", texte: "Plus de crêpe pour l’instant… Quelques flashcartes, et je t’en refais une au chocolat fondu !" }])) },
-      { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
+      { id: "poele", x: POELE.x - 6, y: 300, w: POELE.w + 12, h: 212, get nom() { return cheminee.feuActif() ? "Éteindre le feu" : "Faire du feu"; }, agir: () => cheminee.allumer() },
       { id: "bois", x: -92, y: 430, w: 78, h: 80, nom: "Prendre du bois sec", agir: () => cheminee.prendreBois() },
       { id: "porte", x: -190, y: 322, w: 200, h: 196, nom: "Sortir faire une balade", agir: () => !trajet && fenetreBalade() },
       // les guirlandes dehors, accrochées de la maison aux arbres : on les allume ou on les éteint
