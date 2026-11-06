@@ -3854,11 +3854,33 @@
     ["#6f7f3a", "#8f9e4a", "#b4bf6a"], ["#3f6a3a", "#55804a", "#7c9e62"], ["#7f93a8", "#a2b4c6", "#c8d4e0"],
     ["#6f8a5a", "#8fa878", "#b2c498"], ["#5a7a3a", "#7a9a48", "#a4ba5e"], ["#7a8a4a", "#9aa85a", "#c4c87a"],
   ];
-  function coussinGarrigue(ctx, x, y, r, g, nuit, t) {
+  // (le liseré de lumière sur le bord éclairé, et l'ombre bleue portée au sol, selon le moment :
+  // le soleil à gauche le jour et au couchant, la lune à droite la nuit)
+  const LUMIERE_GARRIGUE = {
+    jour: { rim: "#fff2c0", ombre: "rgba(70,80,180,0.35)", cote: -1 },
+    soir: { rim: "#ffc08a", ombre: "rgba(80,40,120,0.4)", cote: -1 },
+    nuit: { rim: "#c8d070", ombre: "rgba(8,10,40,0.45)", cote: 1 },
+  };
+  // le liseré : un trait fin et doux qui suit le haut du coussin, du côté de la lumière
+  function lisere(ctx, x, y, rx, ry, r, L) {
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = L.rim;
+    ctx.lineWidth = Math.max(1.2, r * 0.06);
+    ctx.beginPath();
+    if (L.cote < 0) ctx.ellipse(x, y, rx * 0.96, ry * 0.96, 0, Math.PI * 1.18, Math.PI * 1.55);
+    else ctx.ellipse(x, y, rx * 0.96, ry * 0.96, 0, Math.PI * 1.45, Math.PI * 1.8);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function coussinGarrigue(ctx, x, y, r, g, nuit, t, moA) {
     const tons = TONS_GARRIGUE[Math.floor(hsh(g, 4) * TONS_GARRIGUE.length)], fleurs = hsh(g, 5) < 0.22;
+    const L = LUMIERE_GARRIGUE[moA || (nuit ? "nuit" : "jour")] || LUMIERE_GARRIGUE.jour;
+    const rx = r, ry = r * (0.72 + hsh(g, 6) * 0.22);
+    ctx.fillStyle = L.ombre;
+    ctx.beginPath(); ctx.ellipse(x - L.cote * rx * 0.35, y + 1, rx * 1.05, Math.max(1.5, ry * 0.2), 0, 0, Math.PI * 2); ctx.fill();
     ctx.save();
     auVent(ctx, x, y, g * 0.3);
-    const rx = r, ry = r * (0.72 + hsh(g, 6) * 0.22);
     // (deux ou trois lobes de tailles différentes : jamais un dôme parfait)
     const lobes = [[0, 1, 1]].concat(Array.from({ length: 1 + Math.floor(hsh(g, 8) * 2) }, (_, k) => [(hsh(g, 20 + k) - 0.5) * 1.1, 0.5 + hsh(g, 24 + k) * 0.4, 0.6 + hsh(g, 28 + k) * 0.5]));
     const dome = (dec, f) => { for (const [dx, fx, fy] of lobes) { ctx.beginPath(); ctx.ellipse(x + dx * rx - rx * dec, y, rx * fx * f, ry * fy * f, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); } };
@@ -3873,13 +3895,54 @@
         ctx.fillStyle = py < y - ry * 0.45 ? tons[2] : tons[0];
         ctx.fillRect(Math.round(px), Math.round(py), Math.max(1.5, r * 0.12), Math.max(1.5, r * 0.1));
       }
+      lisere(ctx, x, y, rx, ry, r, L);
       if (fleurs) for (let k = 0; k < 14; k++) {
         const a = Math.PI * 1.08 + hsh(g, k + 70) * Math.PI * 0.84, d = 0.55 + hsh(g, k + 90) * 0.45;
         ctx.fillStyle = k % 3 ? "#e8d43a" : "#f6e86a";
         ctx.fillRect(Math.round(x + Math.cos(a) * rx * d), Math.round(y + Math.sin(a) * ry * d), Math.max(2, r * 0.16), Math.max(2, r * 0.14));
       }
-    }
+    } else if (hsh(g, 11) < 0.5) lisere(ctx, x, y, rx, ry, r, L); // (la nuit, la lune sur le haut des coussins)
     ctx.restore();
+  }
+  // une touffe en étoile (sparte, brachypode, asphodèle) : des brins fins qui partent d'un même
+  // pied, plus clairs au bout du côté éclairé ; ils ondulent au vent
+  const TONS_TOUFFE = { jour: ["#8a9a4a", "#c8c070", "#6a7a3a"], soir: ["#7a5a3a", "#ffb060", "#5a4030"], nuit: ["#1c3a2c", "#7a90c8", "#122a20"] };
+  function touffeEtoile(ctx, x, y, r, g, moA, t) {
+    const tons = TONS_TOUFFE[moA] || TONS_TOUFFE.jour, L = LUMIERE_GARRIGUE[moA] || LUMIERE_GARRIGUE.jour;
+    ctx.fillStyle = L.ombre;
+    ctx.beginPath(); ctx.ellipse(x - L.cote * r * 0.3, y + 1, r * 0.75, Math.max(1.2, r * 0.12), 0, 0, Math.PI * 2); ctx.fill();
+    const n = 10 + Math.floor(hsh(g, 1) * 6), e = Math.max(1, r * 0.09), vent = Math.sin(t / 700 + g) * 0.06;
+    for (let k = 0; k < n; k++) {
+      const a = Math.PI * 1.06 + (k / (n - 1)) * Math.PI * 0.88 + (hsh(g, k + 3) - 0.5) * 0.16 + vent, l = r * (0.65 + hsh(g, k + 30) * 0.6);
+      for (let q = 0; q < l; q += e) {
+        const bout = q > l * 0.6;
+        ctx.fillStyle = bout && Math.cos(a) * L.cote >= -0.1 ? tons[1] : k % 3 ? tons[0] : tons[2];
+        ctx.fillRect(Math.round(x + Math.cos(a) * q), Math.round(y + Math.sin(a) * q * 1.1), Math.ceil(e), Math.ceil(e));
+      }
+    }
+    // au printemps et en été, quelques épis clairs au bout des brins
+    if (moA === "jour" && hsh(g, 9) < 0.45) {
+      ctx.fillStyle = "#f3f0dc";
+      for (let k = 0; k < 3; k++) ctx.fillRect(Math.round(x + (k - 1) * r * 0.3), Math.round(y - r * (1.15 + (k % 2) * 0.12)), Math.ceil(e), Math.ceil(e * 2));
+    }
+  }
+  // de petites fleurs au ras du sol, sur le plateau
+  function fleursAuSol(ctx, x, y, e, g, nuit) {
+    const c = nuit ? ["#5a5aa8", "#7a7ac8"] : [["#f0d83a", "#f6e86a"], ["#e8a0c8", "#f3c4dc"], ["#f3f0dc", "#ffffff"]][Math.floor(hsh(g, 2) * 3)];
+    for (let k = 0; k < 5; k++) { ctx.fillStyle = c[k % 2]; ctx.fillRect(Math.round(x + (hsh(g, k + 5) - 0.5) * 14 * e), Math.round(y - hsh(g, k + 12) * 3 * e), Math.ceil(e * 1.2), Math.ceil(e * 1.2)); }
+  }
+  // La garrigue change au fil de la balade, par tronçons : B, des coussins mêlés de touffes en étoile ;
+  // C, une haie serrée de coussins qui se chevauchent ; D, un plateau ouvert, des petits buissons
+  // épars et des fleurs au ras du sol (toujours là au pied des falaises). Aux raccords, les deux se
+  // mélangent. (m : là où en sera la balade quand la plante passera devant les promeneurs)
+  const TRONCON = 1100;
+  function styleGarrigue(m, choix) {
+    if (falaises(m) > 0.3) return "D";
+    const de = (k) => ["B", "C", "D", "B"][Math.floor(hsh(k, 91) * 4)];
+    const k = Math.floor(m / TRONCON), f = m / TRONCON - k;
+    if (f < 0.18 && choix < (0.18 - f) / 0.36) return de(k - 1);
+    if (f > 0.82 && choix < (f - 0.82) / 0.36) return de(k + 1);
+    return de(k);
   }
   function premierPlanBalade(ctx, w, h, bas, avance, nuit, moA, dpr, t) {
     const du = dunes(avance), rg = rouge(avance);
@@ -3903,13 +3966,24 @@
     // (tout ce qui pousse au premier plan est dessiné ensemble, du fond vers l'avant)
     const aDessiner = [];
     if (du < 0.35) for (let rang = 0; rang < 9; rang++) {
-      const y = h + 6 + (bas * (rang + 0.3)) / 8.4, vite = 1.25 + rang * 0.2, e = 1 + rang * 0.34, pas = 24 * e;
-      for (let i = 0, n = Math.ceil((w + 120 * e) / pas) + 1; i < n; i++) {
-        const g = i * 13 + rang * 71;
-        if (hsh(g, 7) < 0.12) continue;
-        const x = boucler(i * pas + (hsh(g, 1) - 0.5) * pas * 1.3 - avance * vite, w, 50 * e), taille = (8 + Math.pow(hsh(g, 3), 1.6) * 30) * e;
+      const y = h + 6 + (bas * (rang + 0.3)) / 8.4, vite = 1.25 + rang * 0.2, e = 1 + rang * 0.34, pas = 12 * e, o = avance * vite;
+      // (chaque plante a son numéro dans la rangée, pour garder sa place et son style en défilant)
+      for (let k = Math.floor((o - 60 * e) / pas), kf = (o + w + 60 * e) / pas; k <= kf; k++) {
+        const g = k * 13 + rang * 71, m = (k * pas - w * 0.42) / vite, style = styleGarrigue(m, hsh(g, 9));
+        // (B : un coussin sur deux ; C : tous, serrés ; D : un sur quatre)
+        if (hsh(g, 7) >= (style === "C" ? 1 : style === "B" ? 0.5 : 0.25)) continue;
+        const x = k * pas + (hsh(g, 1) - 0.5) * pas * 1.2 - o;
         const yc = y + (hsh(g, 2) - 0.5) * (bas / 8.4) * 1.1;
-        aDessiner.push({ y: yc, f: () => coussinGarrigue(ctx, x, yc, taille, g, nuit, t) });
+        if (style === "D") {
+          const taille = (4 + hsh(g, 3) * 7) * e;
+          aDessiner.push({ y: yc, f: () => (hsh(g, 4) < 0.45 ? fleursAuSol(ctx, x, yc, e, g, nuit) : coussinGarrigue(ctx, x, yc, taille, g, nuit, t, moA)) });
+        } else if (style === "B" && hsh(g, 4) < 0.45) {
+          const taille = (8 + hsh(g, 3) * 12) * e;
+          aDessiner.push({ y: yc, f: () => touffeEtoile(ctx, x, yc, taille, g, moA, t) });
+        } else {
+          const taille = (style === "C" ? 12 + Math.pow(hsh(g, 3), 1.3) * 22 : 8 + Math.pow(hsh(g, 3), 1.6) * 26) * e;
+          aDessiner.push({ y: yc, f: () => coussinGarrigue(ctx, x, yc, taille, g, nuit, t, moA) });
+        }
       }
     }
     for (let rang = 0; rang < 5; rang++) {
