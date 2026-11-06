@@ -271,7 +271,8 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 }
 .pastille-scene:hover, .pastille-scene:focus-visible { background: #23214a; outline: 2px solid #ff5b4f; }
 :root[data-vue="balade"] .cadre-balade { position: relative; min-height: 100vh; display: grid; align-content: center; }
-:root[data-vue="balade"] .actions-balade { position: absolute; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); justify-content: center; z-index: 2; }
+/* (les boutons en haut, dans le ciel, pour ne pas cacher les promeneurs ; à côté de « ‹ Maison ») */
+:root[data-vue="balade"] .actions-balade { position: absolute; left: 110px; right: 110px; top: calc(12px + env(safe-area-inset-top, 0px)); margin: 0; justify-content: center; z-index: 2; }
 :root[data-vue="balade"] .actions-balade .bouton { background: rgba(35, 33, 74, 0.82); color: #f2f0e8; border-color: #f2f0e8; }
 
 /* un jardin ouvert : sur fond d'encre, sous la même barre jaune que les autres pages */

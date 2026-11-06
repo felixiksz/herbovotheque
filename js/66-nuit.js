@@ -3376,7 +3376,8 @@
     // (jusqu'en bas de l'écran ; un peu de ciel en plus en haut, surtout du premier plan en bas)
     // (sur ordinateur aussi, comme sur téléphone : toute la hauteur de l'écran)
     const Htot = Math.max(h, Math.round(window.innerHeight - Math.max(0, toile.getBoundingClientRect().top)));
-    const haut = Math.round((Htot - h) * 0.3), bas = Htot - h - haut;
+    // (le bas de l'écran, c'est le bas de la route ; tout ce qu'il y a en plus, c'est du ciel)
+    const haut = Htot - h, bas = 0;
     toile.style.height = Htot + "px";
     ecran.width = Math.ceil(w * dpr); ecran.height = Math.ceil(Htot * dpr);
     const nuit = H.ciel.etat().soleil.alt < 0;
