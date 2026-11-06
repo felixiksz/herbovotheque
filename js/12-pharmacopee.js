@@ -113,7 +113,11 @@
       for (const [cle, champ] of Object.entries(DE_LA_FICHE)) { const t = texte((src.fiches[cle] || {})[h.id]); if (t) v[champ] = t; }
       for (const [cle, champ] of Object.entries(DE_LA_CORRECTION)) { if (h[cle] != null && h[cle] !== "") v[champ] = texte(h[cle]); }
       for (const k of Object.keys(v)) if (!v[k]) delete v[k];
-      plantes.push({ id, code: h.id, nom: h.pinyin || h.id, latin: "", valeurs: v, preparations: ["plante-seche"], source: "Pharmacopée chinoise (cours), " + h.id, pc: true });
+      // au jardin : le nom latin, la famille, ses besoins et de quoi la dessiner (voir 13-pharmacopee-jardin.js)
+      const j = (H.pcJardin || {})[h.id];
+      const plante = { id, code: h.id, nom: h.pinyin || h.id, latin: j ? j.latin : "", valeurs: Object.assign({}, j ? j.valeurs : null, v), preparations: ["plante-seche"], source: "Pharmacopée chinoise (cours), " + h.id, pc: true };
+      if (j) plante.dessin = j.dessin;
+      plantes.push(plante);
     }
     return { champs: champs(src.classes || []), plantes };
   }
@@ -165,9 +169,9 @@
     },
     // une fiche chinoise qui part chez ƟvƟ (dans une île offerte) : le nom et le jardin seulement
     pourOvo(p) {
-      const jardin = new Set(H.d.champs().filter((c) => c.section === "jardin").map((c) => c.id));
+      const jardin = new Set(H.d.champs().filter((c) => c.section === "jardin").map((c) => c.id).concat(["famille"]));
       const valeurs = Object.fromEntries(Object.entries(p.valeurs || {}).filter(([k]) => jardin.has(k)));
-      return { id: p.id, nom: p.nom, latin: "", pc: true, preparations: [], valeurs };
+      return Object.assign({ id: p.id, nom: p.nom, latin: p.latin || "", pc: true, preparations: [], valeurs }, p.dessin ? { dessin: p.dessin } : null);
     },
   };
 })();

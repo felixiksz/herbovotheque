@@ -224,8 +224,12 @@
         for (const p of H.base.plantes) {
           vus.add(p.id);
           if (h.supprimees[p.id]) continue;
-          const perso = h.plantes[p.id];
+          let perso = h.plantes[p.id];
           if (perso && perso.supprime) continue;
+          // (une fiche chinoise modifiée par Mesi garde ce qu'il faut pour le jardin : nom latin,
+          // famille, besoins et dessin, sans toucher à ce qu'elle a écrit)
+          const j = perso && p.pc && H.pcJardin && H.pcJardin[p.code];
+          if (j) perso = Object.assign({}, perso, { latin: perso.latin || p.latin, dessin: perso.dessin || p.dessin, valeurs: Object.assign({}, j.valeurs, perso.valeurs) });
           liste.push(perso || p);
         }
         for (const [id, p] of Object.entries(h.plantes)) {

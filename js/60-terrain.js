@@ -1510,7 +1510,8 @@
       const pied = toile(L, Hh), g = pied.getContext("2d"), cx = Math.floor(L / 2), sol = Hh - 2;
       const R = (gg, x, y, ww, hh, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(ww)), Math.max(1, Math.round(hh))); };
       const feuille = FEUILLES_PIX[H.hash(p.id) % FEUILLES_PIX.length], sombre = assombrir(feuille, 0.7), clair = assombrir(feuille, 1.18).replace(/#(..)(..)(..)/, (m0, a, b, c) => "#" + [a, b, c].map((x) => Math.min(255, parseInt(x, 16)).toString(16).padStart(2, "0")).join(""));
-      const fleurCol = FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], r = H.alea(p.id + "|iso|" + st);
+      // (la vraie couleur des fleurs quand la fiche la donne, sinon une couleur au hasard de la plante)
+      const fleurCol = (p.dessin && p.dessin.fleur) || FLEURS_ISO[H.hash(p.id) % FLEURS_ISO.length], r = H.alea(p.id + "|iso|" + st), portP = p.dessin && p.dessin.port;
       const res = { pied, couronne: null, l: L, h: Hh, haut: h };
       if (st === 0) { R(g, cx - 3, sol - 1, 6, 2, "#6b4423"); R(g, cx, sol - 2, 1, 1, "#4f7a3a"); return res; }
       // Un feuillage en grappes : une masse sombre, puis des bouquets de feuilles posés dessus,
@@ -1570,7 +1571,7 @@
         return res;
       }
       if (cycle === "Arbuste" && hm < 1.3 && ["Lamiaceae", "Verbenaceae", "Hypericaceae", "Asteraceae"].includes(v.famille)) {
-        plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol }, fleur && st === 3, st, r, saison, p.id, true);
+        plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol, port: portP }, fleur && st === 3, st, r, saison, p.id, true);
         return res;
       }
       if (cycle === "Arbuste") {
@@ -1596,7 +1597,7 @@
         return res;
       }
       // les herbes : dessinées selon leur famille botanique (voir plantePortrait)
-      plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol }, fleur && st === 3, st, r, saison, p.id);
+      plantePortrait(g, cx, sol, w, h, v.famille, { feuille, sombre, clair, fleurCol, port: portP }, fleur && st === 3, st, r, saison, p.id);
       return res;
     });
   }
@@ -1623,6 +1624,12 @@
     Cornaceae: ["multitige", "ovales", "corymbes"], Grossulariaceae: ["multitige", "lobees", "grappes"],
     Araliaceae: ["multitige", "palmees", "ombelles"], Asparagaceae: ["touffe", "cladodes", "baiesRouges"],
     Theaceae: ["boule", "ovales", "cinq"],
+    // (les arbres et les arbustes de la pharmacopée chinoise)
+    Magnoliaceae: ["ovale", "ovales", "cinq"], Eucommiaceae: ["rond", "dentees", null], Rhamnaceae: ["etale", "ovales", "baiesRouges"],
+    Sapindaceae: ["rond", "pennees", "grappes"], Ebenaceae: ["rond", "ovales", "oranges"], Meliaceae: ["etale", "pennees", "grappes"],
+    Burseraceae: ["etale", "pennees", null], Thymelaeaceae: ["multitige", "lanceolees", "corymbes"], Euphorbiaceae: ["boule", "ovales", "grappes"],
+    Loranthaceae: ["boule", "ovales", "baiesRouges"], Solanaceae: ["arque", "lanceolees", "baiesRouges"], Paeoniaceae: ["multitige", "pennees", "cinq"],
+    Fabaceae: ["etale", "pennees", "grappes"], Myristicaceae: ["cone", "ovales", "jaunes"], Rubiaceae: ["boule", "ovales", "cinq"],
   };
   // les espèces qui ne ressemblent pas au reste de leur famille
   const BOIS_ESPECES = [
@@ -1658,6 +1665,9 @@
       if (o.forme) forme = o.forme; if (o.feuille) feuille = o.feuille; if ("repro" in o) repro = o.repro; if (o.ecorce) ecorce = o.ecorce; if (o.fleur) fleurCol = o.fleur;
       break;
     }
+    // (une plante qui a sa silhouette à elle dans sa fiche : celles de la pharmacopée chinoise)
+    const dd = p.dessin;
+    if (dd) { if (dd.forme) forme = dd.forme; if (dd.feuille) feuille = dd.feuille; if (dd.repro) repro = dd.repro; if (dd.ecorce) ecorce = dd.ecorce; if (dd.fleur) fleurCol = dd.fleur; }
     if (v.cycle === "Arbuste" && ["rond", "etale", "ovale", "boule", "pleureur"].includes(forme) && hauteurM(p) < 4) forme = forme === "pleureur" ? "multitige" : forme === "boule" ? "boule" : "multitige";
     const vf = C.vert || VERTS_FAMILLE[v.famille];
     if (vf) C = Object.assign({}, C, { feuille: vf[0], clair: vf[1], sombre: vf[2], tresSombre: vf[3] });
@@ -1936,9 +1946,19 @@
     Plantaginaceae: ["rosette", "epiHaut"], Primulaceae: ["rosette", "ombelleHaut"], Violaceae: ["rosette", "solitaire"], Asphodelaceae: ["rosetteEpaisse", "grappeHaut"],
     Amaryllidaceae: ["lineaires", "ombelleHaut"], Iridaceae: ["eventail", "solitaireHaut"], Zingiberaceae: ["distiques", "aucune"], Poaceae: ["graminee", "panicule"],
     Equisetaceae: ["prele", "aucune"], Tropaeolaceae: ["peltees", "solitaire"],
+    // (les familles des plantes de la pharmacopée chinoise)
+    Ranunculaceae: ["alternes", "solitaire"], Paeoniaceae: ["composees", "solitaireHaut"], Campanulaceae: ["alternes", "solitaire"],
+    Orobanchaceae: ["rosette", "grappeHaut"], Polygalaceae: ["alternes", "grappe"], Liliaceae: ["alternes", "solitaireHaut"],
+    Asparagaceae: ["lineaires", "epiHaut"], Nelumbonaceae: ["peltees", "solitaireHaut"], Nymphaeaceae: ["peltees", "solitaire"],
+    Typhaceae: ["lineaires", "epiHaut"], Alismataceae: ["rosette", "panicule"], Acoraceae: ["eventail", "aucune"], Cyperaceae: ["graminee", "ombelleHaut"],
+    Orchidaceae: ["eventail", "grappeHaut"], Araceae: ["rosette", "solitaireHaut"], Aristolochiaceae: ["peltees", "solitaire"],
+    Zygophyllaceae: ["composees", "solitaire"], Ephedraceae: ["prele", "aucune"], Saururaceae: ["alternes", "epi"], Cannabaceae: ["opposees", "panicule"],
+    Cucurbitaceae: ["alternes", "solitaire"], Caryophyllaceae: ["opposees", "solitaire"], Amaranthaceae: ["opposees", "epi"],
+    Berberidaceae: ["rosette", "grappe"], Euphorbiaceae: ["alternes", "ombelleHaut"],
   };
   function plantePortrait(g, cx, sol, w, h, famille, C, fleurit, st, r, saison, graine, buisson) {
-    const [port, inflo] = PORTS[famille] || ["alternes", "cyme"];
+    // (une plante peut avoir son port à elle, différent de celui de sa famille : voir sa fiche)
+    const [port, inflo] = C.port || PORTS[famille] || ["alternes", "cyme"];
     const P = (gg, x, y, col) => { gg.fillStyle = col; gg.fillRect(Math.round(x), Math.round(y), 1, 1); };
     const tigeC = C.sombre, coeur = "#f2c94c";
     // les feuilles sur une toile à part (pour les couleurs de la saison)
