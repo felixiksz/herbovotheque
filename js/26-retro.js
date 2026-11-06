@@ -92,9 +92,10 @@
     let deja = memo.get(forceTrame);
     if (!deja) memo.set(forceTrame, (deja = new Int16Array(1 << 19).fill(-1)));
     for (let y = 0, i = 0; y < sh; y++) {
-      const decale = y >= ligneDefile ? dx : 0, ty = (y & 3) << 2;
+      const decaleL = y >= ligneDefile ? dx : 0, ty = (y & 3) << 2, lignes = defile && defile.lignes;
       for (let x = 0; x < sw; x++, i += 4) {
         if (d[i + 3] < 10) continue;
+        const decale = lignes && lignes.length === sw ? (y >= lignes[x] ? dx : 0) : decaleL;
         const ti = ty | ((x + decale) & 3), k = ((((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3)) << 4) | ti;
         let p = deja[k];
         if (p < 0) {

@@ -3790,7 +3790,7 @@
     const x = ((X % CYCLE) + CYCLE) % CYCLE;
     return Math.max(0, Math.min(1, (x - a) / fondu, (b - x) / fondu));
   }
-  const rouge = (X) => zone(X, ROUGE, 320);
+  const rouge = (X) => zone(X, ROUGE, 520);
   const dunes = (X) => zone(X, DUNES, 220);
   const falaises = (X) => zone(X, FALAISES, 200);
   // le relief du chemin : des collines dans la garrigue, de longues dunes, presque plat au pied des falaises
@@ -3972,6 +3972,24 @@
     if (!arret) b.arretDepuis = 0; else if (!b.arretDepuis) b.arretDepuis = t;
     const deDos = arret && !b.baignade && t - b.arretDepuis > 700;
     const regard = b.pause && !b.baignade && !deDos;
+    // de temps en temps, en marchant, on regarde autour de soi : en arrière, vers le paysage ou
+    // vers nous ; l'autre suit souvent, et Lóló tourne la tête vers nous un peu après
+    if (!b.prochainCoup) b.prochainCoup = t + 5000 + Math.random() * 6000;
+    if (!b.pause && !b.baignade && t >= b.prochainCoup) {
+      const sens = () => (Math.random() < 0.5 ? "Regard" : "Camera");
+      const duree = 1300 + Math.random() * 1000, s0 = sens();
+      b.coup = { debut: t, duree, ovo: s0, luigi: Math.random() < 0.7 ? (Math.random() < 0.6 ? s0 : sens()) : null, lolo: false,
+        decal: { ovo: 0, luigi: 200 + Math.random() * 500, lolo: 500 + Math.random() * 500 } };
+      if (Math.random() < 0.5) [b.coup.decal.ovo, b.coup.decal.luigi] = [b.coup.decal.luigi, b.coup.decal.ovo];
+      b.prochainCoup = t + duree + 7000 + Math.random() * 9000;
+    }
+    const coup = (qui) => {
+      const c = b.coup;
+      if (!c || b.pause || b.baignade || !c[qui]) return null;
+      const d = t - c.debut - c.decal[qui];
+      return d >= 0 && d < c.duree ? c[qui] : null;
+    };
+    const tete = (qui) => (regard ? "Regard" : coup(qui) || "Profil");
     const avance = S.decalage;
     const etat = H.ciel.etat();
     const alt = etat.soleil.alt;
@@ -4062,12 +4080,30 @@
     for (let x = 0; x <= w + 6; x += 6) ctx.lineTo(x, sol(x) - h * 0.15);
     ctx.lineTo(w, h);
     const gr = ctx.createLinearGradient(0, 0, w, 0);
-    for (let i = 0; i <= 10; i++) {
-      const xx = (i / 10) * w, rg = rouge(X(xx)), du = dunes(X(xx));
-      gr.addColorStop(i / 10, nuit ? melange("#2f4a36", "#5e3a2a", rg) : du > rg ? melange("#e3c08e", "#efd9a6", du) : melange("#e3c08e", "#c9653d", rg));
+    // (entre la verdure et la terre rouge, deux couleurs franches : un dégradé, passé dans les gros
+    // pixels, faisait une frontière toute droite ; ce sont les plaques posées dessus qui font le
+    // passage)
+    for (let i = 0; i <= 40; i++) {
+      const xx = (i / 40) * w, rg = rouge(X(xx)) >= 0.5 ? 1 : 0, du = dunes(X(xx));
+      gr.addColorStop(i / 40, nuit ? (rg ? "#5e3a2a" : "#2f4a36") : du > rouge(X(xx)) ? melange("#e3c08e", "#efd9a6", du) : rg ? "#c9653d" : "#e3c08e");
     }
     ctx.fillStyle = gr;
     ctx.fill();
+    // entre la terre rouge et la verdure, pas de frontière : des plaques de terre qui se font plus
+    // rares, et des touffes d'herbe qui gagnent, posées sur le chemin et qui défilent avec lui
+    {
+      const vert = nuit ? "#2f4a36" : "#e3c08e", rougeT = nuit ? "#5e3a2a" : "#c9653d", pasP = 11;
+      for (let k = Math.floor((avance - w * 0.42 - 40) / pasP); k * pasP < avance + w * 0.58 + 40; k++) {
+        for (let q = 0; q < 3; q++) {
+          const kk = k * 3 + q, wx = k * pasP + hsh(kk, 1) * pasP, rg = rouge(wx);
+          if (rg < 0.03 || rg > 0.97 || dunes(wx) > rg) continue;
+          const x = wx - avance + w * 0.42, haut = sol(x) - h * 0.15, f = hsh(kk, 2), y = haut + 4 + f * (h - haut - 4);
+          const prof = 0.5 + f, rx = (5 + hsh(kk, 3) * 12) * prof, ry = (1.5 + hsh(kk, 4) * 3) * prof;
+          ctx.fillStyle = hsh(kk, 5) < rg ? rougeT : vert;
+          ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
     for (let i = 0; i < 20; i++) {
       const x = boucler(i * 73 - avance, w, 30);
       ctx.fillStyle = nuit ? "#3a4a3a" : i % 3 ? "#f3e2cf" : "#a8552f";
@@ -4100,7 +4136,7 @@
     const pas = (decale) => (arret ? 4 : (Math.floor(b.foulee / 170) + decale) % 4);
     const avec = (q) => S.compagnons.includes(q);
     // (à l'arrêt, Lóló aussi se tourne vers le paysage)
-    if (avec("lolo")) persoBalade(ctx, deDos ? (avec("meme") ? "loloDosMeme" : "loloDos") : avec("meme") ? "loloBalade" : "loloSeule", w * 0.2, sol(w * 0.2) - h * 0.05, deDos ? 3.2 : 2.4, arret ? 0 : Math.floor(b.foulee / 230) % 4);
+    if (avec("lolo")) persoBalade(ctx, deDos ? (avec("meme") ? "loloDosMeme" : "loloDos") : (avec("meme") ? "loloBalade" : "loloSeule"), w * 0.2, sol(w * 0.2) - h * 0.05, deDos ? 3.2 : 2.4, arret ? 0 : Math.floor(b.foulee / 230) % 4);
     // Mémé sans Lóló trottine devant, sur ses quatre pattes
     if (avec("meme") && !avec("lolo") && !b.baignade) persoBalade(ctx, "memePas", w * 0.5, sol(w * 0.5) - h * 0.055, 3.1, arret ? 0 : Math.floor(b.foulee / 200) % 2);
     // Mémé n'aime pas l'eau : pendant la baignade, elle dort en boule sur la plage
@@ -4121,14 +4157,15 @@
       // (à deux : enlacé·es, le bras de l'une sur les épaules de l'autre)
       if (deDos && avec("luigi")) persoBalade(ctx, "dosEnlaces", w * 0.39, sol(w * 0.39) - h * 0.058, 3, 0);
       else {
-        if (avec("luigi")) persoBalade(ctx, regard ? "luigiRegard" : "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
-        persoBalade(ctx, deDos ? "ovoDos" : regard ? "ovoRegard" : "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, 3, deDos ? 0 : pas(0));
+        if (avec("luigi")) persoBalade(ctx, "luigi" + tete("luigi"), w * 0.33, sol(w * 0.33) - h * 0.055, 3, pas(2));
+        persoBalade(ctx, deDos ? "ovoDos" : "ovo" + tete("ovo"), w * 0.42, sol(w * 0.42) - h * 0.06, 3, deDos ? 0 : pas(0));
       }
       // la nuit, les humain·es ont une lampe frontale ; allumée, elle éclaire le chemin devant
       // (tête tournée vers le paysage, la lampe éclaire au loin, de l'autre côté : on ne la voit plus)
+      // (la tête tournée ailleurs, le faisceau part de l'autre côté : on ne le voit pas)
       if (nuit && !deDos && !regard) {
-        if (avec("luigi")) lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t, pas(2));
-        lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
+        if (avec("luigi") && tete("luigi") === "Profil") lampeFrontale(ctx, "luigiProfil", w * 0.33, sol(w * 0.33) - h * 0.055, b.lampe, sol, h, t, pas(2));
+        if (tete("ovo") === "Profil") lampeFrontale(ctx, "ovoProfil", w * 0.42, sol(w * 0.42) - h * 0.06, b.lampe, sol, h, t, pas(0));
       }
     }
     if (b.boutonLampe) b.boutonLampe.hidden = !nuit || b.baignade;
@@ -4196,7 +4233,10 @@
     }
     // la trame des gros pixels glisse avec le chemin, sous la ligne du rivage
     // (la toile visible reçoit directement la petite image en gros pixels ; l'écran l'agrandit)
-    H.retro.appliquer(S.ecran, 1, 0.7, { x: avance * (S.ecran.width / w), depuis: (haut + h * 0.72) / (S.Htot || h) }, null, b.toile);
+    // (colonne par colonne, la trame glisse dès le haut du chemin, même quand il monte sur une colline)
+    const lignes = new Int16Array(S.ecran.width), fy = S.ecran.height / (S.Htot || h), fx = w / S.ecran.width;
+    for (let c = 0; c < lignes.length; c++) lignes[c] = Math.floor((haut + Math.min(h * 0.72, sol(c * fx) - h * 0.15)) * fy);
+    H.retro.appliquer(S.ecran, 1, 0.7, { x: avance * (S.ecran.width / w), depuis: (haut + h * 0.72) / (S.Htot || h), lignes }, null, b.toile);
     b.anim = requestAnimationFrame(dessinerBalade);
   }
 

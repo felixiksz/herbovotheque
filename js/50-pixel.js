@@ -434,6 +434,30 @@
     }
   }
   // Lóló au pas (ou au galop) : les jambes en diagonale avancent ensemble, celles de l'autre côté plus sombres
+  // la tête de Lóló tournée vers nous : les deux oreilles, les deux yeux, le bout du nez et ses
+  // naseaux ; posée à la place de la tête de profil, au bout de l'encolure
+  const LOLO_FACE = [
+    "..kk.....kk.",
+    ".knk.....knk",
+    ".knnk...knnk",
+    ".knnnkkknnnk",
+    "knnnnnnnnnnk",
+    "knwennnnnwek",
+    "knnnnnnnnnnk",
+    ".knnnnnnnnk.",
+    ".knnNNNNnnk.",
+    "..knNNNNnk..",
+    "..knekkenk..",
+    "...knnnnk...",
+    "....kkkk....",
+  ];
+  function teteDeFace(g) {
+    for (let y = 0; y < 13; y++) for (let x = 29; x < g[y].length; x++) if (!"tTupy".includes(g[y][x])) g[y][x] = ".";
+    for (let y = 0; y < 4; y++) for (let x = 26; x < 29; x++) if (!"tTupy".includes(g[y][x])) g[y][x] = ".";
+    LOLO_FACE.forEach((l, y) => l.split("").forEach((c, x) => { if (c !== ".") g[y][28 + x] = c; }));
+    // (l'encolure qui rejoint la tête)
+    for (let y = 9; y < 13; y++) for (let x = 29; x < 31; x++) if (g[y][x] === ".") g[y][x] = "n";
+  }
   function loloAuPas(image, opts) {
     opts = opts || {};
     let g = (image < 2 ? LOLO : LOLO_2).map((l) => l.split(""));
@@ -454,6 +478,7 @@
       poser(g, x0 + dx + 1, bas, "e");
     }
     if (opts.galop) criniereAuVent(g, image, opts.memeDebout);
+    if (opts.face) teteDeFace(g);
     return contour(g);
   }
 
@@ -540,6 +565,11 @@
     // en marchant, la tête tournée vers le paysage : le corps de profil, l'arrière de la tête
     ovoRegard: [0, 1, 2, 3, 4].map((i) => profil(teteVersPaysage(OVO_DOS, OVO_PROFIL), "r", i)),
     luigiRegard: [0, 1, 2, 3, 4].map((i) => profil(teteVersPaysage(LUIGI_DOS, LUIGI_PROFIL), "g", i)),
+    // en marchant, la tête tournée en arrière (le visage de profil, vers la gauche) ou vers nous
+    ovoArriere: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL.map((l, y) => (y < 12 ? l.split("").reverse().join("") : l)), "r", i)),
+    luigiArriere: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL.map((l, y) => (y < 12 ? l.split("").reverse().join("") : l)), "g", i)),
+    ovoCamera: [0, 1, 2, 3, 4].map((i) => profil(OVO.slice(0, 12).concat(OVO_PROFIL.slice(12)), "r", i)),
+    luigiCamera: [0, 1, 2, 3, 4].map((i) => profil(LUIGI.slice(0, 12).concat(LUIGI_PROFIL.slice(12)), "g", i)),
     // pieds nus, à la maison
     ovoPieds: [0, 1, 2, 3, 4].map((i) => profil(OVO_PROFIL, "r", i, false, "pieds")),
     luigiPieds: [0, 1, 2, 3, 4].map((i) => profil(LUIGI_PROFIL, "g", i, false, "pieds")),
@@ -552,6 +582,9 @@
     loloGalop: [0, 1, 2, 3].map((i) => loloAuPas(i, { galop: true })),
     loloBalade: [0, 1, 2, 3].map((i) => loloAuPas(i, { memeDebout: true })),
     loloSeule: [0, 1, 2, 3].map((i) => loloAuPas(i, { seule: true })),
+    // Lóló qui tourne la tête vers nous en marchant
+    loloBaladeFace: [0, 1, 2, 3].map((i) => loloAuPas(i, { memeDebout: true, face: true })),
+    loloSeuleFace: [0, 1, 2, 3].map((i) => loloAuPas(i, { seule: true, face: true })),
     // Lóló sans Mémé sur l'encolure (quand Mémé est sortie par la chatière)
     loloSansMeme: [LOLO, LOLO_2].map((G) => contour(sansMeme(G.map((l) => l.split("")), false))),
     memePas: [MEME_DEBOUT, MEME_PAS],
