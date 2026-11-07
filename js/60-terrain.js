@@ -863,13 +863,36 @@
       // (en relief, les abeilles sont dessinées à part, par-dessus les plantes)
       if (a.type === "abeille" && projection) continue;
       const [px, py] = projection ? projection(a.x, a.y) : [a.x * T, a.y * T];
+      // (en relief, on les voit de côté, comme les grenouilles ; vu d'en haut, de dessus. Une
+      // grenouille sur l'eau est assise sur un nénuphar)
+      if (projection) a.profil = true;
+      if (a.type === "grenouille") { const c = caseDe(ile, Math.floor(a.x), Math.floor(a.y)); a.nenuphar = (c && c.t === "eau") || (ile.mare && Math.hypot((a.x - ile.mare.cx) / ile.mare.rx, (a.y - ile.mare.cy) / ile.mare.ry) < 1); }
       dessinerUnAnimal(ctx, a, px, py, t);
     }
   }
   function dessinerUnAnimal(ctx, a, px, py, t) {
     {
       ctx.save();
-      if (a.type === "canard") {
+      if (a.type === "canard" && a.profil) {
+        // de profil, posé sur l'eau : le corps à moitié dans l'eau, la queue relevée, le cou et la
+        // tête vers l'avant ; il regarde du côté où il nage à l'écran
+        const [corps, tete, aile] = a.variante ? ["#8a6a4a", "#2f7a4a", "#6b4f34"] : ["#f2f0e8", "#ffd23a", "#d8d2c0"];
+        const f = Math.cos(a.dir) - Math.sin(a.dir) >= 0 ? 1 : -1, x = Math.round(px), y = Math.round(py);
+        ctx.strokeStyle = "rgba(255,255,255,0.65)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(x, y + 1, 10, 2, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.translate(x, y); ctx.scale(f, 1);
+        ctx.save(); ctx.beginPath(); ctx.rect(-12, -14, 24, 15); ctx.clip();
+        ctx.fillStyle = corps; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-8, -4); ctx.lineTo(-11, -8); ctx.lineTo(-6, -5); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(0, -2, 8, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = aile; ctx.beginPath(); ctx.ellipse(-1, -3, 4.5, 2.2, -0.15, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = tete; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1;
+        ctx.fillRect(4, -9, 3, 6);
+        ctx.beginPath(); ctx.arc(6, -10, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ff9a1e"; ctx.beginPath(); ctx.moveTo(8.6, -11); ctx.lineTo(12, -9.6); ctx.lineTo(8.6, -8.6); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#23214a"; ctx.fillRect(6.5, -11.5, 1.2, 1.2);
+      } else if (a.type === "canard") {
         const [corps, tete] = a.variante ? ["#8a6a4a", "#2f7a4a"] : ["#f2f0e8", "#ffd23a"];
         ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.ellipse(px - Math.cos(a.dir) * 8, py - Math.sin(a.dir) * 8, 7, 3, a.dir, 0, Math.PI * 2); ctx.stroke();
@@ -881,6 +904,12 @@
       } else if (a.type === "grenouille") {
         const saut = (t / 1000 + a.variante * 3) % 9 < 0.5;
         const fy = py - (saut ? 4 : 0);
+        if (a.nenuphar) {
+          // sa feuille de nénuphar, ronde et fendue, à plat sur l'eau
+          ctx.fillStyle = "#3f8a3a"; ctx.beginPath(); ctx.ellipse(px, py + 5, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#6cbd5c"; ctx.beginPath(); ctx.ellipse(px - 1, py + 4.4, 8.4, 3, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#3f8a3a"; ctx.beginPath(); ctx.moveTo(px + 1, py + 5); ctx.lineTo(px + 10, py + 3.5); ctx.lineTo(px + 10, py + 6.5); ctx.closePath(); ctx.fill();
+        }
         ctx.fillStyle = "#6fae3a";
         ctx.beginPath(); ctx.ellipse(px, fy, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = "#4a7a2a"; ctx.lineWidth = 2;

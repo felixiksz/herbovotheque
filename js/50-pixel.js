@@ -389,21 +389,23 @@
   ];
   const avecMemeCouchee = (g) => { MEME_COUCHEE.forEach((l, y) => l.split("").forEach((c, x) => { if (c !== "." && g[y + 3]) g[y + 3][x + 13] = c; })); return g; };
   // Lóló sans Mémé couchée sur l'encolure : l'encolure et la crinière redessinées
+  // (la crinière fait deux pixels de large : d'une ligne à l'autre, ses pixels se touchent par un
+  // côté, pas seulement par un coin, et la crête de l'encolure reste d'un seul trait)
   const ENCOLURE = [
     [0, 28, "knk"],
     [1, 28, "knk"],
     [2, 28, "knnk"],
-    [3, 26, "kMNnwnk"],
-    [4, 25, "kMNnnwwnk"],
-    [5, 24, "kMNnnnnnnnk"],
-    [6, 23, "kMNnnnneennnk"],
-    [7, 22, "kMN" + "n".repeat(11) + "k"],
-    [8, 21, "kMN" + "n".repeat(13) + "k"],
-    [9, 20, "kMN" + "n".repeat(14) + "k"],
-    [10, 19, "kMN" + "n".repeat(8) + "kknnnnNnk"],
-    [11, 18, "kMN" + "n".repeat(9) + "kkknnnnnk"],
-    [12, 17, "kMN" + "n".repeat(9) + "k...kknnk"],
-    [13, 13, "kkkk" + "n".repeat(11) + "k......kk"],
+    [3, 26, "kMMNwnk"],
+    [4, 25, "kMMNnwwnk"],
+    [5, 24, "kMMNnnnnnnk"],
+    [6, 23, "kMMNnnneennnk"],
+    [7, 22, "kMMN" + "n".repeat(10) + "k"],
+    [8, 21, "kMMN" + "n".repeat(12) + "k"],
+    [9, 20, "kMMN" + "n".repeat(13) + "k"],
+    [10, 19, "kMMN" + "n".repeat(7) + "kknnnnNnk"],
+    [11, 18, "kMMN" + "n".repeat(8) + "kkknnnnnk"],
+    [12, 17, "kMMN" + "n".repeat(8) + "k...kknnk"],
+    [13, 13, "kkkkMN" + "n".repeat(9) + "k......kk"],
   ];
   const cou = (y) => 30 - y; // la crinière, le long de la crête de l'encolure
   function sansMeme(g, avecChat) {
@@ -411,6 +413,7 @@
     for (let y = 14; y <= 18; y++) for (let x = 13; x <= 15; x++) if ("ktT".includes(g[y][x])) g[y][x] = "n";
     // la croupe : une seule ligne de dos, sans bosse
     for (let x = 10; x <= 13; x++) g[12][x] = ".";
+    g[11][13] = "."; // (un point d'encre resté seul au-dessus du dos)
     for (let x = 10; x <= 12; x++) g[13][x] = "k";
     for (const [y, x0, l] of ENCOLURE) l.split("").forEach((c, i) => c !== "." && (g[y][x0 + i] = c));
     if (avecChat !== false) MEME_DEBOUT.forEach((l, y) => l.split("").forEach((c, x) => c !== "." && poser(g, x + 4, y + 2, c)));
