@@ -237,7 +237,7 @@
     return t.concat([prof[11]], prof.slice(12));
   }
   // Mesi et ƟvƟ de dos, serré·es l'une contre l'autre devant le paysage : Mesi, un peu plus grande,
-  // passe le bras dans le dos d'ƟvƟ (la main en haut de son dos) ; ƟvƟ passe le sien
+  // passe le bras dans le dos d'ƟvƟ (la main sur son épaule droite) ; ƟvƟ passe le sien
   // dans son dos (la main posée sur ses lombes)
   function dosEnlaces() {
     const W = 30, g = Array.from({ length: 25 }, () => Array(W).fill("."));
@@ -251,11 +251,10 @@
     for (let x = 9; x <= 13; x++) { g[15][x] = "r"; g[16][x] = "R"; }
     [[7, 15], [8, 15], [7, 16], [8, 16]].forEach(([x, y]) => (g[y][x] = "s"));
     [[6, 15], [6, 16], [7, 17], [8, 17], [7, 14], [8, 14]].forEach(([x, y]) => (g[y][x] = "k"));
-    // le bras de Mesi dans le dos d'ƟvƟ (manche verte) : court, la main posée en haut de son dos,
-    // entre les omoplates
-    for (let x = 12; x <= 16; x++) { const y = x < 15 ? 11 : 12; g[y][x] = "g"; g[y + 1][x] = "G"; }
-    [[17, 12], [18, 12], [17, 13], [18, 13]].forEach(([x, y]) => (g[y][x] = "s"));
-    [[19, 12], [19, 13], [17, 14], [18, 14], [17, 11], [18, 11]].forEach(([x, y]) => (g[y][x] = "k"));
+    // le bras de Mesi dans le dos d'ƟvƟ (manche verte), la main posée sur son épaule droite
+    for (let x = 12; x <= 20; x++) { const y = x < 16 ? 11 : 12; g[y][x] = "g"; g[y + 1][x] = "G"; }
+    [[21, 12], [22, 12], [21, 13], [22, 13]].forEach(([x, y]) => (g[y][x] = "s"));
+    [[23, 12], [23, 13], [21, 14], [22, 14], [21, 11], [22, 11]].forEach(([x, y]) => (g[y][x] = "k"));
     return g.map((l) => l.join(""));
   }
   // Mesi : mulet châtain, lunettes, chemise verte, chiendent sur la salopette
