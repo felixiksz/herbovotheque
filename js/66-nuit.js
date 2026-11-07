@@ -4114,7 +4114,9 @@
       }
       S.profils.nuages.forEach((v, i) => {
         if (i >= S.couvert.n * 2) return;
-        const gp = 1 / dpr, nx = boucler(i * 170 + v * 90 - avance * 0.12 - (t / 1000) * 5, w, 120);
+        // (les nuages sont plus loin que les collines du fond : ils glissent encore plus lentement
+        // qu'elles quand on marche, et le vent les pousse doucement)
+        const gp = 1 / dpr, nx = boucler(i * 170 + v * 90 - avance * (0.015 + v * 0.015) - (t / 1000) * 3, w, 120);
         nuageNet(ctx, nx, h * (0.08 + v * 0.22), 50 + v * 50, nuit, !!S.couvert.ventre && /^#[0-9a-f]{6}$/i.test(S.couvert.couleur) && parseInt(S.couvert.couleur.slice(1, 3), 16) < 200, gp, alt);
       });
     }
