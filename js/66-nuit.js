@@ -507,7 +507,10 @@
         const u = (tn - k * P) / { renard: 22000, sanglier: 34000, herisson: 46000 }[esp];
         if (u >= 0 && u <= 1.2) {
           const sens = hsh(k, 33) < 0.5 ? 1 : -1, g0 = Math.max(R.x0, PAYS.ile.g) - 60, g1 = Math.min(R.x1, PAYS.ile.d) + 60;
-          const xA = sens > 0 ? g0 : g1, xB = sens > 0 ? g1 : g0, y = SOL_DEHORS + 8 + hsh(k, 34) * 10, s = p * 3, pas = Math.floor(t / 150) % 2;
+          const xA = sens > 0 ? g0 : g1, xB = sens > 0 ? g1 : g0, y = SOL_DEHORS + 8 + hsh(k, 34) * 10, pas = Math.floor(t / 150) % 2;
+          // (à la même échelle que les personnages de la maison, quelle que soit la taille de l'écran ;
+          // calée sur les gros pixels pour rester nette)
+          const s = Math.max(p, Math.round(4.4 / p) * p);
           // (dans la nuit : leurs couleurs passent à la lumière de la lune, sombres et bleutées, comme
           // le reste du dehors ; seuls les yeux et le groin gardent un peu de clarté)
           const nuitDe = nuitBetes || (nuitBetes = {});
@@ -522,7 +525,7 @@
           else if (esp === "herisson") bete(pas ? B.HERISSON_PAS : B.HERISSON, B.PAL_BASSIN, x);
           else {
             bete(pas ? B.SANGLIER_PAS : B.SANGLIER, B.PAL_BETES, x);
-            for (let m = 1; m <= 2 + Math.floor(hsh(k, 35) * 2); m++) bete((pas + m) % 2 ? B.MARCASSIN_PAS : B.MARCASSIN, B.PAL_BETES, x - sens * (22 + m * 12) * p);
+            for (let m = 1; m <= 2 + Math.floor(hsh(k, 35) * 2); m++) bete((pas + m) % 2 ? B.MARCASSIN_PAS : B.MARCASSIN, B.PAL_BETES, x - sens * (22 + m * 12) * s / 3);
           }
         }
       }
