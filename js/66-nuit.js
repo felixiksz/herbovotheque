@@ -4524,7 +4524,6 @@
   function sceneDodo(toile, sortie) {
     const ctx = toile.getContext("2d");
     let derniere = 0, prochainRonflement = performance.now() + 6000 + Math.random() * 8000, zzz = 0, decor = null, cle = "", calque = null, M = null;
-    const surLesYeux = { oui: false };
     // une tête endormie, de face sur l'oreiller : les lunettes enlevées, les yeux fermés ; Mesi
     // dort avec son masque de sommeil sur les yeux
     const tete = (ctx, nom, x, y) => {
@@ -4585,64 +4584,107 @@
       {
       const ctx = cc;
 
-      // ƟvƟ et Mesi en cuillère : Mesi derrière, un peu plus haut ; ƟvƟ devant
-      tete(ctx, "luigi", 34, 158);
-      tete(ctx, "ovo", 56, 170);
-      // La couverture en relief : on devine les deux corps dessous, couchés sur le côté. Derrière,
-      // Mesi (épaule, hanche, genoux pliés), un peu plus haut ; devant, ƟvƟ, blotti·e contre elle.
-      // Les bosses s'éclairent sur le dessus, les creux restent dans l'ombre, et le tout se soulève
-      // doucement avec les respirations.
-      const sf = Math.sin(t / 1300) * 1.2, sg = Math.sin(t / 1500 + 1) * 1.2;
-      const corps = (dy, souffle, bosses) => {
-        // bosses : [x, hauteur] le long du corps, de l'épaule aux pieds
-        ctx.beginPath();
-        ctx.moveTo(84, 238);
-        ctx.lineTo(84, 214 + dy);
-        let px = 84, py = 214 + dy;
-        for (const [x, hh] of bosses) {
-          const y = 214 + dy - hh - (x < 170 ? souffle : 0);
-          ctx.quadraticCurveTo((px + x) / 2, Math.min(py, y) - 4, x, y);
-          px = x; py = y;
-        }
-        ctx.quadraticCurveTo(232, py, 236, 214 + dy + 4);
-        ctx.lineTo(236, 238); ctx.closePath();
+      // ƟvƟ et Mesi couché·es sur le côté, en cuillère : les têtes couchées dans l'axe du corps sur
+      // l'oreiller (le haut du crâne vers la tête du lit) ; devant, la joue sur ses mains jointes,
+      // l'épaule en tee-shirt hors de la couette ; derrière, un peu plus haut, le bras posé sur
+      // l'épaule de l'autre. La couette suit leurs corps (les épaules, la taille, puis un long replat
+      // où Lóló et Mémé se couchent), retombe sur le bord du lit, et se soulève à chaque respiration.
+      // (les mesures viennent de la maquette en pixels : E points du lit pour un pixel)
+      const E = 3.4, X = (wx) => 34 + (wx - 8) * E, Y = (hh) => 202 - hh * E;
+      const devant = H.monde === "mesi" ? "mesi" : "ovo", derriere = devant === "mesi" ? "ovo" : "mesi";
+      const LOOK = { ovo: { h1: "#3e2418", h2: "#6b4430", haut: "#c93f6e", haut2: "#8f2a4e", boucles: true }, mesi: { h1: "#b9834f", h2: "#d9a45e", haut: "#4f9a46", haut2: "#2f6b35", masque: true } };
+      const PEAU = "#f2c29b", PEAU2 = "#d99a7a", BLEU = "#3a3aa8", BLEU2 = "#3d5ee8", BLEU3 = "#7f97f2", BLEU0 = "#232a63";
+      const s1 = Math.sin(t / 1800) * 1.2, s2 = Math.sin(t / 2100 + 1.4) * 1.2, r = Math.round(s2 * 0.5) * E;
+      const lisse = (pts) => (x) => {
+        if (x <= pts[0][0]) return pts[0][1];
+        for (let k = 1; k < pts.length; k++) { const [a, ha] = pts[k - 1], [b, hb] = pts[k]; if (x <= b) { const u = (x - a) / (b - a); return ha + ((hb - ha) * (1 - Math.cos(u * Math.PI))) / 2; } }
+        return pts[pts.length - 1][1];
       };
-      // Mesi, derrière
-      ctx.lineWidth = 2.4;
-      corps(-8, sf, [[104, 30], [130, 16], [168, 30], [194, 12], [218, 22]]);
-      ctx.fillStyle = "#3a3aa8"; ctx.fill(); ctx.stroke();
-      // ƟvƟ, devant, plus bas
-      corps(8, sg, [[100, 22], [124, 8], [160, 24], [186, 6], [210, 16]]);
-      ctx.fillStyle = "#3d5ee8"; ctx.fill(); ctx.stroke();
-      // les reflets sur le haut des bosses, et les plis dans les creux
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "#7f97f2";
-      for (const [x0, x1, y] of [[92, 108, 202], [148, 170, 200], [200, 216, 208]]) { ctx.beginPath(); ctx.moveTo(x0, y + 1 - sg * 0.5); ctx.quadraticCurveTo((x0 + x1) / 2, y - 2 - sg * 0.5, x1, y + 1 - sg * 0.5); ctx.stroke(); }
-      ctx.strokeStyle = "#232a63";
-      for (const [x, y] of [[124, 214], [186, 218], [142, 226], [206, 228]]) { ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y + 4, x + 7, y + 1); ctx.stroke(); }
-      ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
-      // le revers clair de la couverture, sous les mentons
-      ctx.beginPath(); ctx.moveTo(84, 214 - sf); ctx.quadraticCurveTo(96, 200 - sf, 110, 204 - sf); ctx.lineTo(110, 210 - sf); ctx.quadraticCurveTo(96, 207 - sf, 84, 220 - sf); ctx.closePath();
-      ctx.fillStyle = "#f3f0dc"; ctx.fill(); ctx.stroke();
-      // le bras de Mesi posé sur ƟvƟ, par-dessus la couverture
-      ctx.lineWidth = 8.5; ctx.strokeStyle = ENCRE;
-      ctx.beginPath(); ctx.moveTo(92, 194 - sf); ctx.quadraticCurveTo(108, 196 - sf, 124, 204); ctx.stroke();
-      ctx.lineWidth = 5.5; ctx.strokeStyle = "#ffb3a8"; ctx.stroke();
-      ctx.lineWidth = 1.6; ctx.strokeStyle = ENCRE;
-      ctx.beginPath(); ctx.ellipse(126, 205, 4, 3, 0.4, 0, Math.PI * 2); ctx.fillStyle = "#f2c29b"; ctx.fill(); ctx.stroke();
+      const arrondi2 = (x, y, w, hh, rr) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, hh, rr); else ctx.rect(x, y, w, hh); };
+      const teteCouchee = (cx, cy, qui) => {
+        const L = LOOK[qui];
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(cx, cy, 20, 15, 0, 0, Math.PI * 2); ctx.fillStyle = PEAU; ctx.fill();
+        ctx.save(); ctx.clip();
+        // les cheveux, côté crâne (vers la tête du lit)
+        ctx.fillStyle = L.h1; ctx.fillRect(cx - 21, cy - 16, 17, 32); ctx.fillRect(cx - 5, cy - 16, 7, 4); ctx.fillRect(cx - 5, cy + 12, 7, 4);
+        ctx.fillStyle = L.h2;
+        if (L.boucles) for (const [a, b] of [[-14, -8], [-9, 2], [-15, 7], [-7, -12]]) { ctx.beginPath(); ctx.arc(cx + a, cy + b, 2.6, 0, Math.PI * 2); ctx.fill(); }
+        else for (const b of [-9, -1, 7]) ctx.fillRect(cx - 17, cy + b, 9, 2);
+        ctx.restore();
+        ctx.lineWidth = 2.4; ctx.strokeStyle = ENCRE;
+        ctx.beginPath(); ctx.ellipse(cx, cy, 20, 15, 0, 0, Math.PI * 2); ctx.stroke();
+        if (L.masque) {
+          // le masque de sommeil, en travers des yeux
+          ctx.fillStyle = "#3a3aa8"; ctx.fillRect(cx + 1, cy - 14, 7, 28);
+          ctx.fillStyle = "#7f97f2"; ctx.fillRect(cx + 1, cy - 14, 2, 28);
+          ctx.strokeRect(cx + 1, cy - 14, 7, 28);
+        } else {
+          // les yeux fermés, l'un au-dessus de l'autre
+          ctx.lineWidth = 2.2;
+          for (const b of [-8, 4]) { ctx.beginPath(); ctx.moveTo(cx + 5, cy + b); ctx.lineTo(cx + 5, cy + b + 5); ctx.stroke(); }
+        }
+        // le nez et la bouche, vers le menton
+        ctx.fillStyle = PEAU2; ctx.fillRect(cx + 11, cy - 2, 3, 5);
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + 16, cy - 2); ctx.lineTo(cx + 16, cy + 3); ctx.stroke();
+        ctx.restore();
+      };
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      // derrière, la tête de l'autre ; puis les mains jointes sous la joue, et la tête de devant
+      teteCouchee(X(15), Y(12), derriere);
+      arrondi2(X(17), Y(5), 9 * E, 3 * E, 4);
+      ctx.fillStyle = PEAU; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = ENCRE; ctx.stroke();
+      ctx.strokeStyle = PEAU2; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(X(18), Y(3.6)); ctx.lineTo(X(25), Y(3.6)); ctx.stroke();
+      teteCouchee(X(21), Y(10), devant);
+      // la couette : derrière d'abord (plus haut), puis devant ; un long replat vers les pieds
+      const fDer = lisse([[27, 15], [31, 18 + s1], [37, 17 + s1], [42, 12], [47, 10], [55, 9], [61, 9], [64, 5]]);
+      const fDev = lisse([[37, 12 + s2], [40, 13 + s2], [44, 9], [50, 8], [58, 8], [62, 7], [64, 4]]);
+      const f = (x) => (x < 37 ? fDer(x) : Math.max(fDer(x), fDev(x)));
+      const bord = (dy, de, a) => { ctx.beginPath(); for (let wx = de; wx <= a; wx += 0.5) ctx[wx === de ? "moveTo" : "lineTo"](X(wx), Y(f(wx)) + dy); };
+      // (elle retombe sur le bord du lit : un ourlet qui ondule, des plis droits)
+      ctx.beginPath(); ctx.moveTo(X(27), 202);
+      for (let x = X(27); x <= X(64); x += 4) ctx.lineTo(x, 229 + Math.sin(x * 0.16) * 2.5);
+      ctx.lineTo(X(64), 202); ctx.closePath();
+      ctx.fillStyle = BLEU; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = ENCRE; ctx.stroke();
+      ctx.strokeStyle = BLEU0; ctx.lineWidth = 3;
+      for (let x = X(27) + 24; x < X(64) - 6; x += 30) { ctx.beginPath(); ctx.moveTo(x, 206); ctx.lineTo(x, 226 + Math.sin(x * 0.16) * 2.5); ctx.stroke(); }
+      bord(0, 27, 64); ctx.lineTo(X(64), 202); ctx.lineTo(X(27), 202); ctx.closePath();
+      ctx.fillStyle = BLEU; ctx.fill();
+      // la lumière sur le dessus, une ombre douce le long du matelas
+      ctx.save(); ctx.clip();
+      ctx.strokeStyle = BLEU2; ctx.lineWidth = 9; bord(4, 27, 64); ctx.stroke();
+      ctx.strokeStyle = BLEU3; ctx.lineWidth = 2.5; bord(2.5, 28, 46); ctx.stroke();
+      ctx.fillStyle = BLEU0; ctx.fillRect(X(27), 196, X(64) - X(27), 6);
+      ctx.restore();
+      ctx.lineWidth = 2.4; ctx.strokeStyle = ENCRE;
+      bord(0, 27, 64); ctx.lineTo(X(64), 202); ctx.moveTo(X(27), 202); ctx.lineTo(X(27), Y(f(27))); ctx.stroke();
+      // un pli dans le creux de la taille
+      ctx.strokeStyle = BLEU0; ctx.beginPath(); ctx.moveTo(X(43), Y(f(43)) + 8); ctx.quadraticCurveTo(X(44), Y(f(44)) + 16, X(43.5), 198); ctx.stroke();
+      // l'épaule de devant, en tee-shirt, hors de la couette ; l'avant-bras replié vers les mains
+      const Ld = LOOK[devant], Lr = LOOK[derriere];
+      ctx.lineWidth = 2.4; ctx.strokeStyle = ENCRE;
+      arrondi2(X(29), Y(14) - r, 9 * E, 11 * E + r, 6);
+      ctx.fillStyle = Ld.haut; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = Ld.haut2; ctx.fillRect(X(37) - 1, Y(13) - r, E, 10 * E + r - 2);
+      ctx.beginPath(); ctx.rect(X(24), Y(6), 6 * E, 3 * E); ctx.fillStyle = Ld.haut2; ctx.fill(); ctx.stroke();
+      // le bras de derrière : court, il sort de la couette et la main se pose sur l'épaule de devant
+      const ya = Y(fDer(30));
+      arrondi2(X(28), ya, 5 * E, 3 * E, 3);
+      ctx.fillStyle = Lr.haut; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = Lr.haut2; ctx.fillRect(X(28) + 2, ya + 2 * E, 5 * E - 4, E - 2);
+      arrondi2(X(33), Y(16) - r, 4 * E, 3 * E, 4);
+      ctx.fillStyle = PEAU; ctx.fill(); ctx.stroke();
 
-      // Lóló dort sur nous, couché en travers de la couverture ; s'il y a trop de lumière, il
-      // monte se coucher sur les yeux de tout le monde
+      // Lóló dort sur le replat de la couette, vers les pieds
       ctx.save();
-      if (surLesYeux.oui) { ctx.translate(92, 178); ctx.scale(0.72, 0.72); }
-      else { ctx.translate(152, 190); ctx.scale(0.72, 0.72); }
+      ctx.translate(178, Y(fDer(51)) + 2); ctx.scale(0.72, 0.72);
       loloCouche(ctx, 0, 0, t, false);
       ctx.restore();
       }
       cc.restore();
       // Mémé, roulée en boule sur la couverture, sur nous aussi (hors du lit retourné, pour que
       // ses cases tombent pile sur les gros pixels)
-      memeCouchee(cc, LIT.x - 122, LIT.y + 190, t);
+      memeCouchee(cc, LIT.x - 210, LIT.y + 172, t);
 
       // tout le monde reçoit la lumière de la nuit, comme le décor (et celle de la lune)
       {
@@ -4666,7 +4708,7 @@
         ctx.globalAlpha = 1 - u;
         ctx.font = "16px VT323, monospace";
         ctx.fillStyle = "#f3f0dc";
-        ctx.fillText("rrr…", LIT.x - 130 + u * 10, LIT.y + 172 - u * 30);
+        ctx.fillText("rrr…", LIT.x - 218 + u * 10, LIT.y + 154 - u * 30);
         ctx.globalAlpha = 1;
       }
       // tout passe en gros pixels, aux couleurs des pochettes
