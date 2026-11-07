@@ -4434,7 +4434,7 @@
     await new Promise((r) => setTimeout(r, 45000));
     if (balade !== b0 || b0.baignade || b0.attenteCrique) return;
     b0.contemple = true; b0.pause = true;
-    await new Promise((r) => setTimeout(r, 16000));
+    await new Promise((r) => setTimeout(r, 48000));
     if (balade === b0 && b0.contemple) { b0.contemple = false; if (!b0.attenteCrique && !b0.baignade) b0.pause = false; }
   }
   // reprendre le chemin, après la baignade
