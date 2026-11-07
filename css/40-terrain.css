@@ -614,3 +614,8 @@ a.carte-ile:focus-visible { outline: 2px solid var(--fluo); outline-offset: 3px;
 /* ce que Lóló montre pendant la visite : un cadre qui clignote autour, vert pré et jaune */
 .lolo-montre { outline: 3px dashed var(--ampoule-v) !important; outline-offset: 3px; animation: lolo-montre 0.9s steps(2) infinite; }
 @keyframes lolo-montre { 50% { outline-color: var(--ampoule-j); } }
+/* sous le jardin : les plantes prêtes à récolter, en une ligne discrète ; chaque nom montre sa case */
+.a-recolter { margin: 8px 2px 0; font: 1.05rem/1.5 var(--menu-police); }
+.a-recolter > span { opacity: 0.8; }
+.lien-recolte { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.lien-recolte:hover, .lien-recolte:focus-visible { color: var(--menu-choix); outline: none; }

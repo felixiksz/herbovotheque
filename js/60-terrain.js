@@ -1061,8 +1061,10 @@
       H.lolo && H.lolo.disponible() ? boutonIcone(H.pixel.portrait("lolo", 2), "Appeler Lóló", appelerLolo) : null,
       ile.secrete ? boutonIcone(imageIcone("papillon"), "Emmener un animal dans un de mes jardins", () => emmenerAnimal(ile)) : null,
       ile.secrete ? (vue.boutonHongrois = H.el("button.bouton.petit.actif", { type: "button", hidden: true, onclick: finirTourHongrois }, "Finir le tour en hongrois")) : null);
-    conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, H.el("div.cadre-toile-ile", null, zoneToile, barreVue, barreAmis), panneau);
-    Object.assign(vue, { toile, ciel, infoCiel, outils, options, panneau, zoneToile });
+    // sous le jardin : les plantes prêtes à récolter, en une ligne ; un nom montre la plante
+    const aRecolterListe = H.el("p.a-recolter", { hidden: true });
+    conteneur.append(H.el("div.bandeau-ciel", null, ciel, infoCiel), outils, options, H.el("div.cadre-toile-ile", null, zoneToile, barreVue, barreAmis), aRecolterListe, panneau);
+    Object.assign(vue, { toile, ciel, infoCiel, outils, options, panneau, zoneToile, aRecolterListe });
     if (window.ResizeObserver) { const ro = new ResizeObserver(() => hauteurZone()); ro.observe(outils); ro.observe(options); }
 
     dessinerOutils();
@@ -2387,7 +2389,7 @@
 
     // ce qui se dresse, du fond vers le devant
     ctx.setTransform(z, 0, 0, z, 0, 0);
-    const debout = [], couronnes = [], aCueillir = [];
+    const debout = [], couronnes = [];
     // les plantes dessinées plus finement : un pixel du dessin pour un pixel de l'écran
     // (sur téléphone, un pixel du dessin pour deux de l'écran : le filtre des gros pixels a quatre
     // fois moins de points à traiter, et le jardin reste fluide)
@@ -2403,7 +2405,6 @@
         if (d.couronne) couronnes.push([d.couronne, gx, gy, d.l, d.h]);
         vue.boites.push({ x, y, g: gx, h: gy + d.h - 2 - d.haut, d: gx + d.l, b: gy + d.h, grande: d.haut > T * 1.2, prof: x + y });
         if (!ile.croquis && pl.eau < 20 && st > 0 && !aRecolter(q, ile, pl)) { ctx.fillStyle = "#3a8fd8"; ctx.fillRect(Math.round(sx + d.l / 2 - 2), Math.round(sy - Math.min(d.haut, T) - 3), 3, 4); }
-        if (aRecolter(q, ile, pl)) aCueillir.push([sx, sy - d.haut, d.l, d.haut, x * 7 + y * 13]);
       } });
     }
     const enCalin = vue.calin && vue.luigi && !vue.luigi.cible;
@@ -2502,9 +2503,6 @@
     for (const [c, gx, gy, l, hc] of couronnes) ctx.drawImage(c, gx, gy, l, hc);
     ctx.restore();
 
-    // ce qui est prêt à cueillir : un petit panier qui sautille au-dessus de la plante, et des
-    // étincelles qui scintillent dans le feuillage
-    for (const [sx, haut, l, h, g] of aCueillir) panierACueillir(ctx, sx, haut, l, h, g, t);
 
     // petits cœurs pendant un câlin
     if (vue.coeurs && vue.coeurs > t && vue.luigi) {
@@ -2530,7 +2528,6 @@
     if (!ctxDest) H.retro.appliquer(toile, Math.max(TELEPHONE ? 2 : 1, Math.round((z / finPlantes) * H.finesse())));
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
-  const PANIER = ["..kkkk..", ".k....k.", "kkkkkkkk", "kAaAaAak", "kaAaAaAk", ".kAaAak.", "..kkkk.."];
   // --- les paniers de la récolte et les pots à repiquer ---------------------------------------
   // Chaque récolte va dans un panier d'osier posé au bord de l'île (un panier par plante, trois
   // récoltes au plus par panier) ; les paniers restent là jusqu'au lendemain (sur cet appareil).
@@ -2589,22 +2586,6 @@
     }).filter((q) => q.x > -0.5 && q.y > -0.5);
   }
 
-  function panierACueillir(ctx, sx, haut, l, h, g, t) {
-    const saut = Math.round(Math.abs(Math.sin(t / 260 + g)) * 4), x0 = Math.round(sx - 4), y0 = Math.round(haut - 12 - saut);
-    const couleurs = { k: "#23214a", A: "#e9b44c", a: "#b9834f" };
-    PANIER.forEach((ligne, j) => [...ligne].forEach((ch, i) => { if (couleurs[ch]) { ctx.fillStyle = couleurs[ch]; ctx.fillRect(x0 + i, y0 + j, 1, 1); } }));
-    // une petite flèche rose dessous, qui pointe vers la plante
-    ctx.fillStyle = "#ff2e9a"; ctx.fillRect(x0 + 3, y0 + 8, 2, 2); ctx.fillRect(x0 + 2, y0 + 8, 4, 1);
-    // les étincelles
-    for (let k = 0; k < 4; k++) {
-      const u = Math.sin(t / 300 + g + k * 1.7);
-      if (u < 0.3) continue;
-      const ex = Math.round(sx + (H.hash(g + "|" + k) % 100 / 100 - 0.5) * l * 0.9), ey = Math.round(haut + (H.hash(k + "|" + g) % 100 / 100) * h * 0.8);
-      ctx.fillStyle = u > 0.8 ? "#ffffff" : "#f6ee55";
-      ctx.fillRect(ex, ey - 1, 1, 3); ctx.fillRect(ex - 1, ey, 3, 1);
-    }
-  }
-
   // les zones de mi-ombre et d'ombre, en relief : hachures dans les losanges (l'ombre des arbres
   // comprise), liseré jaune là où l'exposition change
   function dessinerZonesIso(ctx, z) {
@@ -2638,6 +2619,8 @@
   }
 
   function dessiner(ctxDest, sansNuit) {
+    // (la ligne des plantes prêtes à récolter, sous le jardin, au plus toutes les secondes)
+    if (!ctxDest && performance.now() - (vue.listeRecolteLe || 0) > 1000) { vue.listeRecolteLe = performance.now(); listeARecolter(); }
     if (vue.iso) return dessinerIso(ctxDest, sansNuit);
     const ile = vue.ile;
     const toile = vue.toile;
@@ -3722,6 +3705,30 @@
     return idees.length ? H.el("span.discret", null, "Pour arranger le sol : " + idees.join(" ; ")) : null;
   }
 
+  // « Prêtes à récolter : Thym (3) · Souci · Mélisse » ; un clic sur un nom ouvre sa case
+  function listeARecolter() {
+    const el = vue && vue.aRecolterListe;
+    if (!el) return;
+    const ile = vue.ile, prets = new Map();
+    for (const [k2, pl] of Object.entries(ile.plantes || {})) {
+      const q = H.d.plante(pl.p);
+      if (!q || !aRecolter(q, ile, pl)) continue;
+      const [x, y] = k2.split(",").map(Number), e = prets.get(q.id) || { nom: q.nom, cases: [] };
+      e.cases.push([x, y]);
+      prets.set(q.id, e);
+    }
+    const cle = [...prets].map(([id, e]) => id + e.cases.length).join("|");
+    if (cle === el.dataset.cle) return;
+    el.dataset.cle = cle;
+    el.hidden = !prets.size;
+    if (!prets.size) return el.replaceChildren();
+    const liens = [...prets.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr")).map((e) => {
+      let i = 0;
+      // (un deuxième clic montre le pied suivant de la même plante)
+      return H.el("button.lien-recolte", { type: "button", onclick: () => { const [x, y] = e.cases[i++ % e.cases.length]; inspecter(x, y); dessiner(); } }, e.nom + (e.cases.length > 1 ? " (" + e.cases.length + ")" : ""));
+    });
+    el.replaceChildren(H.el("span", null, "Prêtes à récolter : "), ...liens.flatMap((b, k) => (k ? [" · ", b] : [b])));
+  }
   function montrerCase(x, y) {
     const c = caseDe(vue.ile, x, y);
     vue.choisie = { x, y };
