@@ -414,6 +414,8 @@
           H.el("h1.fiche-nom", null, p.nom,
             H.el("button.crayon-nom", { type: "button", title: "Renommer", "aria-label": "Renommer", onclick: () => renommer(p) }, icone(SVG_CRAYON))),
           p.latin ? H.el("p.fiche-latin", null, p.latin) : null,
+          // (les fiches chinoises : leur nom français, sous le pinyin)
+          p.pc && (p.valeurs || {}).nomFr ? H.el("p.fiche-francais", null, p.valeurs.nomFr) : null,
           (p.valeurs || {}).nomsCommuns ? H.el("p.discret.fiche-communs", null, p.valeurs.nomsCommuns) : null,
           H.el("div.fiche-outils", null,
             H.el("a.bouton-trait", { href: "#cartes/plante/" + encodeURIComponent(p.id), title: "Réviser cette plante en flashcartes" }, icone(SVG_CERVEAU), H.el("span", null, "Réviser")),

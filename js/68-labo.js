@@ -135,7 +135,7 @@
       }
     }
     const melanges = Object.values(H.herbier.tisanes || {}).filter((x) => !x.supprime && (x.plantes || []).length);
-    if (!melanges.length) return H.el("p.discret", null, H.monde === "mesi" ? "Compose d’abord une formule dans l’herbothèque." : "Compose d’abord un mélange dans le placard à tisanes de l’herbothèque.");
+    if (!melanges.length) return H.el("p.discret", null, H.monde === "mesi" ? "Compose d’abord une formule dans l’herbothèque." : "Compose d’abord un mélange dans le placard à synergies de l’herbothèque.");
     return H.el("div.pastilles", null, melanges.map((m) => {
       const vides = m.plantes.map((x) => H.d.plante(x.id)).filter((p) => p && H.d.stock(p, "plante-seche") === "vide");
       return H.el("button.bouton.petit", {

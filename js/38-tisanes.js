@@ -14,7 +14,7 @@
   const nomRang = (r) => (RANGS.find((x) => x[0] === r) || [])[1] || "";
   const ordreRang = (r) => { const i = RANGS.findIndex((x) => x[0] === r); return i < 0 ? 9 : i; };
   const MOTS = {
-    titre: ["Placard à tisanes", "Mes formules"], nouveau: ["Nouveau mélange", "Nouvelle formule"], mes: ["Mes mélanges", "Mes formules"],
+    titre: ["Placard à synergies", "Mes formules"], nouveau: ["Nouveau mélange", "Nouvelle formule"], mes: ["Mes mélanges", "Mes formules"],
     exporter: ["Exporter les recettes", "Exporter les formules"], vide: ["Pas encore de mélange. Choisis des bocaux plus bas, ou clique sur « Nouveau mélange ».", "Pas encore de formule. Choisis des bocaux plus bas, ou clique sur « Nouvelle formule »."],
     seches: ["Les plantes sèches", "Les substances"], chercher: ["Chercher une plante sèche", "Chercher une substance"], aide: ["Clique sur les bocaux pour préparer un mélange.", "Clique sur les bocaux pour composer une formule."],
     enPrep: ["Mélange en préparation : ", "Formule en préparation : "], composer: ["Composer le mélange", "Composer la formule"], aucune: ["Aucune plante sèche ne correspond.", "Aucune substance ne correspond."],
@@ -206,8 +206,8 @@
 
   function exporter() {
     H.exporter({
-      titre: M() ? "Mes formules" : "Le placard à tisanes",
-      nomFichier: M() ? "mes-formules" : "placard-a-tisanes",
+      titre: M() ? "Mes formules" : "Le placard à synergies",
+      nomFichier: M() ? "mes-formules" : "placard-a-synergies",
       sections: tisanes().map((t) => ({
         titre: t.nom,
         paragraphes: [t.usage ? (M() ? "Indications : " : "Pour quoi : ") + t.usage : "", t.preparation ? "Préparation : " + t.preparation : "", t.notes ? "Notes : " + t.notes : ""].filter(Boolean),

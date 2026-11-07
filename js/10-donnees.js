@@ -219,8 +219,11 @@
     plantes() {
       if (!index) {
         const h = H.herbier;
-        const liste = [];
+        const liste = [], toutes = [];
         const vus = new Set();
+        // chez Mesi, les plantes de l'herbier d'ƟvƟ restent rangées à part : seulement celles qu'elle a
+        // choisies (dans les réglages) ; les autres se retrouvent quand même dans ses jardins
+        const choisie = (id) => H.monde !== "mesi" || !!((h.ovoChoisies || {})[id] || {}).choisie;
         for (const p of H.base.plantes) {
           vus.add(p.id);
           if (h.supprimees[p.id]) continue;
@@ -230,19 +233,29 @@
           // famille, besoins et dessin, sans toucher à ce qu'elle a écrit)
           const j = perso && p.pc && H.pcJardin && H.pcJardin[p.code];
           if (j) perso = Object.assign({}, perso, { latin: perso.latin || p.latin, dessin: perso.dessin || p.dessin, valeurs: Object.assign({}, j.valeurs, perso.valeurs) });
-          liste.push(perso || p);
+          toutes.push(perso || p);
+          if (p.pc || choisie(p.id)) liste.push(perso || p);
         }
         for (const [id, p] of Object.entries(h.plantes)) {
-          if (!vus.has(id) && !p.supprime && !h.supprimees[id]) liste.push(p);
+          if (!vus.has(id) && !p.supprime && !h.supprimees[id]) { liste.push(p); toutes.push(p); }
         }
         liste.sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-        index = { liste, parId: new Map(liste.map((p) => [p.id, p])) };
+        index = { liste, parId: new Map(toutes.map((p) => [p.id, p])) };
       }
       return index.liste;
     },
     plante(id) {
       H.d.plantes();
       return index.parId.get(id);
+    },
+    // chez Mesi : les plantes d'ƟvƟ, et celles qu'elle a choisies d'avoir avec les siennes
+    plantesOvo: () => (H.monde === "mesi" ? H.base.plantes.filter((p) => !p.pc).map((p) => H.d.plante(p.id) || p) : []),
+    estChoisie: (id) => !!((H.herbier.ovoChoisies || {})[id] || {}).choisie,
+    choisir(id, oui) {
+      H.herbier.ovoChoisies = Object.assign({}, H.herbier.ovoChoisies, { [id]: { id, choisie: !!oui, modifieLe: H.maintenant() } });
+      index = null;
+      H.herbier.modifieLe = H.maintenant();
+      H.d.changer("herbier");
     },
     estModifiee: (id) => !!H.herbier.plantes[id],
 

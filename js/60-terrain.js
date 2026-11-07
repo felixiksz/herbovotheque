@@ -3,6 +3,7 @@
 // plus ou moins vite selon que les conditions lui plaisent. Jeu doux : rien ne meurt.
 // Une île « croquis » sert d'esquisse pour un vrai projet (pas de ressources, plantes adultes).
 (function () {
+  const TELEPHONE = window.matchMedia && matchMedia("(pointer: coarse)").matches;
   const H = window.H;
   const T = 32; // taille d'une case à l'écran (zoom 1)
   const BORD = 2; // cases de mer autour de l'île
@@ -2388,7 +2389,9 @@
     ctx.setTransform(z, 0, 0, z, 0, 0);
     const debout = [], couronnes = [], aCueillir = [];
     // les plantes dessinées plus finement : un pixel du dessin pour un pixel de l'écran
-    const finPlantes = Math.max(1, Math.min(3, Math.round(z)));
+    // (sur téléphone, un pixel du dessin pour deux de l'écran : le filtre des gros pixels a quatre
+    // fois moins de points à traiter, et le jardin reste fluide)
+    const finPlantes = Math.max(1, Math.min(3, Math.round(TELEPHONE ? z / 2 : z)));
     vue.boites = [];
     for (const [k2, pl] of Object.entries(ile.plantes || {})) {
       const [x, y] = k2.split(",").map(Number), q = H.d.plante(pl.p);
@@ -2523,7 +2526,8 @@
     }
     // (les gros pixels ont la taille des pixels des plantes : leurs feuilles et leurs fleurs, dessinées
     // selon leur famille, restent lisibles ; avant, un gros pixel en couvrait deux ou trois)
-    if (!ctxDest) H.retro.appliquer(toile, Math.max(1, Math.round((z / finPlantes) * H.finesse())));
+    // (sur téléphone, des gros pixels de deux points au moins : quatre fois moins de calcul)
+    if (!ctxDest) H.retro.appliquer(toile, Math.max(TELEPHONE ? 2 : 1, Math.round((z / finPlantes) * H.finesse())));
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
   const PANIER = ["..kkkk..", ".k....k.", "kkkkkkkk", "kAaAaAak", "kaAaAaAk", ".kAaAak.", "..kkkk.."];
@@ -4048,6 +4052,9 @@
   // --- animation -------------------------------------------------------------------------
   function boucle() {
     cancelAnimationFrame(vue && vue.anim);
+    // (ce qui bouge parce qu'on agit : on redessine à chaque image ; ce qui bouge tout seul, Lóló
+    // au repos, les bêtes, la lumière : quelques images par seconde suffisent)
+    let vif = false;
     const pas = (t) => {
       if (!vue) return;
       const dt = Math.min(0.1, (t - vue.derniere) / 1000);
@@ -4074,17 +4081,17 @@
           o.x += (dx / d) * v;
           o.y += (dy / d) * v;
         }
-        bouge = true;
+        bouge = vif = true;
       }
       // les pas d'ƟvƟ sur le chemin pavé
       const o = vue.ovo;
       const surPave = !!o.cible && caseDe(vue.ile, Math.round(o.x), Math.round(o.y)).t === "chemin";
       H.sons.boucle("pas", surPave, 0.6);
-      if (vue.lolo && (!vue.lolo.course || t < vue.lolo.course.t1)) bouge = true;
-      if ((vue.coeurs && vue.coeurs > t) || vue.calin) bouge = true;
+      if (vue.lolo && (!vue.lolo.course || t < vue.lolo.course.t1)) { bouge = true; if (vue.lolo.course) vif = true; }
+      if ((vue.coeurs && vue.coeurs > t) || vue.calin) bouge = vif = true;
       const lv = vue.loloVisite;
       if (lv) {
-        bouge = true;
+        bouge = vif = true;
         if (lv.course && !lv.arrive && t >= lv.course.t1) {
           lv.arrive = true;
           if (lv.partant) vue.loloVisite = null;
@@ -4110,16 +4117,17 @@
             g.x = Math.random() * W;
           }
         }
-        bouge = true;
+        bouge = vif = true;
       } else vue.gouttes = [];
       if (vue.ile.secrete || (vue.ile.animaux && vue.ile.animaux.length)) bouge = true;
       // la lumière du ciel (aube, couchant, nuit) suit l'heure, comme à la ferme
       if (t - (vue.dernierDessin || 0) > 2000) bouge = true;
-      if ((bouge && t - (vue.dernierDessin || 0) >= H.cadence(0)) || !vue.dessineUneFois) {
+      if ((bouge && t - (vue.dernierDessin || 0) >= H.cadence(vif || performance.now() - H.dernierGeste < 400 ? 0 : TELEPHONE ? 160 : 70)) || !vue.dessineUneFois) {
         dessiner();
         vue.dessineUneFois = true;
         vue.dernierDessin = t;
       }
+      vif = false;
       vue.anim = requestAnimationFrame(pas);
     };
     vue.anim = requestAnimationFrame(pas);

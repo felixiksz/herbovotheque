@@ -112,6 +112,7 @@
     const r = Object.assign({}, local);
     r.plantes = fusionnerCollection(local.plantes, distant.plantes);
     r.tisanes = fusionnerCollection(local.tisanes, distant.tisanes);
+    r.ovoChoisies = fusionnerCollection(local.ovoChoisies, distant.ovoChoisies);
     r.supprimees = Object.assign({}, distant.supprimees, local.supprimees);
     r.schema = plusRecent(local.schema, distant.schema, "modifieLe") === local.schema ? local.schema : distant.schema;
     const rg = plusRecent(local, distant, "rangementsModifieLe");

@@ -577,3 +577,7 @@ html.chargement #ciel { display: none; }
 .liste-anniversaires li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--filet); }
 .ligne-anniversaire { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ligne-anniversaire input { flex: 1 1 140px; min-width: 0; }
+/* chez Mesi, le choix des plantes d'ƟvƟ : une longue liste à cocher qui défile */
+.liste-plantes-ovo { list-style: none; padding: 0; margin: 8px 0 0; max-height: 50vh; overflow: auto; border-top: 1px solid var(--filet); }
+.liste-plantes-ovo li { padding: 4px 0; border-bottom: 1px solid var(--filet); }
+.liste-plantes-ovo label { display: flex; gap: 6px; align-items: baseline; cursor: pointer; }

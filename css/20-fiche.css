@@ -20,6 +20,7 @@
 .fiche-illus .photo-lofi { width: 100%; transform: rotate(-1.5deg); }
 .fiche-nom { font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1.35; margin: 0; }
 .fiche-latin { font-style: italic; font-size: 1.2rem; margin: 0 0 4px; }
+.fiche-francais { font-size: 1.05rem; margin: 0 0 6px; }
 .fiche-communs { margin: 0 0 10px; }
 .fiche-outils { display: flex; flex-wrap: wrap; gap: 6px; }
 

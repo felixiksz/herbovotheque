@@ -18,7 +18,7 @@
     "Un jardin « croquis » sert à dessiner un vrai projet à l’échelle, sans ressources. Tu peux en exporter la liste des plantes et l’image.",
     "Pailler garde l’eau deux semaines, le purin fortifie la plante, et un rayon de soleil la fait pousser d’un coup.",
     "Tu peux dessiner toi-même le modèle d’une plante, de côté, de dessus et de face : « Dessiner son modèle », dans sa fiche.",
-    "Le placard à tisanes garde tes mélanges. Le rôle de chaque plante peut même devenir une flashcarte.",
+    "Le placard à synergies garde tes mélanges. Le rôle de chaque plante peut même devenir une flashcarte.",
     "Pour les bâtons de médecine chinoise, appelle Mesi : la MTC, c’est son grand bâton, surtout sur les plantes de ton jardin.",
     "En voyage ? Dans les Réglages, tu peux changer de lieu : le ciel, les saisons et la météo suivront.",
     "Relie ton Mac et ton iPhone dans les Réglages pour retrouver partout le même herbier.",
@@ -380,7 +380,7 @@
         { t: "Tes formules : clique sur les bocaux pour composer, puis la dose et le rang de chaque substance (empereur, ministre, assistant, messager), son action, la préparation." },
         { montrer: "Exporter les formules", t: "« Exporter les formules » pour tout garder sur papier, ou dans Excel." },
       ] : [
-        { montrer: "Nouveau mélange", t: "Le placard à tisanes : « Nouveau mélange », puis clique sur les bocaux pour composer, les proportions, l’effet de chaque plante, la préparation." },
+        { montrer: "Nouveau mélange", t: "Le placard à synergies : « Nouveau mélange », puis clique sur les bocaux pour composer, les proportions, l’effet de chaque plante, la préparation." },
         { montrer: "Exporter les recettes", t: "« Exporter les recettes » pour tout garder sur papier, ou dans Excel." },
       ] },
       { lieu: "lettres", lignes: [{ montrer: "Écrire une lettre", t: "La boîte aux lettres, pour écrire des lettres, même des lettres qui arrivent plus tard : tu choisis la date d’arrivée." }] },

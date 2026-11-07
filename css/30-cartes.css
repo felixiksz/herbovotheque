@@ -199,7 +199,7 @@
 .proprietes-page .propriete > b { font-weight: normal; color: var(--encre-douce); }
 .proprietes-page input[type="date"], .proprietes-page select { justify-self: start; }
 .relations-page { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.vue-pages { border: 1px solid var(--filet); padding: 8px 10px; margin: 4px 0; }
+.vue-pages { border: 1px solid var(--filet); padding: 8px 10px; margin: 4px 0; overflow-x: auto; /* (un large tableau défile dans son cadre) */ }
 .reglages-vue { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
 .liste-vue { list-style: none; padding: 0; margin: 0; }
 .liste-vue li { padding: 2px 0; }
@@ -285,7 +285,9 @@
 .grille-historique ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .apercu-version { max-height: 60vh; overflow: auto; }
 @media (max-width: 760px) {
-  .carnet { grid-template-columns: 1fr; }
+  /* (minmax(0, 1fr) : la colonne garde la largeur de l'écran ; sinon un large tableau l'élargissait
+     et la page sortait du cadre) */
+  .carnet { grid-template-columns: minmax(0, 1fr); }
   .colonne-carnet { position: static; max-height: none; }
   .bloc-carnet { padding-left: 34px; }
   .outils-bloc { opacity: 1; }

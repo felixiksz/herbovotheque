@@ -99,7 +99,7 @@
     const autres = H.monde === "mesi" ? [{ cle: "tisanes", nom: "Mes formules" }, { cle: "tisanesRoles", nom: "Rôle de chaque substance dans mes formules" }] : [{ cle: "tisanes", nom: "Mes tisanes" }, { cle: "tisanesRoles", nom: "Rôle de chaque plante dans mes tisanes" }];
     const paquets = new Set(Object.values(H.jeu.cartesPerso || {}).filter((c) => !c.supprime).map((c) => c.paquet || "Mes cartes"));
     paquets.forEach((p) => autres.push({ cle: "perso:" + p, nom: p }));
-    g.push({ titre: H.monde === "mesi" ? "Formules et cartes perso" : "Tisanes et cartes perso", items: autres });
+    g.push({ titre: H.monde === "mesi" ? "Formules et cartes perso" : "Synergies et cartes perso", items: autres });
     return g;
   }
 
@@ -600,7 +600,7 @@
   function recompenses() {
     const det = H.el("details.cartes-recompenses");
     det.appendChild(H.el("summary", null, H.el("h2", null, "Ce que rapportent les cartes")));
-    const cats = [["identite", "Identité"]].concat(H.d.sections().map((s) => [s.id, s.nom]), [["tisanes", H.monde === "mesi" ? "Formules" : "Tisanes"], ["perso", "Mes cartes"]]);
+    const cats = [["identite", "Identité"]].concat(H.d.sections().map((s) => [s.id, s.nom]), [["tisanes", H.monde === "mesi" ? "Formules" : "Synergies"], ["perso", "Mes cartes"]]);
     const grille = H.el("div.grille-recompenses");
     cats.forEach(([id, nom]) => {
       const choisie = H.ressources.ressourcePour(id);

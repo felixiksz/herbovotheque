@@ -116,6 +116,29 @@
     },
   };
 
+  // Chez Mesi : les plantes de l'herbier d'ƟvƟ ne sont pas dans son herbothèque, sauf celles
+  // qu'elle coche ici
+  function blocPlantesOvo() {
+    if (H.monde !== "mesi") return null;
+    const liste = H.el("ul.liste-plantes-ovo"), compte = H.el("p.discret");
+    const champ = H.el("input", { type: "search", placeholder: "Chercher une plante", "aria-label": "Chercher une plante d’ƟvƟ" });
+    const remplir = () => {
+      const q = champ.value.trim().toLowerCase();
+      const toutes = H.d.plantesOvo().sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+      compte.textContent = toutes.filter((p) => H.d.estChoisie(p.id)).length + " choisie(s) sur " + toutes.length;
+      liste.replaceChildren(...toutes.filter((p) => !q || (p.nom + " " + (p.latin || "")).toLowerCase().includes(q)).map((p) => {
+        const c = H.el("input", { type: "checkbox", checked: H.d.estChoisie(p.id), onchange: () => { H.d.choisir(p.id, c.checked); remplir(); } });
+        return H.el("li", null, H.el("label", null, c, " ", p.nom, p.latin ? H.el("em.discret", null, " " + p.latin) : null));
+      }));
+    };
+    champ.oninput = remplir;
+    remplir();
+    return H.el("section.reglage", null,
+      H.el("h2", null, H.fixe("Plantes d’ƟvƟ")),
+      H.el("p.discret", null, H.fixe("Coche les plantes de l’herbier d’ƟvƟ que tu veux avoir dans ton herbothèque, avec les tiennes.")),
+      champ, compte, liste);
+  }
+
   function blocTheme() {
     const choix = [["auto", "Selon le soleil"], ["jour", "Toujours le jour"], ["nuit", "Toujours la nuit"]];
     return H.el("section.reglage", null,
@@ -557,7 +580,7 @@
       const visite = H.el("section.reglage", null, H.el("h2", null, "Visite guidée"),
         H.el("p.discret", null, "Lóló refait le tour de tout le jeu, lieu après lieu."),
         H.el("button.bouton", { type: "button", onclick: () => H.lolo && H.lolo.visite() }, "Revoir la visite avec Lóló"));
-      const blocs = [blocLieu(), blocAnniversaires(), blocTheme(), blocLeger(), blocMiaou(), visite, blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
+      const blocs = [blocLieu(), blocAnniversaires(), blocPlantesOvo(), blocTheme(), blocLeger(), blocMiaou(), visite, blocSynchro(), blocSauvegarde(), blocAcces()].filter(Boolean);
       c.appendChild(H.bureau.onglets(blocs.map((b) => ({ nom: b.querySelector("h2").textContent, el: b })), { cle: "reglages", lateral: true }));
       c.appendChild(H.el("p.discret.version", null, "Herbothèque v" + H.VERSION));
     },

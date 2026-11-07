@@ -7,7 +7,7 @@
   // le titre de chaque fenêtre ; les vues absentes de cette liste ne s'ouvrent pas en fenêtre
   const FENETRES = {
     cartes: "Flashcartes",
-    get tisanes() { return H.monde === "mesi" ? "Mes formules" : "Placard à tisanes"; },
+    get tisanes() { return H.monde === "mesi" ? "Mes formules" : "Placard à synergies"; },
     labo: "Labo",
     serre: "Serre",
     lettres: "Boîte aux lettres",
@@ -37,7 +37,7 @@
     ["cartes", "Flashcartes", [
       "...kkkkkkkk.", "...kyyyyyyk.", "kkkkkkkkkyk.", "kwwwwwwwkyk.", "kwkkkkkwkyk.", "kwwwwwwwkyk.",
       "kwkkkwwwkyk.", "kwwwwwwwkkk.", "kwwmmwwwk...", "kwwmmwwwk...", "kwwwwwwwk...", "kkkkkkkkk..."]],
-    ["tisanes", "Tisanes", [
+    ["tisanes", "Synergies", [
       "...g..g.....", "..g..g......", "...g..g.....", "............", "kkkkkkkkk...", "kwwwwwwwkkk.",
       "kwoooooowk.k", "kwoooooowk.k", "kwwwwwwwkkk.", ".kwwwwwk....", "kkkkkkkkkk..", ".kkkkkkkk..."]],
     ["labo", "Labo", [
