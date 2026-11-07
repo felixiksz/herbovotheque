@@ -876,7 +876,8 @@
       if (a.type === "canard" && a.profil) {
         // de profil, posé sur l'eau : le corps à moitié dans l'eau, la queue relevée, le cou et la
         // tête vers l'avant ; il regarde du côté où il nage à l'écran
-        const [corps, tete, aile] = a.variante ? ["#8a6a4a", "#2f7a4a", "#6b4f34"] : ["#f2f0e8", "#ffd23a", "#d8d2c0"];
+        // (un couple de colverts : le mâle à tête verte et collier blanc, la cane brune mouchetée)
+        const [corps, tete, aile, bec] = a.variante ? ["#8a6a4a", "#2f7a4a", "#6b4f34", "#e8c83a"] : ["#a8845a", "#8a6a4a", "#6b4f34", "#d98a3a"];
         const f = Math.cos(a.dir) - Math.sin(a.dir) >= 0 ? 1 : -1, x = Math.round(px), y = Math.round(py);
         ctx.strokeStyle = "rgba(255,255,255,0.65)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.ellipse(x, y + 1, 10, 2, 0, 0, Math.PI * 2); ctx.stroke();
@@ -886,14 +887,18 @@
         ctx.beginPath(); ctx.moveTo(-8, -4); ctx.lineTo(-11, -8); ctx.lineTo(-6, -5); ctx.fill(); ctx.stroke();
         ctx.beginPath(); ctx.ellipse(0, -2, 8, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.fillStyle = aile; ctx.beginPath(); ctx.ellipse(-1, -3, 4.5, 2.2, -0.15, 0, Math.PI * 2); ctx.fill();
+        if (!a.variante) { ctx.fillStyle = "#6b4f34"; for (const [mx, my] of [[-5, -4], [-3, -1], [2, -5], [4, -2], [-1, -6]]) ctx.fillRect(mx, my, 1, 1); }
+        ctx.fillStyle = "#3d5ee8"; ctx.fillRect(-2, -3, 3, 1);
         ctx.restore();
         ctx.fillStyle = tete; ctx.strokeStyle = "#23214a"; ctx.lineWidth = 1;
         ctx.fillRect(4, -9, 3, 6);
         ctx.beginPath(); ctx.arc(6, -10, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#ff9a1e"; ctx.beginPath(); ctx.moveTo(8.6, -11); ctx.lineTo(12, -9.6); ctx.lineTo(8.6, -8.6); ctx.closePath(); ctx.fill();
+        if (a.variante) { ctx.fillStyle = "#f3f0dc"; ctx.fillRect(4, -7, 3, 1); }
+        else { ctx.fillStyle = "#4b3427"; ctx.fillRect(4.5, -11, 4, 1); }
+        ctx.fillStyle = bec; ctx.beginPath(); ctx.moveTo(8.6, -11); ctx.lineTo(12, -9.6); ctx.lineTo(8.6, -8.6); ctx.closePath(); ctx.fill();
         ctx.fillStyle = "#23214a"; ctx.fillRect(6.5, -11.5, 1.2, 1.2);
       } else if (a.type === "canard") {
-        const [corps, tete] = a.variante ? ["#8a6a4a", "#2f7a4a"] : ["#f2f0e8", "#ffd23a"];
+        const [corps, tete] = a.variante ? ["#8a6a4a", "#2f7a4a"] : ["#a8845a", "#8a6a4a"];
         ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.ellipse(px - Math.cos(a.dir) * 8, py - Math.sin(a.dir) * 8, 7, 3, a.dir, 0, Math.PI * 2); ctx.stroke();
         ctx.translate(px, py); ctx.rotate(a.dir);
