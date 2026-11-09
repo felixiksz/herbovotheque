@@ -2397,25 +2397,41 @@
   // en faisant défiler le jardin (ou la page), on redessine ce qui apparaît, une fois par image
   let defileEnAttente = false;
   function auDefile() {
-    if (defileEnAttente || !vue || !vue.toile || !vue.toile.isConnected) return;
+    if (!vue || !vue.toile || !vue.toile.isConnected) return;
+    clearTimeout(vue.finDefile);
+    vue.finDefile = setTimeout(() => { if (vue && vue.toile && vue.toile.isConnected) { vue.toutFiltrer = true; dessiner(); } }, 250);
+    if (defileEnAttente) return;
     defileEnAttente = true;
     requestAnimationFrame(() => { defileEnAttente = false; if (vue && vue.toile && vue.toile.isConnected) dessiner(); });
   }
   window.addEventListener("scroll", auDefile, { passive: true });
+  // Ce qu'on redessine à cette image : seulement la partie visible (le reste garde la dernière image
+  // complète, déjà passée en gros pixels, aux mêmes couleurs) ; une image complète au premier dessin,
+  // quand la toile change de taille, quand on a fini de faire défiler, et toutes les cinq secondes
+  function zoneDeCetteImage(toile) {
+    const cle = toile.width + "x" + toile.height, t = performance.now();
+    if (vue.toutFiltrer || vue.tailleFiltre !== cle || t - (vue.dernierPlein || 0) > 5000) {
+      vue.toutFiltrer = false; vue.tailleFiltre = cle; vue.dernierPlein = t;
+      return null;
+    }
+    return zoneVisible(toile);
+  }
+  function couperA(ctx, zv) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.beginPath(); ctx.rect(zv.x, zv.y, zv.w, zv.h); ctx.clip(); }
   // la partie de la toile qu'on voit vraiment (la zone défile, l'écran coupe le reste)
   function zoneVisible(toile) {
     const r = toile.getBoundingClientRect(), z = vue.zoneToile ? vue.zoneToile.getBoundingClientRect() : r;
     if (!r.width || !r.height) return null;
     const g = Math.max(r.left, z.left, 0), h = Math.max(r.top, z.top, 0), d = Math.min(r.right, z.right, innerWidth), b = Math.min(r.bottom, z.bottom, innerHeight);
     if (d <= g || b <= h) return { x: 0, y: 0, w: 1, h: 1 };
-    const fx = toile.width / r.width, fy = toile.height / r.height, marge = 8;
-    return { x: (g - r.left) * fx - marge, y: (h - r.top) * fy - marge, w: (d - g) * fx + 2 * marge, h: (b - h) * fy + 2 * marge };
+    const fx = toile.width / r.width, fy = toile.height / r.height, mx = (d - g) * fx * 0.15 + 8, my = (b - h) * fy * 0.15 + 8;
+    return { x: (g - r.left) * fx - mx, y: (h - r.top) * fy - my, w: (d - g) * fx + 2 * mx, h: (b - h) * fy + 2 * my };
   }
   function dessinerIso(ctxDest, sansNuit) {
     const ile = vue.ile, toile = vue.toile, ctx = ctxDest || toile.getContext("2d");
     // une nouvelle grande plante : on fait de la place au-dessus de l'île
     if (!ctxDest && Math.abs(placeAuDessus(ile) - vue.headroom) > 2) { dimensionnerIso(); peindreFondIso(); }
-    const z = vue.zoom * vue.dpr, t = performance.now();
+    const z = vue.zoom * vue.dpr, t = performance.now(), zv = ctxDest ? null : zoneDeCetteImage(toile);
+    if (zv) couperA(ctx, zv);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(vue.fond, 0, 0);
     ctx.setTransform(z, 0, 0, z, 0, 0);
@@ -2598,7 +2614,8 @@
     // selon leur famille, restent lisibles ; avant, un gros pixel en couvrait deux ou trois)
     // (sur téléphone, des gros pixels de deux points au moins : quatre fois moins de calcul)
     // (seulement ce qui se voit dans la fenêtre du jardin : la toile est souvent bien plus grande)
-    if (!ctxDest) H.retro.appliquer(toile, Math.max(TELEPHONE ? 2 : 1, Math.round((z / finPlantes) * H.finesse())), null, null, null, null, zoneVisible(toile));
+    if (zv) ctx.restore();
+    if (!ctxDest) H.retro.appliquer(toile, Math.max(TELEPHONE ? 2 : 1, Math.round((z / finPlantes) * H.finesse())), null, null, null, null, zv);
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
   // --- les paniers de la récolte et les pots à repiquer ---------------------------------------
@@ -2698,7 +2715,8 @@
     const ile = vue.ile;
     const toile = vue.toile;
     const ctx = ctxDest || toile.getContext("2d");
-    const k = T * vue.zoom * vue.dpr;
+    const k = T * vue.zoom * vue.dpr, zv = ctxDest ? null : zoneDeCetteImage(toile);
+    if (zv) couperA(ctx, zv);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(vue.fond, 0, 0);
     ctx.setTransform(k / T, 0, 0, k / T, vue.bx * k, vue.by * k);
@@ -2848,7 +2866,8 @@
       }
     }
     // les gros pixels aux couleurs des pochettes
-    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5), null, null, null, null, zoneVisible(toile));
+    if (zv) ctx.restore();
+    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5), null, null, null, null, zv);
     // les zones par-dessus les gros pixels (sinon le voile léger disparaît dans la palette)
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZones(ctx, k);
   }
