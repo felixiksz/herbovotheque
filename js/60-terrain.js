@@ -952,7 +952,19 @@
   const ECHELLE_PIN = { 1: 2.2, 2: 3, 3: 3.8 }, RAYON_PIN = { 1: 1.4, 2: 1.9, 3: 2.4 };
   // l'ombrelle vue du ciel : son ombre bleue portée en bas à droite, puis des touffes d'aiguilles,
   // sombres dessous, claires côté soleil (en haut à gauche)
+  // (chaque pin vu du ciel est peint une seule fois sur sa propre petite toile, puis posé à chaque
+  // image : le peindre point par point à chaque image ralentissait toute la vue d'oiseau)
   function ombrellePinDessus(ctx, cx, cy, r, graine) {
+    const R = Math.ceil(r * 1.45) + 4;
+    const img = memo("pinDessus|" + r + "|" + graine, () => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 2 * R;
+      ombrellePinPeinte(c.getContext("2d"), R, R, r, graine);
+      return c;
+    });
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, Math.round(cx - R), Math.round(cy - R)); ctx.restore();
+  }
+  function ombrellePinPeinte(ctx, cx, cy, r, graine) {
     const rnd = H.alea("pin" + graine), px = 2;
     const touffe = (x, y, rr, couleur) => {
       ctx.fillStyle = couleur;
@@ -2836,7 +2848,7 @@
       }
     }
     // les gros pixels aux couleurs des pochettes
-    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5));
+    if (!ctxDest) H.retro.appliquer(toile, H.retro.taillePour(2.5), null, null, null, null, zoneVisible(toile));
     // les zones par-dessus les gros pixels (sinon le voile léger disparaît dans la palette)
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZones(ctx, k);
   }
@@ -4142,8 +4154,9 @@
     // (ce qui bouge parce qu'on agit : on redessine à chaque image ; ce qui bouge tout seul, Lóló
     // au repos, les bêtes, la lumière : quelques images par seconde suffisent)
     let vif = false;
+    const maVue = vue;
     const pas = (t) => {
-      if (!vue) return;
+      if (!vue || vue !== maVue) return;
       const dt = Math.min(0.1, (t - vue.derniere) / 1000);
       vue.derniere = t;
       let bouge = false;
@@ -4363,6 +4376,9 @@
 
   H.vues.terrain = {
     afficher(c, params) {
+      // (l'animation du jardin d'avant s'arrête : sinon, à chaque nouvel affichage, une boucle de plus
+      // redessinait le même jardin, et tout ralentissait jusqu'à une image par seconde)
+      if (vue) cancelAnimationFrame(vue.anim);
       vue = null;
       // une île ouverte : la scène en plein écran, seules les ressources restent en haut
       if (params[0]) { document.documentElement.dataset.ile = "1"; if (H.bureau && H.bureau.heure) H.bureau.heure(); }
