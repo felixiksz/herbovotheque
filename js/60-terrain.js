@@ -1068,6 +1068,8 @@
     const infoCiel = H.el("p.info-ciel");
     const toile = H.el("canvas.toile-ile", { "aria-label": "Plan du jardin " + ile.nom });
     const zoneToile = H.el("div.zone-toile", null, toile);
+    // (en faisant défiler le jardin, on redessine ce qui apparaît)
+    zoneToile.addEventListener("scroll", auDefile, { passive: true });
     const outils = H.el("div.outils-terrain");
     const options = H.el("div.options-outil");
     const panneau = H.el("div.panneau-case", { hidden: true });
@@ -1465,7 +1467,7 @@
         // une pente : plus claire tournée vers le soleil (en haut à gauche), bleutée à l'opposé
         if (enPente(ile, x, y)) {
           const h = coinsRelief(ile), C1 = ile.cols + 1, i0 = y * C1 + x, e = ((h[i0 + 1] + h[i0 + C1 + 1]) - (h[i0] + h[i0 + C1])) / 2 + ((h[i0 + C1] + h[i0 + C1 + 1]) - (h[i0] + h[i0 + 1])) / 2;
-          if (Math.abs(e) > 0.05) { ctx.fillStyle = e > 0 ? "rgba(255,240,192," + Math.min(0.45, e * 0.32) + ")" : "rgba(38,40,106," + Math.min(0.35, -e * 0.22) + ")"; ctx.fillRect((x + BX) * k, (y + BY) * k, k, k); }
+          if (Math.abs(e) > 0.05) { ctx.fillStyle = e > 0 ? "rgba(255,240,192," + Math.min(0.45, e * 0.32) + ")" : "rgba(38,40,106," + Math.min(0.18, -e * 0.12) + ")"; ctx.fillRect((x + BX) * k, (y + BY) * k, k, k); }
         }
         for (const [dx, dy] of [[1, 0], [0, 1]]) {
           const nx = x + dx, ny = y + dy;
@@ -2328,7 +2330,8 @@
         const gx = (hauteurEn(fx + dd, fy, hc) - hauteurEn(fx - dd, fy, hc)) / (2 * dd), gy = (hauteurEn(fx, fy + dd, hc) - hauteurEn(fx, fy - dd, hc)) / (2 * dd);
         const e = 0.6 * gx - gy;
         if (e > 0.04) c = melange(c, CHAUD, Math.min(0.34, e * 0.26));
-        else if (e < -0.04) c = melange(c, OMBRE, Math.min(0.45, -e * 0.34));
+        // (l'ombre bleue, douce : une pente à l'ombre se lit sans faire une rivière sombre)
+        else if (e < -0.04) c = melange(c, OMBRE, Math.min(0.2, -e * 0.16));
         if (hc > 0.3) c = melange(c, CHAUD, Math.min(0.12, hc * 0.022));
       }
       px[y * lw + x] = c;
@@ -2379,6 +2382,23 @@
     }
   }
 
+  // en faisant défiler le jardin (ou la page), on redessine ce qui apparaît, une fois par image
+  let defileEnAttente = false;
+  function auDefile() {
+    if (defileEnAttente || !vue || !vue.toile || !vue.toile.isConnected) return;
+    defileEnAttente = true;
+    requestAnimationFrame(() => { defileEnAttente = false; if (vue && vue.toile && vue.toile.isConnected) dessiner(); });
+  }
+  window.addEventListener("scroll", auDefile, { passive: true });
+  // la partie de la toile qu'on voit vraiment (la zone défile, l'écran coupe le reste)
+  function zoneVisible(toile) {
+    const r = toile.getBoundingClientRect(), z = vue.zoneToile ? vue.zoneToile.getBoundingClientRect() : r;
+    if (!r.width || !r.height) return null;
+    const g = Math.max(r.left, z.left, 0), h = Math.max(r.top, z.top, 0), d = Math.min(r.right, z.right, innerWidth), b = Math.min(r.bottom, z.bottom, innerHeight);
+    if (d <= g || b <= h) return { x: 0, y: 0, w: 1, h: 1 };
+    const fx = toile.width / r.width, fy = toile.height / r.height, marge = 8;
+    return { x: (g - r.left) * fx - marge, y: (h - r.top) * fy - marge, w: (d - g) * fx + 2 * marge, h: (b - h) * fy + 2 * marge };
+  }
   function dessinerIso(ctxDest, sansNuit) {
     const ile = vue.ile, toile = vue.toile, ctx = ctxDest || toile.getContext("2d");
     // une nouvelle grande plante : on fait de la place au-dessus de l'île
@@ -2417,7 +2437,13 @@
       ctx.restore();
     }
     if (ile.secrete && ile.mare) dessinerMare(ctx, ile, t);
-    if (vue.choisie) { const l = leve(vue.choisie.x, vue.choisie.y); ctx.strokeStyle = "#ff7b00"; ctx.lineWidth = 2.5; ctx.strokeRect(vue.choisie.x * T + 1 - l, vue.choisie.y * T + 1 - l, T - 2, T - 2); }
+    // la case choisie : un cadre jaune vif, cerné d'encre, bien visible sur la terre comme sur l'herbe
+    if (vue.choisie) {
+      const l = leve(vue.choisie.x, vue.choisie.y), rx = vue.choisie.x * T + 1 - l, ry = vue.choisie.y * T + 1 - l;
+      ctx.strokeStyle = "#23214a"; ctx.lineWidth = 6; ctx.strokeRect(rx, ry, T - 2, T - 2);
+      ctx.strokeStyle = "#f6ee55"; ctx.lineWidth = 3; ctx.strokeRect(rx, ry, T - 2, T - 2);
+      ctx.fillStyle = "rgba(246,238,85,0.18)"; ctx.fillRect(rx, ry, T - 2, T - 2);
+    }
     dessinerCalqueEtTrace(ctx);
     ctx.restore();
 
@@ -2559,7 +2585,8 @@
     // (les gros pixels ont la taille des pixels des plantes : leurs feuilles et leurs fleurs, dessinées
     // selon leur famille, restent lisibles ; avant, un gros pixel en couvrait deux ou trois)
     // (sur téléphone, des gros pixels de deux points au moins : quatre fois moins de calcul)
-    if (!ctxDest) H.retro.appliquer(toile, Math.max(TELEPHONE ? 2 : 1, Math.round((z / finPlantes) * H.finesse())));
+    // (seulement ce qui se voit dans la fenêtre du jardin : la toile est souvent bien plus grande)
+    if (!ctxDest) H.retro.appliquer(toile, Math.max(TELEPHONE ? 2 : 1, Math.round((z / finPlantes) * H.finesse())), null, null, null, null, zoneVisible(toile));
     if (!ctxDest && (vue.voirZones || vue.outil === "zones")) dessinerZonesIso(ctx, z);
   }
   // --- les paniers de la récolte et les pots à repiquer ---------------------------------------
@@ -4182,7 +4209,7 @@
       if (vue.ile.secrete || (vue.ile.animaux && vue.ile.animaux.length)) bouge = true;
       // la lumière du ciel (aube, couchant, nuit) suit l'heure, comme à la ferme
       if (t - (vue.dernierDessin || 0) > 2000) bouge = true;
-      if ((bouge && t - (vue.dernierDessin || 0) >= H.cadence(vif || performance.now() - H.dernierGeste < 400 ? 0 : TELEPHONE ? 160 : 70)) || !vue.dessineUneFois) {
+      if ((bouge && t - (vue.dernierDessin || 0) >= H.cadence(vif || !TELEPHONE || performance.now() - H.dernierGeste < 400 ? 0 : 160)) || !vue.dessineUneFois) {
         dessiner();
         vue.dessineUneFois = true;
         vue.dernierDessin = t;

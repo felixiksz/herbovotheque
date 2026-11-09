@@ -62,11 +62,18 @@
   // dégradés en paliers) à 1 (la trame habituelle)
   // defile : { x, depuis } fait glisser la trame avec le décor, sous la ligne « depuis » (de 0 à 1),
   // pour qu'un sol qui défile emporte ses petits points avec lui
-  function appliquer(toile, taille, trame, defile, enPlus, cible) {
+  // zone : { x, y, w, h } en pixels de la toile, pour ne traiter que ce qui se voit à l'écran (la trame
+  // reste calée sur toute la toile)
+  function appliquer(toile, taille, trame, defile, enPlus, cible, zone) {
     const forceTrame = trame == null ? 1 : trame;
     actuel = jeu(enPlus);
-    const W = toile.width, Hh = toile.height;
-    if (!W || !Hh) return;
+    let zx = 0, zy = 0, W = toile.width, Hh = toile.height;
+    if (zone && !cible) {
+      zx = Math.max(0, Math.floor(zone.x / taille) * taille); zy = Math.max(0, Math.floor(zone.y / taille) * taille);
+      W = Math.min(toile.width - zx, Math.ceil((zone.x + zone.w - zx) / taille) * taille); Hh = Math.min(toile.height - zy, Math.ceil((zone.y + zone.h - zy) / taille) * taille);
+    }
+    if (W <= 0 || Hh <= 0) return;
+    const ox = zx / taille, oy = zy / taille;
     const sw = Math.max(1, Math.ceil(W / taille)), sh = Math.max(1, Math.ceil(Hh / taille));
     // (une petite toile de travail par taille : deux scènes qui se succèdent ne la redimensionnent
     // plus à chaque image, ce qui faisait clignoter certaines tablettes)
@@ -83,7 +90,7 @@
     // chaque gros pixel prend une couleur franche (pas de mélange flou sur les contours)
     pc.imageSmoothingEnabled = false;
     pc.clearRect(0, 0, sw, sh);
-    pc.drawImage(toile, 0, 0, W, Hh, 0, 0, sw, sh);
+    pc.drawImage(toile, zx, zy, W, Hh, 0, 0, sw, sh);
     const img = pc.getImageData(0, 0, sw, sh), d = img.data;
     const dx = defile ? Math.round(defile.x / taille) : 0, ligneDefile = defile ? Math.floor(defile.depuis * sh) : sh;
     // (le résultat de chaque teinte, à chaque place de la trame, est retenu : une grande toile ne
@@ -91,24 +98,30 @@
     const pal = actuel.pal, memo = actuel.memo || (actuel.memo = new Map());
     let deja = memo.get(forceTrame);
     if (!deja) memo.set(forceTrame, (deja = new Int16Array(1 << 19).fill(-1)));
+    // (chaque point lu et écrit d'un seul coup ; et comme les aplats se répètent, on garde, pour chaque
+    // place de la trame, la dernière couleur traitée et son résultat : on ne recalcule que ce qui change)
+    const u32 = new Uint32Array(d.buffer, d.byteOffset, d.length >> 2);
+    const pal32 = actuel.pal32 || (actuel.pal32 = pal.map((c) => ((255 << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0));
+    const dernierIn = new Uint32Array(16), dernierOut = new Uint32Array(16);
     for (let y = 0, i = 0; y < sh; y++) {
-      const decaleL = y >= ligneDefile ? dx : 0, ty = (y & 3) << 2, lignes = defile && defile.lignes;
-      for (let x = 0; x < sw; x++, i += 4) {
-        if (d[i + 3] < 10) continue;
+      const decaleL = y >= ligneDefile ? dx : 0, ty = ((y + oy) & 3) << 2, lignes = defile && defile.lignes;
+      for (let x = 0; x < sw; x++, i++) {
+        const v = u32[i];
+        if ((v >>> 24) < 10) continue;
         const decale = lignes && lignes.length === sw ? (y >= lignes[x] ? dx : 0) : decaleL;
-        const ti = ty | ((x + decale) & 3), k = ((((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3)) << 4) | ti;
+        const ti = ty | ((x + ox + decale) & 3);
+        if (v === dernierIn[ti] && v !== 0) { u32[i] = dernierOut[ti]; continue; }
+        const r = v & 255, g = (v >>> 8) & 255, b = (v >>> 16) & 255;
+        const k = ((((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)) << 4) | ti;
         let p = deja[k];
         if (p < 0) {
           // un peu plus saturé et contrasté, comme les pochettes, avant de choisir la couleur
-          const o = TRAME[ti] * forceTrame, m = (d[i] + d[i + 1] + d[i + 2]) / 3;
-          const rs = (v) => Math.max(0, Math.min(255, m + (v - m) * 1.12 + o));
-          p = deja[k] = proche(rs(d[i]), rs(d[i + 1]), rs(d[i + 2]));
+          const o = TRAME[ti] * forceTrame, m = (r + g + b) / 3;
+          const rs = (vv) => Math.max(0, Math.min(255, m + (vv - m) * 1.12 + o));
+          p = deja[k] = proche(rs(r), rs(g), rs(b));
         }
-        const c = pal[p];
-        d[i] = c[0];
-        d[i + 1] = c[1];
-        d[i + 2] = c[2];
-        d[i + 3] = 255;
+        dernierIn[ti] = v; dernierOut[ti] = pal32[p];
+        u32[i] = pal32[p];
       }
     }
     // (la petite image, déjà en gros pixels, posée telle quelle dans une autre toile que l'écran
@@ -123,8 +136,8 @@
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, W, Hh);
-    ctx.drawImage(petit, 0, 0, sw * taille, sh * taille);
+    ctx.clearRect(zx, zy, W, Hh);
+    ctx.drawImage(petit, 0, 0, sw, sh, zx, zy, sw * taille, sh * taille);
     ctx.restore();
   }
   // la taille d'un gros pixel pour une toile affichée à l'écran : n points d'écran

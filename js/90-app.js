@@ -68,6 +68,8 @@
     H.ciel.chargerMeteo().then(() => H.ciel.appliquer());
     if (H.ressources) H.ressources.afficherBarre();
     if (H.local.jeton) H.synchro.lancer();
+    // (d'où l'on vient en ouvrant les réglages : en les fermant, on y revient ; noté avant de dessiner)
+    window.addEventListener("hashchange", (e) => { const ancien = new URL(e.oldURL).hash; if (!/^#reglages/.test(ancien)) H.avantReglages = ancien || "#ferme"; });
     window.addEventListener("hashchange", router);
     H.sur("ciel", peindrePapier);
     if (H.base.message && !H.jeu.vu.messageAccueil) {

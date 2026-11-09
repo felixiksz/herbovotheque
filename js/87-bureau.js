@@ -105,7 +105,9 @@
       icones(vue),
       H.el("section.fenetre-vue", null,
         H.el("div.titre-fenetre", null,
-          H.el("a.fermer-fenetre", { href: "#ferme", "aria-label": "Fermer et revenir à la ferme", title: "Revenir à la ferme" }, "×"),
+          vue === "reglages" && H.avantReglages && H.avantReglages !== "#ferme"
+            ? H.el("a.fermer-fenetre", { href: H.avantReglages, "aria-label": "Fermer et revenir où j’étais", title: "Revenir où j’étais" }, "×")
+            : H.el("a.fermer-fenetre", { href: "#ferme", "aria-label": "Fermer et revenir à la ferme", title: "Revenir à la ferme" }, "×"),
           H.el("span", null, FENETRES[vue])
         ),
         contenu
