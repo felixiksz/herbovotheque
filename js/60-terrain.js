@@ -3663,11 +3663,29 @@
     return false;
   }
 
-  function recolter(x, y) {
+  // tous les pieds prêts d'une même plante, d'un coup (tant qu'il reste de l'énergie)
+  function recolterTout(id, cases) {
+    const ile = vue.ile, p = H.d.plante(id);
+    if (!p || !cases.length) return;
+    if (H.ressources.energie() < 2) return payer({ energie: 2 });
+    let n = 0, paille = false;
+    for (const [x, y] of cases) {
+      if (H.ressources.energie() < 2) break;
+      const g = recolter(x, y, true);
+      if (!g) break;
+      n++; paille = paille || !!g.paille;
+    }
+    if (!n) return;
+    H.bruit("recolte");
+    const reste = cases.length - n;
+    H.toast("Récolte : " + p.nom + " × " + n + " (+" + 2 * n + " graines, +" + n + " compost" + (paille ? ", +" + n + " paille" : "") + ", et " + n + " récolte" + (n > 1 ? "s" : "") + " pour le labo)" + (reste ? " ; il en reste " + reste + ", je suis trop fatigué·e pour la suite" : ""));
+    dessiner();
+  }
+  function recolter(x, y, enSerie) {
     const ile = vue.ile;
     const pl = ile.plantes[cle(x, y)];
     const p = H.d.plante(pl.p);
-    if (!payer({ energie: 2 })) return;
+    if (!payer({ energie: 2 })) return null;
     pl.recolteLe = H.maintenant();
     const gains = { graines: 2, compost: 1 };
     if ((p.preparations || []).includes("plante-seche")) gains.paille = 1;
@@ -3680,9 +3698,11 @@
     if (H.journal) H.journal.noter("recolter:" + ile.id, "j’ai récolté ", H.leNom(p), " sur « " + ile.nom + " »");
     if (p.valeurs.cycle === "Annuelle") pl.c = 40;
     sauver(ile);
+    if (enSerie) return gains;
     H.bruit("recolte");
     H.toast("Récolte : " + p.nom + " (+2 graines, +1 compost" + (gains.paille ? ", +1 paille" : "") + ", et une récolte pour le labo)");
     dessiner();
+    return gains;
   }
 
   // Les bébés plantes de la caisse face à une case : celles qui s'y plairaient (et pourquoi pas les autres)
@@ -3739,7 +3759,7 @@
     return idees.length ? H.el("span.discret", null, "Pour arranger le sol : " + idees.join(" ; ")) : null;
   }
 
-  // « Prêtes à récolter : Thym (3) · Souci · Mélisse » ; un clic sur un nom ouvre sa case
+  // « Prêtes à récolter : Thym (3) · Souci · Mélisse » ; un clic sur un nom les récolte toutes
   function listeARecolter() {
     const el = vue && vue.aRecolterListe;
     if (!el) return;
@@ -3747,7 +3767,7 @@
     for (const [k2, pl] of Object.entries(ile.plantes || {})) {
       const q = H.d.plante(pl.p);
       if (!q || !aRecolter(q, ile, pl)) continue;
-      const [x, y] = k2.split(",").map(Number), e = prets.get(q.id) || { nom: q.nom, cases: [] };
+      const [x, y] = k2.split(",").map(Number), e = prets.get(q.id) || { id: q.id, nom: q.nom, cases: [] };
       e.cases.push([x, y]);
       prets.set(q.id, e);
     }
@@ -3757,9 +3777,8 @@
     el.hidden = !prets.size;
     if (!prets.size) return el.replaceChildren();
     const liens = [...prets.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr")).map((e) => {
-      let i = 0;
-      // (un deuxième clic montre le pied suivant de la même plante)
-      return H.el("button.lien-recolte", { type: "button", onclick: () => { const [x, y] = e.cases[i++ % e.cases.length]; inspecter(x, y); dessiner(); } }, e.nom + (e.cases.length > 1 ? " (" + e.cases.length + ")" : ""));
+      // (un clic récolte d'un coup tous les pieds prêts de cette plante)
+      return H.el("button.lien-recolte", { type: "button", title: "Tout récolter", onclick: () => { recolterTout(e.id, e.cases); delete el.dataset.cle; listeARecolter(); } }, e.nom + (e.cases.length > 1 ? " (" + e.cases.length + ")" : ""));
     });
     el.replaceChildren(H.el("span", null, "Prêtes à récolter : "), ...liens.flatMap((b, k) => (k ? [" · ", b] : [b])));
   }
