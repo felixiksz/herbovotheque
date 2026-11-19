@@ -36,11 +36,11 @@
   function correspond(p, q) {
     if (etat.aVerifier && !(p.aVerifier || []).length) return false;
     if (etat.aRemplir && !H.d.aRemplir(p)) return false;
-    if (!q) return true;
+    if (q.vide) return true;
     const cible = [p.nom, p.latin, p.valeurs && p.valeurs.nomsCommuns].join(" ");
-    if (H.sansAccents(cible).includes(q)) return true;
+    if (q.test(cible)) return true;
     if (!etat.partout) return false;
-    return Object.values(p.valeurs || {}).some((v) => H.sansAccents(texteDe(v)).includes(q));
+    return q.test(cible + " " + Object.values(p.valeurs || {}).map(texteDe).join(" "));
   }
 
   // Groupes d'étagères pour un rangement : [{nom, plantes:[{plante, forme}]}]
@@ -159,7 +159,7 @@
   function dessiner() {
     if (!conteneurEtageres) return;
     const rg = rangementActif();
-    const q = H.sansAccents(etat.recherche.trim());
+    const q = H.recherche(etat.recherche);
     const plantes = H.d.plantes().filter((p) => correspond(p, q));
     const tousGroupes = grouper(rg, plantes);
     // les dossiers du bureau : un par étagère, et « Toutes » pour tout voir
@@ -312,7 +312,7 @@
   }
 
   function exporterVisible() {
-    const q = H.sansAccents(etat.recherche.trim());
+    const q = H.recherche(etat.recherche);
     H.exporterPlantes(H.d.plantes().filter((p) => correspond(p, q)), "herbotheque");
   }
 
@@ -340,10 +340,10 @@
     const recherche = H.el("input", { type: "search", placeholder: "Chercher", "aria-label": "Chercher une plante" });
     const liste = H.el("div.liste-choix");
     const dessinerListe = () => {
-      const q = H.sansAccents(recherche.value.trim());
+      const q = H.recherche(recherche.value);
       liste.innerHTML = "";
       for (const p of H.d.plantes()) {
-        if (q && !H.sansAccents(p.nom + " " + p.latin).includes(q)) continue;
+        if (!q.vide && !q.test(p.nom + " " + p.latin)) continue;
         if (opts.filtre && !opts.filtre(p)) continue;
         liste.appendChild(
           H.el(

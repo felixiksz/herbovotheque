@@ -219,8 +219,8 @@
 
   // --- les bocaux de plantes sèches, au fond du placard -----------------------------
   function bocaux(zone, barre) {
-    const q = H.sansAccents(recherche.trim());
-    const plantes = H.d.plantes().filter((p) => (p.preparations || []).includes("plante-seche") && (!q || H.sansAccents(p.nom + " " + p.latin + " " + ((p.valeurs || {}).nomFr || "")).includes(q))
+    const q = H.recherche(recherche);
+    const plantes = H.d.plantes().filter((p) => (p.preparations || []).includes("plante-seche") && (q.vide || q.test(p.nom + " " + p.latin + " " + ((p.valeurs || {}).nomFr || "")))
       && (!M() || origine === "toutes" || (origine === "pc") === !!p.pc));
     zone.innerHTML = "";
     if (!plantes.length) zone.appendChild(H.el("p.discret", null, mot("aucune")));

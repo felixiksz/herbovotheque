@@ -73,6 +73,47 @@ window.H = window.H || {};
 
   H.slug = (t) => H.sansAccents(t).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
 
+  // --- recherche : la même règle partout ------------------------------------------------
+  // Chaque mot se cherche par son début (« insom » trouve « insomnie », « dents » ne trouve pas « accidents »), au singulier comme au
+  // pluriel (« dent » = « dents »). Un mot de trois lettres ou moins se cherche en mot entier (« os » ne trouve pas « bosse »).
+  // Entre guillemets, une expression se cherche en mots entiers (« "foie gras" »). Une étoile devant un mot cherche une fin de mot (« *ite »).
+  // Tous les mots doivent être présents. Accents, majuscules et apostrophes typographiques ne comptent pas.
+  // Usage : const q = H.recherche(saisie); q.vide ; q.test(texte) ; q.position(texteSansAccents)
+  const normRecherche = (t) => H.sansAccents(t).replace(/[’‘`´]/g, "'").replace(/\s+/g, " ").trim();
+  const echapRx = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const rxRecherche = (terme) => {
+    const entier0 = terme.entier, brut = terme.t;
+    const gauche = brut.startsWith("*"), droite = brut.length > 1 && brut.endsWith("*"), coeur = brut.replace(/^\*+|\*+$/g, "").trim();
+    if (!coeur) return null;
+    const tel = /[0-9]/.test(coeur) || /[㐀-鿿]/.test(coeur);
+    const entier = entier0 || coeur.length <= 3 || coeur.includes(" ");
+    const racine = (w) => (w.length > 3 && /[sx]$/.test(w) ? w.slice(0, -1) : w);
+    const motif = tel ? echapRx(coeur).replace(/ +/g, " +")
+      : entier ? coeur.split(" ").map((w) => (w.length > 3 ? echapRx(racine(w)) + "[sx]?" : echapRx(w))).join(" +")
+      : echapRx(racine(coeur));
+    return new RegExp((tel || gauche ? "()" : "(^|[^\\p{L}\\p{N}])") + "(" + motif + ")" + (tel || droite || !entier ? "" : "(?![\\p{L}\\p{N}])"), "u");
+  };
+  H.recherche = (saisie) => {
+    const brut = String(saisie == null ? "" : saisie), termes = [];
+    let reste = brut.replace(/["«“]([^"»”]+)["»”]/g, (_, p) => { const t = normRecherche(p); if (t) termes.push({ t, entier: true }); return " "; });
+    const ouvert = reste.match(/["«“]([^"»”]*)$/);
+    if (ouvert) { const t = normRecherche(ouvert[1]); if (t) termes.push({ t, entier: true }); reste = reste.slice(0, ouvert.index); }
+    normRecherche(reste).split(" ").filter(Boolean).forEach((t) => termes.push({ t, entier: false }));
+    const rx = termes.map(rxRecherche).filter(Boolean);
+    return {
+      vide: !rx.length,
+      // vrai si tous les mots sont dans le texte
+      test: (texte) => { if (!rx.length) return true; const h = normRecherche(texte); return rx.every((r) => r.test(h)); },
+      // place du premier mot trouvé dans le texte (même longueur que l'original), ou -1
+      position: (texte) => {
+        const h = H.sansAccents(texte).replace(/[’‘`´]/g, "'");
+        let mini = -1;
+        for (const r of rx) { const m = r.exec(h); if (m) { const d = m.index + m[1].length; if (mini < 0 || d < mini) mini = d; } }
+        return mini;
+      },
+    };
+  };
+
   // --- noms de plantes dans une phrase : « le romarin », « de la sauge », « l’ortie » ----
   // Le genre se devine d'après le premier mot ; une fiche peut le préciser (p.genre : m, f, mp, fp).
   const MASCULINS_EN_E = "alkékenge lentisque lierre myrte trèfle tussilage solidage gingembre frêne saule chêne eleuthérocoque éleuthérocoque cèdre cyprès chèvrefeuille aulne epilobe épilobe".split(" ");

@@ -71,22 +71,22 @@
   function extrait(p, q) {
     for (const champ of CHAMPS_INDICATIONS) {
       for (const l of String((p.valeurs || {})[champ] || "").split("\n")) {
-        const propre = sansGras(l), i = H.sansAccents(propre).indexOf(q);
+        const propre = sansGras(l), i = q.position(propre);
         if (i < 0) continue;
-        const debut = Math.max(0, i - 50), fin = Math.min(propre.length, i + q.length + 70);
+        const debut = Math.max(0, i - 50), fin = Math.min(propre.length, i + 80);
         return (debut ? "…" : "") + propre.slice(debut, fin).trim() + (fin < propre.length ? "…" : "");
       }
     }
     return null;
   }
   function resultats() {
-    const q = H.sansAccents(outil.q.trim()), mois = new Date().getMonth() + 1;
+    const q = H.recherche(outil.q), mois = new Date().getMonth() + 1;
     return H.d.plantes().filter((p) => {
       if (outil.ceMois && !((p.valeurs || {}).moisSemis || []).includes(mois)) return false;
       if (outil.sphere && !listeSpheres(p).includes(outil.sphere)) return false;
-      if (!q) return true;
-      if (H.sansAccents(p.nom + " " + p.latin).includes(q)) return true;
-      return CHAMPS_INDICATIONS.some((c) => H.sansAccents(sansGras((p.valeurs || {})[c])).includes(q));
+      if (q.vide) return true;
+      if (q.test(p.nom + " " + p.latin)) return true;
+      return q.test(CHAMPS_INDICATIONS.map((c) => sansGras((p.valeurs || {})[c])).join(" "));
     });
   }
   function construireOutil() {
@@ -114,7 +114,7 @@
       }
     };
     function majListe() {
-      const q = H.sansAccents(outil.q.trim()), mois = new Date().getMonth() + 1;
+      const q = H.recherche(outil.q), mois = new Date().getMonth() + 1;
       const r = resultats();
       resume.textContent = r.length
         ? r.length + (r.length > 1 ? " plantes" : " plante") + (outil.ceMois ? " à semer en " + nomMois : "")
@@ -122,7 +122,7 @@
       liste.innerHTML = "";
       const libre = serre().pots.indexOf(null);
       for (const p of r) {
-        const ex = q && !H.sansAccents(p.nom + " " + p.latin).includes(q) ? extrait(p, q) : null;
+        const ex = !q.vide && !q.test(p.nom + " " + p.latin) ? extrait(p, q) : null;
         liste.appendChild(H.el("div.resultat-serre", null,
           H.el("div.nom-resultat", null,
             H.el("a", { href: "#fiche/" + encodeURIComponent(p.id) }, p.nom),
